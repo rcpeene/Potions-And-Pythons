@@ -1,0 +1,822 @@
+
+DESIGN FOR POTIONS AND PYTHONS ALPHA
+
+
+NOTES ON THE CONVENTIONS AND FORMATTING USED IN THIS CODE PROJECT
+-source are named with capital letters to distinguish them from python modules
+
+-other files are named in lowercase and named as .POPY files, which are just stored as ASCII plaintext
+
+-tabs	are	used	for	indentation,	not	spaces
+
+-the standard maximum line-width is 80 characters for this code, with few exceptions
+
+-functions should not exceed 40 lines in length, including line breaks
+
+-functions typically use camelCase for naming, see 3 exceptions below
+
+-Action functions are named with single capitalized words. Action functions are functions in Parser.py that are called as a result of player actions, or methods which are called by a corresponding Parser.py action function. For instance, the Look() function, which may call a Look() method on an item. This is to distinguish these functions from certain python keywords and built-ins
+
+-functions with names that are multiple abbreviated words are purely lowercase
+
+-the Creature methods which return the ability score for a creature are denoted purely in capital letters, such as MXHP(), and ATCK()
+
+-classes are named with capital letters
+
+-typically, instances of objects are either denoted with capital letters, or with words. For example, an instance of the Item() class may either be I, item, or some other word depending on the use case.
+
+-the global objects P, W, and G refer to the Player, World, and Game objects
+
+-typically, capital S refers to a "source" item. That is, an item which contains another item, usually I.
+
+-strings are denoted with "", unless it is necessary to use a string that contains " in it, in which case, the entire function in question uses '' to denote strings
+
+-strings which are concatenated with variables are formatted using f-string formatting. The + operator is used when there is only one string 'fragment'. For example;
+	f"There is no '{obj.name}' here"
+	f"There is {listItems()} in this room"
+	"You take the " + item.name
+	"There is " + gprint("a",obj.anem,3,1)
+
+
+
+GAMEPLAY MECHANIC GOALS:
+
+-lore/easter eggs are conveyed to the player in engaging but mysterious ways
+-players can get a well-formatted display and description of their stats
+-enemies and player have a perception system
+-save ability and checkpoints, where respawn occurs if players die
+-npcs have dynamic communication options which interact with RP
+-combat can happen in a dynamic way, which may not always end in a death
+-tinkering can be done to create and adapt items magically
+-global events can occur which persistently alter something about the world
+-rooms are persistent globally
+-spells can occur and affect the game in many unique ways
+-fun cheat codes?
+
+
+
+CORE CODE DESIGN:
+
+some file contains base framework;
+	player class, room class, item class
+okay so some file contains all room objects in the world
+another file contains all creatures objects in the world
+another file contains all item objects in the world
+main will probably contain the parser, player object and all action functions
+
+a txt file contains the save, which includes:
+	all player stats
+	current room
+	all rooms in the world and their contents/settings? <- hard part
+	certain global event variables
+
+in main
+there are two major objects
+	player
+	game (containing currentroom, prevroom, and time)
+
+player contains all player attributes and methods
+currentroom contains a room object of the room the player is currently in
+prevroom represents the last room object that was currentroom
+time represents the number of player actions taken since the game's beginning
+
+
+
+FRAMEWORK OF THE GAME
+every room contains a set of string room names denoting its connected rooms
+main() runs a parsing loop, that loops taking valid input
+	when parser encounters a valid command, it runs, calls an action function, which may do various things.
+
+	The move() action will check for valid commands, and triage which room to move to, if any possible given the command. This will take the correct room object stored in currentroom's set of room connections, initialize the new room, set previous room to current room and set current room equal to new room, then call current room's "enter" function, which will print the initial room description and take care of some initial things
+
+	Most other valid actions either alter some feature of the room object, some item in the room, something about the player object, or do some of each.
+
+	Additionally, certain commands do external things, like save the game, cancel last action, or print useful info for the player
+
+
+
+
+
+HOW PARSING INPUT WORKS (EXAMPLE)
+"""
+What will you do?
+> I will attack the Green Snake, with my sword.
+"""
+
+In the above example, the user provides the raw input:
+	"I will attack the Green Snake, with my sword."
+
+input processing in getcmd():
+
+First, the raw input is turned to lowercase:
+	"i will attack the green snake, with my sword."
+Then, the input is purified by removing extraneous symbols:
+	"i will attack the green snake with my sword"
+Then, the input is split into a list of words:
+	['i','will','attack','the','green','snake','with','my','sword']
+Next, articles and determiners (and other extraneous words) are removed:
+	['attack','green','snake','with','sword']
+The nounify step combines words which appear to be a single meaningful term:
+	['attack','green snake','with','sword']
+
+parsing input in parse():
+
+the processed command is taken, and the verb is assumed to be the first word:
+	verb = 'attack'
+If the command is multiple words, the preposition is found (if it exists) by comparing each word to a set of known prepositions. In this case:
+	prep = 'with'
+if there are more words, the direct object is assumed to be the first word after the verb which is not a preposition. In this case:
+	dobj = 'green snake'
+if there are still more words, the indirect object is the last word after the preposition or the direct object, which is not a preposition. In this case:
+	iobj = 'sword'
+
+So parse() assigns terms to verb, dobj, iobj, and prep. The nature of this input parser is such that it cannot accurately parse input with more than these four important terms. So it cannot properly interpret arbitrarily complex input.
+
+
+
+ROOM:
+
+room has several attributes:
+name - every room must have a unique name
+description
+size?
+allexits: set of adjacent rooms (n, ne, e, se, s, sw, w, nw, u, d, b)
+exits: set of directions denoting accessible adjacent rooms
+allcontents: set of all items and creatures in the room
+contents: set of booleans denoting which items and creatures are 'hidden' or not
+additional room booleans and characteristics
+
+#note: each object should contain a list of objects it is adjacent to in the room. Any objects adjacent to eachother must share all adjacent objects
+#currently in question: should room store a 2d array of items which are passable/impassable.
+#alternative answer: objects all participate in an adjacency matrix as discussed above, but they include a distance factor ranging from (adjacent, near, far, distant, on top of, under, within?) and room include a size factor (small, medium, large, vast)
+
+#idea about movement (in or out of combat): movement determines how many steps it takes you to change from adj,near,far,distant or any of those in between. And in that "time" span it takes you to move, other creatures can do things.
+#ex. you move from adj to far, which is a constant distance of 50, your movement is 30, so it takes you two steps to move, meanwhile the goblin could attack twice.
+
+room methods:
+init
+repr
+describe exits
+describe contents
+describe #gonna be elaborate
+
+
+NOTES WHEN MAKING A ROOM:
+- every room must have a unique name which is NOT also a term in any of the game's data sets (except the World dict, which consists entirely of Room names)
+- by convention and necessity, room names must be lowercase (since user input is always lowercase and string comparisons are frequently done with room names)
+- every room exit must refer to the name of an existing room (otherwise runtime errors will occur)
+-pay attention to room exits. Generally, a connection between any two rooms should be two-way. That is, if "glen" has a northern exit to "big tree", "big tree" should have a southern exit to "glen". Exceptions to this recommendation are allowed but should only be used when there's good in-game reason to do so
+-every item in the room must be of an existing item class
+-every creature in the room must of an existing creature class
+
+
+
+
+ITEM:
+An item is any object in the game which can be interacted with which is not a room and which is not a creature. Specifically, an item can exist within a room's contents, within another item's contents, or within a Creature's inventory (including Player's inventory)
+
+The simplest item has attributes; name, description, weight, and durability.
+Items of class Weapon() come with a number of additional attributes regarding their statistics as a utility in combat.
+Items of class Box() come with a boolean "open" attribute and a list of "contents" of Items they contain.
+Items of class Sign() contain a "text" attribute"
+Items of class Switch() contain an "effect" attribute, which is a string which is used with the global "effects" dict, mapping these strings to Effect functions. Effect functions affect the World in some way.
+
+NOTES WHEN MAKING AN ITEM:
+- Items do not necessarily have to have unique name, but there are parsing limitations when multiple items have the same name. Only give two items the same name if they are identical or negligibly distinct to a user.
+- Items names should NOT also be a term in any of the game's data sets (except the Items dict, which consists entirely of Item names)
+- When adding an item, make sure its class exists in the Objects.py Items dict
+- The order of attributes matters! when writing the attributes into the World data file, the attributes must be in the correct order as defined in the __init__ method of the class
+
+
+
+PLAYER:
+
+NAME - player-defined name
+
+RACE - what character race you are, each race gets a stat bonus to two stats
+
+DESCRIPTION - player-defined character description
+
+BASE - defined as a dict of 10 pairs
+
+DERIVED - defined as a dict of 24 pairs
+
+LV - level (int)
+player level, initially 1, ranges 1-20
+
+XP - experience (int)
+player experience points, initially 0, ranges.. to 100,000??
+
+RP - reputation points (int)
+reputation you've built for yourself, initially 0, ranges -100 to 100. Having a higher charisma improves your potential to alter your RP
+
+HP - current hit points (int)
+initially max, ranges 0 to MXHP
+
+MP - current mana points (int)
+initially max, ranges 0 to MXHP
+
+MONEY - defined as a list [cp, sp, gp, pp]
+			represented	by	%	&	$	@
+
+INVENTORY - defined as a list [] containing objects of class item, infinite size
+
+GEAR - a dict of many pairs, each one representing a slot in which an item can be equipped. Included player's hands, clothing, and additional items.
+
+STATUS - a set of all status effects currently affecting the player
+
+
+
+LEVELING:
+
+XP - experience points
+amount of experience player has amassed
+gained by fighting, killing, socializing, praying, etc.
+
+LV - level
+player level, ranging 1 - 20
+determined by XP
+LV = min1(floor(  5*log10(x/10)  ))
+
+QP - quality points
+amount of experience player has with different attributes called qualities.
+determined by level and race
+the lowest any stat can begin at is 1
+different races get an initial bonuses to any qualities totaling +10
+
+Total quality points should be 7 + 3*LV,
+i.e., the player has 1 in all ten qualities at level 1, and gains 3 points total with each level up
+upon leveling up the player allocates the 3 new points to the categories of their choice, in any amount they would like
+
+BASE STATS: also called qualities, a players base stats determine all other stats, they can increase with level, and can be temporarily increased or decreased by magical effects. Each base stat affects a set of derived stats
+STR - ATCK, BRDN, ATHL
+SPD - ATSP, MVMT
+SKL - ACCU, CRIT, ATHL, SLTH, TNKR
+STM - MXHP, MXMP, RESC, MVMT, ATHL, ENDR
+CON - ATSP, DFNS, MXHP, CAST, CSSP, BRDN, MVMT, ENDR
+
+CHA - PRSD, DCPT
+INT - CAST, SPLS, RITL, SLTH, TNKR, INVS, KNLW, DCPT
+WIS - MXMP, CAST, CSSP, INVS, PRSD
+FTH - CAST, RSNC, LOOT, RITL
+LCK - ACCU, EVSN, CRIT, LOOT, KNWL
+
+
+ITEM WEIGHT REFERENCES:
+1 wt = 1/4 lb ==> 1 lb = 4 wt
+key: 				1 (1/4 lb)
+shard: 			1 (1/4 lb)
+bottle: 		2 (1/2 lb)
+potion: 		4 (1 lb)
+shortsword: 8 (2 lbs)
+longsword: 	20 (5 lbs)
+giantsword: 40 (10 lbs)
+person: 		600 (150 lbs)
+
+
+WEAPON STATS:
+
+weight
+affects ATSP, MVMT
+ranging 1 - 20
+
+might
+affects ATCK
+ranging 1 - 20
+
+sleight
+affects ACCU
+ranging 1 - 20
+
+sharpness
+affects CRIT
+ranging 1 - 20
+
+range
+affects HIT%
+ranging 1 - 20
+
+reach
+affects attack distance
+ranging whatever
+
+
+
+ARMOR STATS:
+
+weight
+affects CAST, CSSP, MVMT
+ranging 1 - 20
+
+protection
+affects DFNS
+ranging whatever
+
+SHIELD STATS:
+
+weight
+affects ATSP
+ranging 1 - 20
+
+protection
+affects DFNS
+ranging whatever
+
+
+
+DERIVED STATS:
+24 stats, also called abilites. These stats can be affected by base stats, other derived stats, and the player's equipment. These stats affect the actions taken by the player, including attacks, casting spells, and social interaction. Each derived stat has a formula it is determined by.
+
+ACCU - accuracy
+chance to hit against enemy evasion
+50 + 2*SKL + LCK + weapon.sleight
+
+ATCK - attack
+the amount of max possible damage to the opponent before their damage reduction
+STR d weapon.might
+
+ATSP - attack speed
+combat order, number of attacks against enemy attack speed
+SPD - min0(weapon.weight - CON) - min0(shield.weight - CON)
+
+EVSN - evasion
+chance to not be hit against enemy accuracy,
+2*ATSP + LCK
+
+CRIT - critical hit
+chance of a double-damage hit
+SKL + LCK + weapon.sharpness
+
+DFNS - defense
+physical damage nullification
+CON + armor.protection + shield.protection
+
+MXHP - max hit point
+capacity of total health
+LV*CON + STM
+
+MXMP - max mana points
+capacity of total magic
+LV*WIS + STM
+
+CAST - casting bonus
+bonus applied to various magical effects
+WIS + FTH + INT - min0(armor.weight - CON)
+
+CSSP - casting speed
+speed to cast a spell
+WIS - min0(inventory.weight - BRDN) - min0(armor.weight - CON)
+
+SPLS - number of spells
+the maximum number of spells
+2*INT
+
+RESC - resistance
+magical damage nullification
+2*FTH + STM
+
+BRDN - burden
+carrying capacity without being hindered
+CON*STR + 20
+
+MVMT - movement
+movement distance
+SPD + STM + 10 - min0(inventory.weight - BRDN) - min0(armor.weight - CON) OR mount
+
+LOOT - item drop rate
+the rate and tier at which items and gold are dropped by enemies,
+2*LCK + FTH
+
+RITL - ritual
+ability to cast magical rituals and healing spells
+2*FTH + LCK
+
+ATHL - athletics
+ability to achieve physical activities
+STR + SKL + STM
+
+ENDR - endurance
+ability to endure things (poison, holding breath, regeneration, etc.)
+2*STM + CON
+
+SLTH - stealth
+ability to hide
+2*SKL + INT - min0(inventory.weight - BRDN)
+
+TNKR - tinker
+ability to craft items
+2*INT + SKL
+
+INVS - investigation
+ability to investigate
+2*INT + WIS
+
+KNWL - knowledge
+chance to know things
+2*INT + LCK
+
+PRSD - persuasion
+ability to persuade
+2*CHA + WIS
+
+DCPT - deception
+ability to decieve
+2*CHA + INT
+
+
+
+SWITCHES, LEVERS, BUTTONS:
+
+A switch is a superclass which contains levers and buttons
+Switches can be interacted with (via "use","pull","switch","press",etc.)
+When a switch is "triggered", it calls a specific effect which affects something about the world. In data, switches are stored with a string which refers to a function stored in the effects dict (at the bottom of Objects.py)
+This function is called when a switch is "triggered"
+
+Levers are switches that have 2 states; on or off. They change something when switched "on", and have the reverse effect when switched "off"
+
+Buttons are switches that simply do something when they are triggered. There can be permanent buttons, which can only be triggered once, or recurring buttons which can be triggered multiple times.
+
+Traps are switches that are triggered when the player performs an action other than "pull","switch", or "press". In other words, a switch which is triggered unintentionally by the player. Typically, a trap can only be triggered once, i.e. it has an attribute which begins as "off" and can only be changed to "on"
+
+
+WHAT CAN SWITCHES DO? (EXAMPLES)
+
+They can change the gamemode
+They can make an item or creature appear in the room
+Can alter something about an item, creature, or fixture in the room
+They can reveal a door to another room
+They can alter a players stats or status
+They can alter something in a different room in the world
+
+
+
+A GENERIC ACTION FUNCTION:
+
+if prepositions are invalid, return false
+if dobj or iobj values are required but not provided, ask for them
+search for required iobj and dobj objects in room or on player:
+	if they do not exist, return false
+if required iobj and dobj do not have the necessary attributes, return
+if the item object is affected in some way, call the relevant item methods
+if the player object is affected in some way, call relevant player methods
+return True
+
+
+TYPES OF ACTION FUNCTIONS:
+
+-no-prep function: functions which cannot take a preposition value:
+-single-prep functions: functions which take a single prepositon, usually "with"
+-multi-prep functions: functions which take a number of possible prep values
+
+-inventory search function: functions which search the player inv for an item
+-room item search function: functions which search room contents for an item
+-room creature search function: search room occupants for a creature
+-room search functions: search room for an item or creature
+-item search function: search room and player inv for an item
+-object search function: search room and player inv for creature or item
+
+
+
+
+IDEAS FOR CREATURES/NPCS:
+
+generally, three categories of creatures,
+person, monster, animal
+"villain" - subclass; big bad version of person
+"boss" - subclass; big bad version of a monster
+"beast" - subclass; big bad version of an animal
+
+all creatures have two stats associated with behavior toward the player:
+
+fondness: -100 to 100, represents how much they like the player, a creature with high fondness for the player is less likely to act aggressively toward the player, and more likely to be persuaded or deceived by the player
+
+fear: -100 to 100, represents how much they fear the player, a creature with high fear of the player is less likely to act aggressively toward the player, and less likely to be deceived by the player, but more likely to be persuaded
+
+people have dialogue options for the player and can be communicated with, persuaded, or deceived.
+
+monsters and animals cannot communicate with the player. Animals typically act more passively than monsters and have a limited set of actions they can take. Monsters can use items and weapons.
+
+each person has an initial value for their fondness and fear of new strangers (meaning the player), but upon meeting the player each time, their values deviate from that initial value with a firstImpression() function, which takes in several factors, including the player's amount gear, their type of gear, and their reputation points and sets their fondness and fear values. fear and fondness change with very subsequent meeting with the player to a lesser degree based on the same factors.
+
+fondness and fear are changed by specific dialogue options pursued by the player, and specific actions taken by the player taken toward the creature. additionally, dialogue options the player has with a given person are dependent upon how fond or fearful the person is.
+
+These values can also change, for monsters and animals as well, based on certain actions like giving gifts, buying and selling merchandise, attacking, healing, or casting a spell
+
+//note: creatures should contain a value which indicates how it will be addressed e.g. "The goblin", "Goblin", "a goblin", "goblins"
+
+
+MAKING AN ATTACK:
+
+turn order is determined by ATSP:
+    order is highest to lowest attack speed,
+    ties are settled by the highest SPD
+    ties of SPD are settled by 'defender goes first'
+number of attacks is determined:
+    n = floor(ATSP / target.ATSP) //maybe
+for each attack:
+    chance to hit is determined:
+        if weapon.ranged
+            HIT = min1(max99(ACCU - target.EVSN)) - min0(dist(player, target) - weapon.range)
+        else
+            HIT = min1(max99(ACCU - target.EVSN))
+		percentage roll to HIT
+    chance to crit is rolled
+    attack is rolled:
+		attack = STR d weapon.might
+		if critical
+			attack *= 3
+    damage is calculated:
+		damage = min0(attack - target.DFNS)
+    damage is dealt:
+        enemy.hp -= damage
+		#called in the enemy object, dmgtype passed as well
+
+
+
+CASTING A SPELL:
+
+really just depends...
+
+
+
+DAMAGE TYPES:
+
+p: piercing	[phys] - weapons that can stab
+s: slashing	[phys] - weapons that can slice
+b: bludgeoning	[phys] - weapons that can crush
+
+f: fire	[elem] - weapons that can burn
+c: cold	[elem] - weapons that can freeze
+l: lightning [elem] - weapons that can shock
+t: thunder [elem] - weapons that can burst
+a: acid [elem] - weapons that can corrode
+x: poison [elem] - weapons that can poison (duh)
+
+n: necrotic [mag] - weapons that drain lifeforce
+r: radiant [mag] - weapons that imbue holiness
+v: force	[mag] - weapons that evoke magical force
+i: psychic [mag] - weapons that harm the mind
+
+e: essential [dev] - weapons that transcend the universe
+
+
+
+PROPERTIES:
+
+weapon;
+nimble - bonus to attack speed
+keen - weapon doesn't lose sharpness
+striker - increased chance to hit/crit
+flaming - sets enemy on fire
+venom - poisons enemy
+frost - freezes enemy
+brilliant
+bright
+ironweave
+brave
+breaker
+magic
+razor
+searing
+
+mithril
+gold
+silver
+steel
+iron
+bronze
+tin
+wood
+glass
+
+armor;
+sanguine - overflow defense heals
+fortitude - invulnerability to a dmg type
+patient
+valorous
+robust
+phoenix - fire damage
+
+mithril
+gold
+silver
+steel
+iron
+bronze
+leather
+cloth
+
+
+
+STATUS EFFECTS:
+
+curses;
+
+weakness - lowers STR
+slowness - lowers SPD
+clumsiness - lowers SKL
+tiredness - lowers STM
+illness - lowers CON
+
+timidity - lowers CHA
+stupidity - lowers INT
+insanity - lowers WIS
+apathy - lowers FTH
+calamity - lower LCK
+
+blessings;
+
+brawniness - raises STR
+swiftness - raises SPD
+prowess - raises SKL
+liveliness - raises STM
+toughness - raises CON
+
+felicity - raises CHA
+sagacity - raises INT
+lucidity - raises WIS
+fidelity - raises FTH
+prosperity - raises LCK
+
+
+
+WORLD DESIGN IDEAS:
+
+several different "dungeons" exist in the the world
+however, I dont want them to be super "temple-y" like Legend of Zelda. that feels too restrictive, i want the world to feel less linear/sequential and a bit more open-ended
+
+so these dungeons are generally just clusters of room nodes in the world graph that match a certain theme or aesthetic, and they have different general difficulty levels
+
+-regular forest (starting location)
+-the gallery
+-haunted manor, abandoned manor on a hill thats v spooky
+-ancient mystical forest, full of illusions thats difficult to navigate
+-the catacombs, simple basic religious dungeon under a giant old cathedral
+-atlantis, underwater castle thats coral reef themed and fun, entered by getting to an island somewhere
+-caverns, early dungeon that is large underground caverns
+-necropolis, a massive sandy persian themed graveyard
+-"the tower", tower of ___, hundreds of floors, considered scary and forbidden by nearby townsfolk, probably one of the most dangerous dungeons
+-skyland, a beanstalk leads to a giants house? or smth on a floating cloud?
+-labyrinth, underground labyrinth (maybe library themed), that has magical connections to all kinds of places all over the world
+-mineshaft, underground mines maybe
+-spaceship, extra idea maybe with aliens lol
+-snowy peaks, maybe ice castle? something cold themed
+
+
+
+FOOD AND CONSUMABLE ITEMS:
+
+consumable items can heal hp, regenerate mp, and add or remove status effects.
+cooked/constructed meals have effects that are greater than the sum of their parts. different food groups tend to provide different benefits
+
+proteins/meats - vastly increase hp, synergize well in meals
+grains/starches - moderately increase hp, cheapest/most common
+fruits - minimally increase hp, each fruit adds a different status effect
+veggies - minimally increase hp, moderately increase mp
+dairy - minimally increase hp and mp, can remove bad status effects
+alcohol - same effects as fruit, but adds drunkeness
+water - raises hp and mp by 2
+
+Potions are bottled items that have different effects. Types of potions are:
+Red, Orange, Yellow, Green, Blue, Purple
+Pale Red, Pale Orange, Pale Yellow, Pale Green, Pale Blue, Pale Purple
+Dark Red, Dark Orange, Dark Yellow, Dark Green, Dark Blue, Dark Purple
+Bright Red, Bright Orange, Bright Yellow, Bright Green, Bright Blue, Bright Purple
+Clear, Pink, Brown, Black, Grey, White
+Bronze (defense), Silver (speed), Gold (atk/damg/crit)
+
+Fruits:
+Apple
+Banana
+Blueberry
+Blackberry
+Cranberry
+Cherry
+Coconut
+Dragonfruit
+Durian
+Elderberry
+Gooseberry
+Grape
+Grapefruit
+Guava
+Lemon
+Lime
+Lychee
+Mango
+Olive
+Orange
+Passionfruit
+Peach
+Pear
+Plum
+Cactusfruit
+Pineapple
+Pomegranate
+Quince
+Raspberry
+Starfruit
+Strawberry
+Watermelon
+
+THIRTEEN GODS WITH TEMPLES:
+
+god of strength, fighting, war, lightning
+god of speed, messages, flight, the sky, clouds
+god of skill, ninjas, archery, hunting
+god of stamina, athletics, victory, harvest
+god of constitution, crafting, smithing, fire
+god of charisma,
+god of intelligence,
+god of wisdom,
+god of faith,
+god of luck, tricks, games, cards
+
+sun/love, moon/friendship, death, harvest, war/storms, song/dance/art, animals/hunting, language/magic/truth, crafting/smithing/fire, law, the sea, betrayal/murder, beer/alcohol, trees?, healing, patience, prophecy/fate/stars, peace, wealth/trade, mercy/grace/forgiveness,
+
+https://www.ancient.eu/article/885/egyptian-gods---the-complete-list/
+sun/magic/love/song/music/art
+moon/magic/writing/math/truth
+
+"lord of truth"
+"queen mother"
+
+each of the gods appear in the world in a unique form, such as:
+a cat
+a giant wolf
+a giant serpent/python
+a poor old man
+a (devilish?) queen
+a talking weapon
+a whirlwind
+the same as the beholder (the player)
+a giant/cyclops
+a hooded wanderer
+a swarm of birds (or something else?)
+a dragon?
+a rock/mountain?
+a tree?
+a shadow (maybe tentacles?)
+a wisp/fairy?
+a goose?
+
+
+
+
+BRAINSTORM IDEAS:
+
+Norman's sword
+Norman's shield
+Norman's etc.
+
+Camphor Staff (or sm othr tree idk) Gingko Staff? etc,
+willow staff, banyan, aspen, birch, elm, sycamore
+Pantalon
+The Master Boomerang - (always comes back no matter what u do with it)
+Raygun (that deals E damage)
+Paragon Blade
+Nebula Shroud/Cloak
+
+An item set named after all the greek letters (super powerful)
+each one has a magical effect associated with each of the 24 derived stats
+
+Alpha sword			CRIT
+Nu dagger				ATSP
+Beta axe				ATCK
+Upsilon glaive	ENDR
+Tau hammer			ATHL
+Gamma bow				ACCU
+Omega shield		DFNS
+Phi crown				RESC
+
+Sigma tunic			EVSN
+Theta gauntlet	TNKR
+Psi boots				MVMT
+Delta cloak			SLTH
+Xi amulet				RITL
+Mu stone				MXMP
+Pi compass			LOOT
+Rho pack				BRDN
+
+Zeta wand				CAST
+Omicron tome		SPLS
+Epsilon ring		CSSP
+Chi torch				INVS
+Eta flask				MXHP
+Iota key				KNWL
+Lambda lyre			PRSD
+Kappa horn			DCPT
+
+CHARACTER NAMES:
+	Orion - boss
+	Pax - person
+	giant swamp crocodile
+	Lilith - demon lady? (Secret demon lady???)
+	Somnus
+	The zodiac signs
+	The Lady of the Lake
+	Enchantress of Number
+	Master of Ravens
+	villain king of people
+	villain king of monsters
+	villain king of beast
