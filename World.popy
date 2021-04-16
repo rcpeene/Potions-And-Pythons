@@ -1,4 +1,4 @@
-world.txt
+World.popy
 This file contains the initial world of Potions & Pythons.
 Specifically, it contains a list of all 'rooms' in the game,
 and all of the exits, items, and creatures in each room.
