@@ -14,7 +14,7 @@
 
 menuinstructions = "\nType 'info' for information on the game and how to play\nType 'new' to start a new game\nType 'load' to load a save file\nType 'delete' to delete a save file\nType 'quit' to quit the game\n"
 
-gameinfo = "\n\n\nPotions & Pythons\nv.Alpha\nBy Carter Peene, 2021\n\nTo play, type a command of the form:\n[verb] [*direct object] [*preposition] [*indirect object]\nOR\n[verb] [*preposition] [*direct object]\n\n* denotes a word that can be omitted when unnecessary\nArticles, determiners, and most symbols are removed from your input\n\nSee your main player statistics by typing 'stats' and 'traits'\nGet a description of the current place by typing 'here'\n\nGet a list of possible commands by typing 'help'\nLearn about most game terms and commands by typing 'define [term]'\n"
+gameinfo = "\n\n\nPotions & Pythons\nv.Alpha\nBy Carter Peene, 2021\n\nTo play, type a command of the form:\n[verb] [*direct object] [*preposition] [*indirect object]\nOR\n[verb] [*preposition] [*direct object]\n\n* denotes a word that can be omitted when unnecessary\nArticles, determiners, and most symbols are removed from your input\n\nSee your main player statistics by typing 'stats' and 'traits'\nGet a description of the current place by typing 'here'\nGet a list of possible commands by typing 'help'\nLearn about most game terms and commands by typing 'define [term]'\n"
 
 symbols = ".,!?~`\"()[]{}<>+=/*&^%$#@\t"
 

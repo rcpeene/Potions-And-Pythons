@@ -73,3 +73,19 @@ main()
 # add spells
 # add a world map/record visited rooms
 # add a window which shows player stats/possible commands/instructions
+
+
+
+# effects may include:
+#
+# spawning/destroying an item
+# lowering/raising an items stats
+# spawning/destroying a creature
+# lowering/raising a creature's stats
+# adding/remove a status effect
+# altering time/initiative order
+# adding/removing a room connection
+# adding/removing a room status effect
+# creating some obstacle
+# changing current room
+# to simply give the player information

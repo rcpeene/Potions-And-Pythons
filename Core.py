@@ -351,7 +351,8 @@ class Game():
 
 	def incrementTime(self):
 		self.time += 1
-		# for each creature (& maybe item):
+		# TODO:
+		# for each creature and room (& maybe item):
 		# 	for each status effect
 		# 		if its duration > 0
 		# 			decrement its duration
@@ -393,15 +394,13 @@ class Game():
 
 # used to define all rooms in the world
 class Room():
-	def __init__(self,name,desc,exits,contents,occupants):#,enter,exit):
+	def __init__(self,name,desc,exits,contents,occupants,effects):#,enter,exit):
 		self.name = name
 		self.desc = desc
 		self.exits = exits
 		self.contents = contents
 		self.occupants = occupants
-		# # these are strings which reference an effect via the effect dict
-		# self.enter = enter
-		# self.exit = exit
+		self.effects = effects
 
 	def __repr__(self):
 		return "{}".format(self.name)
@@ -426,14 +425,11 @@ class Room():
 		self.describeContents()
 		self.describeOccupants()
 
-	# does all work to be done when the room is entered
 	def enter(self):
-		# if self.enter:
-		# 	effects[self.enter](P,W,G)
 		self.describe()
 
-	# def exit(self):
-	# 	effects[self.exit](P,W,G)
+	def exit(self):
+		pass
 
 	def addItem(self,I):
 		insort(self.contents,I)

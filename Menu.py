@@ -157,6 +157,7 @@ def readRoom(roomtext,world):
 	exits = {}
 	contents = []
 	occupants = []
+	roomeffects = []
 	# for each line in roomtext
 	for l in range(len(roomtext)):
 		line = roomtext[l]
@@ -175,8 +176,12 @@ def readRoom(roomtext,world):
 			obj = readObj(objtext)
 			if tag == "$":	contents.append(obj)
 			if tag == "!":	occupants.append(obj)
+		elif line[0] == "*":	# room effects
+			pass
+			# effect = effects[]
+			# roomeffects.append()
 		elif line[0] == "~":	# end room data
-			world[name] = Room(name,desc,exits,contents,occupants)
+			world[name] = Room(name,desc,exits,contents,occupants,roomeffects)
 
 # reads all data in the world file, probably named "world.popy"
 # returns the World object as a dictionary of string: Room() pairs
