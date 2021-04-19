@@ -192,7 +192,20 @@ def Pypot(command):
 	except:	print("Value not number")
 
 def Set(command):
-	pass
+	attr = command[1]
+	val = command[2]
+	try:
+		getattr(P,attr)
+	except:
+		print("Attribute does not exist")
+		return
+	if isinstance(getattr(P,attr), int):
+		try:
+			val = int(command[2])
+		except:
+			print("Invalid value type")
+			return
+	setattr(P,command[1],val)
 
 def Teleport(command):
 	location = command[1]

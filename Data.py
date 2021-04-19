@@ -54,7 +54,7 @@ initgear = {"head":-1, "body":-1, "left":-1, "right":-1, "legs":-1}
 
 instantactions = {"describe","define","gear","help","hp","info","information","inventory","inv","level","lv","money","mp","quit","room","rp","save","status","time","traits","xp"}
 
-codes = {"\\lrn","\\mod","\\pot","\\tpt","\\wrp"}
+codes = {"\\lrn","\\mod","\\pot","\\set","\\tpt","\\wrp"}
 
 
 # the following are tuples because their order should be preserved for printing

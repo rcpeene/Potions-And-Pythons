@@ -380,7 +380,7 @@ def newGame():
 	G = Game(0,W["cave"],W["cave"],0)
 	ellipsis(3)
 	# enter the starting room
-	G.startUp()
+	G.startUp(P,W)
 	return P, W, G
 
 # automatically starts a new game with a premade character for easy testing

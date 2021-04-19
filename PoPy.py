@@ -27,10 +27,10 @@ main()
 
 # CURRENT TASKS:
 
-# add "it" variable in G class? maybe ordered list of most recent items, starting with the last item player referred to, followed by last items which were referred to in output?
-
 # fix "you are no longer hindered" in Creature function to only work w/ player
 # consider making potion a subclass of bottle
+
+# add "it" variable in G class? maybe ordered list of most recent items, starting with the last item player referred to, followed by last items which were referred to in output?
 
 # reevaluate effect functions, is there a way to reference a function by string?
 # revise the way status effects are implemented, probably store them as a tuple containing the effect counter and a timer?

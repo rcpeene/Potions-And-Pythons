@@ -3,7 +3,7 @@ DESIGN FOR POTIONS AND PYTHONS ALPHA
 
 
 NOTES ON THE CONVENTIONS AND FORMATTING USED IN THIS CODE PROJECT
--source are named with capital letters to distinguish them from python modules
+-source files are named with capital letters to distinguish them from python modules
 
 -other files are named in lowercase and named as .POPY files, which are just stored as ASCII plaintext
 
@@ -29,7 +29,7 @@ NOTES ON THE CONVENTIONS AND FORMATTING USED IN THIS CODE PROJECT
 
 -typically, capital S refers to a "source" item. That is, an item which contains another item, usually I.
 
--strings are denoted with "", unless it is necessary to use a string that contains " in it, in which case, the entire function in question uses '' to denote strings
+-strings are denoted with "", unless it is necessary to use a string that contains " in it, in which case, the entire function of relevance uses '' to denote strings
 
 -strings which are concatenated with variables are formatted using f-string formatting. The + operator is used when there is only one string 'fragment'. For example;
 	f"There is no '{obj.name}' here"

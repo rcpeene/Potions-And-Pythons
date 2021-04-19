@@ -653,12 +653,12 @@ class Creature():
 		self.inv.remove(I)
 		if hasattr(I,"Drop") and callable(I.Drop):
 			I.Drop(I)
-		if self.invWeight() < self.BRDN() and "hindered" in self.status:
-			self.status.remove("hindered")
-			print("You are no longer hindered")
+		if self.invWeight() < self.BRDN():
+			self.removeCondition("hindered")
 
-	def addCondition(self,cond):
-		self.status.add(cond)
+	def addCondition(self,cond,stackable=False):
+		if cond not in self.status:
+			self.status.add(cond)
 
 	def removeCondition(self,cond):
 		if cond in self.status:
@@ -772,7 +772,7 @@ class Player(Creature):
 			i = 0
 			while trait not in traits:
 				trait = input("> ").upper()
-			#increment corresponding player trait
+			# increment corresponding player trait
 			traitval = getattr(self,trait)
 			setattr(self,trait.upper(),traitval+1)
 			QP -= 1
@@ -817,9 +817,12 @@ class Player(Creature):
 		print(f"You healed {heal} HP")
 		return heal
 
-	def addCondition(self,cond):
-		self.status.add(cond)
-		print("You are " + cond)
+	def addCondition(self,cond,msg="",stackable=False,):
+		if cond not in self.status:
+			self.status.add(cond)
+			if msg != "":
+				print(msg)
+			print("You are " + cond)
 
 	def removeCondition(self,cond):
 		if cond in self.status:
@@ -834,9 +837,7 @@ class Player(Creature):
 		if self.invWeight() + I.Weight() > self.BRDN() * 2:
 			return False
 		if self.invWeight() + I.Weight() > self.BRDN():
-			if "hindered" not in self.status:
-				print("Your Inventory is getting full, you are Hindered")
-				self.status.add("hindered")
+			self.addCondition("hindered","Your inventory is growing heavy.")
 		insort(self.inv,I)
 		S.removeItem(I)
 		if hasattr(I, "Obtain") and callable(I.Obtain):

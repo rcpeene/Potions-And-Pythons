@@ -1,0 +1,18 @@
+"Aegis", "a guy", 1, 1, [1,1,1,1,1,1,1,1,1,1], 0, 
+	[$Controller ("Amulet of Poisoned", "a green amulet shaped like a teardrop", 2, 10, "addPoisoned(P)"),
+	$Controller ("Amulet of Swords", "a red amulet shaped like a sword", 2, 10, "spawnItem(G,Sword('sword', 'a plain iron sword', 8, 10, 2, 2, 2, 0, False, 's'))"),
+	$Potion ("blue potion", "a blue bubbly brew in a glass bottle", 4, 10),
+	$Potion ("blue potion", "a blue bubbly brew in a glass bottle", 4, 10),
+	$Bread ("breadroll", "a small roll of bread", 1, 10),
+	$Box ("chest", "a large wooden chest", 4, 10, False, 
+	[$Lockbox ("capsule", "a metal capsule", 1, 10, False, [], True),
+	$Box ("small chest", "a small wooden chest", 4, 10, False, 
+	[$Potion ("blue potion", "a blue bubbly brew in a glass bottle", 4, 10),
+	$Bread ("breadroll", "a small roll of bread", 1, 10)])]),
+	$Compass ("compass", "a plain steel compass with a red arrow", 2, 10),
+	$Potion ("red potion", "a red bubbly brew in a glass bottle", 4, 3),
+	$Sign ("sign", "A wooden sign", 10, 7, "Welcome to the Land!
+Watch out for Snakes."),
+	$Sword ("sword", "a plain iron sword", 8, 10, 2, 2, 2, 0, 0, "s"),
+	$Sword ("sword", "a plain iron sword", 8, 10, 2, 2, 2, 0, 0, "s")], 
+	{"head": -1, "body": -1, "left": -1, "right": -1, "legs": -1}, [], 0, 0
