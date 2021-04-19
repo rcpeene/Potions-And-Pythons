@@ -497,6 +497,7 @@ class Item():
 
 	# used to create a generic Weapon() if this item is used to attack something
 	def improviseWeapon(self):
+		#TODO: if item is too large/heavy, make it two-handed
 		return Weapon(self.name,self.desc,self.weight,self.durability,minm(1,self.weight//4),0,0,0,False,"b")
 
 	def describe(self):
@@ -560,7 +561,6 @@ class Creature():
 	# the index of the equipped object in the creature's inventory
 	# if the gear slot is empty, replaces it with -1
 	def compressGear(self):
-		print(self.inv)
 		C = {}
 		for key in self.gear:
 			item = self.gear[key]
@@ -848,28 +848,35 @@ class Player(Creature):
 	# only used by equip and unequip to reassign several attributes
 	# specifically, weapon, weapon2, shield, shield2
 	def assignWeaponAndShield(self):
-		# right is always the default weapon unless only left hand has a weapon
-		self.weapon = self.gear["right"]
+		#if unassigned, attributes are empty, self.weapon is always assigned
 		self.weapon2 = Empty()
 		self.shield = Empty()
 		self.shield2 = Empty()
-		# if holding two weapons
-		if isinstance(self.gear["left"], Weapon) and isinstance(self.gear["right"], Weapon):
+
+		# assign weapon and weapon2 based on types of gear in left and right
+		if isinstance(self.gear["right"],Weapon) and isinstance(self.gear["left"],Weapon):
 			self.weapon2 = self.gear["left"]
-		# if holding two shields
-		elif isinstance(self.gear["left"], Shield) and isinstance(self.gear["right"], Shield):
+		elif isinstance(self.gear["left"],Weapon) and not isinstance(self.gear["right"],Weapon):
+			self.weapon = self.gear["left"]
+		elif isinstance(self.gear["left"],Item) and self.gear["right"] == Empty():
+			self.weapon = self.gear["left"]
+		else:
+			self.weapon = self.gear["right"]
+
+		# ensure that weapons are of type Weapon
+		if not isinstance(self.weapon,Weapon):
+			self.weapon = self.weapon.improviseWeapon()
+		if not isinstance(self.weapon2,Weapon):
+			self.weapon2 = self.weapon.improviseWeapon()
+
+		# assign shield and shield2 based on types of gear in left and right
+		if isinstance(self.gear["right"],Shield) and isinstance(self.gear["left"],Shield):
 			self.shield = self.gear["right"]
 			self.shield2 = self.gear["left"]
-		# if shield only in left hand
-		elif isinstance(self.gear["left"], Shield):
-			self.shield = self.gear["left"]
-		# if shield only in right hand, then weapon is in left hand
-		elif isinstance(self.gear["right"], Shield):
+		elif isinstance(self.gear["right"],Shield):
 			self.shield = self.gear["right"]
-			self.weapon = self.gear["left"]
-		# if only the players left hand item is a weapon and there is no shield
-		elif isinstance(self.gear["left"], Weapon):
-			self.weapon = self.gear["left"]
+		elif isinstance(self.gear["left"],Shield):
+			self.shield = self.gear["left"]
 
 	# if the item is armor, equip it, otherwise return False
 	def equipArmor(self,I):
@@ -941,11 +948,11 @@ class Player(Creature):
 			if self.weapon2 != Empty():	self.dualAttack(target,G)
 			if target.alive == False:	return
 
-	def attackItem(self,target):
+	def attackItem(self,target,G):
 		attack = self.ATCK()
 		print(f"{attack} damage")
 		if target.durability != -1 and attack > target.durability:
-			target.Break()
+			target.Break(self,G,G.currentroom)
 		else:
 			print("Nothing happens")
 			return

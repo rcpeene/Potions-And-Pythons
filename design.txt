@@ -531,7 +531,9 @@ for each attack:
         enemy.hp -= damage
 		#called in the enemy object, dmgtype passed as well
 
+EQUIPPING ITEMS/WEAPONS:
 
+ASSIGNING WEAPONS AND SHIELDS
 
 CASTING A SPELL:
 

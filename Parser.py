@@ -259,11 +259,13 @@ def Attack(dobj,iobj,prep):
 		print("Command not understood")
 		return False
 
-	if iobj == None and len(P.weapons()) == 0:	iobj = "fist"
-	if iobj == None and P.weapon == Empty() and P.weapon2 == Empty():
-		iobj = getobj("What will you attack with?")
-		if iobj in cancels:
-			return False
+	if iobj == None:
+		if len(P.weapons()) == 0:
+			iobj = "fist"
+		elif P.gear["right"] == Empty() and P.gear["left"] == Empty():
+			iobj = getobj("What will you attack with?")
+			if iobj in cancels:
+				return False
 	weapon = P.weapon
 	if iobj != None:
 		weapon = P.inGear(iobj)
@@ -285,14 +287,13 @@ def Attack(dobj,iobj,prep):
 
 	if iobj in {"fist","hand","foot","leg","mouth","teeth"}:
 		stowedweapons = P.weapon,P.weapon2
-		P.weapon,P.weapon2 = weapon,Empty()
+		P.weapon,P.weapon2 = weapon.improviseWeapon(),Empty()
 	elif weapon not in P.gear.values():
 		P.equipInHand(weapon)
-	if not isinstance(weapon,Weapon):	weapon = weapon.improviseWeapon()
 
 	print(f"\nYou attack the {target.name} with {P.weapon.name}")
 	if isinstance(target,Creature):		P.attackCreature(target,G)
-	elif isinstance(target,Item):		P.attackItem(target)
+	elif isinstance(target,Item):		P.attackItem(target,G)
 	if iobj in {"fist","hand","foot","leg"}:
 		P.weapon,P.weapon2 = stowedweapons
 	return True
@@ -533,7 +534,7 @@ def Equip(dobj,iobj,prep):
 
 	I = P.inInv(dobj)
 	if I == None:
-		print(f"There is no available'{dobj}' in your inventory")
+		print(f"There is no available '{dobj}' in your inventory")
 		return False
 
 	if P.inGear(dobj) and P.invNames().count(dobj) == 1:
