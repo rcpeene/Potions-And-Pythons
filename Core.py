@@ -472,7 +472,6 @@ class Item():
 		self.desc = desc
 		self.weight = weight
 		self.durability = durability
-		self.ID = None
 
 	def __repr__(self):
 		return f"${self.name}"
@@ -540,7 +539,6 @@ class Creature():
 		self.shield2 = Empty()
 
 		# these attributes remain unused in the Player subclass
-		self.ID = None
 		self.alive = True
 		self.seesPlayer = False
 		self.sawPlayer = -1
@@ -705,7 +703,6 @@ class Creature():
 		self.alive = False
 		print("agh its... ded?")
 		G.currentroom.occupants.remove(self)
-		G.deleteID(self)
 		#drop some wealth or items
 		P.gainxp(10)
 		P.gainMoney(P.LOOT())
@@ -791,7 +788,7 @@ class Player(Creature):
 
 	# adds money
 	def gainMoney(self,money):
-		print(f"\nYou gained ᵽ{money}!")
+		print(f"\nYou gained Ᵽ{money}!")
 		self.money += money
 
 	# called when player hp hits 0
@@ -805,7 +802,7 @@ class Player(Creature):
 	# takes incoming damage, accounts for damage vulnerability or resistance
 	def takedmg(self,dmg,type):
 		if(f"{type} vulnerability" in self.status):	dmg *= 2
-		if(f"{type} resistance" in self.status):		dmg /= 2
+		if(f"{type} resistance" in self.status):	dmg /= 2
 		if(f"{type} immunity" in self.status):		dmg = 0
 		print(f"You took {dmg} {dmgtypes[type]} damage")
 		self.hp = minm(0, self.hp-dmg)	#player hp lowered to a minimum of 0
@@ -976,7 +973,7 @@ class Player(Creature):
 		else:	columnPrint(self.status,12,12)
 
 	# each prints a different player stat
-	def printMoney(self): print(f"ᵽ{self.money}")
+	def printMoney(self): print(f"Ᵽ{self.money}")
 	def printHP(self): print(f"HP: {self.hp}/{self.MXHP()}")
 	def printLV(self): print(f"LV: {self.level()}")
 	def printMP(self): print(f"MP: {self.mp}/{self.MXMP()}")
@@ -997,7 +994,7 @@ class Player(Creature):
 
 	# prints player level, money, hp, mp, rp, and status effects
 	def printStats(self):
-		stats = [self.name, f"LV: {self.level()}", f"ᵽ{self.money}", f"RP: {self.rp}", f"HP: {self.hp}/{self.MXHP()}", f"MP: {self.mp}/{self.MXMP()}"]
+		stats = [self.name, f"LV: {self.level()}", f"Ᵽ{self.money}", f"RP: {self.rp}", f"HP: {self.hp}/{self.MXHP()}", f"MP: {self.mp}/{self.MXMP()}"]
 		columnPrint(stats,3,16)
 		if len(self.status) != 0:
 			self.printStatus()
@@ -1187,7 +1184,6 @@ def removePoisoned(C):
 # spawns an item in the room
 def spawnItem(G,I):
 	print(f"A {I.name} appears in front of you!")
-	G.createID(I)
 	G.currentroom.addItem(I)
 
 

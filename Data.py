@@ -63,7 +63,7 @@ traits = ("STR","SKL","SPD","STM","CON","CHA","INT","WIS","FTH","LCK")
 
 abilities = ("ACCU","ATCK","ATHL","ATSP","BRDN","CAST","CRIT","CSSP","DCPT","DFNS","ENDR","EVSN","INVS","KNWL","LOOT","MVMT","MXHP","MXMP","PRSD","RESC","RITL","SLTH","SPLS","TNKR")
 
-shortverbs = ("back","clear","cry","dance","help","info","information","laugh","quit","return","here","save","scream","shout","sing","time","yell")
+shortverbs = ("back","clear","cry","dance","help","info","information","laugh","quit","return","here","save","scream","shout","sing","time","yawn","yell")
 
 statcommands = ("abilities","accu","atck","athl","atsp","brdn","cast","crit","cssp","dcpt","dfns","endr","evsn","gear","hp","inventory","inv","invs","knwl","level","loot","lv","money","mp","mvmt","mxhp","mxmp","prsd","resc","ritl","rp","slth","spls","stats","status","tnkr","traits","weapons","xp")
 
@@ -564,9 +564,9 @@ bubbleFrames = [bubbleFrame0,bubbleFrame1,bubbleFrame2,bubbleFrame3,bubbleFrame4
 
 
 
+
+
 # you're still here? it's over! go home.
-
-
 
 
 

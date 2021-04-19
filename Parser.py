@@ -234,6 +234,7 @@ def Save(): saveGame(P,W,G)
 def Shout(): print("AHHHHHHHHHH")
 def Sing(): print("Falalalaaaa")
 def Time(): print("Time:", G.time)
+def Yawn():	print("This is no time for slumber!")
 
 
 ##################################
@@ -456,7 +457,7 @@ def Drink(dobj,iobj,prep):
 		return False
 
 	if hasattr(I, "Drink") and callable(I.Drink):
-		I.Drink(P,S)
+		I.Drink(P,G,S)
 		return True
 	else:
 		print("You can't drink the " + I.name)
@@ -958,7 +959,8 @@ shortactions = {
 "traits":P.printTraits,
 "weapons":P.printWeapons,
 "xp":P.printXP,
-"yell":Shout
+"yell":Shout,
+"yawn":Yawn
 }
 
 actions = {

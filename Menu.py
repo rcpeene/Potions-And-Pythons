@@ -388,7 +388,7 @@ def testGame():
 	W = readWorld("world.popy")
 	traits = [4 for _ in range(10)]
 	C = Compass("compass", "a plain steel compass with a red arrow", 2, 10)
-	P = Player("Norman","a hero",24,24,traits,1000,[C],initgear,{"fireproof","blah","poisoned","cursed","immortal","sharpshoot","invisible","fly"},1585,100)
+	P = Player("Norman","a hero",24,24,traits,1000,[C],initgear,{"fireproof","poisoned","cursed","immortal","sharpshoot","invisible","fly"},1585,100)
 
 	clearScreen()
 	G = Game(0,W["glen"],W["tunnel"],0)
