@@ -178,8 +178,8 @@ def parse(command,n):
 ##########################################
 
 def Learn(command):
-	P.gainxp(int(command[1]))
-	# except:	print("Value not number")
+	try:	P.gainxp(int(command[1]))
+	except:	print("Value not number")
 
 def Mode(command):
 	try:
@@ -283,12 +283,12 @@ def Attack(dobj,iobj,prep):
 		print("There is no '" + dobj + "' here")
 		return False
 
-	if not isinstance(weapon,Weapon):	weapon = weapon.improviseWeapon()
 	if iobj in {"fist","hand","foot","leg","mouth","teeth"}:
 		stowedweapons = P.weapon,P.weapon2
 		P.weapon,P.weapon2 = weapon,Empty()
 	elif weapon not in P.gear.values():
 		P.equipInHand(weapon)
+	if not isinstance(weapon,Weapon):	weapon = weapon.improviseWeapon()
 
 	print(f"\nYou attack the {target.name} with {P.weapon.name}")
 	if isinstance(target,Creature):		P.attackCreature(target,G)
@@ -316,13 +316,13 @@ def Bite(dobj,iobj,prep):
 	else:
 		return Attack(dobj,"mouth",prep)
 
-	# if u add the ability to "bite" items, maybe actually damage them...
+	# TODO: if u add the ability to "bite" items, maybe actually damage them...
 	# if their durability is low enough or smth. Maybe append the item's...
 	# description to include "it has a bite taken out of it"
 	# perhaps if player swallows something inedible, take damage?
 
 def Break(dobj,iobj,prep):
-	# potentially just redirect this func to attack, idk
+	# TODO: potentially just redirect this func to attack, idk
 	if prep not in {"with",None}:
 		print("Command not understood")
 		return False

@@ -560,6 +560,7 @@ class Creature():
 	# the index of the equipped object in the creature's inventory
 	# if the gear slot is empty, replaces it with -1
 	def compressGear(self):
+		print(self.inv)
 		C = {}
 		for key in self.gear:
 			item = self.gear[key]
@@ -645,7 +646,12 @@ class Creature():
 		print(self.desc)
 
 	def addItem(self,I):
+		if self.invWeight() + I.Weight() > self.BRDN() * 2:
+			return False
+		if self.invWeight() + I.Weight() > self.BRDN():
+			self.addCondition("hindered")
 		insort(self.inv,I)
+		return True
 
 	def removeItem(self,I):
 		if I in self.gear.values():
@@ -820,8 +826,7 @@ class Player(Creature):
 	def addCondition(self,cond,msg="",stackable=False,):
 		if cond not in self.status:
 			self.status.add(cond)
-			if msg != "":
-				print(msg)
+			if msg != "":	print(msg)
 			print("You are " + cond)
 
 	def removeCondition(self,cond):
@@ -829,10 +834,6 @@ class Player(Creature):
 			self.status.remove(cond)
 			print("You are no longer " + cond)
 
-	# if item wouldn't exceed player carrying capacity,
-	# removes item from takeFrom (which can be a room, item, creature, etc.)
-	# adds item to inventory, calls the item's Obtain() function
-	# returns True or False depending on success of the operation
 	def obtainItem(self,I,S,W,G):
 		if self.invWeight() + I.Weight() > self.BRDN() * 2:
 			return False
@@ -841,7 +842,7 @@ class Player(Creature):
 		insort(self.inv,I)
 		S.removeItem(I)
 		if hasattr(I, "Obtain") and callable(I.Obtain):
-			I.Obtain(self, W, G)
+			I.Obtain(self,W,G)
 		return True
 
 	# only used by equip and unequip to reassign several attributes

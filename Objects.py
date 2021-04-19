@@ -17,9 +17,9 @@ from Core import *
 class Bottle(Item):
 	# breaks the bottle, removes it from player inventory, and randomly...
 	# generates a number of shards between 1,5 into the room.
-	def Break(self,P,G,source):
-		print("You break the bottle. Shards of glass scatter everywhere")
-		source.removeItem(self)
+	def Break(self,P,G,S):
+		print(f"The {self.name} breaks. Shards of glass scatter everywhere")
+		S.removeItem(self)
 		for i in range(randint(3,6)):	#randomly generates n shards between 3,6
 			newShard = Shard("shard","a sharp shard of glass",1,-1)
 			G.currentroom.addItem(newShard)
@@ -159,20 +159,13 @@ class Mouth(Item):
 	def improviseWeapon(self):
 		return Weapon(self.name,self.desc,self.weight,self.durability,minm(1,self.weight//4),0,0,4,False,"p")
 
-class Potion(Item):
+class Potion(Bottle):
 	# heals the player hp 1000, replaces potion with an empty bottle
 	def Drink(self,P,G,S):
 		print("You drink the potion")
 		P.heal(1000)
 		S.removeItem(self)
 		P.addItem(Bottle("bottle","an empty glass bottle",3,3))
-
-	def Break(self,P,G,S):
-		print("You break the bottle. The potion spills and shards of glass scatter everywhere")
-		S.removeItem(self)
-		for i in range(randint(3,6)):	#randomly generates n shards between 3,6
-			newShard = Shard("shard","a sharp shard of glass",1,-1)
-			G.currentroom.addItem(newShard)
 
 class Shard(Item):
 	#???
