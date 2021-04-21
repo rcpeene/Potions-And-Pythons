@@ -1,0 +1,4 @@
+#popy.gitignore
+
+__pycache__/
+saves/

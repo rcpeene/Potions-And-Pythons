@@ -108,6 +108,8 @@ def getcmd():
 	# take input until input has any non-whitespace characters in it
 	while not any(i not in "\t " for i in rawcommand):
 		rawcommand = input("> ")
+	# for convenience, save raw command in game class
+	G.lastRawCommand = rawcommand.split()
 	# lowercase the sentence command, copy it excluding symbols
 	rawcommand = rawcommand.lower()
 	purecommand = ""
@@ -144,7 +146,7 @@ def parse(command,n):
 	prep = None
 
 	if verb in codes:
-		return cheatcodes[verb](command)
+		return cheatcodes[verb](G.lastRawCommand)
 	elif verb in shortverbs or verb in statcommands:
 		if len(command) != 1:
 			return promptHelp(f"The '{verb}' command can only be one word",n)
@@ -177,6 +179,14 @@ def parse(command,n):
 ## CHEATCODES AND DEV COMMAND FUNCTIONS ##
 ##########################################
 
+def Get(command):
+	if command[1] in {"p","player"}:
+		obj = P
+	else:
+		obj = objSearch(command[1],G.currentroom,d=3)
+	attrString = command[2]
+	print(getattr(obj,attrString))
+
 def Learn(command):
 	try:	P.gainxp(int(command[1]))
 	except:	print("Value not number")
@@ -192,24 +202,17 @@ def Pypot(command):
 	except:	print("Value not number")
 
 def Set(command):
-	attr = command[1]
-	val = command[2]
-	try:
-		getattr(P,attr)
-	except:
-		print("Attribute does not exist")
-		return
-	if isinstance(getattr(P,attr), int):
-		try:
-			val = int(command[2])
-		except:
-			print("Invalid value type")
-			return
-	setattr(P,command[1],val)
+	if command[1] in {"p","player"}:
+		obj = P
+	else:
+		obj = objSearch(command[1],G.currentroom,d=3)
+	attrString = command[2]
+	val = command[3]
+	setStat(obj,attrString,val)
 
 def Teleport(command):
 	location = command[1]
-	if location in W:	G.changeRoom(W[location])
+	if location in W:	G.changeRoom(W[location],P,W)
 	else:				print("Location not in world")
 
 def Warp(command):
@@ -589,7 +592,7 @@ def Go(dobj,iobj,prep):
 	if dobj in G.currentroom.exits.keys():
 		dobj = G.currentroom.exits[dobj]
 	if dobj in G.currentroom.exits.values():
-		G.changeRoom(W[dobj])
+		G.changeRoom(W[dobj],P,W)
 		return True
 	if dobj in directions.values():
 		print(f"There is no exit leading {dobj} here")
@@ -933,6 +936,7 @@ def Wave(dobj,iobj,prep):
 ##################################
 
 cheatcodes = {
+	"\\get":Get,
 	"\\lrn":Learn,
 	"\\mod":Mode,
 	"\\pot":Pypot,

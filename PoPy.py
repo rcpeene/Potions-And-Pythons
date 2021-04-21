@@ -26,20 +26,25 @@ main()
 
 
 # CURRENT TASKS:
+#TODO: research using map() in python, and passing functions as arguments
 
+# figure out how doors work, which can close and open between rooms
 # reevaluate effect functions, is there a way to reference a function by string?
+
 # revise the way status effects are implemented, probably store them as a tuple containing the effect counter and a timer?
 # how will amulet effects work??
 # evaluate enter, exit functions in room
+
+# add 'initiative order' for creature actions
+# add time to verbs?
+
+# add "it" variable in G class? maybe ordered list of most recent items, starting with the last item player referred to, followed by last items which were referred to in output?
 
 # figure out animal behavior
 # creatures attacking?
 # add monsters/monster behavior
 # figure out combat? attack items?
 # fix the fact that creatures can't die outside of the currentroom?
-
-# add 'initiative order' for creature actions
-# add time to verbs?
 
 # add locking/unlocking items
 # add Steal
@@ -48,8 +53,6 @@ main()
 # add range and ranged weapons???
 # add new weapons and TEST
 # more switches, levers, buttons
-
-# add "it" variable in G class? maybe ordered list of most recent items, starting with the last item player referred to, followed by last items which were referred to in output?
 
 # add object name disambiguation?
 # add object plural type? 'there is some bread' vs 'there is a bread'
@@ -77,7 +80,7 @@ main()
 
 
 # effects may include:
-#
+
 # spawning/destroying an item
 # lowering/raising an items stats
 # spawning/destroying a creature
@@ -89,3 +92,9 @@ main()
 # creating some obstacle
 # changing current room
 # to simply give the player information
+
+
+# status effects are tuples of the form (name, duration)
+# where duration is an integer representing the number of time units remaining
+# a duration of -1 means the effect lasts until removed
+# a duration of -2 means the effect was imbued from being in a room and it lasts until it is no longer afflicted again

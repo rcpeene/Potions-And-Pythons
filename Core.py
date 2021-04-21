@@ -342,6 +342,7 @@ class Game():
 		self.currentroom = currentroom
 		self.prevroom = prevroom
 		self.time = time
+		self.lastRawCommand = None
 
 	def startUp(self,P,W):
 		self.currentroom.describe()
@@ -386,11 +387,11 @@ class Game():
 		rooms.add(self.currentroom)
 		return rooms
 
-	def changeRoom(self,newroom):
-		# self.prevroom.exit()
+	def changeRoom(self,newroom,P,W):
+		self.prevroom.exit(P,W,G)
 		self.prevroom = self.currentroom
 		self.currentroom = newroom
-		self.currentroom.enter()
+		self.currentroom.enter(P,W,G)
 
 # used to define all rooms in the world
 class Room():
@@ -425,10 +426,12 @@ class Room():
 		self.describeContents()
 		self.describeOccupants()
 
-	def enter(self):
+	def enter(self,P,W,G):
 		self.describe()
+		# for tuple in effectslist:
+		# 	func name = tuple
 
-	def exit(self):
+	def exit(self,P,W,G):
 		pass
 
 	def addItem(self,I):
@@ -1175,30 +1178,84 @@ class Legs(Armor):
 ##  EFFECT FUNCTIONS ##
 #######################
 
-def addPoisoned(C):
-	C.addCondition("poisoned")
-
 # changes global game mode from 1 to 0 or 0 to 1
-def changeMode(P,W,G):
+def changeMode(G):
 	print("Ring!")
 	G.mode = 1 if G.mode == 0 else 0
 
-def removePoisoned(C):
-	C.removeCondition("poisoned")
+def changeTime(G,t):
+	G.time = t
+
+def setStat(C,attrString,val):
+	# try:
+	attr = getattr(C,attrString)
+	# except:
+	# 	print("Attribute does not exist")
+	# 	return
+	if isinstance(attr,int):
+		try:
+			val = int(val)
+		except:
+			print("Invalid value type")
+			return
+	setattr(C,attrString,val)
+
+def changeStat(C,attr,diff):
+	try:
+		attr = getattr(P,attr)
+	except:
+		print("Attribute does not exist")
+		return
+	setattr(C,attr,attr+val)
+
+def addCondition(A,cond):
+	A.addCondition(cond)
+
+def removeCondition(A,cond):
+	A.removeCondition(cond)
 
 # spawns an item in the room
 def spawnItem(G,I):
 	print(f"A {I.name} appears in front of you!")
 	G.currentroom.addItem(I)
 
+def destroyItem(S,I):
+	if isinstance(S,Player):	print(f"Your {I.name} is destroyed")
+	else:						print(f"The {I.name} is destroyed")
+	S.removeItem(I)
+
+def destroyItemsByType(R,Type,d=0,msg=""):
+	#TODO: make this work efficiently
+	items = objTreeToSet(S,d=d)
+	for item in items:
+		if isinstance(item,Type):
+			S,I = objSearch(item.name,R,d=d,reqSource=True)
+			S.removeItem(I)
+	if msg != "":
+		print(msg)
+
+
+# effects may include:
+
+# spawning/destroying an item
+# lowering/raising an items stats
+# spawning/destroying a creature
+# lowering/raising a creature's stats
+# adding/remove a status effect
+# altering time/initiative order
+# adding/removing a room connection
+# adding/removing a room status effect
+# creating some obstacle
+# changing current room
+# to simply give the player information
 
 #######################
 ## EFFECT DICTIONARY ##
 #######################
 
-effects = {
-	"addPoisoned":addPoisoned,
-	"changeMode":changeMode,
-	"removePoisoned":removePoisoned,
-	"spawnItem":spawnItem
-}
+# effects = {
+# 	"addPoisoned":addPoisoned,
+# 	"changeMode":changeMode,
+# 	"removePoisoned":removePoisoned,
+# 	"spawnItem":spawnItem
+# }

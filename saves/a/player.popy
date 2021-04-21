@@ -1,0 +1,5 @@
+"Norman", "a hero", 24, 24, [4,4,4,4,4,4,4,4,4,4], 1000, 
+	[$Compass ("compass", "a plain steel compass with a red arrow", 2, 10)], 
+	{"head": -1, "body": -1, "left": -1, "right": -1, "legs": -1}, 
+	["poisoned", "invisible", "cursed", "sharpshoot", "fireproof", "fly", "immortal"], 
+	1585, 100
