@@ -822,3 +822,6 @@ CHARACTER NAMES:
 	villain king of people
 	villain king of monsters
 	villain king of beasts
+
+
+stoats, lemmings as creatures

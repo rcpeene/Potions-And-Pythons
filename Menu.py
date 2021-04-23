@@ -10,6 +10,7 @@
 
 import sys
 import os
+# import json
 
 from Objects import *
 
@@ -263,12 +264,58 @@ def saveGame(P,W,G):
 	writeWorld("world.popy", W)
 	writePlayer("player.popy", P)
 	writeGame("game.popy", G)
-
+	writeJSON("testsave.json", W)
 	os.chdir("..")
 	os.chdir("..")
 	sleep(1)
 	print("Game saved")
 	sleep(1)
+
+# class worldEncoder(json.JSONEncoder):
+# 	def default(self, o):
+# 		if type(o) == set:
+# 			return {"__class__":"set","setdata":list(o)}
+# 		# elif type(o) == Room:
+# 		# 	return o.__dict__
+# 		elif type(o) not in JSONprimitives:
+# 			d = o.__dict__
+# 			d["__class__"] = o.__class__.__name__
+# 			return d
+# 			# return [o.__class__.__name__] + list(o.__dict__.values())
+# 		else:
+# 			return o
+#
+# def default(d):
+# 	print(type(d))
+# 	if "__class__" in d and d["__class__"] == "set":
+# 		return set(d["setdata"])
+# 	elif "__class__" in d.keys():
+# 		objClassname = d["__class__"]
+# 		del d["__class__"]
+#
+# 		objAttributes = list(d.values())
+# 		print("========================: " + d["name"] + str(objAttributes))
+# 		if objClassname == "Room":
+# 			return Room(*objAttributes)
+# 		elif objClassname == "Empty":
+# 			return Empty()
+# 		elif objClassname in creatures:
+# 			return creatures[objClassname](*objAttributes)
+# 		elif objClassname in items:
+# 			return items[objClassname](*objAttributes)
+# 		else:
+# 			raise Exception("ERROR in decoding JSON object class type")
+# 	else:
+# 		return d
+#
+# def readJSON(filename):
+# 	with open(filename,"r") as fd:
+# 		W = json.load(fd,object_hook=default)
+# 	return W
+#
+# def writeJSON(filename,W):
+# 	with open(filename,"w") as fd:
+# 		json.dump(W,fd,cls=worldEncoder,indent="\t")
 
 # load a game from a save directory
 def loadGame(filename):
