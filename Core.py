@@ -420,6 +420,9 @@ class Room():
 		if len(self.occupants) != 0:
 			print("There is " + listItems(self.occupants))
 
+	def addConnection(self,dir,loc):
+		self.exits[dir] = loc
+
 	# prints room name, description, all its contents and creatures
 	def describe(self):
 		print("\n" + capWords(self.name))

@@ -119,24 +119,30 @@ class Controller(Item):
 
 class Door(Fixture):
 	def __init__(self,name,desc,weight,durability,open,connections):
-		Fixture.__init__(self,name,desc,weight,durability,open,connections)
+		Fixture.__init__(self,name,desc,weight,durability)
+		self.open = open
+		# connection is a 4-tuple of the form:
+		# (outDirection, outLocation, inDirection, inLocation)
+		self.outconnection = connections[0]
 
 	def writeAttributes(self,fd):
 		super(Door,self).writeAttributes(fd)
-		fd.write(f', "{self.open}", "{self.connections}"')
+		fd.write(f', "{self.open}", {self.connections}')
 
 	# sets open bool to true, triggers the effect
-	def Open(self):
+	def Open(self,Currentroom,W):
 		if self.open:
 			print(f"The {self.name} is already open")
 		else:
 			print(f"You open the {self.name}")
 			self.open = True
-		self.Trigger(P,W,G)
-
-	def Trigger(self,P,W,G):
-		eval(self.effect)
-
+		outdir = self.connections[0]
+		outloc = self.connections[1]
+		indir = self.connections[2]
+		inloc = self.connections[3]
+		Currentroom.addConection(outdir,outloc)
+		Otherroom = W[outloc]
+		Otherroom.addConnection(indir,inloc)
 
 class Foot(Item):
 	def improviseWeapon(self):

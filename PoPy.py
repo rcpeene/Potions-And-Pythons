@@ -28,8 +28,6 @@ main()
 # CURRENT TASKS:
 #TODO: research using map() in python, and passing functions as arguments
 
-# figure out how doors work, which can close and open between rooms
-# investigate JSON library
 # reevaluate effect functions, is there a way to reference a function by string?
 
 # revise the way status effects are implemented, probably store them as a tuple containing the effect counter and a timer?

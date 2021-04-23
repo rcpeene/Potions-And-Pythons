@@ -72,7 +72,7 @@ $Controller ("Amulet of Poisoned", "a green amulet shaped like a teardrop", 2, 1
 %"north": "tunnel"
 
 $Compass ("compass", "a plain steel compass with a red arrow", 2, 10)
-$Controller ("Amulet of Swords", "a red amulet shaped like a sword", 2, 10, "spawnItem(G,Sword('sword', 'a plain iron sword', 8, 10, 2, 2, 2, 0, False, 's'))")
+$Controller ("Amulet of Swords", "a red amulet shaped like a sword", 2, 10, "spawnItem(G, Sword('sword', 'a plain iron sword', 8, 10, 2, 2, 2, 0, False, 's'))")
 $Potion ("red potion", "a red bubbly brew in a glass bottle", 4, 3)
 $Sword ("sword", "a plain iron sword", 8, 10, 2, 2, 2, 0, False, "s")
 $Sword ("sword", "a plain iron sword", 8, 10, 2, 2, 2, 0, False, "s")

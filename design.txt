@@ -738,7 +738,7 @@ sun/love, moon/friendship, death, harvest, war/storms, song/dance/art, animals/h
 
 https://www.ancient.eu/article/885/egyptian-gods---the-complete-list/
 sun/magic/love/song/music/art
-moon/magic/writing/math/truth
+moon/magic/brotherhood/writing/math/truth
 
 "lord of truth"
 "queen mother"

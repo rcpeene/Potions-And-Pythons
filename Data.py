@@ -31,8 +31,6 @@ magicaldmg = "inrv"
 ## USEFUL SETS ##
 #################
 
-JSONprimitives = {dict,list,str,int,float,bool,None}
-
 articles = {"a","an","her","his","i","its","my","that","the","their","this","will"}
 
 cancels = {"back","cancel","nevermind","no","undo"} # done,end
