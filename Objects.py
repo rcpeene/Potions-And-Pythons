@@ -117,6 +117,27 @@ class Controller(Item):
 	# using the controller triggers the effect
 	def Use(self,P,W,G):	self.Trigger(P,W,G)
 
+class Door(Fixture):
+	def __init__(self,name,desc,weight,durability,open,connections):
+		Fixture.__init__(self,name,desc,weight,durability,open,connections)
+
+	def writeAttributes(self,fd):
+		super(Door,self).writeAttributes(fd)
+		fd.write(f', "{self.open}", "{self.connections}"')
+
+	# sets open bool to true, triggers the effect
+	def Open(self):
+		if self.open:
+			print(f"The {self.name} is already open")
+		else:
+			print(f"You open the {self.name}")
+			self.open = True
+		self.Trigger(P,W,G)
+
+	def Trigger(self,P,W,G):
+		eval(self.effect)
+
+
 class Foot(Item):
 	def improviseWeapon(self):
 		return Weapon(self.name,self.desc,self.weight,self.durability,minm(1,self.weight//4),0,0,0,False,"b")
@@ -268,6 +289,8 @@ items = {
 	"Bread":Bread,
 	"Compass":Compass,
 	"Controller":Controller,
+	"Door":Door,
+	"Item":Item,
 	"Lockbox":Lockbox,
 	"Potion":Potion,
 	"Shard":Shard,

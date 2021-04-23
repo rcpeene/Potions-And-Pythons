@@ -29,6 +29,7 @@ main()
 #TODO: research using map() in python, and passing functions as arguments
 
 # figure out how doors work, which can close and open between rooms
+# investigate JSON library
 # reevaluate effect functions, is there a way to reference a function by string?
 
 # revise the way status effects are implemented, probably store them as a tuple containing the effect counter and a timer?
@@ -98,3 +99,36 @@ main()
 # where duration is an integer representing the number of time units remaining
 # a duration of -1 means the effect lasts until removed
 # a duration of -2 means the effect was imbued from being in a room and it lasts until it is no longer afflicted again
+
+
+
+
+# OVERVIEW OF ITEM CLASSES AND SUBCLASSES
+# item
+#	armor
+#		helm
+#		body
+#		legs
+# 	bottle
+#		potion
+# 	box
+#		lockbox
+# 	compass
+# 	controller
+# 	door
+# 	hand
+# 	fixture
+#		switch
+#		table
+# 	food
+#		bread
+#		etc other edible items
+# 	foot
+# 	mouth
+# 	shard
+#	shield
+# 	weapon
+#		sword
+#		axe
+#		polearm
+#		club

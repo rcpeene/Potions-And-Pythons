@@ -12,6 +12,7 @@ from time import sleep
 from random import randint,choice
 from math import floor, log10
 from bisect import insort
+# import json
 
 from Data import *
 
@@ -388,10 +389,10 @@ class Game():
 		return rooms
 
 	def changeRoom(self,newroom,P,W):
-		self.prevroom.exit(P,W,G)
+		self.prevroom.exit(P,W,self)
 		self.prevroom = self.currentroom
 		self.currentroom = newroom
-		self.currentroom.enter(P,W,G)
+		self.currentroom.enter(P,W,self)
 
 # used to define all rooms in the world
 class Room():
