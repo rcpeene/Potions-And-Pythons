@@ -263,7 +263,6 @@ def saveGame(P,W,G):
 	writeWorld("world.popy", W)
 	writePlayer("player.popy", P)
 	writeGame("game.popy", G)
-	writeJSON("testsave.json", W)
 	os.chdir("..")
 	os.chdir("..")
 	sleep(1)
@@ -624,6 +623,8 @@ def gameIntro():
 #
 # Note: the current main incompatability with this code is the fact that some objects' __init__ method takes the data in a way which does not have a 1:1 relationship with the objects attributes.
 # for instance, python.__init__() takes many numerical attributes as an array, but the attributes are not stored like this in JSON format.
+#
+################################################################################
 #
 # import json
 # JSONprimitives = {dict,list,str,int,float,bool,None}
