@@ -33,7 +33,7 @@ Have fun reading!
 %"south": "glen"
 %"west": "boulder"
 
-$Controller ("Amulet of Poisoned", "a green amulet shaped like a teardrop", 2, 10, "addPoisoned(P)")
+$Controller ("Amulet of Poisoned", "a green amulet shaped like a teardrop", 2, 10, "addCondition(P,['poisoned',10])")
 ~
 
 #boulder

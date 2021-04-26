@@ -30,14 +30,14 @@ main()
 
 # reevaluate effect functions, is there a way to reference a function by string?
 
-# revise the way status effects are implemented, probably store them as a tuple containing the effect counter and a timer?
-# how will amulet effects work??
 # evaluate enter, exit functions in room
 
 # add 'initiative order' for creature actions
 # add time to verbs?
 
 # add "it" variable in G class? maybe ordered list of most recent items, starting with the last item player referred to, followed by last items which were referred to in output?
+
+# how will amulet effects work??
 
 # figure out animal behavior
 # creatures attacking?

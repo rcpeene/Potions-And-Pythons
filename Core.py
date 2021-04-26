@@ -848,7 +848,7 @@ class Player(Creature):
 		# TODO: include stackability
 		insort(self.status, cond)
 		if msg != "":	print(msg)
-		print("You are " + cond)
+		print("You are " + cond[0])
 
 	def removeCondition(self,cond,reqDuration=None):
 		# removes all conditions of the same name
@@ -1008,11 +1008,19 @@ class Player(Creature):
 
 		conditions = []
 		durations = []
+		# populate conditions with unique conditions affecting the player
+		# populate durations with the highest duration for that condition
 		for cond, dur in self.status:
 			if cond not in conditions:
 				conditions.append(cond)
 				durations.append(dur)
+			else:
+				idx = conditions.index(cond)
+				olddur = durations[idx]
+				newdur = dur if dur > olddur or dur < 0 else olddur
+				durations[idx] = newdur
 
+		# make list of strings to display conditions and their durations
 		statusdisplay = []
 		for i in range(len(conditions)):
 			statusdisplay.append(conditions[i])
