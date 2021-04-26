@@ -351,8 +351,9 @@ class Game():
 	def describeRoom(self):
 		self.currentroom.describe()
 
-	def incrementTime(self):
+	def incrementTime(self,P):
 		self.time += 1
+		P.passTime(1)
 		# TODO:
 		# for each creature and room (& maybe item):
 		# 	for each status effect
@@ -535,7 +536,9 @@ class Creature():
 		self.money = money
 		self.inv = inv
 		self.gear = {key: inv[gear[key]] if gear[key] != -1 else Empty() for key in gear}
-		self.status = set(status)
+		self.status = status
+		# sort status effects by name, change 0 to 1 to sort by duration
+		self.status.sort(key=lambda x: x[0])
 
 		self.weapon = Empty()
 		self.weapon2 = Empty()
@@ -600,7 +603,7 @@ class Creature():
 		fd.write('[')
 		statuslist = list(self.status)
 		for j in range(len(statuslist)):
-			fd.write(f'"{statuslist[j]}"')
+			fd.write(f'["{statuslist[j][0]}",{statuslist[j][1]}]')
 			if j != len(statuslist)-1:	fd.write(', ')
 		fd.write(']')
 
@@ -665,13 +668,28 @@ class Creature():
 		if self.invWeight() < self.BRDN():
 			self.removeCondition("hindered")
 
-	def addCondition(self,cond,stackable=False):
-		if cond not in self.status:
-			self.status.add(cond)
+	def passTime(self,t):
+		for condition in self.status:
+			# if condition is a special condition, ignore it
+			if condition[1] < 0:
+				continue
+			# subtract remaining duration on condition
+			elif condition[1] > 0:
+				condition[1] -= t
+			# if, after subtraction, condition is non-positive, remove it
+			if condition[1] <= 0:
+				self.status.remove(condition)
 
-	def removeCondition(self,cond):
-		if cond in self.status:
-			self.status.remove(cond)
+	def addCondition(self,cond,stackable=False):
+		# TODO: include stackability
+		insort(self.status, cond)
+
+	def removeCondition(self,cond,reqDuration=None):
+		# removes all conditions of the same name
+		for condition, duration in self.status:
+			if condition == cond:
+				if reqDuration == None or reqDuration == duration:
+					self.status.remove(condition,duration)
 
 	# these are creature stats that are determined dynamically with formulas
 	# these formulas are difficult to read, check design document for details
@@ -827,15 +845,18 @@ class Player(Creature):
 		return heal
 
 	def addCondition(self,cond,msg="",stackable=False,):
-		if cond not in self.status:
-			self.status.add(cond)
-			if msg != "":	print(msg)
-			print("You are " + cond)
+		# TODO: include stackability
+		insort(self.status, cond)
+		if msg != "":	print(msg)
+		print("You are " + cond)
 
-	def removeCondition(self,cond):
-		if cond in self.status:
-			self.status.remove(cond)
-			print("You are no longer " + cond)
+	def removeCondition(self,cond,reqDuration=None):
+		# removes all conditions of the same name
+		for condition, duration in self.status:
+			if condition == cond:
+				if reqDuration == None or reqDuration == duration:
+					self.status.remove(condition,duration)
+		print("You are no longer " + cond)
 
 	def obtainItem(self,I,S,W,G):
 		if self.invWeight() + I.Weight() > self.BRDN() * 2:
@@ -981,8 +1002,28 @@ class Player(Creature):
 			self.printAbility(ability)
 
 	def printStatus(self):
-		if len(self.status) == 0:	print("None")
-		else:	columnPrint(self.status,12,12)
+		if len(self.status) == 0:
+			print("None")
+			return
+
+		conditions = []
+		durations = []
+		for cond, dur in self.status:
+			if cond not in conditions:
+				conditions.append(cond)
+				durations.append(dur)
+
+		statusdisplay = []
+		for i in range(len(conditions)):
+			statusdisplay.append(conditions[i])
+			if durations[i] < 0:
+				statusdisplay.append("--")
+			else:
+				statusdisplay.append(str(durations[i]))
+
+		# dynamically determine display column width based on longest name
+		colWidth = len(max(conditions, key=len)) + 4
+		columnPrint(statusdisplay,2,colWidth)
 
 	# each prints a different player stat
 	def printMoney(self): print(f"Ᵽ{self.money}")

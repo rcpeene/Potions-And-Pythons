@@ -81,7 +81,7 @@ $Sword ("sword", "a plain iron sword", 8, 10, 2, 2, 2, 0, False, "s")
 	[$Sword ("sword", "a plain iron sword", 8, 10, 2, 2, 2, 0, False, "s"),
 	$Sword ("sword", "a plain iron sword", 8, 10, 2, 2, 2, 0, False, "s"),
 	$Bread ("breadroll", "a small roll of bread", 1, 10)],
-	{"hand": 0, "head": 1, "mouth": -1}, [])
+	{"hand": 0, "head": 1, "mouth": -1}, [["angered",-1]])
 ~
 
 #cliffside
