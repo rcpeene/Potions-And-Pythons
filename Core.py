@@ -1017,8 +1017,7 @@ class Player(Creature):
 			else:
 				idx = conditions.index(cond)
 				olddur = durations[idx]
-				newdur = dur if dur > olddur or dur < 0 else olddur
-				durations[idx] = newdur
+				durations[idx] = dur if dur > olddur or dur < 0 else olddur
 
 		# make list of strings to display conditions and their durations
 		statusdisplay = []
