@@ -7,6 +7,8 @@ from Parser import *
 # note: some startup code is run in Parser.py before main is called
 def main():
 	while True:
+		G.sortOccupants(W)
+
 		# take user input until player successfully performs an action
 		while not parse(getcmd(),0):	continue
 
@@ -24,18 +26,13 @@ def main():
 
 main()
 
+################################################################################
 
-# CURRENT TASKS:
+# CURRENT TASKS
+
 #TODO: research using map() in python, and passing functions as arguments
-
 # reevaluate effect functions, is there a way to reference a function by string?
 # evaluate enter, exit functions in room
-
-# 'initiative order' for creature actions (sort occupants by mvmt)
-# add action queue
-# add time to verbs?
-
-# add "it" variable in G class? maybe ordered list of most recent items, starting with the last item player referred to, followed by last items which were referred to in output?
 
 # how will amulet effects work??
 
@@ -53,28 +50,34 @@ main()
 # add new weapons and TEST
 # more switches, levers, buttons
 
-# add object name disambiguation?
+# add object name disambiguation? (code asks "which sword will you use?"
 # add object plural type? 'there is some bread' vs 'there is a bread'
 # add object generalization (so you can say 'take potion' on the 'red potion')
-# add possession? (so you can say 'break goblin's sword', 'take his food')
+# add possession? (so you can say 'break goblin's sword', 'take his food')... these could be easily restructured as "break sword from goblin", "take food from him"
 
 # design persons and person behavior all of the RP system?
 # FLESH OUT MORE VERBS (and add items to go with them)
 # go into the cabin?
 
+################################################################################
 
 # FUTURE IMPROVEMENTS
 
 # fill out definitions more
-# add status effects and their durations (can it work on items?)
 # add quicksave and autosave, possibly include recent save name in Game() class
 # add signal handling: ctrl+s to save, ctrl+q to quit?
 # add cooking/brewing/crafting/tinkering
 # ^^^sharpening/smithing items?
 # add trading with npcs
 # add spells
+# add action queue to sort initiative among rooms
+# add time to verbs?
 # add a world map/record visited rooms
 # add a window which shows player stats/possible commands/instructions
+
+################################################################################
+
+
 
 
 

@@ -381,6 +381,10 @@ class Game():
 			elif obj.gender == "f":
 				self.her = obj
 
+	def sortOccupants(self):
+		for room in self.renderedRooms(W):
+			room.sortOccupants()
+
 	# recursively adds all adjacent rooms to the set of found rooms
 	# n is the path length at which the search stops
 	# Sroom is the "source" room, or the current node in the search
@@ -439,6 +443,9 @@ class Room():
 		if len(self.occupants) != 0:
 			print("There is " + listItems(self.occupants))
 
+	def sortOccupants(self):
+		self.occupants.sort(key=lambda x: x.MVMT(), reverse=True)
+
 	def addConnection(self,dir,loc):
 		self.exits[dir] = loc
 
@@ -462,6 +469,9 @@ class Room():
 
 	def removeItem(self,I):
 		self.contents.remove(I)
+
+	def addCreature(self,C):
+		insort(self.occupants,C)
 
 	def search(self,term,d=0,getSource=False,getPath=False,reqSource=None):
 		return objSearch(term,self,d=d,
@@ -579,6 +589,9 @@ class Creature():
 			return self.__dict__ == other.__dict__
 		else:
 			return False
+
+	def __lt__(self,other):
+		return self.MVMT() < other.MVMT()
 
 	# converts the gear dict to a form more easily writable to a save file
 	# replaces all objects in gear.values() with an integer which represents...
