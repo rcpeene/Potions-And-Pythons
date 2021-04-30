@@ -347,9 +347,9 @@ class Game():
 		# pronoun attributes store a reference to an object which may be...
 		# implied by that pronoun from user input
 		self.it = None
-		self.them = None
-		self.she = None
-		self.he = None
+		self.they = None
+		self.her = None
+		self.him = None
 
 	def startUp(self,P,W):
 		self.currentroom.describe()
@@ -363,6 +363,23 @@ class Game():
 		for room in self.renderedRooms(W):
 			for creature in room.occupants:
 				creature.passTime(1)
+
+	def clearPronouns(self):
+		self.it = None
+		self.they = None
+		self.her = None
+		self.him = None
+
+	def setPronouns(self,obj):
+		if not isinstance(obj,Person):
+			self.it = obj
+		if isinstance(obj,Creature):
+			self.they = obj
+		if hasattr(obj,"gender"):
+			if obj.gender == "m":
+				self.him = obj
+			elif obj.gender == "f":
+				self.her = obj
 
 	# recursively adds all adjacent rooms to the set of found rooms
 	# n is the path length at which the search stops
@@ -390,6 +407,7 @@ class Game():
 		return rooms
 
 	def changeRoom(self,newroom,P,W):
+		self.clearPronouns()
 		self.prevroom.exit(P,W,self)
 		self.prevroom = self.currentroom
 		self.currentroom = newroom

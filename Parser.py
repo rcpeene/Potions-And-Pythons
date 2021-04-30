@@ -71,13 +71,16 @@ def nounify(command,i):
 
 def replacePronoun(term):
 	if term == "it":
-		return G.it.name
+		obj = G.it
 	elif term in {"she","her"}:
-		return G.she.name
+		obj = G.she
 	elif term in {"he","him"}:
-		return G.he.name
+		obj = G.he
 	elif term in {"they","them"}:
-		return G.they.name
+		obj = G.they
+	if obj == None:
+		return None
+	return obj.name
 
 # almost does the same thing as getcmd(), except with the intention of...
 # finding a specific object.
@@ -310,6 +313,7 @@ def Attack(dobj,iobj,prep):
 	elif weapon not in P.gear.values():
 		P.equipInHand(weapon)
 
+	G.setPronouns(target)
 	print(f"\nYou attack the {target.name} with {P.weapon.name}")
 	if isinstance(target,Creature):		P.attackCreature(target,G)
 	elif isinstance(target,Item):		P.attackItem(target,G)
@@ -357,6 +361,7 @@ def Break(dobj,iobj,prep):
 		print("There is no '" + dobj + "' here")
 		return False
 
+	G.setPronouns(I)
 	if hasattr(I, "Break") and callable(I.Break):
 		I.Break(P,G,source)
 		return True
@@ -372,6 +377,7 @@ def Carry(dobj,iobj,prep):
 		if dobj in cancels:
 			return False
 
+	# G.setPronouns(I)
 	print("NOT IMPLEMENTED YET!!")
 
 def Cast(dobj,iobj,prep):
@@ -398,6 +404,7 @@ def Close(dobj,iobj,prep):
 		print(f"There is no '{dobj}' here")
 		return False
 
+	G.setPronouns(I)
 	if not hasattr(I,"open"):
 		print("You can't close the " + I.name)
 		return False
@@ -460,6 +467,8 @@ def Describe(dobj,iobj,prep):
 	if D == None:
 		print(f"There is no '{dobj}' here")
 		return False
+
+	G.setPronouns(D)
 	D.describe()
 	return True
 
@@ -489,7 +498,8 @@ def Drink(dobj,iobj,prep):
 		print(f"There is no '{dobj}' in your inventory")
 		return False
 
-	if hasattr(I, "Drink") and callable(I.Drink):
+	G.setPronouns(I)
+	if hasattr(I,"Drink") and callable(I.Drink):
 		I.Drink(P,G,S)
 		return True
 	else:
@@ -509,6 +519,7 @@ def Drop(dobj,iobj,prep):
 		print(f"There is no '{dobj}' in your inventory")
 		return False
 
+	G.setPronouns(I)
 	if isinstance(I,Compass) and not yesno("Are you sure you want to lose your compass? You might get lost!"):
 			return False
 	print("You drop your " + I.name)
@@ -533,7 +544,8 @@ def Eat(dobj,iobj,prep):
 		print(f"There is no '{dobj}' in your inventory")
 		return False
 
-	if hasattr(I, "Eat") and callable(I.Eat):
+	G.setPronouns(I)
+	if hasattr(I,"Eat") and callable(I.Eat):
 		I.Eat(P,G,S)
 		return True
 	print("You can't eat the " + I.name)
@@ -631,6 +643,7 @@ def Grab(dobj,iobj,prep):
 		print(f"There is no '{dobj}' to grab here")
 		return False
 
+	G.setPronouns(I)
 	if isinstance(I,Item):
 		return Take(dobj,iobj,prep)
 	else:
@@ -700,6 +713,7 @@ def Look(dobj,iobj,prep):
 		print(f"There is no '{dobj}' here")
 		return False
 
+	G.setPronouns(L)
 	L.describe()
 	if hasattr(L, "Look") and callable(L.Look):
 		L.Look()
@@ -726,8 +740,9 @@ def Open(dobj,iobj,prep):
 		print(f"There is no '{dobj}' here")
 		return False
 
-	if hasattr(I, "Open") and callable(I.Open):
-		if hasattr(I, "locked") and I.locked:
+	G.setPronouns(I)
+	if hasattr(I,"Open") and callable(I.Open):
+		if hasattr(I,"locked") and I.locked:
 			print("The " + I.name + " is locked")
 		else:
 			I.Open()
@@ -783,6 +798,7 @@ def Put(dobj,iobj,prep):
 		return False
 	if I.name == "compass" and not yesno("Are you sure you want to lose your compass? You might get lost!"):
 			return False
+	G.setPronouns(I)
 
 	R = P.search(iobj)
 	if iobj == "here":	R = G.currentroom
@@ -875,6 +891,7 @@ def Take(dobj,iobj,prep):
 	if isinstance(I,Fixture) or isinstance(I,Creature):
 		print("You can't take the " + dobj)
 		return False
+	G.setPronouns(I)
 
 	S = path[0]		#S is the 'source' object, the object containing I
 	if isinstance(S,Creature) and prep == "from":	return Steal(dobj,iobj,prep)
@@ -934,6 +951,7 @@ def Use(dobj,iobj,prep):
 		print(f"There is no '{dobj}' to use here")
 		return False
 
+	G.setPronouns(I)
 	if hasattr(I,"Use") and callable(I.Use):
 		I.Use(P,W,G)
 		return True
