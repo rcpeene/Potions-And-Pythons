@@ -381,7 +381,7 @@ class Game():
 			elif obj.gender == "f":
 				self.her = obj
 
-	def sortOccupants(self):
+	def sortOccupants(self,W):
 		for room in self.renderedRooms(W):
 			room.sortOccupants()
 
