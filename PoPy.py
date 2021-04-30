@@ -20,7 +20,7 @@ def main():
 				creature.act(P,room,True)
 
 		# pass the time after everyone has acted
-		G.incrementTime(P)
+		G.incrementTime(P,W)
 
 main()
 

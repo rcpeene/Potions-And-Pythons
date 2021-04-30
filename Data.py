@@ -41,6 +41,8 @@ noes = {"absolutely not","certainly not","definitely not","n","na","nah","nahh",
 
 prepositions = {"above","across","at","below","beneath","by","for","from","in","inside","into","near","off","on","onto","over","through","to","toward","under","upon","using","with"}
 
+pronouns = {"she","he","they","her","him","them","it"}
+
 # used in nounify() in Parser.py to combine multiple words that might have a single meaning as a whole term
 miscexpressions = {"it all","spell list"}
 

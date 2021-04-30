@@ -344,6 +344,12 @@ class Game():
 		self.prevroom = prevroom
 		self.time = time
 		self.lastRawCommand = None
+		# pronoun attributes store a reference to an object which may be...
+		# implied by that pronoun from user input
+		self.it = None
+		self.them = None
+		self.she = None
+		self.he = None
 
 	def startUp(self,P,W):
 		self.currentroom.describe()
@@ -351,18 +357,12 @@ class Game():
 	def describeRoom(self):
 		self.currentroom.describe()
 
-	def incrementTime(self,P):
+	def incrementTime(self,P,W):
 		self.time += 1
 		P.passTime(1)
-		# TODO:
-		# for each creature and room (& maybe item):
-		# 	for each status effect
-		# 		if its duration > 0
-		# 			decrement its duration
-		# 		if its duration is 0
-		# 			delete it
-		# 		if its duration is -1
-		# 			do nothing
+		for room in self.renderedRooms(W):
+			for creature in room.occupants:
+				creature.passTime(1)
 
 	# recursively adds all adjacent rooms to the set of found rooms
 	# n is the path length at which the search stops
@@ -385,7 +385,7 @@ class Game():
 		return R
 
 	def renderedRooms(self,W):
-		rooms = self.nearbyRooms(REND_DIST,W)
+		rooms = self.nearbyRooms(W)
 		rooms.add(self.currentroom)
 		return rooms
 

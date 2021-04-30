@@ -69,6 +69,16 @@ def nounify(command,i):
 		j += 1
 	return nounify(command,i+1)
 
+def replacePronoun(term):
+	if term == "it":
+		return G.it.name
+	elif term in {"she","her"}:
+		return G.she.name
+	elif term in {"he","him"}:
+		return G.he.name
+	elif term in {"they","them"}:
+		return G.they.name
+
 # almost does the same thing as getcmd(), except with the intention of...
 # finding a specific object.
 # Processes input to a form usable by action functions
@@ -166,6 +176,9 @@ def parse(command,n):
 		# indirect object is defined if a prep or dobj has been found
 		else:								iobj = term
 
+	if dobj in pronouns:	dobj = replacePronoun(dobj)
+	if iobj in pronouns:	iobj = replacePronoun(iobj)
+
 	# this line calls the action function using the 'actions' dict
 	actionCompleted = actions[verb](dobj,iobj,prep)
 	# if action was not completed for some reason, recur
@@ -184,6 +197,9 @@ def Get(command):
 		obj = P
 	else:
 		obj = objSearch(command[1],G.currentroom,d=3)
+	if obj == None:
+		print("Object not found")
+		return
 	attrString = command[2]
 	print(getattr(obj,attrString))
 
