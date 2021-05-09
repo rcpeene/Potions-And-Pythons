@@ -69,6 +69,7 @@ def nounify(command,i):
 		j += 1
 	return nounify(command,i+1)
 
+# term must be a pronoun
 def replacePronoun(term):
 	if term == "it":
 		obj = G.it
@@ -140,7 +141,7 @@ def getcmd():
 # n is the number of times parse() has recurred
 def promptHelp(msg,n):
 	if msg != "":	print(msg)
-	if n >= 3:	print("Enter 'help' for a list of commands")
+	if n >= 2:	print("Enter 'help' for a list of commands")
 	if n > 32:	return False	# prevent stack overflow from repeated bad input
 	return parse(getcmd(),n+1)	# ask again
 
@@ -196,8 +197,10 @@ def parse(command,n):
 ##########################################
 
 def Get(command):
-	if command[1] in {"p","player"}:
+	if command[1] in {"p","player","my"}:
 		obj = P
+	elif command[1] in {"g","game"}:
+		obj = G
 	else:
 		obj = objSearch(command[1],G.currentroom,d=3)
 	if obj == None:
@@ -600,6 +603,9 @@ def Follow(dobj,iobj,prep):
 def Give(dobj,iobj,prep):
 	print("giveing")
 
+def GoUp(obj=None):
+	print("OWAHAHAHA")
+
 def Go(dobj,iobj,prep):
 	if prep not in {"to","toward","in","into",None}:
 		print("Command not understood")
@@ -615,11 +621,17 @@ def Go(dobj,iobj,prep):
 	if dobj == G.currentroom.name:
 		print("You are already there")
 		return False
-	if dobj in directions.keys():	dobj = directions[dobj]
 
-	if dobj in G.currentroom.exits.keys():
+	exits = G.currentroom.exits
+	if dobj in directions.keys():
+		dobj = directions[dobj]
+	if dobj in exits.keys():
 		dobj = G.currentroom.exits[dobj]
-	if dobj in G.currentroom.exits.values():
+	if "up" in exits and dobj == exits["up"]:
+		print(G.lastRawCommand)
+		print(dobj,iobj,prep)
+		return GoUp()
+	elif dobj in exits.values():
 		G.changeRoom(W[dobj],P,W)
 		return True
 	if dobj in directions.values():

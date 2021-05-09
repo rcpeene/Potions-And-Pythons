@@ -2,3 +2,8 @@
 
 __pycache__/
 saves/
+dist/
+build/
+*.spec
+*.ico
+*.exe

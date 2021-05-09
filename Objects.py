@@ -96,7 +96,6 @@ class Bread(Item):
 			print("Yummy")
 
 class Compass(Item):
-	#???
 	def Orient(self):
 		print("Orienting you northward!")
 
@@ -186,6 +185,17 @@ class Mouth(Item):
 	def improviseWeapon(self):
 		return Weapon(self.name,self.desc,self.weight,self.durability,minm(1,self.weight//4),0,0,4,False,"p")
 
+class Passage(Fixture):
+	def __init__(self,name,desc,weight,durability,directions,verbs):
+		Fixture.__init__(self,name,desc,weight,durability)
+		self.directions = directions
+
+	def Traverse(P,W,G,dir=None):
+		if dir == None:
+			dir = self.directions[0]
+		newroom = W[G.currentroom.exits[dir]]
+		G.changeRoom(newroom,P,W)
+
 class Potion(Bottle):
 	# heals the player hp 1000, replaces potion with an empty bottle
 	def Drink(self,P,G,S):
@@ -235,7 +245,7 @@ class Sword(Weapon):
 
 class Table(Fixture):
 	def __init__(self,name,desc,weight,durability,contents,descname):
-		Item.__init__(self,name,desc,weight,durability)
+		Fixture.__init__(self,name,desc,weight,durability)
 		self.contents = contents
 		self.descname = descname
 
@@ -283,10 +293,22 @@ class Table(Fixture):
 		else:
 			print("There is nothing on it")
 
+# class Stairway(Fixture):
+# 	def __init__(self,name,desc,weight,durability,connection):
+# 		Fixture.__init__(self,name,desc,weight,durability)
+# 		self.connection = connection
+#
+# 	def Ascend(P,W,G):
+# 		print("You go up the " + self.name)
+
 
 #####################
 ## ITEM DICTIONARY ##
 #####################
+
+def strToClass(classname):
+	return globals()[classname]
+
 
 items = {
 	"":Empty,
@@ -298,6 +320,7 @@ items = {
 	"Door":Door,
 	"Item":Item,
 	"Lockbox":Lockbox,
+	"Passage":Passage,
 	"Potion":Potion,
 	"Shard":Shard,
 	"Sign":Sign,

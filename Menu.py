@@ -146,8 +146,8 @@ def readObj(objtext):
 	close = findMatchingParenth(objtext,open)
 	attributetext = objtext[open+1:close]
 	attributes = readList(attributetext,",")
-	if tag == "$":	return items[classname](*attributes)
-	if tag == "!":	return creatures[classname](*attributes)
+	classobj = strToClass(classname)
+	return classobj(*attributes)
 
 # takes roomtext, a list of lines of data, as input, as well as the world dict
 # instantiates a Room() object from roomtext and adds the room to the world dict

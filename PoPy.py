@@ -26,9 +26,13 @@ def main():
 
 main()
 
+
+
 ################################################################################
 
 # CURRENT TASKS
+
+# fix the fact that creatures can't die outside of the currentroom?
 
 #TODO: research using map() in python, and passing functions as arguments
 # reevaluate effect functions, is there a way to reference a function by string?
@@ -40,7 +44,6 @@ main()
 # creatures attacking?
 # add monsters/monster behavior
 # figure out combat? attack items?
-# fix the fact that creatures can't die outside of the currentroom?
 
 # add locking/unlocking items
 # add Steal
@@ -76,6 +79,41 @@ main()
 # add a window which shows player stats/possible commands/instructions
 
 ################################################################################
+
+
+
+
+
+
+
+# commands to take for going up:
+# "go up the cliff"
+# "climb up the cliff"
+# "climb the cliff"
+# "scale the cliff?"
+#
+# "walk up the stairs"
+# "walk the stairs"
+# "go up the stairs"
+#
+# "crawl into the hole"
+# "climb up the wall"
+#
+# "swim into the river"
+# swim in the fountain"
+# swim in the pond"
+# "swim north"
+#
+# Room has connection {"up": "some other room"}
+# when player goes "up":
+# if player can fly: just changeRoom to above room
+# else:
+# 	need to know what things in the room lead up
+# 	"what will you go up?"
+# 	could be stairs, cliff, ladder
+# 	call Ascend() function with specified object
+# 		if obj requires climbing, call obj.climb(currentroom)
+# 		else, just changeRoom to above room
 
 
 
