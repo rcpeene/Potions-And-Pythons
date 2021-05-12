@@ -240,12 +240,9 @@ def writeObj(fd,obj):
 # creature inventories; i.e. objects which are "visible" to the player
 def objSearch(term,root,d=0,getPath=False,getSource=False,reqSource=None):
 	O,S,path = objSearchRecur(term,root,[],d,reqSource)
-	if getPath:
-		return O,path
-	elif getSource:
-		return O,S
-	else:
-		return O
+	if getPath:		return O,path
+	elif getSource:	return O,S
+	else:			return O
 
 def objSearchRecur(term,node,path,d,reqSource):
 	S = None						# source object is initially None
@@ -416,6 +413,19 @@ class Game():
 		self.prevroom = self.currentroom
 		self.currentroom = newroom
 		self.currentroom.enter(P,W,self)
+		return True
+
+	def destroyCreature(self,C,W):
+		for room in self.renderedRooms(W):
+			if C in room.occupants:
+				room.removeCreature(C)
+
+	def destroyItem(self,I,W):
+		for room in self.renderedRooms(W):
+			if I in room.contents:
+				possibleItem,Source = objSearch(I,room,d=3,getSource=True)
+				if possibleItem is I:
+					S.removeItem(I)
 
 # used to define all rooms in the world
 class Room():
@@ -468,10 +478,15 @@ class Room():
 		insort(self.contents,I)
 
 	def removeItem(self,I):
-		self.contents.remove(I)
+		if I in self.contents:
+			self.contents.remove(I)
 
 	def addCreature(self,C):
 		insort(self.occupants,C)
+
+	def removeCreature(self,C):
+		if C in self.occupants:
+			self.occupants.remove(C)
 
 	def search(self,term,d=0,getSource=False,getPath=False,reqSource=None):
 		return objSearch(term,self,d=d,
@@ -541,6 +556,9 @@ class Item():
 
 	def Obtain(self,P,W,G):
 		pass
+
+	def Break(self,G,W):
+		G.destroyItem(W)
 
 # general creature class for all living things in the game
 class Creature():
@@ -763,23 +781,23 @@ class Creature():
 		return prot
 
 	# called when a creature's hp hits 0
-	def death(self,P,G):
+	def death(self,P,G,W):
 		self.alive = False
 		print("agh its... ded?")
-		G.currentroom.occupants.remove(self)
+		G.destroyCreature(self,W)
 		#drop some wealth or items
 		P.gainxp(10)
 		P.gainMoney(P.LOOT())
 
 	# takes incoming damage, accounts for damage vulnerability or resistance
-	def takedmg(self,dmg,type,P,G):
+	def takedmg(self,dmg,type,P,G,W):
 		if(f"{type} vulnerability" in self.status):	dmg *= 2
 		if(f"{type} resistance" in self.status):	dmg //= 2
 		if(f"{type} immunity" in self.status):		dmg = 0
 		print(f"Took {dmg} {dmgtypes[type]} damage")
 		self.hp = minm(0, self.hp-dmg)	#player hp lowered to a minimum of 0
 		if(self.hp == 0):
-			self.death(P,G)
+			self.death(P,G,W)
 
 	def isBloodied(self):
 		# returns true is creature has less than half health
@@ -972,7 +990,7 @@ class Player(Creature):
 		self.assignWeaponAndShield()
 		if hasattr(I,"Equip") and callable(I.Equip): I.Equip(self)
 
-	def dualAttack(self,target,G):
+	def dualAttack(self,target,G,W):
 		hit = minm(1,maxm(99, self.ACCU() - target.EVSN()))
 		if diceRoll(1,100,0) <= hit:
 			print()
@@ -982,13 +1000,13 @@ class Player(Creature):
 				print("critical hit!")
 				attack *= 2
 			damage = minm(0, attack - target.DFNS())
-			target.takedmg(damage, self.weapon2.type, self, G)
+			target.takedmg(damage,self.weapon2.type,self,G,W)
 			if target.alive == False:
 				return
 		else:
 			print("aw it missed")
 
-	def attackCreature(self,target,G):
+	def attackCreature(self,target,G,W):
 		n = minm(1, self.ATSP() // target.ATSP())
 		print(f"{n} attacks:")
 		for i in range(n):
@@ -1002,14 +1020,14 @@ class Player(Creature):
 					print("critical hit!")
 					attack *= 2
 				damage = minm(0, attack - target.DFNS())
-				target.takedmg(damage, self.weapon.type, self, G)
+				target.takedmg(damage,self.weapon.type,self,G,W)
 				if target.alive == False:	return
 			else:
 				print("aw it missed")
-			if self.weapon2 != Empty():	self.dualAttack(target,G)
+			if self.weapon2 != Empty():	self.dualAttack(target,G,W)
 			if target.alive == False:	return
 
-	def attackItem(self,target,G):
+	def attackItem(self,target,G,W):
 		attack = self.ATCK()
 		print(f"{attack} damage")
 		if target.durability != -1 and attack > target.durability:
@@ -1098,7 +1116,7 @@ class Player(Creature):
 
 	# for every item in player inventory, if its a weapon, print it
 	def printWeapons(self):
-		if len(self.weapons) == 0:
+		if len(self.weapons()) == 0:
 			print("You have no weapons")
 		else:	columnPrint(self.weapons,12,12)
 

@@ -112,12 +112,12 @@ $Sign ("sign", "A wooden sign", 7, 10, "Welcome to the Land!\nWatch out for Snak
 $Box ("chest", "a large wooden chest", 4, 10, False,
 	[$Lockbox ("capsule", "a metal capsule", 1, 10, False, [], True),
 	$Box ("small chest", "a small wooden chest", 4, 10, False,
-		[$Potion ("blue potion", "a blue bubbly brew in a glass bottle", 4, 10),
+		[$Potion ("blue potion", "a blue bubbly brew in a glass bottle", 4, 4),
 		$Bread ("breadroll", "a small roll of bread", 1, 10)])])
 $Table ("table", "an oaken table", 40, 5, [
-	$Potion ("blue potion", "a blue bubbly brew in a glass bottle", 4, 10)],
+	$Potion ("blue potion", "a blue bubbly brew in a glass bottle", 4, 4)],
 	"table with things on it")
-$Potion ("blue potion", "a blue bubbly brew in a glass bottle", 4, 10)
+$Potion ("blue potion", "a blue bubbly brew in a glass bottle", 4, 4)
 ~
 
 #pit

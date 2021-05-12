@@ -14,7 +14,9 @@
 
 menuinstructions = "\nType 'info' for information on the game and how to play\nType 'new' to start a new game\nType 'load' to load a save file\nType 'delete' to delete a save file\nType 'quit' to quit the game\n"
 
-gameinfo = "\n\n\nPotions & Pythons\nv.Alpha\nBy Carter Peene, 2021\n\nTo play, type a command of the form:\n[verb] [*direct object] [*preposition] [*indirect object]\nOR\n[verb] [*preposition] [*direct object]\n\n* denotes a word that can be omitted when unnecessary\nArticles, determiners, and most symbols are removed from your input\n\nSee your main player statistics by typing 'stats' and 'traits'\nGet a description of the current place by typing 'here'\nGet a list of possible commands by typing 'help'\nLearn about most game terms and commands by typing 'define [term]'\n"
+gameinfo = "\n\n\nPotions & Pythons\nv.Alpha\nBy Carter Peene, 2021\n\nTo play, type a command of the form:\n[verb] [*direct object] [*preposition] [*indirect object]\nOR\n[verb] [*preposition] [*direct object]\n\n* denotes a word that can be omitted when unnecessary\nArticles, determiners, and most symbols are removed from your input\n\nSee a list of command examples by typing 'examples'\nSee your main player statistics by typing 'stats' and 'traits'\nGet a description of the current place by typing 'here'\nGet a list of possible commands by typing 'help'\nLearn about most game terms and commands by typing 'define [term]'\n"
+
+examples = "\nValid input examples include:\n- go north\n- go nw\n- go up the stairs\n- go to tunnel\n- go\n- look at python\n- fight the python!\n- hit the python with my sword\n- attack python sword\n- equip the sword\n- unequip sword\n- take red potion\n- take the red potion from the chest\n- put red potion chest\n- close chest"
 
 symbols = ".,!?~`\"()[]{}<>+=/*&^%$#@\t"
 
@@ -68,7 +70,7 @@ traits = ("STR","SKL","SPD","STM","CON","CHA","INT","WIS","FTH","LCK")
 
 abilities = ("ACCU","ATCK","ATHL","ATSP","BRDN","CAST","CRIT","CSSP","DCPT","DFNS","ENDR","EVSN","INVS","KNWL","LOOT","MVMT","MXHP","MXMP","PRSD","RESC","RITL","SLTH","SPLS","TNKR")
 
-shortverbs = ("back","clear","cry","dance","help","info","information","laugh","quit","return","here","save","scream","shout","sing","time","yawn","yell")
+shortverbs = ("back","clear","cry","dance","examples","help","info","information","laugh","quit","return","here","save","scream","shout","sing","time","yawn","yell")
 
 statcommands = ("abilities","accu","atck","athl","atsp","brdn","cast","crit","cssp","dcpt","dfns","endr","evsn","gear","hp","inventory","inv","invs","knwl","level","loot","lv","money","mp","mvmt","mxhp","mxmp","prsd","resc","ritl","rp","slth","spls","stats","status","tnkr","traits","weapons","xp")
 

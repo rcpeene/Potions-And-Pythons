@@ -272,7 +272,7 @@ def saveGame(P,W,G):
 # load a game from a save directory
 def loadGame(filename):
 	if not (os.path.exists("saves")) or len(os.listdir(".\\saves")) == 0:
-		print("There are no save files\n")
+		print("There are no save files")
 		return mainMenu()
 	os.chdir("saves")
 
@@ -331,7 +331,7 @@ def deleteAll():
 # deletes a save file whose name is given by the user
 def delete(filename):
 	if not os.path.exists("saves") or len(os.listdir(".\\saves")) == 0:
-		print("There are no save files\n")
+		print("There are no save files")
 		return mainMenu()
 	os.chdir("saves")
 

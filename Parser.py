@@ -274,6 +274,7 @@ def Warp(command):
 
 def Cry(): print("A single tear sheds from your eye")
 def Dance(): print("You bust down a boogie")
+def Examples(): print(examples)
 
 def Help():
 	clearScreen()
@@ -344,8 +345,8 @@ def Attack(dobj,iobj,prep):
 
 	G.setPronouns(target)
 	print(f"\nYou attack the {target.name} with {P.weapon.name}")
-	if isinstance(target,Creature):		P.attackCreature(target,G)
-	elif isinstance(target,Item):		P.attackItem(target,G)
+	if isinstance(target,Creature):		P.attackCreature(target,G,W)
+	elif isinstance(target,Item):		P.attackItem(target,G,W)
 	if iobj in {"fist","hand","foot","leg"}:
 		P.weapon,P.weapon2 = stowedweapons
 	return True
@@ -1043,6 +1044,7 @@ shortactions = {
 "clear":clearScreen,
 "cry":Cry,
 "dance":Dance,
+"examples":Examples,
 "gear":P.printGear,
 "help":Help,
 "hp":P.printHP,

@@ -24,7 +24,8 @@ def main():
 		# pass the time after everyone has acted
 		G.incrementTime(P,W)
 
-main()
+if __name__ == "__main__":
+	main()
 
 
 
@@ -82,10 +83,6 @@ main()
 
 
 
-
-
-
-
 # commands to take for going up:
 # "go up the cliff"
 # "climb up the cliff"
@@ -114,48 +111,6 @@ main()
 # 	call Ascend() function with specified object
 # 		if obj requires climbing, call obj.climb(currentroom)
 # 		else, just changeRoom to above room
-
-
-
-# if prep... command not understood
-# up/down directions are prepositions
-# anything else is dobj
-# check for compass and dobj != back
-# if dobj = back: dobj = prevroom name
-# if dobj = currentroom: "already there!"
-# conv dir -> direction
-
-# (none, none) "where will you go?"		|	getDir()
-
-# (none, "up") "what will you go up?" 	|	GoUp()
-# (obj, "up") --> obj.traverse(up)		|
-# (dir, "up")							|
-
-# (obj, none) --> obj.traverse()		|
-# (dir, none) --> dir to room name		|
-
-# conv direction -> room name
-# change room is room exists
-# else return "nah"
-
-
-# TEST COMMANDS
-
-# ??? go
-
-# !!! go up
-# ... go up stairs
-# ... go up to pit
-
-# ... go stairs
-# ... go to stairs
-# ... go south
-# ... go to south
-
-# ... go to pit
-# ... go pit
-
-
 
 
 
