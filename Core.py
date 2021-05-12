@@ -21,6 +21,12 @@ from Data import *
 ## CORE FUNCTIONS ##
 ####################
 
+def hasMethod(obj,methodname):
+	possibleMethod = getattr(obj,methodname,None)
+	if possibleMethod != None and callable(possibleMethod):
+		return True
+	return False
+
 # prints 30 newlines
 def clearScreen():
 	print("\n"*64)
@@ -278,7 +284,8 @@ def objSearchRecur(term,node,path,d,reqSource):
 # the tree of objects, except that it does not search for a specific object...
 # it returns a set of all the objects found in the tree
 # d, the degree of the traversal, works the same as in objSearch() above
-def objTreeToSet(root,d=0):
+# if getSources, the set will consist of tuples of object,source pairs
+def objTreeToSet(root,d=0,getSources=False):
 	# A is the set of all objects encountered by the traversal
 	A = set()
 	# determine what to search through based on the root's type
@@ -289,13 +296,14 @@ def objTreeToSet(root,d=0):
 	else:	return set()
 	for I in searchThrough:
 		# add the item to the set of all items
-		A.add(I)
+		if getSources:	A.add((I,root))
+		else:			A.add(I)
 		# depending on the degree, skips closed, locked, or creature objects
 		if d == 0 and hasattr(I,"open") and not I.open:		continue
 		elif (d <= 1) and isinstance(I,Creature):			continue
 		elif d <= 2 and hasattr(I,"locked") and I.locked:	continue
 		# merge the set of all items with item I's set
-		A = A | objTreeToSet(I,d=d)
+		A = A | objTreeToSet(I,d=d,getSources=getSources)
 	return A
 
 ############################
@@ -393,19 +401,19 @@ class Game():
 			foundrooms.add(room)
 			self.roomFinder(n,room,pathlen+1,foundrooms,W)
 
-	# gets set of all other rooms with a path to currentroom less than length n
-	def nearbyRooms(self,W):
+	# returns set of all rooms connected to currentroom with path < REND_DIST
+	def renderedRooms(self,W):
 		# constant render distance of rooms in world
 		REND_DIST = 3
 		R = {self.currentroom}
 		self.roomFinder(REND_DIST,self.currentroom,0,R,W)
-		R.remove(self.currentroom)
 		return R
 
-	def renderedRooms(self,W):
-		rooms = self.nearbyRooms(W)
-		rooms.add(self.currentroom)
-		return rooms
+	# gets set of all rendered rooms except the current room
+	def nearbyRooms(self,W):
+		R = self.renderedRooms(W)
+		R.remove(self.currentroom)
+		return R
 
 	def changeRoom(self,newroom,P,W):
 		self.clearPronouns()
@@ -421,11 +429,29 @@ class Game():
 				room.removeCreature(C)
 
 	def destroyItem(self,I,W):
+		print(f"destroying {I.name}")
 		for room in self.renderedRooms(W):
-			if I in room.contents:
-				possibleItem,Source = objSearch(I,room,d=3,getSource=True)
-				if possibleItem is I:
-					S.removeItem(I)
+			allObjects = objTreeToSet(room,d=3,getSources=True)
+			print(allObjects)
+			for (object,source) in allObjects:
+				if object is I:
+					source.removeItem(object)
+
+	def searchRooms(self,objname,W,d=3,getSources=False):
+		matchingObjects = []
+		for room in self.renderedRooms(W):
+			allObjects = objTreeToSet(room,d=d)
+			for obj in allObjects:
+				if objname == obj.name:
+					matchingObjects.append(obj)
+		return matchingObjects
+
+	def inWorld(self,objname,W):
+		objects = self.searchRooms(objname,W)
+		if len(objects) > 0:
+			return True
+		return False
+
 
 # used to define all rooms in the world
 class Room():
@@ -438,10 +464,10 @@ class Room():
 		self.effects = effects
 
 	def __repr__(self):
-		return "{}".format(self.name)
+		return f"#{self.name}"
 
 	def __str__(self):
-		return "{}".format(self.name)
+		return f"#{self.name}"
 
 	# prints all the contents of the room in sentence form
 	def describeContents(self):
@@ -557,8 +583,12 @@ class Item():
 	def Obtain(self,P,W,G):
 		pass
 
-	def Break(self,G,W):
-		G.destroyItem(W)
+	def Break(self,G,W,S):
+		print("breaking!",self.name)
+		if isinstance(S,Room):
+			G.destroyItem(self,W)
+		else:
+			S.removeItem(self)
 
 # general creature class for all living things in the game
 class Creature():
@@ -607,6 +637,9 @@ class Creature():
 			return self.__dict__ == other.__dict__
 		else:
 			return False
+
+	def __hash__(self):
+		return hash(frozenset(self.__dict__))
 
 	def __lt__(self,other):
 		return self.MVMT() < other.MVMT()
@@ -712,7 +745,7 @@ class Creature():
 		if I in self.gear.values():
 			self.unequip(I)
 		self.inv.remove(I)
-		if hasattr(I,"Drop") and callable(I.Drop):
+		if hasMethod(I,"Drop"):
 			I.Drop(I)
 		if self.invWeight() < self.BRDN():
 			self.removeCondition("hindered")
@@ -777,7 +810,8 @@ class Creature():
 	def armor(self):
 		prot = 0
 		for item in self.gear:
-			if hasattr(self.gear[item], "prot"): prot += self.gear[item].prot
+			if hasattr(self.gear[item], "prot"):
+				prot += self.gear[item].prot
 		return prot
 
 	# called when a creature's hp hits 0
@@ -920,7 +954,7 @@ class Player(Creature):
 			self.addCondition("hindered","Your inventory is growing heavy.")
 		insort(self.inv,I)
 		S.removeItem(I)
-		if hasattr(I, "Obtain") and callable(I.Obtain):
+		if hasMethod(I,"Obtain"):
 			I.Obtain(self,W,G)
 		return True
 
@@ -974,7 +1008,7 @@ class Player(Creature):
 		slot = gearslots[gearitems.index(I)]
 		self.gear[slot] = Empty()
 		self.assignWeaponAndShield()
-		if hasattr(I, "Unequip") and callable(I.Unequip):
+		if hasMethod(I,"Unequip"):
 			I.Unequip(P)
 
 	# unequips the lefthanded item, moves righthanded item to left,
@@ -988,7 +1022,7 @@ class Player(Creature):
 		if hasattr(I, "twohanded") and I.twohanded:
 			self.gear["left"] = Empty()
 		self.assignWeaponAndShield()
-		if hasattr(I,"Equip") and callable(I.Equip): I.Equip(self)
+		if hasMethod(I,"Equip"): I.Equip(self)
 
 	def dualAttack(self,target,G,W):
 		hit = minm(1,maxm(99, self.ACCU() - target.EVSN()))
@@ -1326,10 +1360,10 @@ def spawnItem(G,I):
 	print(f"A {I.name} appears in front of you!")
 	G.currentroom.addItem(I)
 
-def destroyItem(S,I):
-	if isinstance(S,Player):	print(f"Your {I.name} is destroyed")
-	else:						print(f"The {I.name} is destroyed")
-	S.removeItem(I)
+# def destroyItem(S,I):
+# 	if isinstance(S,Player):	print(f"Your {I.name} is destroyed")
+# 	else:						print(f"The {I.name} is destroyed")
+# 	S.removeItem(I)
 
 def destroyItemsByType(R,Type,d=0,msg=""):
 	#TODO: make this work efficiently

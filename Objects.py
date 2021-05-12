@@ -22,7 +22,7 @@ class Bottle(Item):
 		S.removeItem(self)
 		for i in range(randint(3,6)):	#randomly generates n shards between 3,6
 			newShard = Shard("shard","a sharp shard of glass",1,-1)
-			G.currentroom.addItem(newShard)
+			S.addItem(newShard)
 
 class Box(Item):
 	def __init__(self,name,desc,weight,durability,open,contents):

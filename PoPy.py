@@ -33,7 +33,9 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# fix the fact that creatures can't die outside of the currentroom?
+# make dead creatures only give you stuff when YOU kill them...
+
+# 'spd', 'int', base stats arent actually valid commands???
 
 #TODO: research using map() in python, and passing functions as arguments
 # reevaluate effect functions, is there a way to reference a function by string?

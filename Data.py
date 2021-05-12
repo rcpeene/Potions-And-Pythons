@@ -14,9 +14,9 @@
 
 menuinstructions = "\nType 'info' for information on the game and how to play\nType 'new' to start a new game\nType 'load' to load a save file\nType 'delete' to delete a save file\nType 'quit' to quit the game\n"
 
-gameinfo = "\n\n\nPotions & Pythons\nv.Alpha\nBy Carter Peene, 2021\n\nTo play, type a command of the form:\n[verb] [*direct object] [*preposition] [*indirect object]\nOR\n[verb] [*preposition] [*direct object]\n\n* denotes a word that can be omitted when unnecessary\nArticles, determiners, and most symbols are removed from your input\n\nSee a list of command examples by typing 'examples'\nSee your main player statistics by typing 'stats' and 'traits'\nGet a description of the current place by typing 'here'\nGet a list of possible commands by typing 'help'\nLearn about most game terms and commands by typing 'define [term]'\n"
+gameinfo = "\n\n\nPotions & Pythons\nv.Alpha\nBy Carter Peene, 2021\n\nTo play, type a command of the form:\n[verb] [*direct object] [*preposition] [*indirect object]\nOR\n[verb] [*preposition] [*direct object]\n\n* denotes a term that can be omitted when unnecessary\nArticles, determiners, and most symbols are removed from your input\n\nSee a list of command examples by typing 'examples'\nSee your main player statistics by typing 'stats' and 'traits'\nGet a description of the current place by typing 'here'\nGet a list of possible commands by typing 'help'\nLearn about most game terms and commands by typing 'define [term]'\n"
 
-examples = "\nValid input examples include:\n- go north\n- go nw\n- go up the stairs\n- go to tunnel\n- go\n- look at python\n- fight the python!\n- hit the python with my sword\n- attack python sword\n- equip the sword\n- unequip sword\n- take red potion\n- take the red potion from the chest\n- put red potion chest\n- close chest"
+examples = "\nValid input examples include:\n- go north\n- go nw\n- go up the stairs\n- go to tunnel\n- go\n- look at python\n- i will fight the python!\n- hit the python with my sword\n- attack python sword\n- equip the sword\n- unequip sword\n- take red potion\n- take the red potion from the chest\n- put red potion chest\n- close chest"
 
 symbols = ".,!?~`\"()[]{}<>+=/*&^%$#@\t"
 
@@ -61,7 +61,7 @@ initgear = {"head":-1, "body":-1, "left":-1, "right":-1, "legs":-1}
 
 instantactions = {"describe","define","gear","help","hp","info","information","inventory","inv","level","lv","money","mp","quit","room","rp","save","status","time","traits","xp"}
 
-codes = {"\\get","\\lrn","\\mod","\\pot","\\set","\\tpt","\\wrp"}
+codes = {"\\get","\\lrn","\\mod","\\pot","\\set","\\tpt","\\wrp","\\zap"}
 
 
 # the following are tuples because their order should be preserved for printing

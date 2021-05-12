@@ -37,11 +37,11 @@ P, W, G = mainMenu()
 ## PARSING FUNCTIONS ##
 #######################
 
-# checks if a noun refers to an exit, an object in the room or on the player...
+# checks if a noun refers to an exit, an object in the world or on the player...
 # or an in-game definition or a miscellaneous expression
 def isMeaningful(noun):
 	if noun in G.currentroom.exits.values() or \
-	objSearch(noun,G.currentroom,d=2) or \
+	G.inWorld(noun,W) or \
 	objSearch(noun,P,d=2) or \
 	noun in definitions or \
 	noun in miscexpressions:
@@ -60,7 +60,7 @@ def nounify(command,i):
 	while j < len(command):
 		# possibleNoun is all words between i and j joined
 		possibleNoun += ' '+command[j]
-		# if the joined term refers to an object, a location, or a game term:
+		# if new term refers to an rendered object a location, or a game term:
 		# combine words into one element
 		if isMeaningful(possibleNoun):
 			del command[i:j+1]
@@ -267,6 +267,16 @@ def Warp(command):
 	try:	G.time += int(command[1])
 	except:	print("Value not number")
 
+def Zap(command):
+	command = nounify(command,1)
+	objname = command[1]
+	for room in G.renderedRooms(W):
+		obj,source = objSearch(objname,room,d=3,getSource=True)
+		if isinstance(obj,Item):
+			obj.Break(G,W,source)
+		elif isinstance(obj,Creature):
+			obj.death(P,G,W)
+
 
 #######################################
 ## SHORTACTION AND RELATED FUNCTIONS ##
@@ -365,7 +375,7 @@ def Bite(dobj,iobj,prep):
 	if I == None:
 		print(f"There is no '{dobj}' here")
 		return False
-	if hasattr(I,"Eat") and callable(I.Eat):
+	if hasMethod(I,"Eat"):
 		return Eat(dobj,iobj,prep)
 	else:
 		return Attack(dobj,"mouth",prep)
@@ -392,7 +402,7 @@ def Break(dobj,iobj,prep):
 		return False
 
 	G.setPronouns(I)
-	if hasattr(I, "Break") and callable(I.Break):
+	if hasMethod(I,"Break"):
 		I.Break(P,G,source)
 		return True
 	print("You can't break the " + I.name)
@@ -441,7 +451,7 @@ def Close(dobj,iobj,prep):
 	if not I.open:
 		print(f"The {I.name} is already closed")
 		return False
-	if hasattr(I,"Close") and callable(I.Close):
+	if hasMethod(I,"Close"):
 		I.Close()
 	else:
 		I.open = False
@@ -529,7 +539,7 @@ def Drink(dobj,iobj,prep):
 		return False
 
 	G.setPronouns(I)
-	if hasattr(I,"Drink") and callable(I.Drink):
+	if hasMethod(I,"Drink"):
 		I.Drink(P,G,S)
 		return True
 	else:
@@ -575,7 +585,7 @@ def Eat(dobj,iobj,prep):
 		return False
 
 	G.setPronouns(I)
-	if hasattr(I,"Eat") and callable(I.Eat):
+	if hasMethod(I,"Eat"):
 		I.Eat(P,G,S)
 		return True
 	print("You can't eat the " + I.name)
@@ -641,7 +651,7 @@ def GoUp():
 	if obj == None:
 		print(f"There is no '{objname}' to go up here")
 		return True
-	if hasattr(obj,"Traverse") and callable(obj.Traverse):
+	if hasMethod(obj,"Traverse"):
 		return obj.Traverse(P,W,G,"up")
 
 def Go(dobj,iobj,prep):
@@ -678,7 +688,8 @@ def Go(dobj,iobj,prep):
 		return G.changeRoom(W[dobj],P,W)
 	passage = G.currentroom.inContents(dobj)
 	if passage:
-		return passage.Traverse(P,W,G,dir)
+		if hasMethod(passage,"Traverse"):
+			passage.Traverse(P,W,G,dir)
 
 	if dobj in directions.values():
 		print(f"There is no exit leading {dobj} here")
@@ -774,7 +785,7 @@ def Look(dobj,iobj,prep):
 
 	G.setPronouns(L)
 	L.describe()
-	if hasattr(L, "Look") and callable(L.Look):
+	if hasMethod(L,"Look"):
 		L.Look()
 	return True
 
@@ -800,7 +811,7 @@ def Open(dobj,iobj,prep):
 		return False
 
 	G.setPronouns(I)
-	if hasattr(I,"Open") and callable(I.Open):
+	if hasMethod(I,"Open"):
 		if hasattr(I,"locked") and I.locked:
 			print(f"The {I.name} is locked")
 		else:
@@ -1011,7 +1022,7 @@ def Use(dobj,iobj,prep):
 		return False
 
 	G.setPronouns(I)
-	if hasattr(I,"Use") and callable(I.Use):
+	if hasMethod(I,"Use"):
 		I.Use(P,W,G)
 		return True
 	print(f"You can't use the {I.name}")
@@ -1030,6 +1041,7 @@ def Wave(dobj,iobj,prep):
 
 cheatcodes = {
 	"\\get":Get,
+	"\\zap":Zap,
 	"\\lrn":Learn,
 	"\\mod":Mode,
 	"\\pot":Pypot,
