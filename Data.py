@@ -39,9 +39,12 @@ yesses = {"absolutely","affirmative","aye","certainly","definitely","indeed","ja
 
 noes = {"absolutely not","certainly not","definitely not","n","na","nah","nahh","nahhh","nay","negative","negatory","nein","no","noo","nooo","noooo","nope"}
 
-prepositions = {"above","across","at","below","beneath","by","for","from","in","inside","into","near","off","on","onto","over","through","to","toward","under","upon","using","with"}
+prepositions = {"above","across","at","below","beneath","by","down","for","from","in","inside","into","near","off","on","onto","over","through","to","toward","under","up","upon","using","with"}
 
 pronouns = {"she","he","they","her","him","them","it"}
+
+# TODO: words which will be split into two meaningful wordss
+compounds = {"downstairs"}
 
 # used in nounify() in Parser.py to combine multiple words that might have a single meaning as a whole term
 miscexpressions = {"it all","spell list"}

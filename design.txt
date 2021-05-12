@@ -31,7 +31,7 @@ NOTES ON THE CONVENTIONS AND FORMATTING USED IN THIS CODE PROJECT
 
 -strings are denoted with "", unless it is necessary to use a string that contains " in it, in which case, the entire function of relevance uses '' to denote strings
 
--strings which are concatenated with variables are formatted using f-string formatting. The + operator is used when there is only one string 'fragment'. For example;
+-strings which are concatenated with variables are formatted using f-string formatting, however the + operator is used when there are only two terms to concatenate. For example;
 	f"There is no '{obj.name}' here"
 	f"There is {listItems()} in this room"
 	"You take the " + item.name
@@ -183,7 +183,7 @@ Items of class Switch() contain an "effect" attribute, which is a string which i
 
 NOTES WHEN MAKING AN ITEM:
 - Items do not necessarily have to have unique name, but there are parsing limitations when multiple items have the same name. Only give two items the same name if they are identical or negligibly distinct to a user.
-- Items names should NOT also be a term in any of the game's data sets (except the Items dict, which consists entirely of Item names)
+- Items names should NOT be a term which also exists in any of the game's data sets (except the Items dict, which consists entirely of Item names). There are cases where code will be unable to reliably parse the ambiguity between an item name and some other important term, like the direction "up", or the word "toward", for instance.
 - When adding an item, make sure its class exists in the Objects.py Items dict
 - The order of attributes matters! when writing the attributes into the World data file, the attributes must be in the correct order as defined in the __init__ method of the class
 
@@ -476,7 +476,13 @@ TYPES OF ACTION FUNCTIONS:
 -object search function: search room and player inv for creature or item
 
 
+CHEAT CODES:
 
+huzzah
+excelsior
+godmode
+oogabooga
+madmax
 
 IDEAS FOR CREATURES/NPCS:
 

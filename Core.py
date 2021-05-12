@@ -69,7 +69,7 @@ def columnPrint(l,n,w):
 	print()
 
 # grammar print, adds punctuation and determiners
-# n is the 'number' of an item
+# n is the 'number' of an item, denoting its plurality
 def gprint(det,text,pos,n):
 	if text[0] in vowels and det == "a":
 		det = "an"
@@ -400,7 +400,7 @@ class Game():
 	def nearbyRooms(self,W):
 		# constant render distance of rooms in world
 		REND_DIST = 3
-		R = set()
+		R = {self.currentroom}
 		self.roomFinder(REND_DIST,self.currentroom,0,R,W)
 		R.remove(self.currentroom)
 		return R
@@ -721,6 +721,12 @@ class Creature():
 			if condition == cond:
 				if reqDuration == None or reqDuration == duration:
 					self.status.remove(condition,duration)
+
+	def hasCondition(self,condname):
+		for cond in self.status:
+			if cond[0] == condname:
+				return True
+		return False
 
 	# these are creature stats that are determined dynamically with formulas
 	# these formulas are difficult to read, check design document for details

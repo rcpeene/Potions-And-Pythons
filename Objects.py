@@ -186,15 +186,24 @@ class Mouth(Item):
 		return Weapon(self.name,self.desc,self.weight,self.durability,minm(1,self.weight//4),0,0,4,False,"p")
 
 class Passage(Fixture):
-	def __init__(self,name,desc,weight,durability,directions,verbs):
+	def __init__(self,name,desc,weight,durability,directions,descname):
 		Fixture.__init__(self,name,desc,weight,durability)
 		self.directions = directions
+		self.descname = descname
 
-	def Traverse(P,W,G,dir=None):
+	def Traverse(self,P,W,G,dir=None):
 		if dir == None:
-			dir = self.directions[0]
+			if len(self.directions) == 1:
+				dir = self.directions[0]
+			else:
+				dir = input("Which direction will you go?\n> ")
+				if dir not in self.directions:
+					print(f"The {self.name} does not go that way")
+					return False
+		print(f"You go {dir} the {self.name}")
 		newroom = W[G.currentroom.exits[dir]]
 		G.changeRoom(newroom,P,W)
+		return True
 
 class Potion(Bottle):
 	# heals the player hp 1000, replaces potion with an empty bottle

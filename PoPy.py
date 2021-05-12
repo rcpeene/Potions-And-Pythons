@@ -10,7 +10,7 @@ def main():
 		G.sortOccupants(W)
 
 		# take user input until player successfully performs an action
-		while not parse(getcmd(),0):	continue
+		while not parse(getCmd(),0):	continue
 
 		# creatures in current room's turn
 		for creature in G.currentroom.occupants:
@@ -114,6 +114,46 @@ main()
 # 	call Ascend() function with specified object
 # 		if obj requires climbing, call obj.climb(currentroom)
 # 		else, just changeRoom to above room
+
+
+
+# if prep... command not understood
+# up/down directions are prepositions
+# anything else is dobj
+# check for compass and dobj != back
+# if dobj = back: dobj = prevroom name
+# if dobj = currentroom: "already there!"
+# conv dir -> direction
+
+# (none, none) "where will you go?"		|	getDir()
+
+# (none, "up") "what will you go up?" 	|	GoUp()
+# (obj, "up") --> obj.traverse(up)		|
+# (dir, "up")							|
+
+# (obj, none) --> obj.traverse()		|
+# (dir, none) --> dir to room name		|
+
+# conv direction -> room name
+# change room is room exists
+# else return "nah"
+
+
+# TEST COMMANDS
+
+# ??? go
+
+# !!! go up
+# ... go up stairs
+# ... go up to pit
+
+# ... go stairs
+# ... go to stairs
+# ... go south
+# ... go to south
+
+# ... go to pit
+# ... go pit
 
 
 

@@ -71,32 +71,59 @@ def nounify(command,i):
 
 # term must be a pronoun
 def replacePronoun(term):
-	if term == "it":
-		obj = G.it
-	elif term in {"she","her"}:
-		obj = G.she
-	elif term in {"he","him"}:
-		obj = G.he
-	elif term in {"they","them"}:
-		obj = G.they
-	if obj == None:
-		return None
+	if term == "it":				obj = G.it
+	elif term in {"she","her"}:		obj = G.she
+	elif term in {"he","him"}:		obj = G.he
+	elif term in {"they","them"}:	obj = G.they
+	if obj == None:					return None
 	return obj.name
 
-# almost does the same thing as getcmd(), except with the intention of...
+# works like getObj() and getCmd(), but for the parsing of a "destination"
+# in Go(), when a destination wasn't initially provide
+# this processes the input so it can be parsed like a regular command
+# in order to identify an object and a preposition in the input
+# returns the object and preposition found
+def getDest(prompt):
+	rawdestination = input(prompt + "\n> ")
+	# take input until input has any non-whitespace characters in it
+	while not any(i not in "\t " for i in rawdestination):
+		rawdestination = input("> ")
+	# lowercase the sentence command, copy it excluding symbols
+	rawdestination = rawdestination.lower()
+	puredestination = ""
+	for i in rawdestination:
+		if i in symbols:	puredestination = puredestination + " "
+		else:				puredestination = puredestination + i
+	# copy command, delimited by spaces, into a list excluding articles
+	listdestination = [i for i in puredestination.split() if i not in articles]
+	# finally, combine certain words if they appear to make one noun term
+	finaldestination = nounify(listdestination,1)
+	return finaldestination
+
+def parseGo(prompt):
+	preps = {"down","through","to","toward","up","in","into","on","onto"}
+	prep = None
+	obj = None
+	destinput = getDest(prompt)
+
+	# iterates through the input and assigns...
+	# terms based on their position relative to the other terms present
+	for term in destinput:
+		# preposition is defined if the term is a known preposition
+		if term in preps and prep == None:	prep = term
+		# direct object is defined if prep and dobj havent been found yet
+		elif obj == None:					obj = term
+	return obj,prep
+
+# almost does the same thing as getCmd(), except with the intention of...
 # finding a specific object.
 # Processes input to a form usable by action functions
-# unlike getcmd(), this function returns a string
-def getobj(prompt):
-	rawobject = input(prompt + '\n> ')
-	validinput = False
-	# validate input by checking for any non-whitespace characters
-	for i in rawobject:
-		if i not in '\t ':	validinput = True
-	# if input invalid, ask again
-	if validinput == False:
-		print("Enter an object")
-		return getobj(prompt)
+# unlike getCmd(), this function returns a string
+def getObj(prompt):
+	rawobject = input(prompt + "\n> ")
+	# take input until input has any non-whitespace characters in it
+	while not any(i not in "\t " for i in rawobject):
+		rawobject = input("> ")
 	# lowercase the object, copy it excluding symbols
 	rawobject = rawobject.lower()
 	pureobject = ""
@@ -110,15 +137,14 @@ def getobj(prompt):
 		if i not in articles:
 			purelistobject.append(i)
 	# finally, combine the list of words into a single string
-	endobject = " ".join(purelistobject)
-	return endobject
+	finalobject = " ".join(purelistobject)
+	return finalobject
 
 # validates user input and processes into into a command form usable by parse(),
 # namely, it returns a list of words without capitals, symbols, or articles
 # the last step, nounify(), joins words that may only be meaningful as one term
-def getcmd():
+def getCmd():
 	rawcommand = input("\nWhat will you do?\n> ")
-	validinput = False
 	# take input until input has any non-whitespace characters in it
 	while not any(i not in "\t " for i in rawcommand):
 		rawcommand = input("> ")
@@ -133,8 +159,8 @@ def getcmd():
 	# copy command, delimited by spaces, into a list excluding articles
 	listcommand = [i for i in purecommand.split() if i not in articles]
 	# finally, combine certain words if they appear to make one noun term
-	endcommand = nounify(listcommand,1)
-	return endcommand
+	finalcommand = nounify(listcommand,1)
+	return finalcommand
 
 # called in parse() when a command fails, it simply recurs parse(), and...
 # prints a helpful message if user has provided invalid input 4 or more times
@@ -143,11 +169,11 @@ def promptHelp(msg,n):
 	if msg != "":	print(msg)
 	if n >= 2:	print("Enter 'help' for a list of commands")
 	if n > 32:	return False	# prevent stack overflow from repeated bad input
-	return parse(getcmd(),n+1)	# ask again
+	return parse(getCmd(),n+1)	# ask again
 
 # the primary input parsing function for the game
 # its purpose is to parse command grammar and call the related action function
-# it is called by main() with getcmd() as its first argument
+# it is called by main() with getCmd() as its first argument
 # it is called on infinite loop until it returns True
 # it returns True only when the player successfully takes an action in the game
 # n denotes how many times parse has recurred
@@ -174,11 +200,11 @@ def parse(command,n):
 	# terms based on their position relative to the other terms present
 	for term in command[1:]:
 		# preposition is defined if the term is a known preposition
-		if term in prepositions:			prep = term
+		if term in prepositions and prep == None:	prep = term
 		# direct object is defined if prep and dobj havent been found yet
-		elif prep == None and dobj == None:	dobj = term
+		elif prep == None and dobj == None:			dobj = term
 		# indirect object is defined if a prep or dobj has been found
-		else:								iobj = term
+		else:										iobj = term
 
 	if dobj in pronouns:	dobj = replacePronoun(dobj)
 	if iobj in pronouns:	iobj = replacePronoun(iobj)
@@ -288,7 +314,7 @@ def Attack(dobj,iobj,prep):
 		if len(P.weapons()) == 0:
 			iobj = "fist"
 		elif P.gear["right"] == Empty() and P.gear["left"] == Empty():
-			iobj = getobj("What will you attack with?")
+			iobj = getObj("What will you attack with?")
 			if iobj in cancels:
 				return False
 	weapon = P.weapon
@@ -302,12 +328,12 @@ def Attack(dobj,iobj,prep):
 			print(f"There is no '{iobj}' in your inventory")
 			return False
 
-	if dobj == None:	dobj = getobj("What will you attack?")
+	if dobj == None:	dobj = getObj("What will you attack?")
 	target = G.currentroom.inOccupants(dobj)
 	if target == None:	target = G.currentroom.inContents(dobj)
 	if dobj in {"myself","me"}: target = P
 	if target == None:
-		print("There is no '" + dobj + "' here")
+		print(f"There is no '{dobj}' here")
 		return False
 
 	if iobj in {"fist","hand","foot","leg","mouth","teeth"}:
@@ -329,7 +355,7 @@ def Bite(dobj,iobj,prep):
 	if prep not in {"with","using",None}:
 		print("Command not understood")
 	if dobj == None:
-		dobj = getobj("What do you want to bite?")
+		dobj = getObj("What do you want to bite?")
 		if dobj in cancels:
 			return False
 
@@ -354,14 +380,14 @@ def Break(dobj,iobj,prep):
 		print("Command not understood")
 		return False
 	if dobj == None:
-		dobj = getobj("What do you want to break?")
+		dobj = getObj("What do you want to break?")
 		if dobj in cancels:
 			return False
 
 	I,source = P.search(dobj,getSource=True)
 	if I == None:	I,source = G.currentroom.search(dobj,getSource=True)
 	if I == None:
-		print("There is no '" + dobj + "' here")
+		print(f"There is no '{dobj}' here")
 		return False
 
 	G.setPronouns(I)
@@ -376,7 +402,7 @@ def Carry(dobj,iobj,prep):
 		print("Command not understood")
 		return False
 	if dobj == None:
-		dobj = getobj("What do you want to carry?")
+		dobj = getObj("What do you want to carry?")
 		if dobj in cancels:
 			return False
 
@@ -397,7 +423,7 @@ def Close(dobj,iobj,prep):
 		print("Command not understood")
 		return False
 	if dobj == None:
-		dobj = getobj("What will you close?")
+		dobj = getObj("What will you close?")
 		if dobj in cancels:
 			return False
 
@@ -441,7 +467,7 @@ def Define(dobj,iobj,prep):
 		print("Can only define one word at once")
 		return False
 	if dobj == None:
-		dobj = getobj("What term would you like defined?")
+		dobj = getObj("What term would you like defined?")
 		if dobj in cancels:
 			return False
 
@@ -459,7 +485,7 @@ def Describe(dobj,iobj,prep):
 		print("Can only describe one thing at once")
 		return False
 	if dobj == None:	#if no dobj, ask
-		dobj = getobj("What do you want to be described?")
+		dobj = getObj("What do you want to be described?")
 		if dobj in cancels:
 			return False
 
@@ -492,7 +518,7 @@ def Drink(dobj,iobj,prep):
 		print("Command not understood")
 		return False
 	if dobj == None:
-		dobj = getobj("What do you want to drink?")
+		dobj = getObj("What do you want to drink?")
 		if dobj in cancels:
 			return False
 
@@ -513,7 +539,7 @@ def Drop(dobj,iobj,prep):
 	if prep != None:
 		return Put(dobj,iobj,prep)
 	if dobj == None:
-		dobj = getobj("What will you drop?")
+		dobj = getObj("What will you drop?")
 		if dobj in cancels:
 			return False
 
@@ -538,7 +564,7 @@ def Eat(dobj,iobj,prep):
 		print("Command not understood")
 		return False
 	if dobj == None:
-		dobj = getobj("What do you want to eat?")
+		dobj = getObj("What do you want to eat?")
 		if dobj in cancels:
 			return False
 
@@ -562,7 +588,7 @@ def Equip(dobj,iobj,prep):
 		print("Command not understood")
 		return False
 	if dobj == None:
-		dobj = getobj("What would you like to equip?")
+		dobj = getObj("What would you like to equip?")
 		if dobj in cancels:
 			return False
 
@@ -603,41 +629,60 @@ def Follow(dobj,iobj,prep):
 def Give(dobj,iobj,prep):
 	print("giveing")
 
-def GoUp(obj=None):
-	print("OWAHAHAHA")
+def GoUp():
+	if P.hasCondition("fly"):
+		newroom = G.currentroom.exits["up"]
+		print("You fly up!")
+		return G.changeRoom(W[newroom],P,W)
+
+	objname = getObj("What will you go up?")
+	obj = G.currentroom.search(objname)
+	if obj == None:
+		print(f"There is no '{objname}' to go up here")
+		return True
+	if hasattr(obj,"Traverse") and callable(obj.Traverse):
+		return obj.Traverse(P,W,G,"up")
 
 def Go(dobj,iobj,prep):
-	if prep not in {"to","toward","in","into",None}:
+	preps = {"down","through","to","toward","up","in","into","on","onto"}
+	dir = None
+	if dobj == None and prep == None:
+		dobj,prep = parseGo("Where will you go?")
+	if dobj == None:	dobj = iobj
+	if dobj == None:	dobj = prep
+	if prep in directions.values():
+		dir = prep
+		prep = None
+	if prep != None and prep not in preps:
 		print("Command not understood")
 		return False
-	if prep in {"to","toward","in","into"}:	dobj = iobj
-	if dobj == None:						dobj = iobj
 
-	if not any(isinstance(item,Compass) for item in P.inv) and dobj != "back":
-		print("\nWithout your compass, you go in a random direction")
-		dobj = choice(list(G.currentroom.exits.values()))
-	if dobj == None:	dobj = getobj("Where will you go?")
 	if dobj == "back":	dobj = G.prevroom.name
 	if dobj == G.currentroom.name:
 		print("You are already there")
 		return False
+	if not any(isinstance(item,Compass) for item in P.inv) and dobj != "back":
+		print("\nWithout your compass, you go in a random direction")
+		dobj = choice(list(G.currentroom.exits.values()))
 
-	exits = G.currentroom.exits
 	if dobj in directions.keys():
 		dobj = directions[dobj]
+	exits = G.currentroom.exits
 	if dobj in exits.keys():
-		dobj = G.currentroom.exits[dobj]
-	if "up" in exits and dobj == exits["up"]:
-		print(G.lastRawCommand)
-		print(dobj,iobj,prep)
+		dobj = exits[dobj]
+
+	if "up" in exits.keys() and exits["up"] == dobj:
 		return GoUp()
-	elif dobj in exits.values():
-		G.changeRoom(W[dobj],P,W)
-		return True
+	if dobj in exits.values():
+		return G.changeRoom(W[dobj],P,W)
+	passage = G.currentroom.inContents(dobj)
+	if passage:
+		return passage.Traverse(P,W,G,dir)
+
 	if dobj in directions.values():
 		print(f"There is no exit leading {dobj} here")
 	else:
-		print(f"There is no exit leading to {gprint('a', dobj,1,1)} here")
+		print(f"There is no exit leading to a '{dobj}' here")
 	return False
 
 # add in the ability to try to 'grab' creatures?
@@ -646,7 +691,7 @@ def Grab(dobj,iobj,prep):
 		print("Command not understood")
 		return False
 	if dobj == None:
-		dobj = getobj("What will you grab?")
+		dobj = getObj("What will you grab?")
 		if dobj in cancels:
 			return False
 
@@ -675,7 +720,7 @@ def Jump(dobj,iobj,prep):
 
 def Kick(dobj,iobj,prep):
 	if dobj == None:
-		dobj = getobj("What will you kick?")
+		dobj = getObj("What will you kick?")
 		if dobj in cancels:
 			return False
 	return Attack(dobj,"foot","with")
@@ -688,6 +733,7 @@ def Kill(dobj,iobj,prep):
 		if yesno("Are you sure you want to kill yourself?"):
 			P.death()
 			return True
+		print("Fwew, that was close!")
 		return False
 	return Attack(dobj,iobj,prep)
 
@@ -709,7 +755,7 @@ def Look(dobj,iobj,prep):
 		return False
 	if dobj == None:	dobj = iobj
 	if dobj == None:
-		dobj = getobj("What will you look at?")
+		dobj = getObj("What will you look at?")
 		if dobj in cancels:
 			return False
 
@@ -742,7 +788,7 @@ def Open(dobj,iobj,prep):
 		print("Command not understood")
 		return False
 	if dobj == None:
-		dobj = getobj("What will you open?")
+		dobj = getObj("What will you open?")
 		if dobj in cancels:
 			return True
 
@@ -755,7 +801,7 @@ def Open(dobj,iobj,prep):
 	G.setPronouns(I)
 	if hasattr(I,"Open") and callable(I.Open):
 		if hasattr(I,"locked") and I.locked:
-			print("The " + I.name + " is locked")
+			print(f"The {I.name} is locked")
 		else:
 			I.Open()
 		return True
@@ -785,7 +831,7 @@ def Pull(dobj,iobj,prep):
 
 def Punch(dobj,iobj,prep):
 	if dobj == None:
-		dobj = getobj("What will you punch?")
+		dobj = getObj("What will you punch?")
 		if dobj in cancels:
 			return False
 	return Attack(dobj,"fist","with")
@@ -798,11 +844,11 @@ def Put(dobj,iobj,prep):
 		print("Command not understood")
 		return False
 	if dobj == None:
-		dobj = getobj("What will you put?")
+		dobj = getObj("What will you put?")
 		if dobj in cancels:
 			return False
 	if iobj == None:
-		iobj = getobj(f"What will you put your {dobj} in?")
+		iobj = getObj(f"What will you put your {dobj} in?")
 
 	I,S = P.search(dobj,getSource=True)
 	if I == None:
@@ -884,7 +930,7 @@ def Take(dobj,iobj,prep):
 		print("Command not understood")
 		return False
 	if dobj == None:
-		dobj = getobj("What will you take?")
+		dobj = getObj("What will you take?")
 		if dobj in cancels:
 			return False
 	if dobj in {"all","everything","it all"}:
@@ -911,7 +957,7 @@ def Take(dobj,iobj,prep):
 	if S is P:
 		return TakeFromSelf(dobj,iobj,prep)
 	if not P.obtainItem(I, S, W, G):
-		print(f"You can't take the {dobj}, your Inventory is too full")
+		print(f"You can't take the {I.name}, your Inventory is too full")
 		return False
 
 	if S is G.currentroom:		appendstring = ""
@@ -932,7 +978,7 @@ def Unequip(dobj,iobj,prep):
 		print("Command not understood")
 		return False
 	if dobj == None:
-		dobj = getobj("What would you like to unequip?")
+		dobj = getObj("What would you like to unequip?")
 		if dobj in cancels:
 			return False
 
@@ -967,7 +1013,7 @@ def Use(dobj,iobj,prep):
 	if hasattr(I,"Use") and callable(I.Use):
 		I.Use(P,W,G)
 		return True
-	print(f"You can't use the '{dobj}'")
+	print(f"You can't use the {I.name}")
 	return False
 
 def Wait(dobj,iobj,prep):
@@ -1186,7 +1232,7 @@ some action functions only serve to redirect to other functions depending on the
 
 INPUT AND PREPROCESSING:
 
-getcmd() takes input in the form of a string
+getCmd() takes input in the form of a string
 (loop until input is not an empty string)
 
 convert to total lowercase
