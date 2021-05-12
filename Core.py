@@ -429,15 +429,13 @@ class Game():
 				room.removeCreature(C)
 
 	def destroyItem(self,I,W):
-		print(f"destroying {I.name}")
 		for room in self.renderedRooms(W):
 			allObjects = objTreeToSet(room,d=3,getSources=True)
-			print(allObjects)
 			for (object,source) in allObjects:
 				if object is I:
 					source.removeItem(object)
 
-	def searchRooms(self,objname,W,d=3,getSources=False):
+	def searchRooms(self,objname,W,d=3):
 		matchingObjects = []
 		for room in self.renderedRooms(W):
 			allObjects = objTreeToSet(room,d=d)
@@ -445,6 +443,14 @@ class Game():
 				if objname == obj.name:
 					matchingObjects.append(obj)
 		return matchingObjects
+
+	def getAllObjects(self,W,getSources=False):
+		allObjects = []
+		for room in self.renderedRooms(W):
+			roomObjects = objTreeToSet(room,d=3,getSources=getSources)
+			for elem in roomObjects:
+				allObjects.append(elem)
+		return allObjects
 
 	def inWorld(self,objname,W):
 		objects = self.searchRooms(objname,W)
@@ -742,8 +748,9 @@ class Creature():
 		return True
 
 	def removeItem(self,I):
-		if I in self.gear.values():
-			self.unequip(I)
+		# TODO: can animals unequip? can any creature?
+		# if I in self.gear.values():
+		# 	self.unequip(I)
 		self.inv.remove(I)
 		if hasMethod(I,"Drop"):
 			I.Drop(I)

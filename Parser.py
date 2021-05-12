@@ -270,12 +270,13 @@ def Warp(command):
 def Zap(command):
 	command = nounify(command,1)
 	objname = command[1]
-	for room in G.renderedRooms(W):
-		obj,source = objSearch(objname,room,d=3,getSource=True)
-		if isinstance(obj,Item):
-			obj.Break(G,W,source)
-		elif isinstance(obj,Creature):
-			obj.death(P,G,W)
+	allObjects = G.getAllObjects(W,getSources=True)
+	for (obj,source) in allObjects:
+		if objname == obj.name:
+			if isinstance(obj,Item):
+				obj.Break(G,W,source)
+			elif isinstance(obj,Creature):
+				obj.death(P,G,W)
 
 
 #######################################
