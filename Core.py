@@ -348,6 +348,7 @@ class Game():
 		self.currentroom = currentroom
 		self.prevroom = prevroom
 		self.time = time
+		self.whoseturn = None
 		self.lastRawCommand = None
 		# pronoun attributes store a reference to an object which may be...
 		# implied by that pronoun from user input
@@ -440,7 +441,7 @@ class Game():
 		for room in self.renderedRooms(W):
 			allObjects = objTreeToSet(room,d=d)
 			for obj in allObjects:
-				if objname == obj.name:
+				if objname == obj.name.lower():
 					matchingObjects.append(obj)
 		return matchingObjects
 
@@ -568,7 +569,7 @@ class Item():
 			return False
 
 	def __hash__(self):
-		return hash(frozenset(self.__dict__))
+		return hash(frozenset(self.__dict__)) * hash(id(self))
 
 	def writeAttributes(self,fd):
 		fd.write(f'"{self.name}", "{self.desc}", ')
@@ -590,11 +591,7 @@ class Item():
 		pass
 
 	def Break(self,G,W,S):
-		print("breaking!",self.name)
-		if isinstance(S,Room):
-			G.destroyItem(self,W)
-		else:
-			S.removeItem(self)
+		S.removeItem(self)
 
 # general creature class for all living things in the game
 class Creature():
@@ -645,7 +642,7 @@ class Creature():
 			return False
 
 	def __hash__(self):
-		return hash(frozenset(self.__dict__))
+		return hash(frozenset(self.__dict__)) * hash(id(self))
 
 	def __lt__(self,other):
 		return self.MVMT() < other.MVMT()
@@ -753,7 +750,7 @@ class Creature():
 		# 	self.unequip(I)
 		self.inv.remove(I)
 		if hasMethod(I,"Drop"):
-			I.Drop(I)
+			I.Drop(self)
 		if self.invWeight() < self.BRDN():
 			self.removeCondition("hindered")
 
@@ -827,8 +824,9 @@ class Creature():
 		print("agh its... ded?")
 		G.destroyCreature(self,W)
 		#drop some wealth or items
-		P.gainxp(10)
-		P.gainMoney(P.LOOT())
+		if G.whoseturn is P:
+			P.gainxp(10)
+			P.gainMoney(P.LOOT())
 
 	# takes incoming damage, accounts for damage vulnerability or resistance
 	def takedmg(self,dmg,type,P,G,W):

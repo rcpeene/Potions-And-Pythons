@@ -10,15 +10,18 @@ def main():
 		G.sortOccupants(W)
 
 		# take user input until player successfully performs an action
+		G.whoseturn = P
 		while not parse(getCmd(),0):	continue
 
 		# creatures in current room's turn
 		for creature in G.currentroom.occupants:
+			G.whoseturn = creature
 			creature.act(P,G.currentroom,False)
 
 		# creatures in nearby rooms' turn
 		for room in G.nearbyRooms(W):
 			for creature in room.occupants:
+				G.whoseturn = creature
 				creature.act(P,room,True)
 
 		# pass the time after everyone has acted
@@ -33,9 +36,7 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# zapping sword doesn't remove from the python. why?
-
-# make dead creatures only give you stuff when YOU kill them...
+# fix destroyItem and destroyCreature
 
 # 'spd', 'int', base stats arent actually valid commands???
 

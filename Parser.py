@@ -233,7 +233,8 @@ def Get(command):
 		print("Object not found")
 		return
 	attrString = command[2]
-	print(getattr(obj,attrString))
+	try:	print(getattr(obj,attrString))
+	except:	print("Attribute does not exist")
 
 def Learn(command):
 	try:	P.gainxp(int(command[1]))
@@ -268,15 +269,17 @@ def Warp(command):
 	except:	print("Value not number")
 
 def Zap(command):
-	command = nounify(command,1)
-	objname = command[1]
+	objname = " ".join(command[1:])
 	allObjects = G.getAllObjects(W,getSources=True)
+	zappedObjects = 0
 	for (obj,source) in allObjects:
-		if objname == obj.name:
+		if objname.lower() == obj.name.lower():
 			if isinstance(obj,Item):
 				obj.Break(G,W,source)
 			elif isinstance(obj,Creature):
 				obj.death(P,G,W)
+			zappedObjects += 1
+	print("Zapped objects: " + str(zappedObjects))
 
 
 #######################################
