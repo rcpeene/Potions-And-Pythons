@@ -429,12 +429,13 @@ class Game():
 			if C in room.occupants:
 				room.removeCreature(C)
 
-	def destroyItem(self,I,W):
-		for room in self.renderedRooms(W):
-			allObjects = objTreeToSet(room,d=3,getSources=True)
-			for (object,source) in allObjects:
-				if object is I:
-					source.removeItem(object)
+	# perhaps not necessary code
+	# def destroyItem(self,I,W):
+	# 	for room in self.renderedRooms(W):
+	# 		allObjects = objTreeToSet(room,d=3,getSources=True)
+	# 		for (object,source) in allObjects:
+	# 			if object is I:
+	# 				source.removeItem(object)
 
 	def searchRooms(self,objname,W,d=3):
 		matchingObjects = []
@@ -445,6 +446,7 @@ class Game():
 					matchingObjects.append(obj)
 		return matchingObjects
 
+	# returns a set of all objects in the world (does not include player inv)
 	def getAllObjects(self,W,getSources=False):
 		allObjects = []
 		for room in self.renderedRooms(W):
@@ -616,7 +618,7 @@ class Creature():
 		self.inv = inv
 		self.gear = {key: inv[gear[key]] if gear[key] != -1 else Empty() for key in gear}
 		self.status = status
-		# sort status effects by name, change 0 to 1 to sort by duration
+		# sort status effects by name; change '0' to '1' to sort by duration
 		self.status.sort(key=lambda x: x[0])
 
 		self.weapon = Empty()
@@ -752,7 +754,7 @@ class Creature():
 		if hasMethod(I,"Drop"):
 			I.Drop(self)
 		if self.invWeight() < self.BRDN():
-			self.removeCondition("hindered")
+			self.removeCondition("hindered",reqDuration=-3)
 
 	def passTime(self,t):
 		for condition in self.status:
@@ -764,23 +766,27 @@ class Creature():
 				condition[1] -= t
 			# if, after subtraction, condition is non-positive, remove it
 			if condition[1] <= 0:
-				self.status.remove(condition)
+				self.removeCondition(condition[0],reqDuration=0)
 
-	def addCondition(self,cond,stackable=False):
+
+	def addCondition(self,cond,dur,stackable=False):
 		# TODO: include stackability
-		insort(self.status, cond)
+		pair = [cond,dur]
+		insort(self.status,pair)
 
 	def removeCondition(self,cond,reqDuration=None):
-		# removes all conditions of the same name
-		for condition, duration in self.status:
+		# removes one of the same name
+		for condition,duration in self.status:
 			if condition == cond:
 				if reqDuration == None or reqDuration == duration:
-					self.status.remove(condition,duration)
+					self.status.remove([condition,duration])
+					break
 
-	def hasCondition(self,condname):
+	def hasCondition(self,condname,reqDuration=None):
 		for cond in self.status:
 			if cond[0] == condname:
-				return True
+				if reqDuration == None or reqDuration == cond[1]:
+					return True
 		return False
 
 	# these are creature stats that are determined dynamically with formulas
@@ -823,7 +829,7 @@ class Creature():
 		self.alive = False
 		print("agh its... ded?")
 		G.destroyCreature(self,W)
-		#drop some wealth or items
+		#drop some wealth or items if its players turn
 		if G.whoseturn is P:
 			P.gainxp(10)
 			P.gainMoney(P.LOOT())
@@ -914,8 +920,8 @@ class Player(Creature):
 
 	# called when player hp hits 0
 	def death(self):
-		# check if there's any auto-resurrect features
 		print("You have died!")
+		# check if there's any auto-resurrect features
 		# ask to continue from checkpoint (last save)
 		# or to load a different save
 		# or to quit game
@@ -938,25 +944,28 @@ class Player(Creature):
 		print(f"You healed {heal} HP")
 		return heal
 
-	def addCondition(self,cond,msg="",stackable=False,):
+	def addCondition(self,cond,dur,msg="",stackable=False,):
 		# TODO: include stackability
-		insort(self.status, cond)
+		pair = [cond,dur]
+		insort(self.status, pair)
 		if msg != "":	print(msg)
-		print("You are " + cond[0])
+		print("You are " + cond)
 
 	def removeCondition(self,cond,reqDuration=None):
-		# removes all conditions of the same name
-		for condition, duration in self.status:
+		# removes one of the same name
+		for condition,duration in self.status:
 			if condition == cond:
 				if reqDuration == None or reqDuration == duration:
-					self.status.remove(condition,duration)
-		print("You are no longer " + cond)
+					self.status.remove([condition,duration])
+					print("You are no longer " + cond)
+					break
 
 	def obtainItem(self,I,S,W,G):
 		if self.invWeight() + I.Weight() > self.BRDN() * 2:
 			return False
 		if self.invWeight() + I.Weight() > self.BRDN():
-			self.addCondition("hindered","Your inventory is growing heavy.")
+			if not self.hasCondition("hindered"):
+				self.addCondition("hindered",-3,"Your inventory grows heavy.")
 		insort(self.inv,I)
 		S.removeItem(I)
 		if hasMethod(I,"Obtain"):
@@ -1143,13 +1152,16 @@ class Player(Creature):
 
 	# prints player inventory
 	def printInv(self):
-		if len(self.inv) == 0:	print("Inventory is empty")
-		else:					columnPrint(self.invNames(),8,12)
+		if len(self.inv) == 0:
+			print("Inventory is empty")
+		else:
+			print("Weight:",self.invWeight())
+			columnPrint(self.invNames(),8,12)
 
 	# prints player level, money, hp, mp, rp, and status effects
 	def printStats(self):
-		stats = [self.name, f"LV: {self.level()}", f"Ᵽ{self.money}", f"RP: {self.rp}", f"HP: {self.hp}/{self.MXHP()}", f"MP: {self.mp}/{self.MXMP()}"]
-		columnPrint(stats,3,16)
+		stats = [self.name, f"Ᵽ{self.money}", f"LV: {self.level()}", f"RP: {self.rp}", f"HP: {self.hp}/{self.MXHP()}", f"MP: {self.mp}/{self.MXMP()}"]
+		columnPrint(stats,2,16)
 		if len(self.status) != 0:
 			self.printStatus()
 

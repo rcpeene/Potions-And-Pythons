@@ -197,9 +197,9 @@ class Passage(Fixture):
 				dir = self.directions[0]
 			else:
 				dir = input("Which direction will you go?\n> ")
-				if dir not in self.directions:
-					print(f"The {self.name} does not go that way")
-					return False
+		if dir not in self.directions:
+			print(f"The {self.name} does not go that way")
+			return False
 		print(f"You go {dir} the {self.name}")
 		newroom = W[G.currentroom.exits[dir]]
 		G.changeRoom(newroom,P,W)
@@ -302,13 +302,34 @@ class Table(Fixture):
 		else:
 			print("There is nothing on it")
 
-# class Stairway(Fixture):
-# 	def __init__(self,name,desc,weight,durability,connection):
-# 		Fixture.__init__(self,name,desc,weight,durability)
-# 		self.connection = connection
-#
-# 	def Ascend(P,W,G):
-# 		print("You go up the " + self.name)
+class Wall(Passage):
+	def __init__(self,name,desc,weight,durability,directions,descname,cr):
+		Fixture.__init__(self,name,desc,weight,durability)
+		self.directions = directions
+		self.descname = descname
+		self.cr = cr
+
+	def Traverse(self,P,W,G,dir=None):
+		if dir == None:
+			if len(self.directions) == 1:
+				dir = self.directions[0]
+			else:
+				dir = input("Which direction will you go?\n> ")
+		if dir not in self.directions:
+			print(f"The {self.name} does not go that way")
+			return False
+
+		if P.ATHL() < self.cr:
+			print(f"You fall down the {self.name}!")
+			if dir == "down":
+				G.changeRoom(W[currentroom.exits["down"]])
+			P.takedmg(self.cr-P.ATHL(),"b")
+			return True
+
+		print(f"You climb {dir} the {self.name}")
+		newroom = W[G.currentroom.exits[dir]]
+		G.changeRoom(newroom,P,W)
+		return True
 
 
 #####################

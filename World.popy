@@ -92,6 +92,9 @@ $Sword ("sword", "a plain iron sword", 8, 10, 2, 2, 2, 0, False, "s")
 #cliffside
 @A small log cabin resides here. Moss and vines cover what may have once been a reddish colored home. Rays of light peak through the canopy, landing on the dusty roof. All sides of this cabin are surrounded by insurmountable cliffs except the forest to the east.
 %"east": "pond"
+%"up": "glen"
+
+$Wall ("cliff", "a dark rocky cliff leading high up", -1, -1, ["up"], "cliff leading up", 30)
 
 $Switch ("doorbell", "a bronze bell hanging near the door of the cabin", 2, 10, "changeMode")
 ~
@@ -108,7 +111,7 @@ $Switch ("doorbell", "a bronze bell hanging near the door of the cabin", 2, 10, 
 %"south": "tunnel"
 %"west": "brook"
 
-$Sign ("sign", "A wooden sign", 7, 10, "Welcome to the Land!\nWatch out for Snakes.")
+$Sign ("sign", "A wooden sign", 7, 100, "Welcome to the Land!\nWatch out for Snakes.")
 $Box ("chest", "a large wooden chest", 4, 10, False,
 	[$Lockbox ("capsule", "a metal capsule", 1, 10, False, [], True),
 	$Box ("small chest", "a small wooden chest", 4, 10, False,

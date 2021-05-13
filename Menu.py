@@ -372,7 +372,7 @@ def createCharacter():
 	name = input("What is your name?\n> ")
 	while len(name) == 0: name = input('> ')
 	gear = {"head":-1, "body":-1, "left":-1, "right":-1, "legs":-1}
-	return Player(name,"a guy",1,1,[1 for _ in range(10)],0,[],initgear,{},0,0)
+	return Player(name,"a guy",1,1,[1 for _ in range(10)],0,[],initgear,[],0,0)
 
 # starts a new game and returns player, world, and game objects
 def newGame():
@@ -393,7 +393,7 @@ def testGame():
 	traits = [4 for _ in range(10)]
 	C = Compass("compass", "a plain steel compass with a red arrow", 2, 10)
 	status = [["fireproof",-1], ["poisoned",10], ["cursed",-2], ["immortal",-1],
-	["sharpshooter",50],["invisible",5]]
+	["sharpshooter",50],["invisible",5], ["invisible",-1]]
 	P = Player("Norman","a hero",24,24,traits,1000,[C],initgear,status,1585,100)
 
 	clearScreen()
@@ -410,7 +410,7 @@ def mainMenu():
 		print(menuinstructions)
 		g = input("> ").lower().split()
 		if len(g) == 0: continue
-		if g[0] == "info" and len(g) == 1:		print("\n"*64+gameinfo)
+		if g[0] == "info" and len(g) == 1:		print("\n"*64+gameinfo+"\n")
 		if g[0] == "new" and len(g) == 1:		return newGame()
 
 		if g[0] == "load" and len(g) == 1:		return loadGame(None)

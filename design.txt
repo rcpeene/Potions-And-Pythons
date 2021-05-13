@@ -618,6 +618,13 @@ cloth
 
 STATUS EFFECTS:
 
+status conditions exist in the creatures status list as list pairs
+of condition name and duration
+negative durations have special meanings:
+-1 means the condition permanent until it is removed by some general source
+-2 means the condition lasts as long as the player is in the current room
+-3 or less means the condition lasts until removed by a specific source
+
 curses;
 
 weakness - lowers STR

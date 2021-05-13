@@ -36,10 +36,6 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# fix destroyItem and destroyCreature
-
-# 'spd', 'int', base stats arent actually valid commands???
-
 #TODO: research using map() in python, and passing functions as arguments
 # reevaluate effect functions, is there a way to reference a function by string?
 # evaluate enter, exit functions in room

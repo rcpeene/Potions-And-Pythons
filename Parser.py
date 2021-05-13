@@ -288,7 +288,7 @@ def Zap(command):
 
 def Cry(): print("A single tear sheds from your eye")
 def Dance(): print("You bust down a boogie")
-def Examples(): print(examples)
+def Examples(): print("\n"*64 + examples)
 
 def Help():
 	clearScreen()
@@ -300,9 +300,7 @@ def Help():
 	columnPrint(verbs,10,10)
 	print("\nType 'info' for information on the game and how to play")
 
-def Info():
-	clearScreen()
-	print(gameinfo)
+def Info(): print("\n"*64 + gameinfo)
 
 def Laugh(): print("HAHAHAHAHA!")
 def Quit():
@@ -430,8 +428,8 @@ def Cast(dobj,iobj,prep):
 def Catch(dobj,iobj,prep):
 	print("catching")
 
-def Climb(dobj,iobj,prep):
-	print("climbing")
+# def Climb(dobj,iobj,prep):
+# 	print("climbing")
 
 def Close(dobj,iobj,prep):
 	if prep != None:
@@ -644,19 +642,19 @@ def Follow(dobj,iobj,prep):
 def Give(dobj,iobj,prep):
 	print("giveing")
 
-def GoUp():
+def GoVertical(dir):
 	if P.hasCondition("fly"):
-		newroom = G.currentroom.exits["up"]
-		print("You fly up!")
+		newroom = G.currentroom.exits[dir]
+		print(f"You fly {dir}!")
 		return G.changeRoom(W[newroom],P,W)
 
-	objname = getObj("What will you go up?")
+	objname = getObj(f"What will you go {dir}?")
 	obj = G.currentroom.search(objname)
 	if obj == None:
-		print(f"There is no '{objname}' to go up here")
-		return True
+		print(f"There is no '{objname}' to go {dir} here")
+		return False
 	if hasMethod(obj,"Traverse"):
-		return obj.Traverse(P,W,G,"up")
+		return obj.Traverse(P,W,G,dir)
 
 def Go(dobj,iobj,prep):
 	preps = {"down","through","to","toward","up","in","into","on","onto"}
@@ -687,13 +685,15 @@ def Go(dobj,iobj,prep):
 		dobj = exits[dobj]
 
 	if "up" in exits.keys() and exits["up"] == dobj:
-		return GoUp()
+		return GoVertical("up")
+	if "down" in exits.keys() and exits["down"] == dobj:
+		return GoVertical("down")
 	if dobj in exits.values():
 		return G.changeRoom(W[dobj],P,W)
 	passage = G.currentroom.inContents(dobj)
 	if passage:
 		if hasMethod(passage,"Traverse"):
-			passage.Traverse(P,W,G,dir)
+			return passage.Traverse(P,W,G,dir)
 
 	if dobj in directions.values():
 		print(f"There is no exit leading {dobj} here")
@@ -1099,7 +1099,7 @@ actions = {
 "carry":Carry,
 "cast":Cast,
 "catch":Catch,
-"climb":Climb,
+"climb":Go,
 "close":Close,
 "craft":Craft,
 "crawl":Crawl,
