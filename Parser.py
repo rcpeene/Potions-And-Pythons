@@ -78,7 +78,7 @@ def replacePronoun(term):
 	if obj == None:					return None
 	return obj.name
 
-# works like getObj() and getCmd(), but for the parsing of a "destination"
+# works like getNoun() and getCmd(), but for the parsing of a "destination"
 # in Go(), when a destination wasn't initially provide
 # this processes the input so it can be parsed like a regular command
 # in order to identify an object and a preposition in the input
@@ -100,8 +100,7 @@ def getDest(prompt):
 	finaldestination = nounify(listdestination,1)
 	return finaldestination
 
-def parseGo(prompt):
-	preps = {"down","through","to","toward","up","in","into","on","onto"}
+def parseWithoutVerb(prompt,preps):
 	prep = None
 	obj = None
 	destinput = getDest(prompt)
@@ -119,7 +118,7 @@ def parseGo(prompt):
 # finding a specific object.
 # Processes input to a form usable by action functions
 # unlike getCmd(), this function returns a string
-def getObj(prompt):
+def getNoun(prompt):
 	rawobject = input(prompt + "\n> ")
 	# take input until input has any non-whitespace characters in it
 	while not any(i not in "\t " for i in rawobject):
@@ -185,7 +184,7 @@ def parse(command,n):
 	iobj = None
 	prep = None
 
-	if verb in codes:
+	if verb in cheatcodes.keys():
 		return cheatcodes[verb](G.lastRawCommand)
 	elif verb in shortverbs or verb in statcommands:
 		if len(command) != 1:
@@ -223,12 +222,13 @@ def parse(command,n):
 ##########################################
 
 def Get(command):
-	if command[1] in {"p","player","my"}:
+	objname = command[1].lower()
+	if objname in {"p","player","my"}:
 		obj = P
-	elif command[1] in {"g","game"}:
+	elif objname in {"g","game"}:
 		obj = G
 	else:
-		obj = objSearch(command[1],G.currentroom,d=3)
+		obj = objSearch(objname,G.currentroom,d=3)
 	if obj == None:
 		print("Object not found")
 		return
@@ -263,6 +263,9 @@ def Teleport(command):
 	location = command[1]
 	if location in W:	G.changeRoom(W[location],P,W)
 	else:				print("Location not in world")
+
+def Test(command):
+	pass
 
 def Warp(command):
 	try:	G.time += int(command[1])
@@ -327,7 +330,7 @@ def Attack(dobj,iobj,prep):
 		if len(P.weapons()) == 0:
 			iobj = "fist"
 		elif P.gear["right"] == Empty() and P.gear["left"] == Empty():
-			iobj = getObj("What will you attack with?")
+			iobj = getNoun("What will you attack with?")
 			if iobj in cancels:
 				return False
 	weapon = P.weapon
@@ -341,7 +344,7 @@ def Attack(dobj,iobj,prep):
 			print(f"There is no '{iobj}' in your inventory")
 			return False
 
-	if dobj == None:	dobj = getObj("What will you attack?")
+	if dobj == None:	dobj = getNoun("What will you attack?")
 	target = G.currentroom.inOccupants(dobj)
 	if target == None:	target = G.currentroom.inContents(dobj)
 	if dobj in {"myself","me"}: target = P
@@ -368,7 +371,7 @@ def Bite(dobj,iobj,prep):
 	if prep not in {"with","using",None}:
 		print("Command not understood")
 	if dobj == None:
-		dobj = getObj("What do you want to bite?")
+		dobj = getNoun("What do you want to bite?")
 		if dobj in cancels:
 			return False
 
@@ -393,7 +396,7 @@ def Break(dobj,iobj,prep):
 		print("Command not understood")
 		return False
 	if dobj == None:
-		dobj = getObj("What do you want to break?")
+		dobj = getNoun("What do you want to break?")
 		if dobj in cancels:
 			return False
 
@@ -415,7 +418,7 @@ def Carry(dobj,iobj,prep):
 		print("Command not understood")
 		return False
 	if dobj == None:
-		dobj = getObj("What do you want to carry?")
+		dobj = getNoun("What do you want to carry?")
 		if dobj in cancels:
 			return False
 
@@ -436,7 +439,7 @@ def Close(dobj,iobj,prep):
 		print("Command not understood")
 		return False
 	if dobj == None:
-		dobj = getObj("What will you close?")
+		dobj = getNoun("What will you close?")
 		if dobj in cancels:
 			return False
 
@@ -480,7 +483,7 @@ def Define(dobj,iobj,prep):
 		print("Can only define one word at once")
 		return False
 	if dobj == None:
-		dobj = getObj("What term would you like defined?")
+		dobj = getNoun("What term would you like defined?")
 		if dobj in cancels:
 			return False
 
@@ -498,7 +501,7 @@ def Describe(dobj,iobj,prep):
 		print("Can only describe one thing at once")
 		return False
 	if dobj == None:	#if no dobj, ask
-		dobj = getObj("What do you want to be described?")
+		dobj = getNoun("What do you want to be described?")
 		if dobj in cancels:
 			return False
 
@@ -521,17 +524,56 @@ def Dodge(dobj,iobj,prep):
 	print("dodgeing")
 
 def Doff(dobj,iobj,prep):
-	print("doffing")
+	if prep != None:
+		print("Command not understood")
+		return False
+	if dobj == None:
+		dobj = getNoun("What do you want to doff?")
+		if dobj in cancels:
+			return False
+
+	I = P.inGear(dobj)
+	if I == None or not isinstance(I,Armor):
+		print(f"You aren't wearing a '{dobj}'")
+		return False
+
+	G.setPronouns(I)
+	P.unequip(I)
+	print(f"You doff your {I.name}")
+	return True
 
 def Don(dobj,iobj,prep):
-	print("doning")
+	if prep != None:
+		print("Command not understood")
+		return False
+	if dobj == None:
+		dobj = getNoun("What do you want to don?")
+		if dobj in cancels:
+			return False
+
+	I = P.inInv(dobj)
+	if I == None:
+		print(f"There is no available '{dobj}' in your inventory")
+		return False
+
+	if not isinstance(I,Armor):
+		print(f"You cannot wear your {I.name}")
+		return False
+	if I in P.gear.values():
+		print(f"You are already wearing your {I.name}")
+		return False
+
+	G.setPronouns(I)
+	if P.equipArmor(I):
+		print(f"You don your {I.name}")
+		return True
 
 def Drink(dobj,iobj,prep):
 	if prep != "with" and prep != None:
 		print("Command not understood")
 		return False
 	if dobj == None:
-		dobj = getObj("What do you want to drink?")
+		dobj = getNoun("What do you want to drink?")
 		if dobj in cancels:
 			return False
 
@@ -552,7 +594,7 @@ def Drop(dobj,iobj,prep):
 	if prep != None:
 		return Put(dobj,iobj,prep)
 	if dobj == None:
-		dobj = getObj("What will you drop?")
+		dobj = getNoun("What will you drop?")
 		if dobj in cancels:
 			return False
 
@@ -577,7 +619,7 @@ def Eat(dobj,iobj,prep):
 		print("Command not understood")
 		return False
 	if dobj == None:
-		dobj = getObj("What do you want to eat?")
+		dobj = getNoun("What do you want to eat?")
 		if dobj in cancels:
 			return False
 
@@ -601,7 +643,7 @@ def Equip(dobj,iobj,prep):
 		print("Command not understood")
 		return False
 	if dobj == None:
-		dobj = getObj("What would you like to equip?")
+		dobj = getNoun("What would you like to equip?")
 		if dobj in cancels:
 			return False
 
@@ -610,12 +652,14 @@ def Equip(dobj,iobj,prep):
 		print(f"There is no available '{dobj}' in your inventory")
 		return False
 
+	G.setPronouns(I)
 	if P.inGear(dobj) and P.invNames().count(dobj) == 1:
 		print(f"Your {dobj} is already equipped")
 		return False
 	# if item is armor, equip it as armor, otherwise, equip it in hand
 	if isinstance(I,Armor):		P.equipArmor(I)
 	else:						P.equipInHand(I)
+	print(f"You equip your {I.name}")
 	return True
 
 def Escape(dobj,iobj,prep):
@@ -648,7 +692,7 @@ def GoVertical(dir):
 		print(f"You fly {dir}!")
 		return G.changeRoom(W[newroom],P,W)
 
-	objname = getObj(f"What will you go {dir}?")
+	objname = getNoun(f"What will you go {dir}?")
 	obj = G.currentroom.search(objname)
 	if obj == None:
 		print(f"There is no '{objname}' to go {dir} here")
@@ -660,7 +704,7 @@ def Go(dobj,iobj,prep):
 	preps = {"down","through","to","toward","up","in","into","on","onto"}
 	dir = None
 	if dobj == None and prep == None:
-		dobj,prep = parseGo("Where will you go?")
+		dobj,prep = parseWithoutVerb("Where will you go?",preps)
 	if dobj == None:	dobj = iobj
 	if dobj == None:	dobj = prep
 	if prep in directions.values():
@@ -707,7 +751,7 @@ def Grab(dobj,iobj,prep):
 		print("Command not understood")
 		return False
 	if dobj == None:
-		dobj = getObj("What will you grab?")
+		dobj = getNoun("What will you grab?")
 		if dobj in cancels:
 			return False
 
@@ -736,7 +780,7 @@ def Jump(dobj,iobj,prep):
 
 def Kick(dobj,iobj,prep):
 	if dobj == None:
-		dobj = getObj("What will you kick?")
+		dobj = getNoun("What will you kick?")
 		if dobj in cancels:
 			return False
 	return Attack(dobj,"foot","with")
@@ -771,7 +815,7 @@ def Look(dobj,iobj,prep):
 		return False
 	if dobj == None:	dobj = iobj
 	if dobj == None:
-		dobj = getObj("What will you look at?")
+		dobj = getNoun("What will you look at?")
 		if dobj in cancels:
 			return False
 
@@ -804,7 +848,7 @@ def Open(dobj,iobj,prep):
 		print("Command not understood")
 		return False
 	if dobj == None:
-		dobj = getObj("What will you open?")
+		dobj = getNoun("What will you open?")
 		if dobj in cancels:
 			return True
 
@@ -834,7 +878,38 @@ def Point(dobj,iobj,prep):
 	print("pointing")
 
 def Pour(dobj,iobj,prep):
-	print("pouring")
+	if prep not in {"in","into","inside","on","onto","out","upon",None}:
+		print("Command not understood")
+		return False
+	if dobj == None:
+		dobj = getNoun("What will you pour?")
+		if dobj in cancels:
+			return False
+
+	I,S = P.search(dobj,getSource=True)
+	if I == None:
+		print(f"There is no '{dobj}' in your inventory")
+		return False
+	G.setPronouns(I)
+	if not hasMethod(I,"Pour"):
+		print(f"You can't pour the {I.name}")
+		return False
+
+	R = None
+	if iobj != None:
+		if iobj == "here":	R = G.currentroom
+		R = P.search(iobj)
+		if R == None:
+			R = G.currentroom.search(iobj)
+		if R == None:
+			print(f"There is no '{iobj}' here")
+			return False
+
+	if prep == None:	prep = "on"
+	if R != None:		print(f"You pour your {I.name} {prep} the {R.name}")
+	else:				print(f"You pour out your {I.name}")
+	I.Pour(P,G,S)
+	return True
 
 def Pray(dobj,iobj,prep):
 	print("praying")
@@ -847,7 +922,7 @@ def Pull(dobj,iobj,prep):
 
 def Punch(dobj,iobj,prep):
 	if dobj == None:
-		dobj = getObj("What will you punch?")
+		dobj = getNoun("What will you punch?")
 		if dobj in cancels:
 			return False
 	return Attack(dobj,"fist","with")
@@ -860,11 +935,11 @@ def Put(dobj,iobj,prep):
 		print("Command not understood")
 		return False
 	if dobj == None:
-		dobj = getObj("What will you put?")
+		dobj = getNoun("What will you put?")
 		if dobj in cancels:
 			return False
 	if iobj == None:
-		iobj = getObj(f"What will you put your {dobj} in?")
+		iobj = getNoun(f"What will you put your {dobj} in?")
 
 	I,S = P.search(dobj,getSource=True)
 	if I == None:
@@ -895,8 +970,8 @@ def Put(dobj,iobj,prep):
 def Release(dobj,iobj,prep):
 	print("releaseing")
 
-def Remove(dobj,iobj,prep):
-	print("removeing")
+# def Remove(dobj,iobj,prep):
+# 	print("removeing")
 
 def Rest(dobj,iobj,prep):
 	print("resting")
@@ -937,16 +1012,13 @@ def Throw(dobj,iobj,prep):
 def Tie(dobj,iobj,prep):
 	print("tieing")
 
-def TakeFromSelf(dobj,iobj,prep):
-	print("You can't take from your own Inventory")
-	return False
 
 def Take(dobj,iobj,prep):
 	if prep not in {"from","in","inside",None}:
 		print("Command not understood")
 		return False
 	if dobj == None:
-		dobj = getObj("What will you take?")
+		dobj = getNoun("What will you take?")
 		if dobj in cancels:
 			return False
 	if dobj in {"all","everything","it all"}:
@@ -971,7 +1043,8 @@ def Take(dobj,iobj,prep):
 	if isinstance(S,Creature) and prep == "from":	return Steal(dobj,iobj,prep)
 	count = S.contentNames().count(I.name)
 	if S is P:
-		return TakeFromSelf(dobj,iobj,prep)
+		print("You can't take from your own Inventory")
+		return False
 	if not P.obtainItem(I, S, W, G):
 		print(f"You can't take the {I.name}, your Inventory is too full")
 		return False
@@ -994,7 +1067,7 @@ def Unequip(dobj,iobj,prep):
 		print("Command not understood")
 		return False
 	if dobj == None:
-		dobj = getObj("What would you like to unequip?")
+		dobj = getNoun("What would you like to unequip?")
 		if dobj in cancels:
 			return False
 
@@ -1003,7 +1076,8 @@ def Unequip(dobj,iobj,prep):
 		print(f"You do not have a '{dobj}' equipped")
 		return False
 
-	print("unequipping:",I)
+	G.setPronouns(I)
+	print(f"You unequip your {I.name}")
 	P.unequip(I)
 	return True
 
@@ -1015,7 +1089,7 @@ def Untie(dobj,iobj,prep):
 
 def Use(dobj,iobj,prep):
 	if dobj == None:
-		dobj = getObj("What will you use?")
+		dobj = getNoun("What will you use?")
 		if dobj in cancels:
 			return False
 
@@ -1050,6 +1124,7 @@ cheatcodes = {
 	"\\mod":Mode,
 	"\\pot":Pypot,
 	"\\set":Set,
+	"\\tst":Test,
 	"\\tpt":Teleport,
 	"\\wrp":Warp
 }
@@ -1172,7 +1247,7 @@ actions = {
 "quaff":Drink,
 "read":Look,
 "release":Release,
-"remove":Remove,
+"remove":Unequip,
 "rest":Rest,
 "ride":Mount,
 "ring":Ring,

@@ -562,7 +562,7 @@ class Item():
 		return f"${self.name}"
 
 	def __lt__(self,other):
-		return self.name < other.name
+		return self.name.lower() < other.name.lower()
 
 	def __eq__(self,other) :
 		if isinstance(other, self.__class__):
@@ -618,8 +618,8 @@ class Creature():
 		self.inv = inv
 		self.gear = {key: inv[gear[key]] if gear[key] != -1 else Empty() for key in gear}
 		self.status = status
-		# sort status effects by name; change '0' to '1' to sort by duration
-		self.status.sort(key=lambda x: x[0])
+		# sort status effects by duration; change '1' to '0' to sort by name
+		self.status.sort(key=lambda x: x[1])
 
 		self.weapon = Empty()
 		self.weapon2 = Empty()
@@ -702,7 +702,7 @@ class Creature():
 
 	# returns a list of names of all items in player inventory
 	def invNames(self):
-		return [item.name for item in self.inv]
+		return [item.name.lower() for item in self.inv]
 
 	# just a function wrapper for functions that call contentNames on objects
 	def contentNames(self):
@@ -712,24 +712,35 @@ class Creature():
 	# if a match is found, return the item, otherwise return None
 	def inInv(self,term):
 		for item in self.inv:
-			if item.name == term:	return item
+			if item.name.lower() == term:	return item
 		return None
 
 	# searches through gear for an item whose name matches 'term'
-	# if a match is found, return the item, otherwise return False
+	# if a match is found, return the item, otherwise return None
 	def inGear(self,term):
 		for slot in self.gear:
-			if self.gear[slot].name == term:
+			if self.gear[slot].name.lower() == term:
 				return self.gear[slot]
 		return None
 
 	# returns sum of the weight of all items in player gear
-	def armorWeight(self):
+	def gearWeight(self):
 		weight = 0
 		for item in self.gear:
 			if hasattr(self.gear[item], "weight"):
 				weight += self.gear[item].Weight()
 		return weight
+
+	# finds the slot in which item resides, sets it to Empty()
+	# calls the item's Unequip() method if it has one
+	def unequip(self,I):
+		gearslots = list(self.gear.keys())
+		gearitems = list(self.gear.values())
+		#finds the slot whose value is item, sets it to empty
+		slot = gearslots[gearitems.index(I)]
+		self.gear[slot] = Empty()
+		if hasMethod(I,"Unequip"):
+			I.Unequip(self)
 
 	def describe(self):
 		if hasattr(descname,self):
@@ -742,19 +753,19 @@ class Creature():
 		if self.invWeight() + I.Weight() > self.BRDN() * 2:
 			return False
 		if self.invWeight() + I.Weight() > self.BRDN():
-			self.addCondition("hindered")
+			if not self.hasCondition("hindered"):
+				self.addCondition("hindered",-3)
 		insort(self.inv,I)
 		return True
 
 	def removeItem(self,I):
-		# TODO: can animals unequip? can any creature?
-		# if I in self.gear.values():
-		# 	self.unequip(I)
+		if I in self.gear.values():
+			self.unequip(I)
 		self.inv.remove(I)
 		if hasMethod(I,"Drop"):
 			I.Drop(self)
 		if self.invWeight() < self.BRDN():
-			self.removeCondition("hindered",reqDuration=-3)
+			self.removeCondition("hindered",-3)
 
 	def passTime(self,t):
 		for condition in self.status:
@@ -766,7 +777,7 @@ class Creature():
 				condition[1] -= t
 			# if, after subtraction, condition is non-positive, remove it
 			if condition[1] <= 0:
-				self.removeCondition(condition[0],reqDuration=0)
+				self.removeCondition(condition[0],0)
 
 
 	def addCondition(self,cond,dur,stackable=False):
@@ -774,13 +785,13 @@ class Creature():
 		pair = [cond,dur]
 		insort(self.status,pair)
 
+	# removes all condition of the same name
+	# if reqDuration is given, only removes conditions with that duration
 	def removeCondition(self,cond,reqDuration=None):
-		# removes one of the same name
 		for condition,duration in self.status:
 			if condition == cond:
 				if reqDuration == None or reqDuration == duration:
 					self.status.remove([condition,duration])
-					break
 
 	def hasCondition(self,condname,reqDuration=None):
 		for cond in self.status:
@@ -796,9 +807,9 @@ class Creature():
 	def ATHL(self): return self.STR + self.SKL + self.STM
 	def ATSP(self): return self.SPD - minm(0,self.weapon.weight//4 - self.CON) - minm(0,self.weapon2.weight//4 - self.CON) - minm(0,self.shield.weight//4 - self.CON)
 	def BRDN(self): return self.CON * self.STR * 4 + 60
-	def CAST(self): return self.WIS + self.FTH + self.INT - minm(0,self.armorWeight()//4 - self.CON)
+	def CAST(self): return self.WIS + self.FTH + self.INT - minm(0,self.gearWeight()//4 - self.CON)
 	def CRIT(self): return self.SKL + self.LCK + self.weapon.sharpness
-	def CSSP(self): return self.WIS - minm(0,self.invWeight() - self.BRDN()) - minm(0,self.armorWeight()//4 - self.CON)
+	def CSSP(self): return self.WIS - minm(0,self.invWeight() - self.BRDN()) - minm(0,self.gearWeight()//4 - self.CON)
 	def DCPT(self): return 2*self.CHA + self.INT
 	def DFNS(self): return self.CON + self.armor()
 	def ENDR(self): return 2*self.STM + self.CON
@@ -806,7 +817,7 @@ class Creature():
 	def INVS(self): return 2*self.INT + self.WIS
 	def KNWL(self): return 2*self.INT + self.LCK
 	def LOOT(self): return 2*self.LCK + self.FTH
-	def MVMT(self): return self.SPD + self.STM + 10 - minm(0,self.invWeight() - self.BRDN()) - minm(0,self.armorWeight()//4 - self.CON)
+	def MVMT(self): return self.SPD + self.STM + 10 - minm(0,self.invWeight() - self.BRDN()) - minm(0,self.gearWeight()//4 - self.CON)
 	def MXHP(self): return self.level()*self.CON + self.STM
 	def MXMP(self): return self.level()*self.WIS + self.STM
 	def PRSD(self): return 2*self.CHA + self.WIS
@@ -819,9 +830,10 @@ class Creature():
 	# returns sum of all protection values of all items in gear
 	def armor(self):
 		prot = 0
-		for item in self.gear:
-			if hasattr(self.gear[item], "prot"):
-				prot += self.gear[item].prot
+		for slot in self.gear:
+			item = self.gear[slot]
+			if hasattr(item, "prot"):
+				prot += item.prot
 		return prot
 
 	# called when a creature's hp hits 0
@@ -944,28 +956,29 @@ class Player(Creature):
 		print(f"You healed {heal} HP")
 		return heal
 
-	def addCondition(self,cond,dur,msg="",stackable=False,):
+	def addCondition(self,cond,dur,stackable=False,):
 		# TODO: include stackability
 		pair = [cond,dur]
 		insort(self.status, pair)
-		if msg != "":	print(msg)
 		print("You are " + cond)
 
+	# removes all condition of the same name
+	# if reqDuration is given, only removes conditions with that duration
 	def removeCondition(self,cond,reqDuration=None):
-		# removes one of the same name
 		for condition,duration in self.status:
 			if condition == cond:
 				if reqDuration == None or reqDuration == duration:
 					self.status.remove([condition,duration])
-					print("You are no longer " + cond)
-					break
+		if not self.hasCondition(cond):
+			print("You are no longer " + cond)
 
 	def obtainItem(self,I,S,W,G):
 		if self.invWeight() + I.Weight() > self.BRDN() * 2:
 			return False
 		if self.invWeight() + I.Weight() > self.BRDN():
 			if not self.hasCondition("hindered"):
-				self.addCondition("hindered",-3,"Your inventory grows heavy.")
+				print("Your inventory grows heavy")
+				self.addCondition("hindered",-3)
 		insort(self.inv,I)
 		S.removeItem(I)
 		if hasMethod(I,"Obtain"):
@@ -1005,25 +1018,26 @@ class Player(Creature):
 		elif isinstance(self.gear["left"],Shield):
 			self.shield = self.gear["left"]
 
-	# if the item is armor, equip it, otherwise return False
-	def equipArmor(self,I):
-		if isinstance(I, Helm):		self.gear["helm"] = I
-		elif isinstance(I, Body):	self.gear["body"] = I
-		elif isinstance(I, Legs):	self.gear["pants"] = I
-		else:	return False
-		I.Equip(self)
-
 	# finds the slot in which item resides, sets it to Empty()
 	# calls the item's Unequip() method if it has one
 	def unequip(self,I):
 		gearslots = list(self.gear.keys())
 		gearitems = list(self.gear.values())
-		#finds the slot who's value matches the item, sets it to empty
+		#finds the slot whose value is item, sets it to empty
 		slot = gearslots[gearitems.index(I)]
 		self.gear[slot] = Empty()
 		self.assignWeaponAndShield()
 		if hasMethod(I,"Unequip"):
-			I.Unequip(P)
+			I.Unequip(self)
+
+	# if the item is armor, equip it, otherwise return False
+	def equipArmor(self,I):
+		if isinstance(I,Helm):		self.gear["head"] = I
+		elif isinstance(I,Tunic):	self.gear["body"] = I
+		elif isinstance(I,Greaves):	self.gear["legs"] = I
+		else:	return False
+		I.Equip(self)
+		return True
 
 	# unequips the lefthanded item, moves righthanded item to left,
 	# equips the new item in right hand
@@ -1111,16 +1125,18 @@ class Player(Creature):
 
 		conditions = []
 		durations = []
-		# populate conditions with unique conditions affecting the player
+		# populate conditions with unique condition names affecting the player
 		# populate durations with the highest duration for that condition
-		for cond, dur in self.status:
+		# negative (special) durations take precedence over positive durations
+		for cond, dur in sorted(self.status, key=lambda x: x[1]):
 			if cond not in conditions:
 				conditions.append(cond)
 				durations.append(dur)
 			else:
 				idx = conditions.index(cond)
 				olddur = durations[idx]
-				durations[idx] = dur if dur > olddur or dur < 0 else olddur
+				newdur = dur if dur > olddur and olddur > 0 else olddur
+				durations[idx] = newdur
 
 		# make list of strings to display conditions and their durations
 		statusdisplay = []
@@ -1306,12 +1322,14 @@ class Weapon(Item):
 
 
 class Shield(Item):
-	def __init__(self,name,desc,weight):
-		Item.__init__(self,name,desc,weight)
+	def __init__(self,name,desc,weight,durability,prot):
+		Item.__init__(self,name,desc,durability,weight)
+		self.prot = prot
 
 class Armor(Item):
-	def __init__(self,name,desc,weight):
-		Item.__init__(self,name,desc,weight)
+	def __init__(self,name,desc,weight,durability,prot):
+		Item.__init__(self,name,desc,weight,durability)
+		self.prot = prot
 
 	def Equip(self,P):
 		pass
@@ -1319,17 +1337,17 @@ class Armor(Item):
 	def Unequip(self,P):
 		pass
 
-class Head(Armor):
-	def __init__(self,name,desc,weight):
-		Armor.__init__(self,name,desc,weight)
+class Helm(Armor):
+	def __init__(self,name,desc,weight,durability,prot):
+		Armor.__init__(self,name,desc,weight,prot)
 
-class Body(Armor):
-	def __init__(self,name,desc,weight):
-		Item.__init__(self,name,desc,weight)
+class Tunic(Armor):
+	def __init__(self,name,desc,weight,durability,prot):
+		Armor.__init__(self,name,desc,weight,durability,prot)
 
-class Legs(Armor):
-	def __init__(self,name,desc,weight):
-		Armor.__init__(self,name,desc,weight)
+class Greaves(Armor):
+	def __init__(self,name,desc,weight,durability,prot):
+		Armor.__init__(self,name,desc,weight,durability,prot)
 
 
 #######################

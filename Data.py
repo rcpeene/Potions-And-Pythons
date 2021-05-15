@@ -41,7 +41,7 @@ yesses = {"absolutely","affirmative","aye","certainly","definitely","indeed","ja
 
 noes = {"absolutely not","certainly not","definitely not","n","na","nah","nahh","nahhh","nay","negative","negatory","nein","no","noo","nooo","noooo","nope"}
 
-prepositions = {"above","across","at","below","beneath","by","down","for","from","in","inside","into","near","off","on","onto","over","through","to","toward","under","up","upon","using","with"}
+prepositions = {"above","across","at","below","beneath","by","down","for","from","in","inside","into","near","off","on","onto","out","over","through","to","toward","under","up","upon","using","with"}
 
 pronouns = {"she","he","they","her","him","them","it"}
 
@@ -61,8 +61,6 @@ initgear = {"head":-1, "body":-1, "left":-1, "right":-1, "legs":-1}
 
 instantactions = {"describe","define","gear","help","hp","info","information","inventory","inv","level","lv","money","mp","quit","room","rp","save","status","time","traits","xp"}
 
-codes = {"\\get","\\lrn","\\mod","\\pot","\\set","\\tpt","\\wrp","\\zap"}
-
 
 # the following are tuples because their order should be preserved for printing
 
@@ -75,7 +73,7 @@ shortverbs = ("back","clear","cry","dance","examples","help","info","information
 statcommands = ("abilities","accu","atck","athl","atsp","brdn","cast","crit","cssp","dcpt","dfns","endr","evsn","gear","hp","inventory","inv","invs","knwl","level","loot","lv","money","mp","mvmt","mxhp","mxmp","prsd","resc","ritl","rp","slth","spls","stats","status","tnkr","traits","weapons","xp")
 
 verbs = ("attack","bite","break","build","carry","cast","catch","climb","close","craft","crawl","create","cross","crouch","cut","dash","define","describe","do","dodge","doff","don","drink","drop","duck","dump","eat","enter","equip","escape","examine","exit","feed","feel","fight","fill","find","fish","follow","get","give","go","grab","grapple","head","hear","hide","hit","ignite","insert","jump","kick","kill","lay","leave","lick","light","listen","lock","look","make","mount","move","obtain","open","pet","pick","place","play","point","pour","pray","pull","punch","push","put","quaff","read","release","remove","rest","return","ride","ring","rub","run","search","set","shove","shut","slap","sleep","slice","smell","sniff","speak","steal","stomp","strike","struggle","swim","take","talk","taste","throw","tie","tinker","toss","touch","travel","trip","unequip","unlock","untie","use","view","wait","walk","wave","wear")
-# trade/buy/sell, brew/cook, masturbate, dig, leap, blow/breath, clap, scratch, spit, dive, lift, observe, think, write, laydown/sitdown, fuck, shit on
+# trade/buy/sell, brew/cook, dig, leap, blow/breath, clap, scratch, spit, dive, lift, observe, think, write, laydown/sitdown, fuck, shit on
 
 
 ##########################

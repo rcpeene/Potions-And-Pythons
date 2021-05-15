@@ -392,8 +392,8 @@ def testGame():
 	W = readWorld("world.popy")
 	traits = [4 for _ in range(10)]
 	C = Compass("compass", "a plain steel compass with a red arrow", 2, 10)
-	status = [["fireproof",-1], ["poisoned",10], ["cursed",-2], ["immortal",-1],
-	["sharpshooter",50],["invisible",5], ["invisible",-1]]
+	status = [["fireproof",-1], ["poisoned",5], ["cursed",-2], ["immortal",-1],
+	["sharpshooter",50],["invisible",15], ["poisoned",-1]]
 	P = Player("Norman","a hero",24,24,traits,1000,[C],initgear,status,1585,100)
 
 	clearScreen()

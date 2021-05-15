@@ -78,7 +78,7 @@ $Passage ("stairwell", "stairs leading up into the light and down into the dark"
 
 $Compass ("compass", "a plain steel compass with a red arrow", 2, 10)
 $Controller ("Amulet of Swords", "a red amulet shaped like a sword", 2, 10, "spawnItem(G, Sword('sword', 'a plain iron sword', 8, 10, 2, 2, 2, 0, False, 's'))")
-$Potion ("red potion", "a red bubbly brew in a glass bottle", 4, 3)
+$Potion ("red potion", "a red bubbly brew in a glass bottle", 6, 3)
 $Sword ("sword", "a plain iron sword", 8, 10, 2, 2, 2, 0, False, "s")
 $Sword ("sword", "a plain iron sword", 8, 10, 2, 2, 2, 0, False, "s")
 
@@ -115,12 +115,12 @@ $Sign ("sign", "A wooden sign", 7, 100, "Welcome to the Land!\nWatch out for Sna
 $Box ("chest", "a large wooden chest", 4, 10, False,
 	[$Lockbox ("capsule", "a metal capsule", 1, 10, False, [], True),
 	$Box ("small chest", "a small wooden chest", 4, 10, False,
-		[$Potion ("blue potion", "a blue bubbly brew in a glass bottle", 4, 4),
+		[$Potion ("blue potion", "a blue bubbly brew in a glass bottle", 6, 3),
 		$Bread ("breadroll", "a small roll of bread", 1, 10)])])
 $Table ("table", "an oaken table", 40, 5, [
-	$Potion ("blue potion", "a blue bubbly brew in a glass bottle", 4, 4)],
+	$Potion ("blue potion", "a blue bubbly brew in a glass bottle", 6, 3)],
 	"table with things on it")
-$Potion ("blue potion", "a blue bubbly brew in a glass bottle", 4, 4)
+$Potion ("blue potion", "a blue bubbly brew in a glass bottle", 6, 3)
 ~
 
 #pit
@@ -141,4 +141,5 @@ $Potion ("blue potion", "a blue bubbly brew in a glass bottle", 4, 4)
 %"north": "glen"
 %"south": "cave"
 $Bread ("breadroll", "a small roll of bread", 1, 10)
+$Tunic ("Tunic", "a magic green cloth tunic", 10, -1, 100)
 ~

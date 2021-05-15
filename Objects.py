@@ -198,7 +198,7 @@ class Passage(Fixture):
 			else:
 				dir = input("Which direction will you go?\n> ")
 		if dir not in self.directions:
-			print(f"The {self.name} does not go that way")
+			print(f"The {self.name} does not go '{dir}'")
 			return False
 		print(f"You go {dir} the {self.name}")
 		newroom = W[G.currentroom.exits[dir]]
@@ -212,6 +212,13 @@ class Potion(Bottle):
 		P.heal(1000)
 		S.removeItem(self)
 		P.addItem(Bottle("bottle","an empty glass bottle",3,3))
+
+	def Pour(self,P,G,S,obj=None):
+		if obj != None:
+			obj.Drench(self)
+		S.removeItem(self)
+		P.addItem(Bottle("bottle","an empty glass bottle",3,3))
+
 
 class Shard(Item):
 	#???
@@ -316,14 +323,15 @@ class Wall(Passage):
 			else:
 				dir = input("Which direction will you go?\n> ")
 		if dir not in self.directions:
-			print(f"The {self.name} does not go that way")
+			print(f"The {self.name} does not go '{dir}'")
 			return False
 
 		if P.ATHL() < self.cr:
 			print(f"You fall down the {self.name}!")
 			if dir == "down":
 				G.changeRoom(W[currentroom.exits["down"]])
-			P.takedmg(self.cr-P.ATHL(),"b")
+			if not (P.hasCondition("fly") or P.hasCondition("feather fall")):
+				P.takedmg(self.cr-P.ATHL(),"b")
 			return True
 
 		print(f"You climb {dir} the {self.name}")

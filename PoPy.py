@@ -36,19 +36,32 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-#TODO: research using map() in python, and passing functions as arguments
+# get all action funcs on same page with returning true or false
+
+# then pour/dump on
+# then hide/crouch/crawl
+# then lock/unlock
+# then grab/carry
+
+# consider adding alternative names (this would change search funcs a lot)
+
+# TODO: research using map() in python, and passing functions as arguments
 # reevaluate effect functions, is there a way to reference a function by string?
 # evaluate enter, exit functions in room
 
 # how will amulet effects work??
 
+# add magic beans or food to pour stuff one
+# "drink from the fountain"
+# add locking/unlocking items
+#
 # figure out animal behavior
 # creatures attacking?
 # add monsters/monster behavior
 # figure out combat? attack items?
-
-# add locking/unlocking items
 # add Steal
+
+# there is a bug in equip where two of the same item can be equipped twice
 
 # add in armor and shields and protection and test them
 # add range and ranged weapons???
@@ -138,7 +151,8 @@ if __name__ == "__main__":
 
 
 
-# OVERVIEW OF ITEM CLASSES AND SUBCLASSES
+# OVERVIEW OF ITEM CLASSES AND SUBCLASSES:
+
 # item
 #	armor
 #		helm
@@ -167,3 +181,118 @@ if __name__ == "__main__":
 #		axe
 #		polearm
 #		club
+
+
+# CONDITION IDEAS:
+
+# improving a base stat
+# improving a derived stat
+# resistance to a damage type
+# invulnerability to a damage type
+# vulnerability to a damage type
+# bonus to stealth
+# decrease to perception
+# raising fondness of creature
+# raising fear of creature
+# insanity
+# rage
+# bloodied
+# disguised
+# polymorphed
+# petrified
+# frozen
+# paralyzed
+# restrained
+# on fire
+# poisoned
+# sleep
+# blinded
+# deafened
+# prone?
+# invisible
+# fly
+# feather fall
+# gaseous form
+# trusight
+# darkvision
+# spellbound
+# in a sphere/bubble
+
+
+# 40-50 SPELL IDEAS:
+
+# add a status effect
+# remove a status effect
+# deal area damage (to whole room)
+# deal damage only to certain types of creatures
+# deal target damage
+# hunters mark
+# heal a creature
+# improving weapon stats
+# changing weapon damage type
+# repair an item
+
+# spawning item (temporary weapon, illusion projector, food, leomund chest)
+# destroy item
+# unlock an item
+# lock an item
+# locate an item? in the world or nearby
+# open up a giant fissure???
+# create a lasting room effect (like preventing entering an exiting, zero gravity, darkness)
+# alter the terrain
+# create a portal to somewhere (mansion, hut, another room) (permanent/temp)
+# ignite things
+# freeze things
+# acid melt things
+# shock things
+
+# spawning creature (familiar, magic sentry, dragon)
+# summon an npc
+# destroy creature
+# read people's minds
+# command a creature
+# make a creature laugh/cry/sneeze
+# attract animals/creatures
+# disguising self
+# attracts animals
+# speak with animals/monsters
+# communicate with npc at a distance?
+# freeze a creature in time? paralyze them maybe
+# freeze all creatures in time
+# produce illusion of a creature (probably class creature)
+# create a loud sound?
+
+# resurrect a dead creature
+# create a zombie
+# teleport somewhere
+# stop time everywhere (bool in game class)
+
+
+
+
+
+# interpret(verb,dobj,iobj,prep,preps,dobjSearch,iobjSearch,d1=0)
+# 	if prep not in preps:
+# 		print("not understood")
+# 		return False
+# 	if dobj == None: dobj = iobj
+# 	if dobj == None: dobj = getNoun("What do you want to " + verb + "?")
+# 	if dobj in cancels:
+# 		return False
+#
+# 	if searchInv:
+#
+#
+#
+#
+# func(dobj,iobj,prep):
+# 	preps = {toward, none}
+# 	I,R,prep = interpretSearch(dobj,iobj,prep,preps,dobjSearch,iobjSearch)
+#
+#
+#
+#
+#
+#
+#
+#

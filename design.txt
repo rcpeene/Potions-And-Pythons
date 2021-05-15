@@ -1,6 +1,14 @@
 
 DESIGN FOR POTIONS AND PYTHONS ALPHA
 
+TOADD to this document:
+a description of Go()
+a description of passages
+a description of status conditions
+a description of all the object search functions and methodology (also described the object tree)
+include discussion of "source"
+
+
 
 NOTES ON THE CONVENTIONS AND FORMATTING USED IN THIS CODE PROJECT
 -source files are named with capital letters to distinguish them from python modules
