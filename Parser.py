@@ -56,7 +56,7 @@ def nounify(command,i):
 	if i >= len(command)-1:
 		return command
 	possibleNoun = command[i]
-	j = i+1
+	j = i
 	while j < len(command):
 		# possibleNoun is all words between i and j joined
 		possibleNoun += ' '+command[j]
@@ -71,6 +71,7 @@ def nounify(command,i):
 
 # term must be a pronoun
 def replacePronoun(term):
+	obj = None
 	if term == "it":				obj = G.it
 	elif term in {"she","her"}:		obj = G.she
 	elif term in {"he","him"}:		obj = G.he
@@ -210,10 +211,10 @@ def parse(command,n):
 
 	# this line calls the action function using the 'actions' dict
 	actionCompleted = actions[verb](dobj,iobj,prep)
-	# if action was not completed for some reason, recur
-	if not actionCompleted:		return promptHelp('',n)
 	# if action was instant, loop for another command
 	if verb in instantactions:	return False
+	# if action was not completed for some reason, recur
+	if not actionCompleted:		return promptHelp('',n)
 	return True
 
 
@@ -604,7 +605,9 @@ def Drop(dobj,iobj,prep):
 		return False
 
 	G.setPronouns(I)
-	if isinstance(I,Compass) and not yesno("Are you sure you want to lose your compass? You might get lost!"):
+	if isinstance(I,Compass) and P.countCompasses() == 1:
+		q = "Are you sure you want to lose your compass? You might get lost!"
+		if not yesno(q):
 			return False
 	print("You drop your " + I.name)
 	S.removeItem(I)
@@ -612,7 +615,24 @@ def Drop(dobj,iobj,prep):
 	return True
 
 def Dump(dobj,iobj,prep):
-	print("dumping")
+	if prep not in {"in","into","inside","on","onto","upon",None}:
+		print("Command not understood")
+		return False
+	if dobj == None:
+		dobj = getNoun("What will you dump?")
+		if dobj in cancels:
+			return False
+
+	I,S = P.search(dobj,getSource=True)
+	if I == None:
+		print(f"There is no '{dobj}' in your inventory")
+		return False
+	G.setPronouns(I)
+	if hasMethod(I,"Pour"):
+		return Pour(dobj,iobj,prep)
+	else:
+		return Drop(dobj,iobj,prep)
+
 
 def Eat(dobj,iobj,prep):
 	if prep not in {"with",None}:
@@ -653,7 +673,7 @@ def Equip(dobj,iobj,prep):
 		return False
 
 	G.setPronouns(I)
-	if P.inGear(dobj) and P.invNames().count(dobj) == 1:
+	if P.inGear(dobj) and P.invNames(lower=True).count(dobj) == 1:
 		print(f"Your {dobj} is already equipped")
 		return False
 	# if item is armor, equip it as armor, otherwise, equip it in hand
@@ -718,9 +738,10 @@ def Go(dobj,iobj,prep):
 	if dobj == G.currentroom.name:
 		print("You are already there")
 		return False
-	if not any(isinstance(item,Compass) for item in P.inv) and dobj != "back":
-		print("\nWithout your compass, you go in a random direction")
-		dobj = choice(list(G.currentroom.exits.values()))
+	if not any(isinstance(item,Compass) for item in P.inv):
+		if dobj != "back" and prep not in {"up","down"}:
+			print("\nWithout your compass, you go in a random direction")
+			dobj = choice(list(G.currentroom.exits.values()))
 
 	if dobj in directions.keys():
 		dobj = directions[dobj]
@@ -807,7 +828,35 @@ def Listen(dobj,iobj,prep):
 	print("listening")
 
 def Lock(dobj,iobj,prep):
-	print("locking")
+	if prep != "with" and prep != None:
+		print("Command not understood")
+		return False
+	if dobj == None:
+		dobj = getNoun("What will you lock?")
+		if dobj in cancels:
+			return False
+	if iobj == None:
+		iobj = getNoun("What will you lock with?")
+		if iobj in cancels:
+			return False
+	I = G.currentroom.search(dobj)
+	if I == None: I = P.search(dobj)
+	if I == None:
+		print(f"There is no '{dobj}' here")
+		return False
+	K = P.search(iobj)
+	if K == None:
+		print(f"There is no '{iobj}' in your inventory")
+		return False
+	if not isinstance(K,Key):
+		print(f"You can't lock with the {K.name}")
+		return False
+
+	G.setPronouns(I)
+	if not hasMethod(I,"Lock"):
+		print(f"The {I.name} doesn't lock")
+		return False
+	return I.Lock(K)
 
 def Look(dobj,iobj,prep):
 	if prep not in {"at","in","inside","into","on","through",None}:
@@ -825,8 +874,8 @@ def Look(dobj,iobj,prep):
 	if dobj in {"me","myself",P.name}:
 		print("You are " + P.desc)
 		return True
-	L = P.search(dobj)
-	if L == None: L = G.currentroom.search(dobj)
+	L = G.currentroom.search(dobj)
+	if L == None: L = P.search(dobj)
 	if L == None:
 		print(f"There is no '{dobj}' here")
 		return False
@@ -850,7 +899,7 @@ def Open(dobj,iobj,prep):
 	if dobj == None:
 		dobj = getNoun("What will you open?")
 		if dobj in cancels:
-			return True
+			return False
 
 	I = P.search(dobj)
 	if I == None: I = G.currentroom.search(dobj)
@@ -878,7 +927,6 @@ def Point(dobj,iobj,prep):
 	print("pointing")
 
 def Pour(dobj,iobj,prep):
-	print(dobj,iobj,prep)
 	if prep not in {"in","into","inside","on","onto","upon",None}:
 		print("Command not understood")
 		return False
@@ -946,7 +994,9 @@ def Put(dobj,iobj,prep):
 	if I == None:
 		print(f"There is no '{dobj}' in your inventory")
 		return False
-	if I.name == "compass" and not yesno("Are you sure you want to lose your compass? You might get lost!"):
+	if isinstance(I,Compass) and P.countCompasses() == 1:
+		q = "Are you sure you want to lose your compass? You might get lost!"
+		if not yesno(q):
 			return False
 	G.setPronouns(I)
 
@@ -1014,9 +1064,12 @@ def Tie(dobj,iobj,prep):
 	print("tieing")
 
 def Take(dobj,iobj,prep):
-	if prep not in {"from","in","inside",None}:
+	if prep not in {"from","in","inside","up",None}:
 		print("Command not understood")
 		return False
+	if dobj == None and prep == "up":
+		dobj = iobj
+		iobj = None
 	if dobj == None:
 		dobj = getNoun("What will you take?")
 		if dobj in cancels:
@@ -1031,7 +1084,7 @@ def Take(dobj,iobj,prep):
 	I,path = objSearch(dobj,G.currentroom,d=2,getPath=True,reqSource=iobj)
 	if I == None:	I,path = objSearch(dobj,P,d=2,getPath=True,reqSource=iobj)
 	if I == None:
-		if prep == None:	print(f"There is no '{dobj}' here")
+		if prep in {None,"up"}:	print(f"There is no '{dobj}' here")
 		else:				print(f"There is no '{dobj}' in a '{iobj}' here")
 		return False
 	if isinstance(I,Fixture) or isinstance(I,Creature):
@@ -1079,7 +1132,36 @@ def Unequip(dobj,iobj,prep):
 	return True
 
 def Unlock(dobj,iobj,prep):
-	print("unlocking")
+	if prep != "with" and prep != None:
+		print("Command not understood")
+		return False
+	if dobj == None:
+		dobj = getNoun("What will you unlock?")
+		if dobj in cancels:
+			return False
+	if iobj == None:
+		iobj = getNoun("What will you unlock with?")
+		if iobj in cancels:
+			return False
+
+	I = G.currentroom.search(dobj)
+	if I == None: I = P.search(dobj)
+	if I == None:
+		print(f"There is no '{dobj}' here")
+		return False
+	K = P.search(iobj)
+	if K == None:
+		print(f"There is no '{iobj}' in your inventory")
+		return False
+	if not isinstance(K,Key):
+		print(f"You can't unlock with the {K.name}")
+		return False
+
+	G.setPronouns(I)
+	if not hasMethod(I,"Lock"):
+		print(f"The {I.name} doesn't lock")
+		return False
+	return I.Unlock(K)
 
 def Untie(dobj,iobj,prep):
 	print("untieing")

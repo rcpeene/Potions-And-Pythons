@@ -12,11 +12,11 @@
 ## USEFUL STRINGS ##
 ####################
 
-menuinstructions = "\nType 'info' for information on the game and how to play\nType 'new' to start a new game\nType 'load' to load a save file\nType 'delete' to delete a save file\nType 'quit' to quit the game\n"
+menuinstructions = "\nType 'info' for information on how to play\nType 'new' to start a new game\nType 'load' to load a save file\nType 'delete' to delete a save file\nType 'quit' to quit the game\n"
 
 gameinfo = "="*64 + "\n\nPotions & Pythons\nv.Alpha\nBy Carter Peene, 2021\n\nTo play, type a command of the form:\n[verb] [*noun] [*preposition] [*noun]\nOR\n[verb] [*preposition] [*noun]\n\n* denotes a term that can be omitted when unnecessary\nArticles, determiners, and most symbols are removed from your input\n\nGet a list of valid commands by typing 'help'\nGet a list of command examples by typing 'examples'\nSee your main player statistics by typing 'stats' and 'traits'\nSee a description of your current location by typing 'here'\nLearn about most game terms and commands by typing 'define [term]'\n\n" + "="*64
 
-examples = "\nValid input examples include:\n- go\n- go north\n- go nw\n- go up the stairs\n- go to tunnel\n- look at python\n- i will fight the python!\n- hit the python with my sword\n- attack python sword\n- equip the sword\n- unequip sword\n- take red potion\n- take the red potion from the chest\n- put red potion in chest\n- put red potion chest\n- drop the red potion\n- close chest"
+examples = "\nValid input examples include:\n- go\n- go north\n- go nw\n- go up the stairs\n- go back\n- go to tunnel\n- look at python\n- i will fight the python!\n- hit the python with my sword\n- attack python sword\n- equip the sword\n- unequip sword\n- take red potion\n- take the red potion from the chest\n- put red potion in chest\n- put red potion chest\n- drop the red potion\n- close chest"
 
 symbols = ".,!?~`\"()[]{}<>+=/*&^%$#@\t"
 
@@ -58,6 +58,8 @@ dmgtypes = {"a":"acid","b":"bludgeoning","c":"cold","e":"essential","f":"fire","
 
 # gear dict used to initialize a player object
 initgear = {"head":-1, "body":-1, "left":-1, "right":-1, "legs":-1}
+
+inittraits = [1,1,1,1,1,1,1,1,1,1]
 
 instantactions = {"describe","define","gear","help","hp","info","information","inventory","inv","level","lv","money","mp","quit","room","rp","save","status","time","traits","xp"}
 
