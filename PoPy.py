@@ -38,7 +38,7 @@ if __name__ == "__main__":
 
 # get all action funcs on same page with returning true or false
 
-# then pour/dump on
+# then pour/dump
 # then hide/crouch/crawl
 # then lock/unlock
 # then grab/carry

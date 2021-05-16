@@ -752,9 +752,6 @@ class Creature():
 	def addItem(self,I):
 		if self.invWeight() + I.Weight() > self.BRDN() * 2:
 			return False
-		if self.invWeight() + I.Weight() > self.BRDN():
-			if not self.hasCondition("hindered"):
-				self.addCondition("hindered",-3)
 		insort(self.inv,I)
 		return True
 
@@ -799,6 +796,12 @@ class Creature():
 				if reqDuration == None or reqDuration == cond[1]:
 					return True
 		return False
+
+	def checkHindered():
+		if self.invWeight() + I.Weight() > self.BRDN():
+			if not self.hasCondition("hindered"):
+				print("Your inventory grows heavy")
+				self.addCondition("hindered",-3)
 
 	# these are creature stats that are determined dynamically with formulas
 	# these formulas are difficult to read, check design document for details
@@ -969,21 +972,19 @@ class Player(Creature):
 			if condition == cond:
 				if reqDuration == None or reqDuration == duration:
 					self.status.remove([condition,duration])
-		if not self.hasCondition(cond):
-			print("You are no longer " + cond)
+					if not self.hasCondition(cond):
+						print("You are no longer " + cond)
 
-	def obtainItem(self,I,S,W,G):
-		if self.invWeight() + I.Weight() > self.BRDN() * 2:
-			return False
-		if self.invWeight() + I.Weight() > self.BRDN():
-			if not self.hasCondition("hindered"):
-				print("Your inventory grows heavy")
-				self.addCondition("hindered",-3)
-		insort(self.inv,I)
-		S.removeItem(I)
-		if hasMethod(I,"Obtain"):
-			I.Obtain(self,W,G)
-		return True
+	def obtainItem(self,I,S,W,G,msg=None):
+		if self.addItem(I):
+			S.removeItem(I)
+			if msg != None:
+				print(msg)
+			if hasMethod(I,"Obtain"):
+				I.Obtain(self,W,G)
+			return True
+		print(f"You can't take the {I.name}, your Inventory is too full")
+		return False
 
 	# only used by equip and unequip to reassign several attributes
 	# specifically, weapon, weapon2, shield, shield2

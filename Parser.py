@@ -878,7 +878,8 @@ def Point(dobj,iobj,prep):
 	print("pointing")
 
 def Pour(dobj,iobj,prep):
-	if prep not in {"in","into","inside","on","onto","out","upon",None}:
+	print(dobj,iobj,prep)
+	if prep not in {"in","into","inside","on","onto","upon",None}:
 		print("Command not understood")
 		return False
 	if dobj == None:
@@ -1012,7 +1013,6 @@ def Throw(dobj,iobj,prep):
 def Tie(dobj,iobj,prep):
 	print("tieing")
 
-
 def Take(dobj,iobj,prep):
 	if prep not in {"from","in","inside",None}:
 		print("Command not understood")
@@ -1045,16 +1045,13 @@ def Take(dobj,iobj,prep):
 	if S is P:
 		print("You can't take from your own Inventory")
 		return False
-	if not P.obtainItem(I, S, W, G):
-		print(f"You can't take the {I.name}, your Inventory is too full")
-		return False
 
 	if S is G.currentroom:		appendstring = ""
 	elif P in path:				appendstring = " from your " + S.name
 	else:						appendstring = " from the " + S.name
 	det = "the" if count == 1 else "a"
-	print(f"You take {det} {I.name}{appendstring}")
-	return True
+	msg = f"You take {det} {I.name}{appendstring}"
+	return P.obtainItem(I,S,W,G,msg)
 
 def Touch(dobj,iobj,prep):
 	print("touching")
