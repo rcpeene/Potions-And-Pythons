@@ -113,7 +113,7 @@ $Switch ("doorbell", "a bronze bell hanging near the door of the cabin", 2, 10, 
 
 $Sign ("sign", "A wooden sign", 7, 100, "Welcome to the Land!\nWatch out for Snakes.")
 $Box ("chest", "a large wooden chest", 4, 10, False,
-	[$Lockbox ("capsule", "a metal capsule", 1, 10, False, [], True),
+	[$Lockbox ("capsule", "a metal capsule", 1, 10, False, [], [001], True),
 	$Box ("small chest", "a small wooden chest", 4, 10, False,
 		[$Potion ("blue potion", "a blue bubbly brew in a glass bottle", 6, 3),
 		$Bread ("breadroll", "a small roll of bread", 1, 10)])])
@@ -134,6 +134,8 @@ $Potion ("blue potion", "a blue bubbly brew in a glass bottle", 6, 3)
 %"north": "pit"
 %"east": "brook"
 %"west": "cliffside"
+
+$ Key ("iron key", "a plain iron key", 1, 6, 001)
 ~
 
 #tunnel

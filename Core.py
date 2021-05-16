@@ -29,6 +29,8 @@ def hasMethod(obj,methodname):
 
 # prints 30 newlines
 def clearScreen():
+	# try: os.system("cls")
+	# except: os.system("clear")
 	print("\n"*64)
 
 def flushInput():
@@ -38,7 +40,7 @@ def flushInput():
 			msvcrt.getch()
 	except ImportError:
 		import sys, termios
-		termios.tcflush(sys.stdin, termios.TCIOFLUSH)
+		termios.tcflush(sys.stdin,termios.TCIOFLUSH)
 
 def kbInput():
 	try:
@@ -701,8 +703,11 @@ class Creature():
 		return weight
 
 	# returns a list of names of all items in player inventory
-	def invNames(self):
-		return [item.name.lower() for item in self.inv]
+	def invNames(self,lower = False):
+		if lower:
+			return [item.name.lower() for item in self.inv]
+		return [item.name for item in self.inv]
+
 
 	# just a function wrapper for functions that call contentNames on objects
 	def contentNames(self):
@@ -743,7 +748,7 @@ class Creature():
 			I.Unequip(self)
 
 	def describe(self):
-		if hasattr(descname,self):
+		if hasattr(self,"descname"):
 			print(f"It's {gprint('a',self.descname,3,1)}", end="")
 		else:
 			print(f"It's {gprint('a',self.name,3,1)}", end="")
@@ -873,10 +878,11 @@ class Creature():
 
 # the class representing the player, contains all player stats
 class Player(Creature):
-	def __init__(self,name,desc,hp,mp,traits,money,inv,gear,status,xp,rp):
+	def __init__(self,name,desc,hp,mp,traits,money,inv,gear,status,xp,rp,crouched):
 		Creature.__init__(self,name,desc,hp,mp,traits,money,inv,gear,status)
 		self.xp = xp
 		self.rp = rp
+		self.crouched = crouched
 
 	def writeAttributes(self,fd):
 		super(Player,self).writeAttributes(fd)
@@ -985,6 +991,13 @@ class Player(Creature):
 			return True
 		print(f"You can't take the {I.name}, your Inventory is too full")
 		return False
+
+	def countCompasses(self):
+		count = 0
+		for item in self.inv:
+			if isinstance(item,Compass):
+				count +=1
+		return count
 
 	# only used by equip and unequip to reassign several attributes
 	# specifically, weapon, weapon2, shield, shield2
@@ -1349,6 +1362,10 @@ class Tunic(Armor):
 class Greaves(Armor):
 	def __init__(self,name,desc,weight,durability,prot):
 		Armor.__init__(self,name,desc,weight,durability,prot)
+
+class Compass(Item):
+	def Orient(self):
+		print("Orienting you northward!")
 
 
 #######################

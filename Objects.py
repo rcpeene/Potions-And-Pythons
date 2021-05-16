@@ -76,13 +76,15 @@ class Box(Item):
 	# the weight of a box is equal to its own weight + weights of its contents
 	def Weight(self):
 		w = self.weight
-		for i in self.contents:	w += i.Weight()
+		for i in self.contents:
+			w += i.Weight()
 		return w
 
 	def Look(self):
 		if len(self.contents) == 0:
 			print("It is empty")
 		else:
+			self.open = True
 			print("Inside there is " + listItems(self.contents))
 
 
@@ -94,10 +96,6 @@ class Bread(Item):
 		S.removeItem(self)
 		if h == 0:
 			print("Yummy")
-
-class Compass(Item):
-	def Orient(self):
-		print("Orienting you northward!")
 
 class Controller(Item):
 	def __init__(self,name,desc,weight,durability,effect):
@@ -151,9 +149,21 @@ class Hand(Item):
 	def improviseWeapon(self):
 		return Weapon(self.name,self.desc,self.weight,self.durability,minm(1,self.weight//4),2,0,0,False,"b")
 
+class Key(Item):
+	def __init__(self,name,desc,weight,durability,id):
+		Item.__init__(self,name,desc,weight,durability)
+		self.id = id
+
+	def LockWith(self,box):
+		pass
+
+	def UnlockWith(self,box):
+		pass
+
 class Lockbox(Box):
-	def __init__(self,name,desc,weight,durability,open,contents,locked):
+	def __init__(self,name,desc,weight,durability,open,contents,keyids,locked):
 		Box.__init__(self,name,desc,weight,durability,open,contents)
+		self.keyids = keyids
 		self.locked = locked
 
 	def writeAttributes(self,fd):
@@ -175,11 +185,40 @@ class Lockbox(Box):
 		else:
 			print("Inside there is " + listItems(self.contents))
 
-	def Lock(self):
-		pass
+	def Look(self):
+		if self.locked == True:
+			print("It is locked")
+		elif len(self.contents) == 0:
+			print("It is empty")
+		else:
+			self.open = True
+			print("Inside there is " + listItems(self.contents))
 
-	def Unlock(self):
-		pass
+	def Lock(self,key):
+		if I.locked:
+			print(f"The {I.name} is already locked")
+			return False
+		if key.id in self.keyids:
+			self.locked = True
+			print(f"You lock the {self.name}")
+			if hasMethod(key,"UnlockWith"):
+				key.UnlockWith(self)
+			return True
+		print(f"You can't lock the {self.name} with the {key.name}")
+		return True
+
+	def Unlock(self,key):
+		if not self.locked:
+			print(f"The {self.name} is not locked")
+			return False
+		if key.id in self.keyids:
+			self.locked = False
+			print(f"You unlock the {self.name}")
+			if hasMethod(key,"LockWith"):
+				key.LockWith(self)
+			return True
+		print(f"The {key.name} won't work!")
+		return True
 
 class Mouth(Item):
 	def improviseWeapon(self):
@@ -218,7 +257,6 @@ class Potion(Bottle):
 			obj.Drench(self)
 		S.removeItem(self)
 		P.addItem(Bottle("bottle","an empty glass bottle",3,3))
-
 
 class Shard(Item):
 	#???
@@ -303,7 +341,7 @@ class Table(Fixture):
 		return w
 
 	def describe(self):
-		super(Table,self).describe()
+		print(self.descname)
 		if len(self.contents) != 0:
 			print("On it is " + listItems(self.contents))
 		else:

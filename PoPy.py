@@ -25,6 +25,7 @@ def main():
 				creature.act(P,room,True)
 
 		# pass the time after everyone has acted
+		G.whoseturn = None
 		G.incrementTime(P,W)
 
 if __name__ == "__main__":
@@ -38,11 +39,11 @@ if __name__ == "__main__":
 
 # get all action funcs on same page with returning true or false
 
-# then pour/dump
 # then hide/crouch/crawl
-# then lock/unlock
 # then grab/carry
 
+# when creature die, make it so they drop items maybe? instead of to player inv?
+# fix Go() when they dont have a compass
 # consider adding alternative names (this would change search funcs a lot)
 
 # TODO: research using map() in python, and passing functions as arguments
