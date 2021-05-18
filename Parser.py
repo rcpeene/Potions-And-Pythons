@@ -50,13 +50,12 @@ def isMeaningful(noun):
 
 # recursively inspects the command, a list of words
 # combines multiple words into single words that appear to be a meaningful term.
-# initially called where i = 1 (it skips the first word, which is always a verb)
 # returns the command after any relevant terms are joined into one word
 def nounify(command,i):
 	if i >= len(command)-1:
 		return command
 	possibleNoun = command[i]
-	j = i
+	j = i+1
 	while j < len(command):
 		# possibleNoun is all words between i and j joined
 		possibleNoun += ' '+command[j]
@@ -98,7 +97,7 @@ def getDest(prompt):
 	# copy command, delimited by spaces, into a list excluding articles
 	listdestination = [i for i in puredestination.split() if i not in articles]
 	# finally, combine certain words if they appear to make one noun term
-	finaldestination = nounify(listdestination,1)
+	finaldestination = nounify(listdestination,0)
 	return finaldestination
 
 def parseWithoutVerb(prompt,preps):
@@ -159,7 +158,7 @@ def getCmd():
 	# copy command, delimited by spaces, into a list excluding articles
 	listcommand = [i for i in purecommand.split() if i not in articles]
 	# finally, combine certain words if they appear to make one noun term
-	finalcommand = nounify(listcommand,1)
+	finalcommand = nounify(listcommand,0)
 	return finalcommand
 
 # called in parse() when a command fails, it simply recurs parse(), and...

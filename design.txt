@@ -417,7 +417,7 @@ ability to craft items
 
 INVS - investigation
 ability to investigate
-2*INT + WIS
+2*WIS + INT
 
 KNWL - knowledge
 chance to know things
@@ -561,10 +561,10 @@ p: piercing	[phys] - weapons that can stab
 s: slashing	[phys] - weapons that can slice
 b: bludgeoning	[phys] - weapons that can crush
 
-f: fire	[elem] - weapons that can burn
-c: cold	[elem] - weapons that can freeze
-l: lightning [elem] - weapons that can shock
-t: thunder [elem] - weapons that can burst
+f: fire	[elem] - weapons that can burn [can cause burning condition]
+c: cold	[elem] - weapons that can freeze [can cause frozen condition]
+l: lightning [elem] - weapons that can shock [can cause paralyzed condition]
+t: thunder [elem] - weapons that can burst [can cause deafened condition]
 a: acid [elem] - weapons that can corrode
 x: poison [elem] - weapons that can poison (duh)
 
@@ -574,53 +574,6 @@ v: force	[mag] - weapons that evoke magical force
 i: psychic [mag] - weapons that harm the mind
 
 e: essential [dev] - weapons that transcend the universe
-
-
-
-PROPERTIES:
-
-weapon;
-nimble - bonus to attack speed
-keen - weapon doesn't lose sharpness
-striker - increased chance to hit/crit
-flaming - sets enemy on fire
-venom - poisons enemy
-frost - freezes enemy
-brilliant
-bright
-ironweave
-brave
-breaker
-magic
-razor
-searing
-
-mithril
-gold
-silver
-steel
-iron
-bronze
-tin
-wood
-glass
-
-armor;
-sanguine - overflow defense heals
-fortitude - invulnerability to a dmg type
-patient
-valorous
-robust
-phoenix - fire damage
-
-mithril
-gold
-silver
-steel
-iron
-bronze
-leather
-cloth
 
 
 
@@ -662,6 +615,244 @@ fidelity - raises FTH
 prosperity - raises LCK
 
 
+CONDITION IDEAS:
+
+raising a base stat
+raising a derived stat
+lowering a base stat
+lowering a derived stat
+resistance to a damage type
+invulnerability to a damage type
+vulnerability to a damage type
+raising fondness of creature
+raising fear of creature
+insanity
+rage (for any target)
+ire (for a target)
+bloodied
+lignified
+petrified
+frozen
+paralyzed
+restrained
+burning
+poisoned
+sleep
+blinded
+deafened
+prone
+spellbound (cant cast)
+disguised
+polymorphed
+invisible
+fly
+hindered
+waterbreathing
+feather fall
+gaseous form
+truesight
+darkvision
+opulence (double money recieved)
+chefskiss (better at cooking)
+greenthumb (good at planting or something)
+in a sphere/bubble (immune to damage, can't attack)
+hunters mark
+
+
+
+EQUIPMENT PROPERTIES:
+
+	weapon;
+	nimble - bonus to attack speed
+	keen - weapon doesn't lose sharpness
+	striker - increased chance to hit/crit
+	flaming - sets enemy on fire
+	venom - poisons enemy
+	frost - freezes enemy
+	brilliant
+	bright
+	ironweave
+	brave
+	breaker
+	magic
+	razor
+	searing
+
+	mithril
+	gold
+	silver
+	steel
+	iron
+	bronze
+	tin
+	wood
+	glass
+
+	armor;
+	sanguine - overflow defense heals
+	fortitude - invulnerability to a dmg type
+	patient
+	valorous
+	robust
+	phoenix - fire damage
+
+	mithril
+	gold
+	silver
+	steel
+	iron
+	bronze
+	leather
+	cloth
+
+
+
+ITEM IDEAS:
+
+Norman's sword
+Norman's shield
+Norman's etc.
+
+Camphor Staff (or sm othr tree idk) Gingko Staff? etc,
+willow staff, banyan, aspen, birch, elm, sycamore
+Pantalon
+The Master Boomerang - (always comes back no matter what u do with it)
+Raygun (that deals E damage)
+Paragon Blade
+Nebula Shroud/Cloak
+Durendal
+Caliburn
+Tyrfing (Cursed)
+Shamshir (Poisonous)
+Carnwennan (Shadow Dagger)
+
+Sci-fi set
+
+(Newton/Gravity Something)
+Raygun (Lazer Mauser)
+Gauss Rifle (Coilgun)
+Lorentz Rifle (Railgun)
+Maxwell Cannon (Plasma Cannon)
+Faraday Shield (Lightning Shied)
+
+
+An item set named after all the greek letters (super powerful)
+each one has a magical effect associated with each of the 24 derived stats
+
+Alpha sword			CRIT
+Beta axe				ATCK
+Delta cloak			SLTH
+Gamma bow				ACCU
+Epsilon ring		CSSP
+Zeta wand				CAST
+
+Eta flask				MXHP
+Theta gauntlet	TNKR
+Iota key				KNWL
+Kappa horn			DCPT
+Lambda lyre			PRSD
+Mu stone				MXMP
+
+Nu dagger				ATSP
+Xi amulet				RITL
+Omicron tome		SPLS
+Pi compass			LOOT
+Rho pack				BRDN
+Sigma tunic			EVSN
+
+Tau hammer			ATHL
+Upsilon glaive	ENDR
+Phi crown				RESC
+Chi torch				INVS
+Psi boots				MVMT
+Omega shield		DFNS
+
+
+
+FOOD AND CONSUMABLE ITEMS:
+
+consumable items can heal hp, regenerate mp, and add or remove status effects.
+cooked/constructed meals have effects that are greater than the sum of their parts. different food groups tend to provide different benefits
+
+proteins/meats - vastly increase hp, synergize well in meals
+grains/starches - moderately increase hp, cheapest/most common
+fruits - minimally increase hp, each fruit adds a different status effect
+veggies - minimally increase hp, minimally increases mp, can remove bad status effects
+dairy - minimally increase hp and mp, can remove bad status effects
+alcohol - same effects as fruit, but adds drunkeness
+water - raises hp and mp by 2
+
+Potions are bottled items that have different effects. Types of potions are:
+Red, Orange, Yellow, Green, Blue, Purple
+Pale Red, Pale Orange, Pale Yellow, Pale Green, Pale Blue, Pale Purple
+Dark Red, Dark Orange, Dark Yellow, Dark Green, Dark Blue, Dark Purple
+Bright Red, Bright Orange, Bright Yellow, Bright Green, Bright Blue, Bright Purple
+Clear, Pink, Brown, Black, Grey, White
+Bronze (defense), Silver (speed), Gold (atk/dmg/crit)
+
+Fruits:
+
+Apple - reduces disease conditions
+Banana
+Blueberry
+Blackberry
+Cherry
+
+Coconut
+Cowberry
+Cranberry
+Currant (Black) - physical resistance
+Currant (Red) - elemental resistance
+
+Currant (White) - magical resistance
+Dragonfruit - firebreath? fly? fire resistance?
+Durian - bonus to endurance or wpn durability?
+Elderberry
+Fig
+
+Ghostberry - ghost effects? gaseous form? cold resistance?
+Gojiberry - something awesome, remove all bad conditions?
+Goldenberry - double money gained?
+Gooseberry - bonus to luck?
+Grape
+
+Grapefruit - temporarily raises MXMP
+Guava
+Huckleberry
+Juniperberry
+Kiwi
+
+Kumquat - something with mp
+Lemon - improved spells
+Lime - improved spells some other way
+Loquat
+Lychee
+
+Mango
+Mulberry
+Muskmelon - immune to poison
+Olive
+Orange
+
+Passionfruit - bonus to social interaction
+Peach
+Pear
+Persimmon
+Pitanga
+
+Plum
+Pricklepear - thornshield
+Pineapple
+Pomogranate
+Quince
+
+Raspberry
+Seaberry - water breathing
+Starfruit
+Strawberry
+Watermelon
+
+
 
 WORLD DESIGN IDEAS:
 
@@ -685,62 +876,8 @@ so these dungeons are generally just clusters of room nodes in the world graph t
 -spaceship, extra idea maybe with aliens lol
 -snowy peaks, maybe ice castle? something cold themed
 
+several settlements exist in the world (aim for like at least 9)
 
-
-FOOD AND CONSUMABLE ITEMS:
-
-consumable items can heal hp, regenerate mp, and add or remove status effects.
-cooked/constructed meals have effects that are greater than the sum of their parts. different food groups tend to provide different benefits
-
-proteins/meats - vastly increase hp, synergize well in meals
-grains/starches - moderately increase hp, cheapest/most common
-fruits - minimally increase hp, each fruit adds a different status effect
-veggies - minimally increase hp, moderately increase mp
-dairy - minimally increase hp and mp, can remove bad status effects
-alcohol - same effects as fruit, but adds drunkeness
-water - raises hp and mp by 2
-
-Potions are bottled items that have different effects. Types of potions are:
-Red, Orange, Yellow, Green, Blue, Purple
-Pale Red, Pale Orange, Pale Yellow, Pale Green, Pale Blue, Pale Purple
-Dark Red, Dark Orange, Dark Yellow, Dark Green, Dark Blue, Dark Purple
-Bright Red, Bright Orange, Bright Yellow, Bright Green, Bright Blue, Bright Purple
-Clear, Pink, Brown, Black, Grey, White
-Bronze (defense), Silver (speed), Gold (atk/damg/crit)
-
-Fruits:
-Apple
-Banana
-Blueberry
-Blackberry
-Cranberry
-Cherry
-Coconut
-Dragonfruit
-Durian
-Elderberry
-Gooseberry
-Grape
-Grapefruit
-Guava
-Lemon
-Lime
-Lychee
-Mango
-Olive
-Orange
-Passionfruit
-Peach
-Pear
-Plum
-Cactusfruit
-Pineapple
-Pomegranate
-Quince
-Raspberry
-Starfruit
-Strawberry
-Watermelon
 
 THIRTEEN GODS WITH TEMPLES:
 
@@ -753,7 +890,7 @@ god of charisma,
 god of intelligence,
 god of wisdom,
 god of faith,
-god of luck, tricks, games, cards
+god of luck, tricks, games, cards, money
 
 sun/love, moon/friendship, death, harvest, war/storms, song/dance/art, animals/hunting, language/magic/truth, crafting/smithing/fire, law, the sea, betrayal/murder, beer/alcohol, trees?, healing, patience, prophecy/fate/stars, peace, wealth/trade, mercy/grace/forgiveness,
 
@@ -784,52 +921,6 @@ a wisp/fairy?
 a goose?
 
 
-
-
-BRAINSTORM IDEAS:
-
-Norman's sword
-Norman's shield
-Norman's etc.
-
-Camphor Staff (or sm othr tree idk) Gingko Staff? etc,
-willow staff, banyan, aspen, birch, elm, sycamore
-Pantalon
-The Master Boomerang - (always comes back no matter what u do with it)
-Raygun (that deals E damage)
-Paragon Blade
-Nebula Shroud/Cloak
-
-An item set named after all the greek letters (super powerful)
-each one has a magical effect associated with each of the 24 derived stats
-
-Alpha sword			CRIT
-Nu dagger				ATSP
-Beta axe				ATCK
-Upsilon glaive	ENDR
-Tau hammer			ATHL
-Gamma bow				ACCU
-Omega shield		DFNS
-Phi crown				RESC
-
-Sigma tunic			EVSN
-Theta gauntlet	TNKR
-Psi boots				MVMT
-Delta cloak			SLTH
-Xi amulet				RITL
-Mu stone				MXMP
-Pi compass			LOOT
-Rho pack				BRDN
-
-Zeta wand				CAST
-Omicron tome		SPLS
-Epsilon ring		CSSP
-Chi torch				INVS
-Eta flask				MXHP
-Iota key				KNWL
-Lambda lyre			PRSD
-Kappa horn			DCPT
-
 CHARACTER NAMES:
 	Orion - boss
 	Pax - person
@@ -838,11 +929,67 @@ CHARACTER NAMES:
 	Somnus
 	The zodiac signs
 	The Lady of the Lake
-	Enchantress of Number
+	Enchantress of Number(Numeral)
 	Master of Ravens
 	villain king of people
 	villain king of monsters
 	villain king of beasts
 
+	one bbeg is the world serpent called Aeormungand (Leviathan?)
+	also an evil wizard ofc
+
+
+
+SPELL EFFECTS:
+Note: these are not speciifc spell ideas, but general things a spell could do, to outline ways to implement spells and what technical limitations there are
+
+add a status effect
+remove a status effect
+deal area damage (to whole room)
+deal damage only to certain types of creatures
+deal target damage
+heal a creature
+improving weapon stats
+changing weapon damage type
+repair an item
+
+spawning item (temporary weapon, illusion projector, food, leomund chest)
+destroy item
+unlock an item
+lock an item
+locate an item? in the world or nearby
+create a lasting room effect (like preventing entering an exiting, zero avity, darkness)
+alter the terrain (affecting fixtures)
+create a portal to somewhere (mansion, hut, another room) (permanent/temp)
+break an item
+ignite things
+freeze things
+acid melt things
+shock things
+
+spawning creature (familiar, magic sentry, dragon)
+summon an npc
+destroy creature
+read people's minds
+command a creature
+make a creature laugh/cry/sneeze
+attract animals/creatures
+disguising self
+attracts animals
+speak with animals/monsters
+communicate with npc at a distance?
+freeze a creature in time? paralyze them maybe
+freeze all creatures in time
+produce illusion of a creature (probably class creature)
+create a loud sound (alert creatures)
+
+resurrect a dead creature
+create a zombie
+teleport somewhere
+stop time everywhere (bool in game class)
+
+
+
+MISC IDEAS:
 
 stoats, lemmings as creatures

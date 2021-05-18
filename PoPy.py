@@ -41,7 +41,9 @@ if __name__ == "__main__":
 
 # then hide/crouch/crawl
 # then grab/carry
+# add a wait command (cant wait with enemies nearby)
 
+# add room status conditions
 # when creature die, make it so they drop items maybe? instead of to player inv?
 # fix Go() when they dont have a compass
 # consider adding alternative names (this would change search funcs a lot)
@@ -184,92 +186,6 @@ if __name__ == "__main__":
 #		club
 
 
-# CONDITION IDEAS:
-
-# improving a base stat
-# improving a derived stat
-# resistance to a damage type
-# invulnerability to a damage type
-# vulnerability to a damage type
-# bonus to stealth
-# decrease to perception
-# raising fondness of creature
-# raising fear of creature
-# insanity
-# rage
-# bloodied
-# disguised
-# polymorphed
-# petrified
-# frozen
-# paralyzed
-# restrained
-# on fire
-# poisoned
-# sleep
-# blinded
-# deafened
-# prone?
-# invisible
-# fly
-# feather fall
-# gaseous form
-# trusight
-# darkvision
-# spellbound
-# in a sphere/bubble
-
-
-# 40-50 SPELL IDEAS:
-
-# add a status effect
-# remove a status effect
-# deal area damage (to whole room)
-# deal damage only to certain types of creatures
-# deal target damage
-# hunters mark
-# heal a creature
-# improving weapon stats
-# changing weapon damage type
-# repair an item
-
-# spawning item (temporary weapon, illusion projector, food, leomund chest)
-# destroy item
-# unlock an item
-# lock an item
-# locate an item? in the world or nearby
-# open up a giant fissure???
-# create a lasting room effect (like preventing entering an exiting, zero gravity, darkness)
-# alter the terrain
-# create a portal to somewhere (mansion, hut, another room) (permanent/temp)
-# ignite things
-# freeze things
-# acid melt things
-# shock things
-
-# spawning creature (familiar, magic sentry, dragon)
-# summon an npc
-# destroy creature
-# read people's minds
-# command a creature
-# make a creature laugh/cry/sneeze
-# attract animals/creatures
-# disguising self
-# attracts animals
-# speak with animals/monsters
-# communicate with npc at a distance?
-# freeze a creature in time? paralyze them maybe
-# freeze all creatures in time
-# produce illusion of a creature (probably class creature)
-# create a loud sound?
-
-# resurrect a dead creature
-# create a zombie
-# teleport somewhere
-# stop time everywhere (bool in game class)
-
-
-
 
 
 # interpret(verb,dobj,iobj,prep,preps,dobjSearch,iobjSearch,d1=0)
@@ -289,11 +205,6 @@ if __name__ == "__main__":
 # func(dobj,iobj,prep):
 # 	preps = {toward, none}
 # 	I,R,prep = interpretSearch(dobj,iobj,prep,preps,dobjSearch,iobjSearch)
-#
-#
-#
-#
-#
 #
 #
 #

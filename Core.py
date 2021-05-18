@@ -630,6 +630,7 @@ class Creature():
 
 		# these attributes remain unused in the Player subclass
 		self.alive = True
+		self.alert = False
 		self.seesPlayer = False
 		self.sawPlayer = -1
 
