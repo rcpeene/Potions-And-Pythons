@@ -41,17 +41,14 @@ if __name__ == "__main__":
 
 # then hide/crouch/crawl
 # then grab/carry
-# add a wait command (cant wait with enemies nearby)
-
 # add room status conditions
 # when creature die, make it so they drop items maybe? instead of to player inv?
 # fix Go() when they dont have a compass
-# consider adding alternative names (this would change search funcs a lot)
 
+# consider adding alternative names (this would change search funcs a lot)
 # TODO: research using map() in python, and passing functions as arguments
 # reevaluate effect functions, is there a way to reference a function by string?
 # evaluate enter, exit functions in room
-
 # how will amulet effects work??
 
 # add magic beans or food to pour stuff one
@@ -64,6 +61,7 @@ if __name__ == "__main__":
 # figure out combat? attack items?
 # add Steal
 
+# add a wait command (cant wait with enemies nearby)
 # there is a bug in equip where two of the same item can be equipped twice
 
 # add in armor and shields and protection and test them

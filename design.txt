@@ -877,6 +877,7 @@ so these dungeons are generally just clusters of room nodes in the world graph t
 -snowy peaks, maybe ice castle? something cold themed
 
 several settlements exist in the world (aim for like at least 9)
+- Folkston or Folksvale
 
 
 THIRTEEN GODS WITH TEMPLES:
@@ -946,7 +947,7 @@ Note: these are not speciifc spell ideas, but general things a spell could do, t
 add a status effect
 remove a status effect
 deal area damage (to whole room)
-deal damage only to certain types of creatures
+deal area damage only to certain types of creatures
 deal target damage
 heal a creature
 improving weapon stats
@@ -955,6 +956,7 @@ repair an item
 
 spawning item (temporary weapon, illusion projector, food, leomund chest)
 destroy item
+destroy all items that fit a condition
 unlock an item
 lock an item
 locate an item? in the world or nearby

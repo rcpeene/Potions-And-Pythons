@@ -42,13 +42,14 @@ P, W, G = mainMenu()
 def isMeaningful(noun):
 	if noun in G.currentroom.exits.values() or \
 	G.inWorld(noun,W) or \
-	objSearch(noun,P,d=2) or \
+	P.search(noun) or \
+	noun in actions or \
 	noun in definitions or \
 	noun in miscexpressions:
 		return True
 	return False
 
-# recursively inspects the command, a list of words
+# recursively inspects the command, wich is a list of words
 # combines multiple words into single words that appear to be a meaningful term.
 # returns the command after any relevant terms are joined into one word
 def nounify(command,i):
@@ -60,7 +61,7 @@ def nounify(command,i):
 		# possibleNoun is all words between i and j joined
 		possibleNoun += ' '+command[j]
 		# if new term refers to an rendered object a location, or a game term:
-		# combine words into one element
+		# combine words into one element and recur
 		if isMeaningful(possibleNoun):
 			del command[i:j+1]
 			command.insert(i,possibleNoun)
@@ -162,7 +163,7 @@ def getCmd():
 	return finalcommand
 
 # called in parse() when a command fails, it simply recurs parse(), and...
-# prints a helpful message if user has provided invalid input 4 or more times
+# prints a helpful message if user has provided invalid input 3 or more times
 # n is the number of times parse() has recurred
 def promptHelp(msg,n):
 	if msg != "":	print(msg)
@@ -178,7 +179,7 @@ def promptHelp(msg,n):
 # n denotes how many times parse has recurred
 def parse(command,n):
 	if len(command) == 0:
-		return promptHelp("Command not understood", n)
+		return promptHelp("Command not understood",n)
 	verb = command[0]	# verb is always first word
 	dobj = None			# values are None by default, they may remain None
 	iobj = None
@@ -632,7 +633,6 @@ def Dump(dobj,iobj,prep):
 	else:
 		return Drop(dobj,iobj,prep)
 
-
 def Eat(dobj,iobj,prep):
 	if prep not in {"with",None}:
 		print("Command not understood")
@@ -830,19 +830,25 @@ def Lock(dobj,iobj,prep):
 	if prep != "with" and prep != None:
 		print("Command not understood")
 		return False
+
 	if dobj == None:
 		dobj = getNoun("What will you lock?")
 		if dobj in cancels:
-			return False
-	if iobj == None:
-		iobj = getNoun("What will you lock with?")
-		if iobj in cancels:
 			return False
 	I = G.currentroom.search(dobj)
 	if I == None: I = P.search(dobj)
 	if I == None:
 		print(f"There is no '{dobj}' here")
 		return False
+	G.setPronouns(I)
+	if not hasMethod(I,"Lock"):
+		print(f"The {I.name} doesn't lock")
+		return False
+
+	if iobj == None:
+		iobj = getNoun("What will you lock with?")
+		if iobj in cancels:
+			return False
 	K = P.search(iobj)
 	if K == None:
 		print(f"There is no '{iobj}' in your inventory")
@@ -851,10 +857,6 @@ def Lock(dobj,iobj,prep):
 		print(f"You can't lock with the {K.name}")
 		return False
 
-	G.setPronouns(I)
-	if not hasMethod(I,"Lock"):
-		print(f"The {I.name} doesn't lock")
-		return False
 	return I.Lock(K)
 
 def Look(dobj,iobj,prep):
@@ -1066,9 +1068,6 @@ def Take(dobj,iobj,prep):
 	if prep not in {"from","in","inside","up",None}:
 		print("Command not understood")
 		return False
-	if dobj == None and prep == "up":
-		dobj = iobj
-		iobj = None
 	if dobj == None:
 		dobj = getNoun("What will you take?")
 		if dobj in cancels:
@@ -1138,16 +1137,20 @@ def Unlock(dobj,iobj,prep):
 		dobj = getNoun("What will you unlock?")
 		if dobj in cancels:
 			return False
-	if iobj == None:
-		iobj = getNoun("What will you unlock with?")
-		if iobj in cancels:
-			return False
-
 	I = G.currentroom.search(dobj)
 	if I == None: I = P.search(dobj)
 	if I == None:
 		print(f"There is no '{dobj}' here")
 		return False
+	G.setPronouns(I)
+	if not hasMethod(I,"Lock"):
+		print(f"The {I.name} doesn't lock")
+		return False
+
+	if iobj == None:
+		iobj = getNoun("What will you unlock with?")
+		if iobj in cancels:
+			return False
 	K = P.search(iobj)
 	if K == None:
 		print(f"There is no '{iobj}' in your inventory")
@@ -1156,10 +1159,6 @@ def Unlock(dobj,iobj,prep):
 		print(f"You can't unlock with the {K.name}")
 		return False
 
-	G.setPronouns(I)
-	if not hasMethod(I,"Lock"):
-		print(f"The {I.name} doesn't lock")
-		return False
 	return I.Unlock(K)
 
 def Untie(dobj,iobj,prep):
@@ -1312,6 +1311,7 @@ actions = {
 "open":Open,
 "pet":Pet,
 "pick":Take,
+"pick up":Take,
 "place":Put,
 "play":Play,
 "point":Point,

@@ -304,6 +304,7 @@ def loadGame(filename):
 	os.chdir("..")
 	os.chdir("..")
 	ellipsis(3)
+	flushInput()
 	# describe the current room
 	G.startUp(P,W)
 	return P, W, G
