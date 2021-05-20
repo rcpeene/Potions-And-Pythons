@@ -369,6 +369,7 @@ class Game():
 		self.time += 1
 		P.passTime(1)
 		for room in self.renderedRooms(W):
+			room.passTime(1)
 			for creature in room.occupants:
 				creature.passTime(1)
 
@@ -568,6 +569,18 @@ class Room():
 				if reqDuration == None or reqDuration == duration:
 					return True
 		return False
+
+	def passTime(self,t):
+		for condition in self.status:
+			# if condition is a special condition, ignore it
+			if condition[1] < 0:
+				continue
+			# subtract remaining duration on condition
+			elif condition[1] > 0:
+				condition[1] -= t
+			# if, after subtraction, condition is non-positive, remove it
+			if condition[1] <= 0:
+				self.removeCondition(condition[0],0)
 
 # general item class, all items come with a name, description, weight
 class Item():
@@ -862,7 +875,6 @@ class Creature():
 			if condition[1] <= 0:
 				self.removeCondition(condition[0],0)
 
-
 	def addCondition(self,name,dur,stackable=False):
 		# TODO: include stackability
 		pair = [name,dur]
@@ -912,7 +924,7 @@ class Creature():
 	def PRSD(self): return 2*self.CHA + self.WIS
 	def RESC(self): return 2*self.FTH + self.STM
 	def RITL(self): return 2*self.FTH + self.LCK
-	def SLTH(self): return 2*self.SKL + self.INT - minm(0,self.invWeight() - self.BRDN())
+	def SLTH(self): return ( 2*self.SKL + self.INT - minm(0,self.invWeight() - self.BRDN()) ) * 2*self.hasCondition("hiding")
 	def SPLS(self): return 2*self.INT
 	def TNKR(self): return 2*self.INT + self.SKL
 

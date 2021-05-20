@@ -37,8 +37,7 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# get all action funcs on same page with returning true or false
-# then hide/crouch/crawl
+# then add hide/crouch/crawl
 # test newest actions
 # when creature die, make it so they drop items maybe? instead of to player inv?
 # fix Go() when they dont have a compass

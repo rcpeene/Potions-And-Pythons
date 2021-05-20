@@ -73,7 +73,7 @@ $Controller ("Amulet of Poisoned", "a green amulet shaped like a teardrop", 2, 1
 %"up": "pit"
 %"down": "cabin"
 
-* [["darkness",-1], ["poisonous",-1]]
+* [["darkness",-1], ["poisonous",3]]
 
 $Passage ("stairwell", "stairs leading up into the light and down into the dark", -1, -1,
 ["up","down"], "stairwell that goes up and down")
