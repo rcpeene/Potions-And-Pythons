@@ -39,11 +39,12 @@ if __name__ == "__main__":
 
 # get all action funcs on same page with returning true or false
 
-# then hide/crouch/crawl
 # then grab/carry
+# then hide/crouch/crawl
 # add room status conditions
 # when creature die, make it so they drop items maybe? instead of to player inv?
 # fix Go() when they dont have a compass
+# examine output grammar/statements for lower level actions (in case non-player creatures do actions, we dont want it to print the same msgs)
 
 # consider adding alternative names (this would change search funcs a lot)
 # TODO: research using map() in python, and passing functions as arguments
@@ -53,7 +54,6 @@ if __name__ == "__main__":
 
 # add magic beans or food to pour stuff one
 # "drink from the fountain"
-# add locking/unlocking items
 #
 # figure out animal behavior
 # creatures attacking?
@@ -68,6 +68,7 @@ if __name__ == "__main__":
 # add range and ranged weapons???
 # add new weapons and TEST
 # more switches, levers, buttons
+# ensure output is grammatically correct with creature names. (for npcs, instead of printing "the I.name" you must print just name)
 
 # add object name disambiguation? (code asks "which sword will you use?"
 # add object plural type? 'there is some bread' vs 'there is a bread'
@@ -83,6 +84,7 @@ if __name__ == "__main__":
 # FUTURE IMPROVEMENTS
 
 # fill out definitions more
+# consider making objects hideable based on something other than weight
 # add quicksave and autosave, possibly include recent save name in Game() class
 # add signal handling: ctrl+s to save, ctrl+q to quit?
 # add cooking/brewing/crafting/tinkering
@@ -142,13 +144,6 @@ if __name__ == "__main__":
 # creating some obstacle
 # changing current room
 # to simply give the player information
-
-
-# status effects are tuples of the form (name, duration)
-# where duration is an integer representing the number of time units remaining
-# a duration of -1 means the effect lasts until removed
-# a duration of -2 means the effect was imbued from being in a room and it lasts until it is no longer afflicted again
-
 
 
 

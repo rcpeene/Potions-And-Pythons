@@ -115,8 +115,8 @@ class Controller(Item):
 	def Use(self,P,W,G):	self.Trigger(P,W,G)
 
 class Door(Fixture):
-	def __init__(self,name,desc,weight,durability,open,connections):
-		Fixture.__init__(self,name,desc,weight,durability)
+	def __init__(self,name,desc,weight,durability,size,open,connections):
+		Fixture.__init__(self,name,desc,weight,durability,size)
 		self.open = open
 		# connection is a 4-tuple of the form:
 		# (outDirection, outLocation, inDirection, inLocation)
@@ -224,26 +224,6 @@ class Mouth(Item):
 	def improviseWeapon(self):
 		return Weapon(self.name,self.desc,self.weight,self.durability,minm(1,self.weight//4),0,0,4,False,"p")
 
-class Passage(Fixture):
-	def __init__(self,name,desc,weight,durability,directions,descname):
-		Fixture.__init__(self,name,desc,weight,durability)
-		self.directions = directions
-		self.descname = descname
-
-	def Traverse(self,P,W,G,dir=None):
-		if dir == None:
-			if len(self.directions) == 1:
-				dir = self.directions[0]
-			else:
-				dir = input("Which direction will you go?\n> ")
-		if dir not in self.directions:
-			print(f"The {self.name} does not go '{dir}'")
-			return False
-		print(f"You go {dir} the {self.name}")
-		newroom = W[G.currentroom.exits[dir]]
-		G.changeRoom(newroom,P,W)
-		return True
-
 class Potion(Bottle):
 	# heals the player hp 1000, replaces potion with an empty bottle
 	def Drink(self,P,G,S):
@@ -277,8 +257,8 @@ class Sign(Item):
 		print('\n"' + self.text + '"')
 
 class Switch(Fixture):
-	def __init__(self,name,desc,weight,durability,effect):
-		Fixture.__init__(self,name,desc,weight,durability)
+	def __init__(self,name,desc,weight,durability,size,effect):
+		Fixture.__init__(self,name,desc,weight,durability,size)
 		self.effect = effect
 
 	# has an effect string which is used as a key in an 'effects' dict
@@ -298,8 +278,8 @@ class Sword(Weapon):
 		print("[you cut something?]")
 
 class Table(Fixture):
-	def __init__(self,name,desc,weight,durability,contents,descname):
-		Fixture.__init__(self,name,desc,weight,durability)
+	def __init__(self,name,desc,weight,durability,size,contents,descname):
+		Fixture.__init__(self,name,desc,weight,durability,size)
 		self.contents = contents
 		self.descname = descname
 
@@ -348,10 +328,8 @@ class Table(Fixture):
 			print("There is nothing on it")
 
 class Wall(Passage):
-	def __init__(self,name,desc,weight,durability,directions,descname,cr):
-		Fixture.__init__(self,name,desc,weight,durability)
-		self.directions = directions
-		self.descname = descname
+	def __init__(self,name,desc,directions,descname,cr):
+		Passage.__init__(self,name,desc,directions,descname)
 		self.cr = cr
 
 	def Traverse(self,P,W,G,dir=None):

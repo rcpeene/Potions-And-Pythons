@@ -865,6 +865,16 @@ class Creature():
 		if(self.hp == 0):
 			self.death(P,G,W)
 
+	def Restrain(self,restrainer,item):
+		if item != None:
+			#TODO: add restraining with items? like rope??
+			pass
+		if self.ATHL() > restrainer.ATHL() or self.EVSN() > restrainer.ATHL():
+			return False
+		restrainer.addCondition("restraining",-3)
+		self.addCondition("restrained",-3)
+		return True
+
 	def isBloodied(self):
 		# returns true is creature has less than half health
 		pass
@@ -1310,10 +1320,32 @@ class Person(Creature):
 	def act(self,P,currentroom,silent):
 		pass
 
-# almost identical to the item class, but fixtures cannot be removed from their initial location
+class Passage():
+	def __init__(self,name,desc,directions,descname):
+		self.name = name
+		self.desc = desc
+		self.directions = directions
+		self.descname = descname
+
+	def Traverse(self,P,W,G,dir=None):
+		if dir == None:
+			if len(self.directions) == 1:
+				dir = self.directions[0]
+			else:
+				dir = input("Which direction will you go?\n> ")
+		if dir not in self.directions:
+			print(f"The {self.name} does not go '{dir}'")
+			return False
+		print(f"You go {dir} the {self.name}")
+		newroom = W[G.currentroom.exits[dir]]
+		G.changeRoom(newroom,P,W)
+		return True
+
+# almost identical to the item class, but fixtures may not be removed from their initial location. Fixtures also have a size attribute
 class Fixture(Item):
-	def __init__(self,name,desc,weight,durability):
+	def __init__(self,name,desc,weight,durability,size):
 		Item.__init__(self,name,desc,weight,durability)
+		self.size = size
 
 class Weapon(Item):
 	def __init__(self,name,desc,weight,durability,might,sleight,sharpness,range,twohanded,type):

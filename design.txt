@@ -1,12 +1,13 @@
 
 DESIGN FOR POTIONS AND PYTHONS ALPHA
 
-TOADD to this document:
+TODO to add to this document:
 a description of Go()
 a description of passages
 a description of status conditions
 a description of all the object search functions and methodology (also described the object tree)
 include discussion of "source"
+a description of equipping (it doesnt remove it from your inventory), but carrying allows something to be equipping while not in your inv
 
 
 
@@ -336,100 +337,107 @@ DERIVED STATS:
 24 stats, also called abilites. These stats can be affected by base stats, other derived stats, and the player's equipment. These stats affect the actions taken by the player, including attacks, casting spells, and social interaction. Each derived stat has a formula it is determined by.
 
 ACCU - accuracy
-chance to hit against enemy evasion
 50 + 2*SKL + LCK + weapon.sleight
+chance to hit against enemy evasion
 
 ATCK - attack
-the amount of max possible damage to the opponent before their damage reduction
 STR d weapon.might
+the amount of max possible damage to the opponent before their damage reduction
 
 ATSP - attack speed
-combat order, number of attacks against enemy attack speed
 SPD - min0(weapon.weight - CON) - min0(shield.weight - CON)
+number of attacks against enemy attack speed
+combat order?
 
 EVSN - evasion
-chance to not be hit against enemy accuracy,
 2*ATSP + LCK
+chance to not be hit against enemy accuracy
+ability to escape restraint
 
 CRIT - critical hit
-chance of a double-damage hit
 SKL + LCK + weapon.sharpness
+chance of a double-damage hit
 
 DFNS - defense
-physical damage nullification
 CON + armor.protection + shield.protection
+physical damage negation
 
 MXHP - max hit point
-capacity of total health
 LV*CON + STM
+capacity of total health
 
-MXMP - max mana points
-capacity of total magic
+MXMP - max magic points
 LV*WIS + STM
+capacity of total magic
 
 CAST - casting bonus
-bonus applied to various magical effects
 WIS + FTH + INT - min0(armor.weight - CON)
+bonus applied to various magical effects
 
 CSSP - casting speed
-speed to cast a spell
 WIS - min0(inventory.weight - BRDN) - min0(armor.weight - CON)
+speed to cast a spell
 
 SPLS - number of spells
-the maximum number of spells
 2*INT
+the maximum number of spells known
 
 RESC - resistance
-magical damage nullification
 2*FTH + STM
+magical damage negation
 
 BRDN - burden
-carrying capacity without being hindered
 CON*STR + 20
+maximum inventory carrying capacity without being hindered
+2*BRDN is hard maximum inventory carrying capacity
 
 MVMT - movement
+SPD + STM + 10 - min0(inventory.weight - BRDN) - min0(armor.weight - CON) OR mount MVMT
 movement distance
-SPD + STM + 10 - min0(inventory.weight - BRDN) - min0(armor.weight - CON) OR mount
+turn order
 
 LOOT - item drop rate
-the rate and tier at which items and gold are dropped by enemies,
 2*LCK + FTH
+the rate and tier at which items and gold are dropped by enemies
 
 RITL - ritual
-ability to cast magical rituals and healing spells
 2*FTH + LCK
+ability to cast magical rituals and healing spells
 
 ATHL - athletics
-ability to achieve physical activities
 STR + SKL + STM
+ability to achieve physical activities
 
 ENDR - endurance
-ability to endure things (poison, holding breath, regeneration, etc.)
 2*STM + CON
+ability to endure things (poison, holding breath, regeneration, etc.)
 
 SLTH - stealth
-ability to hide
 2*SKL + INT - min0(inventory.weight - BRDN)
+ability to hide
 
 TNKR - tinker
-ability to craft items
 2*INT + SKL
+ability to craft items
+quality of cooked items
+quality of repaired items
 
 INVS - investigation
-ability to investigate
 2*WIS + INT
+ability to investigate
+ability to perceive hiding creatures
 
 KNWL - knowledge
-chance to know things
 2*INT + LCK
+chance to know things
 
 PRSD - persuasion
-ability to persuade
 2*CHA + WIS
+ability to persuade
 
 DCPT - deception
-ability to decieve
 2*CHA + INT
+ability to deceive
 
 
 
@@ -641,12 +649,12 @@ sleep
 blinded
 deafened
 prone
+hindered
 spellbound (cant cast)
 disguised
 polymorphed
 invisible
-fly
-hindered
+flying
 waterbreathing
 feather fall
 gaseous form
@@ -655,7 +663,7 @@ darkvision
 opulence (double money recieved)
 chefskiss (better at cooking)
 greenthumb (good at planting or something)
-in a sphere/bubble (immune to damage, can't attack)
+in a sphere/bubble (immune to attack damage, can't attack, drop, take)
 hunters mark
 
 
@@ -877,7 +885,7 @@ so these dungeons are generally just clusters of room nodes in the world graph t
 -snowy peaks, maybe ice castle? something cold themed
 
 several settlements exist in the world (aim for like at least 9)
-- Folkston or Folksvale
+- Folkston/Folksvale
 
 
 THIRTEEN GODS WITH TEMPLES:
@@ -942,7 +950,7 @@ CHARACTER NAMES:
 
 
 SPELL EFFECTS:
-Note: these are not speciifc spell ideas, but general things a spell could do, to outline ways to implement spells and what technical limitations there are
+Note: these are not specific spell ideas, but general things a spell could do, to outline ways to implement spells and what technical limitations there are
 
 add a status effect
 remove a status effect
@@ -980,8 +988,8 @@ disguising self
 attracts animals
 speak with animals/monsters
 communicate with npc at a distance?
-freeze a creature in time? paralyze them maybe
-freeze all creatures in time
+pause a creature in time? paralyze them maybe
+pause all creatures in time
 produce illusion of a creature (probably class creature)
 create a loud sound (alert creatures)
 

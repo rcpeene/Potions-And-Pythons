@@ -783,8 +783,10 @@ def Grab(dobj,iobj,prep):
 	G.setPronouns(I)
 	if isinstance(I,Item):
 		return Take(dobj,iobj,prep)
+	elif isinstance(I,Creature):
+		return Restrain(dobj,iobj,prep)
 	else:
-		print("[GRABBING CREATURES NOT YET IMPLEMENTED]")
+		print(f"You cannot grab the {I.name}")
 
 def Hide(dobj,iobj,prep):
 	print("hideing")
@@ -1027,6 +1029,40 @@ def Release(dobj,iobj,prep):
 
 def Rest(dobj,iobj,prep):
 	print("resting")
+
+def Restrain(dobj,iobj,prep):
+	if prep != "with" and prep != None:
+		print("Command not understood")
+		return False
+
+	if dobj == None:
+		dobj = getNoun("What will you restrain?")
+		if dobj in cancels:
+			return False
+	C = G.currentroom.search(dobj)
+	if C == None:
+		print(f"There is no '{dobj}' here")
+		return False
+	G.setPronouns(C)
+	if not isinstance(C,Creature):
+		print(f"You can't restrain the {C.name}")
+		return False
+
+	I = None
+	if iobj != None:
+		I = P.search(iobj)
+		if I == None:
+			print(f"There is no '{iobj}' in your inventory")
+			return False
+		if not hasMethod(I,"RestrainWith"):
+			print(f"You can't restrain with the {I.name}")
+			return False
+
+	if not C.Restrain(P,I):
+		print(f"You fail to restrain the {C.name}")
+		return False
+	print(f"You restrain the {C.name}")
+	return True
 
 def Ring(dobj,iobj,prep):
 	print("ringing")
@@ -1327,6 +1363,7 @@ actions = {
 "release":Release,
 "remove":Unequip,
 "rest":Rest,
+"restrain":Restrain,
 "ride":Mount,
 "ring":Ring,
 "rub":Rub,
