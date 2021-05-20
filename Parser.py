@@ -309,7 +309,7 @@ def Info(): print("\n"*64 + gameinfo)
 def Laugh(): print("HAHAHAHAHA!")
 def Quit():
 	if yesno("Are you sure you want to quit? (Anything unsaved will be lost)"):
-		exit(1)
+		sys.exit()
 def Return(): return Go(None, G.prevroom.name, None) #go to previous room
 def Save(): saveGame(P,W,G)
 def Shout(): print("AHHHHHHHHHH")
@@ -423,7 +423,7 @@ def Carry(dobj,iobj,prep):
 		if dobj in cancels:
 			return False
 
-	# G.setPronouns(I)
+	G.setPronouns(I)
 	print("NOT IMPLEMENTED YET!!")
 
 def Cast(dobj,iobj,prep):
@@ -1121,7 +1121,7 @@ def Take(dobj,iobj,prep):
 		if prep in {None,"up"}:	print(f"There is no '{dobj}' here")
 		else:				print(f"There is no '{dobj}' in a '{iobj}' here")
 		return False
-	if isinstance(I,Fixture) or isinstance(I,Creature):
+	if not isinstance(I,Item):
 		print("You can't take the " + dobj)
 		return False
 	G.setPronouns(I)

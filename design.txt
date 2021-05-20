@@ -7,7 +7,7 @@ a description of passages
 a description of status conditions
 a description of all the object search functions and methodology (also described the object tree)
 include discussion of "source"
-a description of equipping (it doesnt remove it from your inventory), but carrying allows something to be equipping while not in your inv
+a description of equipping (equipping doesnt remove it from your inventory), but carrying allows something to be equipped while not in your inv?
 
 
 

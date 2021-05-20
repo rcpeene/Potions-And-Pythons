@@ -37,36 +37,45 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
+# test newest actions
 # get all action funcs on same page with returning true or false
-
-# then grab/carry
 # then hide/crouch/crawl
 # add room status conditions
+# revise passages to be tied to connections
+# alter saving and loading funcs to include passages
 # when creature die, make it so they drop items maybe? instead of to player inv?
 # fix Go() when they dont have a compass
 # examine output grammar/statements for lower level actions (in case non-player creatures do actions, we dont want it to print the same msgs)
+# add carry/put down (HOW IS THIS GONNA WORK? does it equip the creature? while they are restraining is the player unable to do anything else?)
+# organize method names in Core.py, jesus christ
+
+# implement escape and exit actions
+# add a wait command (cant wait with enemies nearby)
+# there is a bug in equip where two of the same item can be equipped twice
+# make menu look nice instead of reprinting everything
 
 # consider adding alternative names (this would change search funcs a lot)
 # TODO: research using map() in python, and passing functions as arguments
+# consider enter, exit functions in room
 # reevaluate effect functions, is there a way to reference a function by string?
-# evaluate enter, exit functions in room
 # how will amulet effects work??
 
 # add magic beans or food to pour stuff one
 # "drink from the fountain"
-#
+
+# add Steal
+# make a list of all possible uses and inputs for each action and systematically test them. Revise the world to accomodate them
+
+# add some preliminary spells and add effect file
+# split creatures and objects into different files
 # figure out animal behavior
 # creatures attacking?
 # add monsters/monster behavior
 # figure out combat? attack items?
-# add Steal
-
-# add a wait command (cant wait with enemies nearby)
-# there is a bug in equip where two of the same item can be equipped twice
 
 # add in armor and shields and protection and test them
 # add range and ranged weapons???
-# add new weapons and TEST
+# add new weapons
 # more switches, levers, buttons
 # ensure output is grammatically correct with creature names. (for npcs, instead of printing "the I.name" you must print just name)
 
@@ -97,53 +106,6 @@ if __name__ == "__main__":
 # add a window which shows player stats/possible commands/instructions
 
 ################################################################################
-
-
-
-# commands to take for going up:
-# "go up the cliff"
-# "climb up the cliff"
-# "climb the cliff"
-# "scale the cliff?"
-#
-# "walk up the stairs"
-# "walk the stairs"
-# "go up the stairs"
-#
-# "crawl into the hole"
-# "climb up the wall"
-#
-# "swim into the river"
-# swim in the fountain"
-# swim in the pond"
-# "swim north"
-#
-# Room has connection {"up": "some other room"}
-# when player goes "up":
-# if player can fly: just changeRoom to above room
-# else:
-# 	need to know what things in the room lead up
-# 	"what will you go up?"
-# 	could be stairs, cliff, ladder
-# 	call Ascend() function with specified object
-# 		if obj requires climbing, call obj.climb(currentroom)
-# 		else, just changeRoom to above room
-
-
-
-# effects may include:
-
-# spawning/destroying an item
-# lowering/raising an items stats
-# spawning/destroying a creature
-# lowering/raising a creature's stats
-# adding/remove a status effect
-# altering time/initiative order
-# adding/removing a room connection
-# adding/removing a room status effect
-# creating some obstacle
-# changing current room
-# to simply give the player information
 
 
 

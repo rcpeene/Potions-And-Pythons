@@ -213,15 +213,15 @@ def findLineStartsWith(lines,symbol,start):
 			return l
 		l += 1
 
-# takes an object of class Empty(), Creature(), or Item()
+# takes an object of class Empty(), Creature(), Item(), or Passage()
 # writes all the text necessary to store an object's class and its attributes
 def writeObj(fd,obj):
 	classname = obj.__class__.__name__
 	if isinstance(obj, Empty):
 		fd.write("")
 		return
-	elif isinstance(obj, Item):	fd.write("$")
-	elif isinstance(obj, Creature):	fd.write("!")
+	elif isinstance(obj,Item):	fd.write("$")
+	elif isinstance(obj,Creature):	fd.write("!")
 	else:	raise Exception("trying to write obj which is not Item or Creature")
 	fd.write(classname + " (")
 	obj.writeAttributes(fd)
@@ -737,6 +737,43 @@ class Creature():
 				weight += self.gear[item].Weight()
 		return weight
 
+	def improviseWeapon(self):
+		#TODO: if item is too large/heavy, make it two-handed
+		return Weapon(self.name,self.desc,self.CON,self.CON,minm(1,self.Weight()//4),0,0,0,False,"b")
+
+	# only used by equip and unequip to reassign several attributes
+	# specifically, weapon, weapon2, shield, shield2
+	def assignWeaponAndShield(self):
+		#if unassigned, attributes are empty, self.weapon is always assigned
+		self.weapon2 = Empty()
+		self.shield = Empty()
+		self.shield2 = Empty()
+
+		# assign weapon and weapon2 based on types of gear in left and right
+		if isinstance(self.gear["right"],Weapon) and isinstance(self.gear["left"],Weapon):
+			self.weapon2 = self.gear["left"]
+		elif isinstance(self.gear["left"],Weapon) and not isinstance(self.gear["right"],Weapon):
+			self.weapon = self.gear["left"]
+		elif isinstance(self.gear["left"],Item) and self.gear["right"] == Empty():
+			self.weapon = self.gear["left"]
+		else:
+			self.weapon = self.gear["right"]
+
+		# ensure that weapons are of type Weapon
+		if not isinstance(self.weapon,Weapon):
+			self.weapon = self.weapon.improviseWeapon()
+		if not isinstance(self.weapon2,Weapon):
+			self.weapon2 = self.weapon.improviseWeapon()
+
+		# assign shield and shield2 based on types of gear in left and right
+		if isinstance(self.gear["right"],Shield) and isinstance(self.gear["left"],Shield):
+			self.shield = self.gear["right"]
+			self.shield2 = self.gear["left"]
+		elif isinstance(self.gear["right"],Shield):
+			self.shield = self.gear["right"]
+		elif isinstance(self.gear["left"],Shield):
+			self.shield = self.gear["left"]
+
 	# finds the slot in which item resides, sets it to Empty()
 	# calls the item's Unequip() method if it has one
 	def unequip(self,I):
@@ -745,8 +782,31 @@ class Creature():
 		#finds the slot whose value is item, sets it to empty
 		slot = gearslots[gearitems.index(I)]
 		self.gear[slot] = Empty()
+		self.assignWeaponAndShield()
 		if hasMethod(I,"Unequip"):
 			I.Unequip(self)
+
+	# if the item is armor, equip it, otherwise return False
+	def equipArmor(self,I):
+		if isinstance(I,Helm):		self.gear["head"] = I
+		elif isinstance(I,Tunic):	self.gear["body"] = I
+		elif isinstance(I,Greaves):	self.gear["legs"] = I
+		else:	return False
+		I.Equip(self)
+		return True
+
+	# unequips the lefthanded item, moves righthanded item to left,
+	# equips the new item in right hand
+	# if the new item is twohanded, set lefthand to Empty()
+	# calls the new item's Equip() method if it has one
+	def equipInHand(self,I):
+		self.unequip(self.gear["left"])
+		self.gear["left"] = self.gear["right"]
+		self.gear["right"] = I
+		if hasattr(I, "twohanded") and I.twohanded:
+			self.gear["left"] = Empty()
+		self.assignWeaponAndShield()
+		if hasMethod(I,"Equip"): I.Equip(self)
 
 	def describe(self):
 		if hasattr(self,"descname"):
@@ -1009,73 +1069,6 @@ class Player(Creature):
 			if isinstance(item,Compass):
 				count +=1
 		return count
-
-	# only used by equip and unequip to reassign several attributes
-	# specifically, weapon, weapon2, shield, shield2
-	def assignWeaponAndShield(self):
-		#if unassigned, attributes are empty, self.weapon is always assigned
-		self.weapon2 = Empty()
-		self.shield = Empty()
-		self.shield2 = Empty()
-
-		# assign weapon and weapon2 based on types of gear in left and right
-		if isinstance(self.gear["right"],Weapon) and isinstance(self.gear["left"],Weapon):
-			self.weapon2 = self.gear["left"]
-		elif isinstance(self.gear["left"],Weapon) and not isinstance(self.gear["right"],Weapon):
-			self.weapon = self.gear["left"]
-		elif isinstance(self.gear["left"],Item) and self.gear["right"] == Empty():
-			self.weapon = self.gear["left"]
-		else:
-			self.weapon = self.gear["right"]
-
-		# ensure that weapons are of type Weapon
-		if not isinstance(self.weapon,Weapon):
-			self.weapon = self.weapon.improviseWeapon()
-		if not isinstance(self.weapon2,Weapon):
-			self.weapon2 = self.weapon.improviseWeapon()
-
-		# assign shield and shield2 based on types of gear in left and right
-		if isinstance(self.gear["right"],Shield) and isinstance(self.gear["left"],Shield):
-			self.shield = self.gear["right"]
-			self.shield2 = self.gear["left"]
-		elif isinstance(self.gear["right"],Shield):
-			self.shield = self.gear["right"]
-		elif isinstance(self.gear["left"],Shield):
-			self.shield = self.gear["left"]
-
-	# finds the slot in which item resides, sets it to Empty()
-	# calls the item's Unequip() method if it has one
-	def unequip(self,I):
-		gearslots = list(self.gear.keys())
-		gearitems = list(self.gear.values())
-		#finds the slot whose value is item, sets it to empty
-		slot = gearslots[gearitems.index(I)]
-		self.gear[slot] = Empty()
-		self.assignWeaponAndShield()
-		if hasMethod(I,"Unequip"):
-			I.Unequip(self)
-
-	# if the item is armor, equip it, otherwise return False
-	def equipArmor(self,I):
-		if isinstance(I,Helm):		self.gear["head"] = I
-		elif isinstance(I,Tunic):	self.gear["body"] = I
-		elif isinstance(I,Greaves):	self.gear["legs"] = I
-		else:	return False
-		I.Equip(self)
-		return True
-
-	# unequips the lefthanded item, moves righthanded item to left,
-	# equips the new item in right hand
-	# if the new item is twohanded, set lefthand to Empty()
-	# calls the new item's Equip() method if it has one
-	def equipInHand(self,I):
-		self.unequip(self.gear["left"])
-		self.gear["left"] = self.gear["right"]
-		self.gear["right"] = I
-		if hasattr(I, "twohanded") and I.twohanded:
-			self.gear["left"] = Empty()
-		self.assignWeaponAndShield()
-		if hasMethod(I,"Equip"): I.Equip(self)
 
 	def dualAttack(self,target,G,W):
 		hit = minm(1,maxm(99, self.ACCU() - target.EVSN()))
