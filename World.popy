@@ -95,7 +95,7 @@ $Sword ("sword", "a plain iron sword", 8, 10, 2, 2, 2, 0, False, "s")
 
 $Wall ("cliff", "a dark rocky cliff leading high up", ["up"], "cliff leading up", 30)
 
-$Switch ("doorbell", "a bronze bell hanging near the door of the cabin", 2, 10, 2 "changeMode")
+$Switch ("doorbell", "a bronze bell hanging near the door of the cabin", 2, 10, 2, "changeMode")
 ~
 
 #field
