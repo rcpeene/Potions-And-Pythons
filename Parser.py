@@ -228,8 +228,13 @@ def Get(command):
 		obj = P
 	elif objname in {"g","game"}:
 		obj = G
+	elif objname in {"here","room"}:
+		obj = G.currentroom
 	else:
 		obj = objSearch(objname,G.currentroom,d=3)
+	if obj == None:
+		try: obj = W[objname]
+		except:	pass
 	if obj == None:
 		print("Object not found")
 		return
@@ -1358,6 +1363,7 @@ actions = {
 "punch":Punch,
 "push":Push,
 "put":Put,
+"put down":Put,
 "quaff":Drink,
 "read":Look,
 "release":Release,

@@ -115,8 +115,8 @@ class Controller(Item):
 	def Use(self,P,W,G):	self.Trigger(P,W,G)
 
 class Door(Fixture):
-	def __init__(self,name,desc,weight,durability,size,open,connections):
-		Fixture.__init__(self,name,desc,weight,durability,size)
+	def __init__(self,name,desc,weight,durability,open,connections):
+		Fixture.__init__(self,name,desc,weight,durability)
 		self.open = open
 		# connection is a 4-tuple of the form:
 		# (outDirection, outLocation, inDirection, inLocation)
@@ -257,8 +257,8 @@ class Sign(Item):
 		print('\n"' + self.text + '"')
 
 class Switch(Fixture):
-	def __init__(self,name,desc,weight,durability,size,effect):
-		Fixture.__init__(self,name,desc,weight,durability,size)
+	def __init__(self,name,desc,weight,durability,effect):
+		Fixture.__init__(self,name,desc,weight,durability)
 		self.effect = effect
 
 	# has an effect string which is used as a key in an 'effects' dict
@@ -278,8 +278,8 @@ class Sword(Weapon):
 		print("[you cut something?]")
 
 class Table(Fixture):
-	def __init__(self,name,desc,weight,durability,size,contents,descname):
-		Fixture.__init__(self,name,desc,weight,durability,size)
+	def __init__(self,name,desc,weight,durability,contents,descname):
+		Fixture.__init__(self,name,desc,weight,durability)
 		self.contents = contents
 		self.descname = descname
 
@@ -328,8 +328,8 @@ class Table(Fixture):
 			print("There is nothing on it")
 
 class Wall(Passage):
-	def __init__(self,name,desc,directions,descname,cr):
-		Passage.__init__(self,name,desc,directions,descname)
+	def __init__(self,name,desc,weight,durability,directions,descname,cr):
+		Passage.__init__(self,name,weight,durability,desc,directions,descname)
 		self.cr = cr
 
 	def Traverse(self,P,W,G,dir=None):

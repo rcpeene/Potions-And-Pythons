@@ -37,22 +37,22 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# test newest actions
+# add room status conditions
 # get all action funcs on same page with returning true or false
 # then hide/crouch/crawl
-# add room status conditions
-# revise passages to be tied to connections
-# alter saving and loading funcs to include passages
+# test newest actions
 # when creature die, make it so they drop items maybe? instead of to player inv?
 # fix Go() when they dont have a compass
 # examine output grammar/statements for lower level actions (in case non-player creatures do actions, we dont want it to print the same msgs)
 # add carry/put down (HOW IS THIS GONNA WORK? does it equip the creature? while they are restraining is the player unable to do anything else?)
 # organize method names in Core.py, jesus christ
-
 # implement escape and exit actions
 # add a wait command (cant wait with enemies nearby)
 # there is a bug in equip where two of the same item can be equipped twice
 # make menu look nice instead of reprinting everything
+# add basic "cast" parsing
+# add some preliminary spells and add effect file
+# split creatures and objects into different files
 
 # consider adding alternative names (this would change search funcs a lot)
 # TODO: research using map() in python, and passing functions as arguments
@@ -60,14 +60,11 @@ if __name__ == "__main__":
 # reevaluate effect functions, is there a way to reference a function by string?
 # how will amulet effects work??
 
+# add Steal
 # add magic beans or food to pour stuff one
 # "drink from the fountain"
-
-# add Steal
 # make a list of all possible uses and inputs for each action and systematically test them. Revise the world to accomodate them
 
-# add some preliminary spells and add effect file
-# split creatures and objects into different files
 # figure out animal behavior
 # creatures attacking?
 # add monsters/monster behavior

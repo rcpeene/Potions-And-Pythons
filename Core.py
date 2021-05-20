@@ -466,13 +466,13 @@ class Game():
 
 # used to define all rooms in the world
 class Room():
-	def __init__(self,name,desc,exits,contents,occupants,effects):#,enter,exit):
+	def __init__(self,name,desc,exits,contents,occupants,status):
 		self.name = name
 		self.desc = desc
 		self.exits = exits
 		self.contents = contents
 		self.occupants = occupants
-		self.effects = effects
+		self.status = status
 
 	def __repr__(self):
 		return f"#{self.name}"
@@ -548,6 +548,26 @@ class Room():
 
 	def occupantNames(self):
 		return [creature.name for creature in self.occupants]
+
+	def addCondition(self,name,dur,stackable=False):
+		# TODO: include stackability
+		pair = [name,dur]
+		insort(self.status,pair)
+
+	# removes all condition of the same name
+	# if reqDuration is given, only removes conditions with that duration
+	def removeCondition(self,name,reqDuration=None):
+		for condname,duration in self.status:
+			if condname == name:
+				if reqDuration == None or reqDuration == duration:
+					self.status.remove([condname,duration])
+
+	def hasCondition(self,name,reqDuration=None):
+		for condname,duration in self.status:
+			if condname == name:
+				if reqDuration == None or reqDuration == duration:
+					return True
+		return False
 
 # general item class, all items come with a name, description, weight
 class Item():
@@ -843,23 +863,23 @@ class Creature():
 				self.removeCondition(condition[0],0)
 
 
-	def addCondition(self,cond,dur,stackable=False):
+	def addCondition(self,name,dur,stackable=False):
 		# TODO: include stackability
-		pair = [cond,dur]
+		pair = [name,dur]
 		insort(self.status,pair)
 
 	# removes all condition of the same name
 	# if reqDuration is given, only removes conditions with that duration
-	def removeCondition(self,cond,reqDuration=None):
-		for condition,duration in self.status:
-			if condition == cond:
+	def removeCondition(self,name,reqDuration=None):
+		for condname,duration in self.status:
+			if condname == name:
 				if reqDuration == None or reqDuration == duration:
-					self.status.remove([condition,duration])
+					self.status.remove([condname,duration])
 
-	def hasCondition(self,condname,reqDuration=None):
-		for cond in self.status:
-			if cond[0] == condname:
-				if reqDuration == None or reqDuration == cond[1]:
+	def hasCondition(self,name,reqDuration=None):
+		for condname,duration in self.status:
+			if condname == name:
+				if reqDuration == None or reqDuration == duration:
 					return True
 		return False
 
@@ -1036,21 +1056,22 @@ class Player(Creature):
 		print(f"You healed {heal} HP")
 		return heal
 
-	def addCondition(self,cond,dur,stackable=False,):
+	def addCondition(self,name,dur,stackable=False):
 		# TODO: include stackability
-		pair = [cond,dur]
-		insort(self.status, pair)
-		print("You are " + cond)
+		pair = [name,dur]
+		insort(self.status,pair)
+		print("You are " + name)
 
 	# removes all condition of the same name
 	# if reqDuration is given, only removes conditions with that duration
-	def removeCondition(self,cond,reqDuration=None):
-		for condition,duration in self.status:
-			if condition == cond:
+	def removeCondition(self,name,reqDuration=None):
+		for condname,duration in self.status:
+			if condname == name:
 				if reqDuration == None or reqDuration == duration:
-					self.status.remove([condition,duration])
-					if not self.hasCondition(cond):
-						print("You are no longer " + cond)
+					self.status.remove([condname,duration])
+					if not self.hasCondition(condname):
+						print("You are no longer " + condname)
+
 
 	def obtainItem(self,I,S,W,G,msg=None):
 		if self.addItem(I):
@@ -1313,10 +1334,17 @@ class Person(Creature):
 	def act(self,P,currentroom,silent):
 		pass
 
-class Passage():
-	def __init__(self,name,desc,directions,descname):
+# almost identical to the item class, but fixtures may not be removed from their initial location. Fixtures also have a size attribute
+class Fixture(Item):
+	def __init__(self,name,desc,weight,durability):
+		Item.__init__(self,name,desc,weight,durability)
+
+class Passage(Fixture):
+	def __init__(self,name,desc,weight,durability,directions,descname):
 		self.name = name
 		self.desc = desc
+		self.weight = weight
+		self.durability = durability
 		self.directions = directions
 		self.descname = descname
 
@@ -1333,12 +1361,6 @@ class Passage():
 		newroom = W[G.currentroom.exits[dir]]
 		G.changeRoom(newroom,P,W)
 		return True
-
-# almost identical to the item class, but fixtures may not be removed from their initial location. Fixtures also have a size attribute
-class Fixture(Item):
-	def __init__(self,name,desc,weight,durability,size):
-		Item.__init__(self,name,desc,weight,durability)
-		self.size = size
 
 class Weapon(Item):
 	def __init__(self,name,desc,weight,durability,might,sleight,sharpness,range,twohanded,type):

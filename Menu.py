@@ -89,6 +89,7 @@ def readDict(text):
 	except: raise Exception("Dict data not convertable from list to dict")
 
 # reads a list from text, given a set of delimiters (usually just ',')
+# takes text BETWEEN the brackets (dont include the brackets in text input)
 # iterates through the text with i and finds the index of the next delimiter
 # isolates text between i and next delimiter, assigns it to elemtext
 # attempts to define elem by passing elemtext to the appropriate read function
@@ -176,10 +177,12 @@ def readRoom(roomtext,world):
 			obj = readObj(objtext)
 			if tag == "$":	contents.append(obj)
 			if tag == "!":	occupants.append(obj)
-		elif line[0] == "*":	# room effects
-			pass
-			# effect = effects[]
-			# roomeffects.append()
+		elif line[0] == "*":	# room effects			symbol = elemtext[0]
+			listtext = " ".join(roomtext[l:])
+			print(listtext)
+			start = listtext.index("[")
+			end = findMatchingParenth(listtext,start)
+			roomeffects = readList(listtext[start+1:end],",")
 		elif line[0] == "~":	# end room data
 			world[name] = Room(name,desc,exits,contents,occupants,roomeffects)
 
