@@ -413,11 +413,11 @@ def Break(dobj,iobj,prep):
 		return False
 
 	G.setPronouns(I)
-	if hasMethod(I,"Break"):
-		I.Break(P,G,source)
-		return True
-	print("You can't break the " + I.name)
-	return False
+	if not hasMethod(I,"Break"):
+		print("You can't break the " + I.name)
+		return False
+	I.Break(P,G,source)
+	return True
 
 def Carry(dobj,iobj,prep):
 	if prep != None:
@@ -570,9 +570,10 @@ def Don(dobj,iobj,prep):
 		return False
 
 	G.setPronouns(I)
-	if P.equipArmor(I):
-		print(f"You don your {I.name}")
-		return True
+	if not P.equipArmor(I):
+		return False
+	print(f"You don your {I.name}")
+	return True
 
 def Drink(dobj,iobj,prep):
 	if prep != "with" and prep != None:
@@ -589,12 +590,11 @@ def Drink(dobj,iobj,prep):
 		return False
 
 	G.setPronouns(I)
-	if hasMethod(I,"Drink"):
-		I.Drink(P,G,S)
-		return True
-	else:
+	if not hasMethod(I,"Drink"):
 		print("You can't drink the " + I.name)
 		return False
+	I.Drink(P,G,S)
+	return True
 
 def Drop(dobj,iobj,prep):
 	if prep != None:
@@ -653,11 +653,11 @@ def Eat(dobj,iobj,prep):
 		return False
 
 	G.setPronouns(I)
-	if hasMethod(I,"Eat"):
-		I.Eat(P,G,S)
-		return True
-	print("You can't eat the " + I.name)
-	return False
+	if not hasMethod(I,"Eat"):
+		print("You can't eat the " + I.name)
+		return False
+	I.Eat(P,G,S)
+	return True
 
 def Enter(dobj,iobj,prep):
 	print("entering")
@@ -792,6 +792,7 @@ def Grab(dobj,iobj,prep):
 		return Restrain(dobj,iobj,prep)
 	else:
 		print(f"You cannot grab the {I.name}")
+		return False
 
 def Hide(dobj,iobj,prep):
 	print("hideing")
@@ -916,14 +917,14 @@ def Open(dobj,iobj,prep):
 		return False
 
 	G.setPronouns(I)
-	if hasMethod(I,"Open"):
-		if hasattr(I,"locked") and I.locked:
-			print(f"The {I.name} is locked")
-		else:
-			I.Open()
-		return True
-	print("You can't open the " + I.name)
-	return False
+	if not hasMethod(I,"Open"):
+		print("You can't open the " + I.name)
+		return False
+	if hasattr(I,"locked") and I.locked:
+		print(f"The {I.name} is locked")
+		return False
+	I.Open()
+	return True
 
 def Pet(dobj,iobj,prep):
 	print("peting")
@@ -1218,11 +1219,11 @@ def Use(dobj,iobj,prep):
 		return False
 
 	G.setPronouns(I)
-	if hasMethod(I,"Use"):
-		I.Use(P,W,G)
-		return True
-	print(f"You can't use the {I.name}")
-	return False
+	if not hasMethod(I,"Use"):
+		print(f"You can't use the {I.name}")
+		return False
+	I.Use(P,W,G)
+	return True
 
 def Wait(dobj,iobj,prep):
 	print("waiting")

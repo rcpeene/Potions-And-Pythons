@@ -37,7 +37,6 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# add room status conditions
 # get all action funcs on same page with returning true or false
 # then hide/crouch/crawl
 # test newest actions
