@@ -79,27 +79,6 @@ def replacePronoun(term):
 	if obj == None:					return None
 	return obj.name
 
-def parseWithoutVerb(prompt,preps):
-	dobj = None
-	iobj = None
-	prep = None
-	cmdInput = processCmd(prompt)
-
-	# iterates through the input and assigns...
-	# terms based on their position relative to the other terms present
-	for term in cmdInput:
-		# preposition is defined if the term is a known preposition
-		if term in prepositions and prep == None:	prep = term
-		# direct object is defined if prep and dobj havent been found yet
-		elif prep == None and dobj == None:			dobj = term
-		# indirect object is defined if a prep or dobj has been found
-		else:										iobj = term
-
-	if dobj in pronouns:	dobj = replacePronoun(dobj)
-	if iobj in pronouns:	iobj = replacePronoun(iobj)
-
-	return dobj,iobj,prep
-
 # validates user input and processes into into a command form usable by parse(),
 # namely, it returns a list of words without capitals, symbols, or articles
 # the last step, nounify(), joins words that may only be meaningful as one term
@@ -121,6 +100,30 @@ def processCmd(prompt,saveRawCmd=False):
 	# finally, combine certain words if they appear to make one noun term
 	finalcommand = nounify(listcommand,0)
 	return finalcommand
+
+def getNoun(prompt):
+	return " ".join(processCmd(prompt))
+
+def parseWithoutVerb(prompt,preps):
+	dobj = None
+	iobj = None
+	prep = None
+	cmdInput = processCmd(prompt)
+
+	# iterates through the input and assigns...
+	# terms based on their position relative to the other terms present
+	for term in cmdInput:
+		# preposition is defined if the term is a known preposition
+		if term in prepositions and prep == None:	prep = term
+		# direct object is defined if prep and dobj havent been found yet
+		elif prep == None and dobj == None:			dobj = term
+		# indirect object is defined if a prep or dobj has been found
+		else:										iobj = term
+
+	if dobj in pronouns:	dobj = replacePronoun(dobj)
+	if iobj in pronouns:	iobj = replacePronoun(iobj)
+
+	return dobj,iobj,prep
 
 # called in parse() when a command fails, it simply recurs parse(), and...
 # prints a helpful message if user has provided invalid input 3 or more times
@@ -1347,6 +1350,7 @@ actions = {
 "push":Push,
 "put":Put,
 "put down":Put,
+"put on":Don,
 "quaff":Drink,
 "read":Look,
 "release":Release,
@@ -1375,6 +1379,7 @@ actions = {
 "struggle":Struggle,
 "swim":Swim,
 "take":Take,
+"take off":Doff,
 "talk":Talk,
 "taste":Lick,
 "throw":Throw,

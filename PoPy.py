@@ -37,7 +37,7 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# add "put on" and "take off" commands
+# fix the use of processCmd, make a new getNoun() probably
 # test input "go">"up">"the stairwell"
 # really consider what attributes to give items. maybe give them a value and a size attribute.
 # give passages complete "connections" rather than just directions, ie directions and destinations
