@@ -11,7 +11,7 @@ def main():
 
 		# take user input until player successfully performs an action
 		G.whoseturn = P
-		while not parse(getCmd(),0):	continue
+		while not parse(0):	continue
 
 		# creatures in current room's turn
 		for creature in G.currentroom.occupants:
@@ -37,11 +37,16 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# then add hide/crouch/crawl
+# add "put on" and "take off" commands
+# test input "go">"up">"the stairwell"
+# really consider what attributes to give items. maybe give them a value and a size attribute.
+# give passages complete "connections" rather than just directions, ie directions and destinations
+# add hide/crouch/crawl
 # test newest actions
 # when creature die, make it so they drop items maybe? instead of to player inv?
 # fix Go() when they dont have a compass
 # examine output grammar/statements for lower level actions (in case non-player creatures do actions, we dont want it to print the same msgs)
+
 # add carry/put down (HOW IS THIS GONNA WORK? does it equip the creature? while they are restraining is the player unable to do anything else?)
 # organize method names in Core.py, jesus christ
 # implement escape and exit actions
@@ -49,7 +54,7 @@ if __name__ == "__main__":
 # there is a bug in equip where two of the same item can be equipped twice
 # make menu look nice instead of reprinting everything
 # add basic "cast" parsing
-# add some preliminary spells and add effect file
+# add some preliminary spells and add effects file
 # split creatures and objects into different files
 
 # consider adding alternative names (this would change search funcs a lot)
@@ -59,6 +64,7 @@ if __name__ == "__main__":
 # how will amulet effects work??
 
 # add Steal
+# determine what can be hid behind
 # add magic beans or food to pour stuff one
 # "drink from the fountain"
 # make a list of all possible uses and inputs for each action and systematically test them. Revise the world to accomodate them
@@ -155,6 +161,5 @@ if __name__ == "__main__":
 # func(dobj,iobj,prep):
 # 	preps = {toward, none}
 # 	I,R,prep = interpretSearch(dobj,iobj,prep,preps,dobjSearch,iobjSearch)
-#
 #
 #

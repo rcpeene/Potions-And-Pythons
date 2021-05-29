@@ -70,13 +70,10 @@ $Controller ("Amulet of Poisoned", "a green amulet shaped like a teardrop", 2, 1
 #cave
 @A wet cave. You are surrounded by stalactites above and stalagmites around. Dripping sounds can be heard echoing throughout the cave. A dim light can be seen down a tunnel to the north.
 %"north": "tunnel"
-%"up": "pit"
-%"down": "cabin"
 
 * [["darkness",-1], ["poisonous",3]]
 
-$Passage ("stairwell", "stairs leading up into the light and down into the dark", -1, -1,
-["up","down"], "stairwell that goes up and down")
+$Passage ("stairwell", "stairs leading up into the light and down into the dark", -1, -1, {"north": "pit", "down": "cabin"}, "stairwell that goes up and down")
 
 $Compass ("compass", "a plain steel compass with a red arrow", 2, 10)
 $Controller ("Amulet of Swords", "a red amulet shaped like a sword", 2, 10, "spawnItem(G, Sword('sword', 'a plain iron sword', 8, 10, 2, 2, 2, 0, False, 's'))")

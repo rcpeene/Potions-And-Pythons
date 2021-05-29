@@ -6,10 +6,27 @@ a description of Go()
 a description of passages
 a description of status conditions
 a description of all the object search functions and methodology (also described the object tree)
-include discussion of "source"
+include discussion of "source" object labels
 a description of equipping (equipping doesnt remove it from your inventory), but carrying allows something to be equipped while not in your inv?
 
-
+Contents (WIP):
+code styleguide
+definition of "command", "verb", "action", "object", "source", and other terms
+world network design
+room
+passages
+items
+creature stats and creatures
+status conditions
+object search methodology
+input processing, parsing, interpreting, executing methodology
+world file, and saving methodology
+world file and parsing methodology
+go function methodology
+attack function methodology
+equip function methodology
+effects methodology
+spell methodology
 
 NOTES ON THE CONVENTIONS AND FORMATTING USED IN THIS CODE PROJECT
 -source files are named with capital letters to distinguish them from python modules
@@ -729,6 +746,9 @@ Norman's etc.
 Camphor Staff (or sm othr tree idk) Gingko Staff? etc,
 willow staff, banyan, aspen, birch, elm, sycamore
 Pantalon
+(Magic?) Umbrella
+Shrunken heads
+Magic Teapot (or just a normal teapot idk)
 The Master Boomerang - (always comes back no matter what u do with it)
 Raygun (that deals E damage)
 Paragon Blade
@@ -888,9 +908,12 @@ so these dungeons are generally just clusters of room nodes in the world graph t
 -mineshaft, underground mines maybe
 -spaceship, extra idea maybe with aliens lol
 -snowy peaks, maybe ice castle? something cold themed
+-hunt the wumpus map, with a WUMPUS!!! and traps and whatnot
 
 several settlements exist in the world (aim for like at least 9)
 - Folkston/Folksvale
+- Ratcatcher Mill/Ratstead/Ratcatchers Pass
+- Goosetower
 
 
 THIRTEEN GODS WITH TEMPLES:
@@ -939,15 +962,18 @@ CHARACTER NAMES:
 	Orion - boss
 	Pax - person
 	giant swamp crocodile
-	Lilith - demon lady? (Secret demon lady???)
+	Lilith - demon lady? (Secretly a demon lady???)
 	Somnus
 	The zodiac signs
 	The Lady of the Lake
 	Enchantress of Number(Numeral)
 	Master of Ravens
+	All-knowing demon that follows you (Laplace's Demon)
 	villain king of people
 	villain king of monsters
 	villain king of beasts
+	Balthazar the Wizard
+	Tyro
 
 	one bbeg is the world serpent called Aeormungand (Leviathan?)
 	also an evil wizard ofc
@@ -973,7 +999,7 @@ destroy all items that fit a condition
 unlock an item
 lock an item
 locate an item? in the world or nearby
-create a lasting room effect (like preventing entering an exiting, zero avity, darkness)
+create a lasting room effect (like preventing entering an exiting, zero gravity, darkness)
 alter the terrain (affecting fixtures)
 create a portal to somewhere (mansion, hut, another room) (permanent/temp)
 break an item

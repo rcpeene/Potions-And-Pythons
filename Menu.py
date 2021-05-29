@@ -432,17 +432,6 @@ def mainMenu():
 ## GAME INTRO FUNCTIONS ##
 ##########################
 
-# print logo bubbling animation from statically stored string "frames"
-# unused function, replaced by dynamicBubbleAnimation()
-def staticBubbleAnimation():
-	for i in range(len(bubbleFrames)):
-		print("\n"*64)
-		print(bubbleFrames[i])
-		sleep(0.125)
-	clearScreen()
-	print(logo+"\n"*7)
-	sleep(0.625)
-
 # returns true if bubble at row,col is under a "_" and under or beside a "wall"
 def bubbleTrapped(logoArray,row,col):
 	walls = "_\\/|"
@@ -521,7 +510,7 @@ def growBubbles(logoArray):
 				char = "o"
 			logoArray[row][col] = char
 
-# generate between 1,n new bubbles represented by "." at any "_" in logo
+# generate between 1,n new bubbles represented by "." at any "_" in 'rows'
 # rows is a list of indices of the logo rows upon which new bubbles will appear
 # returns the number of new bubbles generated
 def makeNewBubbles(logoArray,n,rows):
@@ -540,7 +529,6 @@ def makeNewBubbles(logoArray,n,rows):
 			logoArray[row-1][col] in {".","o","O"}:
 				row = choice([5,7])
 				col = randint(1,22)
-
 		logoArray[row][col] = "."
 	return newBubbles
 
@@ -551,7 +539,7 @@ def printLogoArray(logoArray):
 	print("\n".join(["".join(line) for line in logoArray]))
 
 # procedurally generated bubble animation, makes, grows, and moves bubbles
-# t is the time unit between frames
+# t is the time between frames
 # b is the number of bubbles which will be produced in total
 # n is the max number of bubbles produced per frame
 def dynamicBubbleAnimation(t,b,n):
@@ -559,7 +547,8 @@ def dynamicBubbleAnimation(t,b,n):
 	logoArray = [[char for char in line] for line in logoLines]
 	totalBubbles = 0
 	currentBubbles = 0
-	# get a list of row indices of every other row which contains a "_"
+	# get a list of row indices of every other row that contains a "_"
+	# flat rows are rows where new bubbles will appear
 	flatrows = [nrow for nrow in range(1,len(logoArray)) if "_" in logoArray[nrow]][1::2]
 	# run animation until b bubbles have been produced
 	while totalBubbles < b:
@@ -577,7 +566,7 @@ def dynamicBubbleAnimation(t,b,n):
 		# if user presses any key, skip animation
 		if kbInput():	return False
 		growBubbles(logoArray)
-		# add a small delay for the final bubbles
+		# add a small delay for the final bubbles for pizazz
 		if currentBubbles < 3:	sleep(t)
 		sleep(t)
 		printLogoArray(logoArray)
@@ -592,7 +581,7 @@ def endIntro():
 	flushInput()
 
 # runs the intro logo animation
-# uses data in the bottom of Data.py
+# uses data from the bottom of Data.py
 def gameIntro():
 	tempLines = []
 	for line in logoLines:	tempLines.append(line)
@@ -605,12 +594,12 @@ def gameIntro():
 		sleep(0.125)
 
 	# if user skipped bubble animation, skip rest of intro too
-	if not dynamicBubbleAnimation(0.20,10,2):	return endIntro()
+	if not dynamicBubbleAnimation(0.25,10,2):	return endIntro()
 
 	# print PoPy text crawling up
 	sleep(0.375)
 	l = len(popyLines)
-	for i in range(l-4):
+	for i in range(l-4):	#stops at the fourth line from the top
 		if kbInput():	return endIntro()
 		tempLines[l-i-1] = popyLines[l-i-1]
 		clearScreen()

@@ -49,9 +49,9 @@ def isMeaningful(noun):
 		return True
 	return False
 
-# recursively inspects the command, wich is a list of words
-# combines multiple words into single words that appear to be a meaningful term.
-# returns the command after any relevant terms are joined into one word
+# recursively inspects the command, which is a list of words
+# combines multiple words into single terms that appear to be a meaningful term.
+# returns the command after any relevant words are joined into one term
 def nounify(command,i):
 	if i >= len(command)-1:
 		return command
@@ -60,7 +60,7 @@ def nounify(command,i):
 	while j < len(command):
 		# possibleNoun is all words between i and j joined
 		possibleNoun += ' '+command[j]
-		# if new term refers to an rendered object a location, or a game term:
+		# if new term refers to an rendered object, a location, or a game term:
 		# combine words into one element and recur
 		if isMeaningful(possibleNoun):
 			del command[i:j+1]
@@ -79,77 +79,37 @@ def replacePronoun(term):
 	if obj == None:					return None
 	return obj.name
 
-# works like getNoun() and getCmd(), but for the parsing of a "destination"
-# in Go(), when a destination wasn't initially provide
-# this processes the input so it can be parsed like a regular command
-# in order to identify an object and a preposition in the input
-# returns the object and preposition found
-def getDest(prompt):
-	rawdestination = input(prompt + "\n> ")
-	# take input until input has any non-whitespace characters in it
-	while not any(i not in "\t " for i in rawdestination):
-		rawdestination = input("> ")
-	# lowercase the sentence command, copy it excluding symbols
-	rawdestination = rawdestination.lower()
-	puredestination = ""
-	for i in rawdestination:
-		if i in symbols:	puredestination = puredestination + " "
-		else:				puredestination = puredestination + i
-	# copy command, delimited by spaces, into a list excluding articles
-	listdestination = [i for i in puredestination.split() if i not in articles]
-	# finally, combine certain words if they appear to make one noun term
-	finaldestination = nounify(listdestination,0)
-	return finaldestination
-
 def parseWithoutVerb(prompt,preps):
+	dobj = None
+	iobj = None
 	prep = None
-	obj = None
-	destinput = getDest(prompt)
+	cmdInput = processCmd(prompt)
 
 	# iterates through the input and assigns...
 	# terms based on their position relative to the other terms present
-	for term in destinput:
+	for term in cmdInput:
 		# preposition is defined if the term is a known preposition
-		if term in preps and prep == None:	prep = term
+		if term in prepositions and prep == None:	prep = term
 		# direct object is defined if prep and dobj havent been found yet
-		elif obj == None:					obj = term
-	return obj,prep
+		elif prep == None and dobj == None:			dobj = term
+		# indirect object is defined if a prep or dobj has been found
+		else:										iobj = term
 
-# almost does the same thing as getCmd(), except with the intention of...
-# finding a specific object.
-# Processes input to a form usable by action functions
-# unlike getCmd(), this function returns a string
-def getNoun(prompt):
-	rawobject = input(prompt + "\n> ")
-	# take input until input has any non-whitespace characters in it
-	while not any(i not in "\t " for i in rawobject):
-		rawobject = input("> ")
-	# lowercase the object, copy it excluding symbols
-	rawobject = rawobject.lower()
-	pureobject = ""
-	for i in rawobject:
-		if i in symbols:	pureobject = pureobject + " "
-		else:				pureobject = pureobject + i
-	# copy object, delimited by spaces, into a list excluding articles
-	listobject = pureobject.split()
-	purelistobject = []
-	for i in listobject:
-		if i not in articles:
-			purelistobject.append(i)
-	# finally, combine the list of words into a single string
-	finalobject = " ".join(purelistobject)
-	return finalobject
+	if dobj in pronouns:	dobj = replacePronoun(dobj)
+	if iobj in pronouns:	iobj = replacePronoun(iobj)
+
+	return dobj,iobj,prep
 
 # validates user input and processes into into a command form usable by parse(),
 # namely, it returns a list of words without capitals, symbols, or articles
 # the last step, nounify(), joins words that may only be meaningful as one term
-def getCmd():
-	rawcommand = input("\nWhat will you do?\n> ")
+def processCmd(prompt,saveRawCmd=False):
+	rawcommand = input(prompt + "\n> ")
 	# take input until input has any non-whitespace characters in it
 	while not any(i not in "\t " for i in rawcommand):
 		rawcommand = input("> ")
 	# for convenience, save raw command in game class
-	G.lastRawCommand = rawcommand.split()
+	if saveRawCmd:	G.lastRawCommand = rawcommand.split()
 	# lowercase the sentence command, copy it excluding symbols
 	rawcommand = rawcommand.lower()
 	purecommand = ""
@@ -169,15 +129,16 @@ def promptHelp(msg,n):
 	if msg != "":	print(msg)
 	if n >= 2:	print("Enter 'help' for a list of commands")
 	if n > 32:	return False	# prevent stack overflow from repeated bad input
-	return parse(getCmd(),n+1)	# ask again
+	return parse(n+1)	# ask again
 
 # the primary input parsing function for the game
 # its purpose is to parse command grammar and call the related action function
-# it is called by main() with getCmd() as its first argument
+# it is called by main() with processCmd() as its first argument
 # it is called on infinite loop until it returns True
 # it returns True only when the player successfully takes an action in the game
 # n denotes how many times parse has recurred
-def parse(command,n):
+def parse(n):
+	command = processCmd("What will you do?",saveRawCmd=True)
 	if len(command) == 0:
 		return promptHelp("Command not understood",n)
 	verb = command[0]	# verb is always first word
@@ -727,8 +688,8 @@ def GoVertical(dir):
 def Go(dobj,iobj,prep):
 	preps = {"down","through","to","toward","up","in","into","on","onto"}
 	dir = None
-	if dobj == None and prep == None:
-		dobj,prep = parseWithoutVerb("Where will you go?",preps)
+	if dobj == None and iobj == None and prep == None:
+		dobj,iobj,prep = parseWithoutVerb("Where will you go?",preps)
 	if dobj == None:	dobj = iobj
 	if dobj == None:	dobj = prep
 	if prep in directions.values():
@@ -795,7 +756,28 @@ def Grab(dobj,iobj,prep):
 		return False
 
 def Hide(dobj,iobj,prep):
-	print("hideing")
+	if prep not in {"behind","below","beneath","inside","under",None}:
+		print("Command not understood")
+		return False
+
+	if dobj == None:	dobj = iobj
+	if dobj == None:
+		dobj = getNoun("What do you want to hide behind?")
+		if dobj in cancels:
+			return False
+
+	I = G.currentroom.search(dobj)
+	if I == None:
+		print(f"There is no '{dobj}' here")
+		return False
+
+	G.setPronouns(I)
+	if not isinstance(I,Fixture):
+		print("You can't hide behind " + I.name)
+		return False
+
+	P.addCondition("hiding",-3)
+	return
 
 def Ignite(dobj,iobj,prep):
 	print("igniteing")
@@ -1388,6 +1370,7 @@ actions = {
 "speak":Talk,
 "steal":Steal,
 "stomp":Kick,
+"stow":Unequip,
 "strike":Attack,
 "struggle":Struggle,
 "swim":Swim,
@@ -1447,7 +1430,7 @@ some action functions only serve to redirect to other functions depending on the
 
 INPUT AND PREPROCESSING:
 
-getCmd() takes input in the form of a string
+processCmd() takes input in the form of a string
 (loop until input is not an empty string)
 
 convert to total lowercase

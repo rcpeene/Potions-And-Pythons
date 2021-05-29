@@ -1352,25 +1352,25 @@ class Fixture(Item):
 		Item.__init__(self,name,desc,weight,durability)
 
 class Passage(Fixture):
-	def __init__(self,name,desc,weight,durability,directions,descname):
+	def __init__(self,name,desc,weight,durability,connections,descname):
 		self.name = name
 		self.desc = desc
 		self.weight = weight
 		self.durability = durability
-		self.directions = directions
+		self.connections = connections
 		self.descname = descname
 
 	def Traverse(self,P,W,G,dir=None):
 		if dir == None:
-			if len(self.directions) == 1:
-				dir = self.directions[0]
+			if len(self.connections) == 1:
+				dir = self.connections.keys()[0]
 			else:
 				dir = input("Which direction will you go?\n> ")
-		if dir not in self.directions:
+		if dir not in self.connections:
 			print(f"The {self.name} does not go '{dir}'")
 			return False
 		print(f"You go {dir} the {self.name}")
-		newroom = W[G.currentroom.exits[dir]]
+		newroom = W[self.connections[dir]]
 		G.changeRoom(newroom,P,W)
 		return True
 

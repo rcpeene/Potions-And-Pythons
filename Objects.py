@@ -328,31 +328,30 @@ class Table(Fixture):
 			print("There is nothing on it")
 
 class Wall(Passage):
-	def __init__(self,name,desc,weight,durability,directions,descname,cr):
-		Passage.__init__(self,name,weight,durability,desc,directions,descname)
+	def __init__(self,name,desc,weight,durability,connections,descname,cr):
+		Passage.__init__(self,name,weight,durability,desc,connections,descname)
 		self.cr = cr
 
 	def Traverse(self,P,W,G,dir=None):
 		if dir == None:
-			if len(self.directions) == 1:
-				dir = self.directions[0]
+			if len(self.connections) == 1:
+				dir = self.connections[0]
 			else:
 				dir = input("Which direction will you go?\n> ")
-		if dir not in self.directions:
+		if dir not in self.connections:
 			print(f"The {self.name} does not go '{dir}'")
 			return False
 
 		if P.ATHL() < self.cr:
 			print(f"You fall down the {self.name}!")
 			if dir == "down":
-				G.changeRoom(W[currentroom.exits["down"]])
+				G.changeRoom(W[self.connections["down"]])
 			if not (P.hasCondition("fly") or P.hasCondition("feather fall")):
 				P.takedmg(self.cr-P.ATHL(),"b")
 			return True
 
 		print(f"You climb {dir} the {self.name}")
-		newroom = W[G.currentroom.exits[dir]]
-		G.changeRoom(newroom,P,W)
+		G.changeRoom(W[self.connections[dir]],P,W)
 		return True
 
 

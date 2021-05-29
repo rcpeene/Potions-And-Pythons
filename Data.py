@@ -41,7 +41,7 @@ yesses = {"absolutely","affirmative","aye","certainly","definitely","indeed","ja
 
 noes = {"absolutely not","certainly not","definitely not","n","na","nah","nahh","nahhh","nay","negative","negatory","nein","no","noo","nooo","noooo","nope"}
 
-prepositions = {"above","across","at","below","beneath","by","down","for","from","in","inside","into","near","off","on","onto","over","through","to","toward","under","up","upon","using","with"}
+prepositions = {"above","across","at","behind","below","beneath","by","down","for","from","in","inside","into","near","off","on","onto","over","through","to","toward","under","up","upon","using","with"}
 
 pronouns = {"she","he","they","her","him","them","it"}
 
@@ -74,7 +74,7 @@ shortverbs = ("back","clear","cry","dance","examples","help","info","information
 
 statcommands = ("abilities","accu","atck","athl","atsp","brdn","cast","crit","cssp","dcpt","dfns","endr","evsn","gear","hp","inventory","inv","invs","knwl","level","loot","lv","money","mp","mvmt","mxhp","mxmp","prsd","resc","ritl","rp","slth","spls","stats","status","tnkr","traits","weapons","xp")
 
-verbs = ("attack","bite","break","build","carry","cast","catch","climb","close","craft","crawl","create","cross","crouch","cut","dash","define","describe","do","dodge","doff","don","drink","drop","duck","dump","eat","enter","equip","escape","examine","exit","feed","feel","fight","fill","find","fish","follow","get","give","go","grab","grapple","head","hear","hide","hit","ignite","insert","jump","kick","kill","lay","leave","lick","light","listen","lock","look","make","mount","move","obtain","open","pet","pick","pick up","place","play","point","pour","pray","pull","punch","push","put","put down","quaff","read","release","remove","rest","restrain","return","ride","ring","rub","run","search","set","shove","shut","slap","sleep","slice","smell","sniff","speak","steal","stomp","strike","struggle","swim","take","talk","taste","throw","tie","tinker","toss","touch","travel","trip","unequip","unlock","untie","use","view","wait","walk","wave","wear")
+verbs = ("attack","bite","break","build","carry","cast","catch","climb","close","craft","crawl","create","cross","crouch","cut","dash","define","describe","do","dodge","doff","don","drink","drop","duck","dump","eat","enter","equip","escape","examine","exit","feed","feel","fight","fill","find","fish","follow","get","give","go","grab","grapple","head","hear","hide","hit","ignite","insert","jump","kick","kill","lay","leave","lick","light","listen","lock","look","make","mount","move","obtain","open","pet","pick","pick up","place","play","point","pour","pray","pull","punch","push","put","put down","quaff","read","release","remove","rest","restrain","return","ride","ring","rub","run","search","set","shove","shut","slap","sleep","slice","smell","sniff","speak","steal","stomp","stow","strike","struggle","swim","take","talk","taste","throw","tie","tinker","toss","touch","travel","trip","unequip","unlock","untie","use","view","wait","walk","wave","wear")
 # trade/buy/sell, brew/cook, dig, leap, blow/breath, clap, scratch, spit, dive, lift, observe, think, write, laydown/sitdown, fuck, shit on
 
 
@@ -361,208 +361,36 @@ popyLines = ["",
 "   POTIONS  &  PYTHONS   	",
 "   POTIONS  &  PYTHONS   	"]
 
-# these are utilized by the unused function staticBubbleAnimation() in Menu.py
-bubbleFrame0 = "\
- ______________________		\n\
-|   __  \   __\   ___  \	\n\
-|  |  \  \  \  \  \  \  \	\n\
-|  |__/  /   \  \  \__| |	\n\
-|   ____/ /\  \  \   ___/	\n\
-|  |    \ \_\  \__\  \		\n\
-|__|     \_._____/ \__\		\n\
-\n\n\n\n\n\n"
 
-bubbleFrame1 = "\
- ______________________		\n\
-|   __  \   __\   ___  \	\n\
-|  |  \  \  \  \  \  \  \	\n\
-|  |__/  /   \  \  \__| |	\n\
-|   ____/ /\  \  \   ___/	\n\
-|  |    \ \_\  \__\  \		\n\
-|__|     \_._____/ \._\		\n\
-\n\n\n\n\n\n"
 
-bubbleFrame2 = "\
- ______________________		\n\
-|   __  \   __\   ___  \	\n\
-|  |  \  \  \  \  \  \  \	\n\
-|  |__/  /   \  \  \__| |	\n\
-|   ____/ /\  \  \   ___/	\n\
-|  |    \ \_\  \__\  \		\n\
-|_.|     \_._____/ \._\		\n\
-\n\n\n\n\n\n"
 
-bubbleFrame3 = "\
- ______________________		\n\
-|   __  \   __\   ___  \	\n\
-|  |  \  \  \  \  \  \  \	\n\
-|  |__/  /   \  \  \__| |	\n\
-|   ____/ /\  \  \   ___/	\n\
-|  |    \ \_\  \__\. \		\n\
-|_.|     \_o_____/ \__\		\n\
-\n\n\n\n\n\n"
 
-bubbleFrame4 = "\
- ______________________		\n\
-|   __  \   __\   ___  \	\n\
-|  |  \  \  \  \  \  \  \	\n\
-|  |__/  /   \  \  \__| |	\n\
-|   ____/ /\  \  \ o ___/	\n\
-|  |    \o\_\  \__\  \		\n\
-|_o|     \_______/ \__\		\n\
-\n\n\n\n\n\n"
 
-bubbleFrame5 = "\
- ______________________		\n\
-|   __  \   __\   ___  \	\n\
-|  |  \  \  \  \  \  \  \	\n\
-|  |__/  /   \  \ o\__| |	\n\
-|   ____/o/\  \  \   __./	\n\
-|o |    \ \_\  \__\  \		\n\
-|__|     \____.__/ \_.\		\n\
-\n\n\n\n\n\n"
 
-bubbleFrame6 = "\
- ______________________		\n\
-|   __  \   __\   ___  \	\n\
-|  |  \  \  \  \ o\  \  \	\n\
-|  |__/  /o  \  \  \__|.|	\n\
-| O ____/ /\  \  \   ___/	\n\
-|  |    \ \_\ .\__\ o\		\n\
-|_.|     \_._____/ \__\		\n\
-\n\n\n\n\n\n"
 
-bubbleFrame7 = "\
- ______________________		\n\
-|   __  \   __\O  ___  \	\n\
-|  |  \  \O \  \  \  \O \	\n\
-|O |__/  /   \  \  \__| |	\n\
-|  .____/ /\o \  \  o___/	\n\
-|  |    \o\_\  \__\  \		\n\
-|_.|     \___.___/ \._\		\n\
-\n\n\n\n\n\n"
 
-bubbleFrame8 = "\
- ______________________		\n\
-|   __  \  O__\*  ___ O\	\n\
-|  |  \  \  \  \  \  \  \	\n\
-|* |__/  / o \  \ o\__| |	\n\
-|  o____/o/\  \  \   ___/	\n\
-|  |    \ \_\ .\__\ o\		\n\
-|_o|     \_______/ \__\		\n\
-\n\n\n\n\n\n"
 
-bubbleFrame9 = "\
- ______________~_______		\n\
-|   __  \  *__\   ___ O\	\n\
-|  |  \  \O \  \ o\  \  \	\n\
-| .|__/  /o  \  \  \__| |	\n\
-|   ____/ /\ o\  \  O___/	\n\
-|o |    \ \_\  \__\  \		\n\
-|__|     \_______/ \__\		\n\
-\n\n\n\n\n\n"
 
-bubbleFrame10 = "\
- ______________________		\n\
-|   __  \ O __\ O ___ *\	\n\
-| o|  \  \  \  \  \  \  \	\n\
-|  |__/* /O  \  \  \__|	|	\n\
-|   ____/ /\  \  \   ___/	\n\
-|o |    \ \_\  \__\  \		\n\
-|__|     \_______/ \__\		\n\
-\n\n\n\n\n\n"
 
-bubbleFrame11 = "\
- _____________________~		\n\
-|O  __  \ * __\ O ___  \	\n\
-|  |  \  \ O\  \  \  \O \	\n\
-|  |__/  /   \  \  \__| |	\n\
-| o ____/ /\  \  \   ___/	\n\
-|  |    \ \_\  \__\  \		\n\
-|__|     \_______/ \__\		\n\
-\n\n\n\n\n\n"
 
-bubbleFrame12 = "\
- _________~____________		\n\
-|O  __  \  O__\ * ___ O\	\n\
-|  |  \  \  \  \  \  \  \	\n\
-|o |__/  /   \  \  \__| |	\n\
-|   ____/ /\  \  \   ___/	\n\
-|  |    \ \_\  \__\  \		\n\
-|__|     \_______/ \__\		\n\
-\n\n\n\n\n\n"
 
-bubbleFrame13 = "\
- _______________~______		\n\
-|*  __  \  *__\   ___ O\	\n\
-| O|  \  \  \  \  \  \  \	\n\
-|  |__/  /   \  \  \__| |	\n\
-|   ____/ /\  \  \   ___/	\n\
-|  |    \ \_\  \__\  \		\n\
-|__|     \_______/ \__\		\n\
-\n\n\n\n\n\n"
 
-bubbleFrame14 = "\
- ~__________~__________		\n\
-| O __  \   __\   ___ O\	\n\
-|  |  \  \  \  \  \  \  \	\n\
-|  |__/  /   \  \  \__| |	\n\
-|   ____/ /\  \  \   ___/	\n\
-|  |    \ \_\  \__\  \		\n\
-|__|     \_______/ \__\		\n\
-\n\n\n\n\n\n"
 
-bubbleFrame15 = "\
- ______________________		\n\
-| * __  \   __\   ___ O\	\n\
-|  |  \  \  \  \  \  \  \	\n\
-|  |__/  /   \  \  \__| |	\n\
-|   ____/ /\  \  \   ___/	\n\
-|  |    \ \_\  \__\  \		\n\
-|__|     \_______/ \__\		\n\
-\n\n\n\n\n\n"
 
-bubbleFrame16 = "\
- __~___________________		\n\
-|   __  \   __\   ___ O\	\n\
-|  |  \  \  \  \  \  \  \	\n\
-|  |__/  /   \  \  \__| |	\n\
-|   ____/ /\  \  \   ___/	\n\
-|  |    \ \_\  \__\  \		\n\
-|__|     \_______/ \__\		\n\
-\n\n\n\n\n\n"
 
-bubbleFrame17 = "\
- ______________________		\n\
-|   __  \   __\   ___ O\	\n\
-|  |  \  \  \  \  \  \  \	\n\
-|  |__/  /   \  \  \__| |	\n\
-|   ____/ /\  \  \   ___/	\n\
-|  |    \ \_\  \__\  \		\n\
-|__|     \_______/ \__\		\n\
-\n\n\n\n\n\n"
 
-bubbleFrame18 = "\
- ______________________		\n\
-|   __  \   __\   ___ *\	\n\
-|  |  \  \  \  \  \  \  \	\n\
-|  |__/  /   \  \  \__| |	\n\
-|   ____/ /\  \  \   ___/	\n\
-|  |    \ \_\  \__\  \		\n\
-|__|     \_______/ \__\		\n\
-\n\n\n\n\n\n"
 
-bubbleFrame19 = "\
- _____________________~		\n\
-|   __  \   __\   ___  \	\n\
-|  |  \  \  \  \  \  \  \	\n\
-|  |__/  /   \  \  \__| |	\n\
-|   ____/ /\  \  \   ___/	\n\
-|  |    \ \_\  \__\  \		\n\
-|__|     \_______/ \__\		\n\
-\n\n\n\n\n\n"
 
-bubbleFrames = [bubbleFrame0,bubbleFrame1,bubbleFrame2,bubbleFrame3,bubbleFrame4,bubbleFrame5,bubbleFrame6,bubbleFrame7,bubbleFrame8,bubbleFrame9,bubbleFrame10,bubbleFrame11,bubbleFrame12,bubbleFrame13,bubbleFrame14,bubbleFrame15,bubbleFrame16,bubbleFrame17,bubbleFrame18,bubbleFrame19]
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -574,6 +402,14 @@ bubbleFrames = [bubbleFrame0,bubbleFrame1,bubbleFrame2,bubbleFrame3,bubbleFrame4
 
 
 # you're still here? it's over! go home.
+
+
+
+
+
+
+
+
 
 
 
