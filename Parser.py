@@ -37,39 +37,43 @@ P, W, G = mainMenu()
 ## PARSING FUNCTIONS ##
 #######################
 
-# checks if a noun refers to an exit, an object in the world or on the player...
-# or an in-game definition or a miscellaneous expression
+# checks if a noun refers to a room, an object in the world or on the player...
+# or an action verb, an in-game definition or a miscellaneous expression
 def isMeaningful(noun):
-	if noun in G.currentroom.exits.values() or \
-	G.inWorld(noun,W) or \
-	P.search(noun) or \
+	if noun in W or \
 	noun in actions or \
 	noun in definitions or \
-	noun in miscexpressions:
+	noun in miscexpressions or \
+	P.search(noun) or \
+	G.inWorld(noun,W):
 		return True
 	return False
 
-# recursively inspects the command, which is a list of words
-# combines multiple words into single terms that appear to be a meaningful term.
+# recursively inspects the command, which is a list of words, starting at i
+# combines multiple words into single terms that appear to be a meaningful term
 # returns the command after any relevant words are joined into one term
+# this algorithm favors the meaningful terms which contain the most words
 def nounify(command,i):
+	# base case when end of command is reached
 	if i >= len(command)-1:
 		return command
+	# the possible noun begins as the word at i (subsequent words will be added)
 	possibleNoun = command[i]
 	j = i+1
 	while j < len(command):
 		# possibleNoun is all words between i and j joined
 		possibleNoun += ' '+command[j]
-		# if new term refers to an rendered object, a location, or a game term:
-		# combine words into one element and recur
+		# if new term refers to a rendered object, a location, or a game term:
 		if isMeaningful(possibleNoun):
+			# combine words into one element and recur
 			del command[i:j+1]
 			command.insert(i,possibleNoun)
 			return nounify(command,i)
 		j += 1
 	return nounify(command,i+1)
 
-# term must be a pronoun
+# if the term is a given pronoun, returns the name of the object which...
+# matches the pronoun in the Game class. Intended to return a "best guess"
 def replacePronoun(term):
 	obj = None
 	if term == "it":				obj = G.it
@@ -82,20 +86,20 @@ def replacePronoun(term):
 # validates user input and processes into into a command form usable by parse(),
 # namely, it returns a list of words without capitals, symbols, or articles
 # the last step, nounify(), joins words that may only be meaningful as one term
-def processCmd(prompt,saveRawCmd=False):
-	rawcommand = input(prompt + "\n> ")
+def processCmd(prompt,storeRawCmd=False):
+	rawcommand = input("\n" + prompt + "\n> ")
 	# take input until input has any non-whitespace characters in it
 	while not any(i not in "\t " for i in rawcommand):
 		rawcommand = input("> ")
 	# for convenience, save raw command in game class
-	if saveRawCmd:	G.lastRawCommand = rawcommand.split()
-	# lowercase the sentence command, copy it excluding symbols
+	if storeRawCmd:	G.lastRawCommand = rawcommand.split()
+	# lowercase-ify the sentence command, copy it excluding symbols
 	rawcommand = rawcommand.lower()
 	purecommand = ""
 	for i in rawcommand:
 		if i in symbols:	purecommand = purecommand + " "
 		else:				purecommand = purecommand + i
-	# copy command, delimited by spaces, into a list excluding articles
+	# copy command, delimited by spaces, into a list of words excluding articles
 	listcommand = [i for i in purecommand.split() if i not in articles]
 	# finally, combine certain words if they appear to make one noun term
 	finalcommand = nounify(listcommand,0)
@@ -141,7 +145,7 @@ def promptHelp(msg,n):
 # it returns True only when the player successfully takes an action in the game
 # n denotes how many times parse has recurred
 def parse(n):
-	command = processCmd("What will you do?",saveRawCmd=True)
+	command = processCmd("What will you do?",storeRawCmd=True)
 	if len(command) == 0:
 		return promptHelp("Command not understood",n)
 	verb = command[0]	# verb is always first word
@@ -149,6 +153,7 @@ def parse(n):
 	iobj = None
 	prep = None
 
+	# handle cases with special verb commands
 	if verb in cheatcodes.keys():
 		return cheatcodes[verb](G.lastRawCommand)
 	elif verb in shortverbs or verb in statcommands:
@@ -157,7 +162,7 @@ def parse(n):
 		if verb.upper() in abilities:
 			return P.printAbility(verb.upper())
 		return shortactions[verb]()
-	elif verb not in verbs:
+	elif verb not in actions:
 		return promptHelp(f"'{verb}' is not a valid verb",n)
 
 	# iterates through the command (skips the verb) and assigns...
@@ -168,7 +173,7 @@ def parse(n):
 		# direct object is defined if prep and dobj havent been found yet
 		elif prep == None and dobj == None:			dobj = term
 		# indirect object is defined if a prep or dobj has been found
-		else:										iobj = term
+		elif iobj == None:							iobj = term
 
 	if dobj in pronouns:	dobj = replacePronoun(dobj)
 	if iobj in pronouns:	iobj = replacePronoun(iobj)
@@ -233,9 +238,6 @@ def Teleport(command):
 	location = command[1]
 	if location in W:	G.changeRoom(W[location],P,W)
 	else:				print("Location not in world")
-
-def Test(command):
-	pass
 
 def Warp(command):
 	try:	G.time += int(command[1])
@@ -674,64 +676,64 @@ def Follow(dobj,iobj,prep):
 def Give(dobj,iobj,prep):
 	print("giveing")
 
-def GoVertical(dir):
+def GoVertical(dir,passage=None):
 	if P.hasCondition("fly"):
 		newroom = G.currentroom.exits[dir]
 		print(f"You fly {dir}!")
 		return G.changeRoom(W[newroom],P,W)
 
-	objname = getNoun(f"What will you go {dir}?")
-	obj = G.currentroom.search(objname)
-	if obj == None:
-		print(f"There is no '{objname}' to go {dir} here")
+	if passage == None:
+		passagename = getNoun(f"What will you go {dir}?")
+		passage = G.currentroom.search(passagename)
+	if passage == None:
+		print(f"There is no '{passagename}' to go {dir} here")
 		return False
-	if hasMethod(obj,"Traverse"):
-		return obj.Traverse(P,W,G,dir)
+	if hasMethod(passage,"Traverse"):
+		return passage.Traverse(P,W,G,dir)
 
 def Go(dobj,iobj,prep):
-	preps = {"down","through","to","toward","up","in","into","on","onto"}
-	dir = None
+	preps = {"down","through","to","toward","up","in","into","on","onto",None}
+	if prep not in preps:
+		print("Command not understood")
+		return False
+	dir,dest,passage = None,None,None
 	if dobj == None and iobj == None and prep == None:
 		dobj,iobj,prep = parseWithoutVerb("Where will you go?",preps)
-	if dobj == None:	dobj = iobj
-	if dobj == None:	dobj = prep
-	if prep in directions.values():
-		dir = prep
-		prep = None
-	if prep != None and prep not in preps:
+	# if any terms are abbreviations for a direction, expand them
+	dobj,iobj,prep = map(expandDir,[dobj,iobj,prep])
+	if prep not in preps:
 		print("Command not understood")
 		return False
 
+	if dobj in directions.values():		dir,dobj = dobj,None
+	elif iobj in directions.values():	dir = iobj
+	elif prep in directions.values():	dir = prep
+	# special cases
+	if dobj == None:	dobj = iobj
 	if dobj == "back":	dobj = G.prevroom.name
-	if dobj == G.currentroom.name:
-		print("You are already there")
-		return False
-	if not any(isinstance(item,Compass) for item in P.inv):
-		if dobj != "back" and prep not in {"up","down"}:
-			print("\nWithout your compass, you go in a random direction")
-			dobj = choice(list(G.currentroom.exits.values()))
 
-	if dobj in directions.keys():
-		dobj = directions[dobj]
-	exits = G.currentroom.exits
-	if dobj in exits.keys():
-		dobj = exits[dobj]
+	# disambiguation with dir and dest
+	if dir != None:
+		if dir in G.currentroom.exits:
+			dest = G.currentroom.exits[dir]
+		elif dir in G.currentroom.allExits():
+			passage = G.currentroom.getPassageFromDir(dir)
+		else:
+			print(f"There is no exit leading {dir} here")
+			return False
 
-	if "up" in exits.keys() and exits["up"] == dobj:
-		return GoVertical("up")
-	if "down" in exits.keys() and exits["down"] == dobj:
-		return GoVertical("down")
-	if dobj in exits.values():
-		return G.changeRoom(W[dobj],P,W)
-	passage = G.currentroom.inContents(dobj)
-	if passage:
-		if hasMethod(passage,"Traverse"):
-			return passage.Traverse(P,W,G,dir)
+	if passage == None:
+		passage = G.currentroom.search(dobj)
+	if passage == None and dobj in G.currentroom.exits.values():
+	 	dest = dobj
+	elif dobj in G.currentroom.allExits().values():
+		dir = G.currentroom.getDirFromDest(dobj)
+		passage = G.currentroom.getPassageFromDir(dir)
 
-	if dobj in directions.values():
-		print(f"There is no exit leading {dobj} here")
-	else:
-		print(f"There is no exit leading to a '{dobj}' here")
+	if dir == "up" or dir == "down":	return GoVertical(dir,passage)
+	if hasMethod(passage,"Traverse"):	return passage.Traverse(P,W,G,dir)
+	if dest != None:					return G.changeRoom(W[dest],P,W)
+	print(f"There is no exit leading to a {dobj} here")
 	return False
 
 # add in the ability to try to 'grab' creatures?
@@ -1131,6 +1133,10 @@ def Take(dobj,iobj,prep):
 	msg = f"You take {det} {I.name}{appendstring}"
 	return P.obtainItem(I,S,W,G,msg)
 
+def Test(dobj,iobj,prep):
+	print(f"dobj: {dobj}\niobj: {iobj}\nprep: {prep}")
+	return True
+
 def Touch(dobj,iobj,prep):
 	print("touching")
 
@@ -1228,7 +1234,7 @@ cheatcodes = {
 	"\\mod":Mode,
 	"\\pot":Pypot,
 	"\\set":Set,
-	"\\tst":Test,
+	# "\\tst":Test,
 	"\\tpt":Teleport,
 	"\\wrp":Warp
 }
@@ -1382,6 +1388,7 @@ actions = {
 "take off":Doff,
 "talk":Talk,
 "taste":Lick,
+"test":Test,
 "throw":Throw,
 "tie":Tie,
 "tinker":Craft,

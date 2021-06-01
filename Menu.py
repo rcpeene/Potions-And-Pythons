@@ -617,7 +617,7 @@ def gameIntro():
 #
 # THE FOLLOWING CODE COULD BE USED FOR A FUTURE TRANSITION TO SAVING GAME DATA IN JSON FORMAT
 #
-# Note: the current main incompatability with this code is the fact that some objects' __init__ method takes the data in a way which does not have a 1:1 relationship with the objects attributes.
+# Note: the current main incompatability with this code is the fact that some objects' __init__ method takes the data in a way takes parameters which do not have a 1:1 relationship with the object attributes.
 # for instance, python.__init__() takes many numerical attributes as an array, but the attributes are not stored like this in JSON format.
 #
 ################################################################################

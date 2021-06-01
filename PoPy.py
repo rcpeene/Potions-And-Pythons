@@ -37,8 +37,8 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# fix the use of processCmd, make a new getNoun() probably
-# test input "go">"up">"the stairwell"
+# revise design.txt to accomodate newly renamed functions
+
 # really consider what attributes to give items. maybe give them a value and a size attribute.
 # give passages complete "connections" rather than just directions, ie directions and destinations
 # add hide/crouch/crawl
@@ -57,8 +57,8 @@ if __name__ == "__main__":
 # add some preliminary spells and add effects file
 # split creatures and objects into different files
 
+# figure out a thing that removes dead bodies outside of render distance
 # consider adding alternative names (this would change search funcs a lot)
-# TODO: research using map() in python, and passing functions as arguments
 # consider enter, exit functions in room
 # reevaluate effect functions, is there a way to reference a function by string?
 # how will amulet effects work??
@@ -163,3 +163,51 @@ if __name__ == "__main__":
 # 	I,R,prep = interpretSearch(dobj,iobj,prep,preps,dobjSearch,iobjSearch)
 #
 #
+
+
+"""
+def Go(dobj,iobj,prep):
+	preps = {"down","through","to","toward","up","in","into","on","onto"}
+	dir = None
+	if dobj == None and iobj == None and prep == None:
+		dobj,iobj,prep = parseWithoutVerb("Where will you go?",preps)
+	dobj,iobj,prep = map(expandDir,[dobj,iobj,prep])
+	if prep != None and prep not in preps:
+		print("Command not understood")
+		return False
+
+	if dobj == None:	dobj = iobj
+	if dobj in directions.values():
+		dir = dobj
+		dobj = None
+	elif prep in directions.values():
+		dir = prep
+	if dobj == None:	dobj = iobj
+	print(f"dobj: {dobj}\niobj: {iobj}\nprep: {prep}\ndir: {dir}")
+
+	if dobj == "back":	dobj = G.prevroom.name
+	if dobj == G.currentroom.name:
+		print("You are already there")
+		return False
+
+	allExits = G.currentroom.allExits()
+	if dir in allExits.keys() and dir not in G.currentroom.exits:
+		dobj = G.currentroom.getPassageFromDir(dir).name
+	passage = G.currentroom.inContents(dobj)
+	if passage:
+		if hasMethod(passage,"Traverse"):
+			return passage.Traverse(P,W,G,dir)
+
+	if dir in allExits.keys():
+		dobj = allExits[dir]
+	if "up" in allExits.keys() and allExits["up"] == dobj:
+		return GoVertical("up")
+	if "down" in allExits.keys() and allExits["down"] == dobj:
+		return GoVertical("down")
+	if dobj in allExits.values():
+		return G.changeRoom(W[dobj],P,W)
+
+	if dir in directions.values(): print(f"There is no exit leading {dir} here")
+	else: print(f"There is no exit leading to a '{dobj}' here")
+	return False
+"""

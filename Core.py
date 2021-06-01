@@ -110,6 +110,10 @@ def ordinal(n):
 	else:					suffix = "th"
 	return str(n) + suffix
 
+def expandDir(term):
+	if term in directions:	return directions[term]
+	else:					return term
+
 # returns a list of element names for L, a list of objects with name attribute
 def namesList(L):
 	names = []
@@ -205,7 +209,7 @@ def findNextDelimiter(symbols,text,start):
 	return len(text)
 
 # searches through a list of strings, starting at index l
-# returns the earliest index of the string which begins with a given symbol
+# returns the lowest index of the string which begins with a given symbol
 def findLineStartsWith(lines,symbol,start):
 	l = start
 	while l < len(lines):
@@ -255,7 +259,7 @@ def objSearch(term,root,d=0,getPath=False,getSource=False,reqSource=None):
 def objSearchRecur(term,node,path,d,reqSource):
 	S = None						# source object is initially None
 	O = None						# object is initially None
-	# choose list of objects to search through depending on the node node's type
+	# choose list of objects to search through depending on the node's type
 	if isinstance(node,Room):	searchThrough = node.contents + node.occupants
 	elif hasattr(node,"contents"):	searchThrough = node.contents
 	elif hasattr(node,"inv"):		searchThrough = node.inv
@@ -304,7 +308,7 @@ def objTreeToSet(root,d=0,getSources=False):
 		if d == 0 and hasattr(I,"open") and not I.open:		continue
 		elif (d <= 1) and isinstance(I,Creature):			continue
 		elif d <= 2 and hasattr(I,"locked") and I.locked:	continue
-		# merge the set of all items with item I's set
+		# unionize the set of all items with item I's set
 		A = A | objTreeToSet(I,d=d,getSources=getSources)
 	return A
 
@@ -352,7 +356,7 @@ class Game():
 		self.time = time
 		self.whoseturn = None
 		self.lastRawCommand = None
-		# pronoun attributes store a reference to an object which may be...
+		# pronoun attributes store an object which may be...
 		# implied by that pronoun from user input
 		self.it = None
 		self.they = None
@@ -400,7 +404,7 @@ class Game():
 	def roomFinder(self,n,Sroom,pathlen,foundrooms,W):
 		if pathlen >= n:
 			return
-		adjacentRooms = [W[name] for name in Sroom.exits.values()]
+		adjacentRooms = [W[name] for name in Sroom.allExits().values()]
 		for room in adjacentRooms:
 			foundrooms.add(room)
 			self.roomFinder(n,room,pathlen+1,foundrooms,W)
@@ -432,7 +436,7 @@ class Game():
 			if C in room.occupants:
 				room.removeCreature(C)
 
-	# perhaps not necessary code
+	# perhaps unnecessary code
 	# def destroyItem(self,I,W):
 	# 	for room in self.renderedRooms(W):
 	# 		allObjects = objTreeToSet(room,d=3,getSources=True)
@@ -440,12 +444,13 @@ class Game():
 	# 			if object is I:
 	# 				source.removeItem(object)
 
-	def searchRooms(self,objname,W,d=3):
+	# returns a list of objects in rendered rooms which fit a certain condition
+	def searchRooms(self,key,W,d=3):
 		matchingObjects = []
 		for room in self.renderedRooms(W):
 			allObjects = objTreeToSet(room,d=d)
 			for obj in allObjects:
-				if objname == obj.name.lower():
+				if key(obj):
 					matchingObjects.append(obj)
 		return matchingObjects
 
@@ -458,11 +463,11 @@ class Game():
 				allObjects.append(elem)
 		return allObjects
 
+	# true if there's an object in rendered rooms whose name matches objname
 	def inWorld(self,objname,W):
-		objects = self.searchRooms(objname,W)
-		if len(objects) > 0:
-			return True
-		return False
+		key = lambda obj: obj.name.lower() == objname
+		objects = self.searchRooms(key,W)
+		return len(objects) > 0
 
 
 # used to define all rooms in the world
@@ -496,6 +501,35 @@ class Room():
 
 	def addConnection(self,dir,loc):
 		self.exits[dir] = loc
+
+	def getPassages(self):
+		return [item for item in self.contents if isinstance(item,Passage)]
+
+	def getPassageFromDir(self,dir):
+		for passage in self.getPassages():
+			if dir in passage.connections:
+				return passage
+		return None
+
+	def getDirFromDest(self,dest):
+		if dest in self.allExits().values():
+			idx = list(self.allExits().values()).index(dest)
+			dir = list(self.allExits().keys())[idx]
+			return dir
+
+	# returns dict of exits, where keys are pairs of a direction and passage...
+	# and values are room names
+	def allExits(self):
+		all = {}
+		for dir in self.exits:
+			all[dir] = self.exits[dir]
+		# get a list of passages in the room (non-recursive search)
+		passages = self.getPassages()
+		# for each passage, add its connections to all
+		for passage in passages:
+			for dir in passage.connections:
+				all[dir] = passage.connections[dir]
+		return all
 
 	# prints room name, description, all its contents and creatures
 	def describe(self):
@@ -651,6 +685,7 @@ class Creature():
 
 		self.money = money
 		self.inv = inv
+		# convert gear from its stored form in files to its runtime form
 		self.gear = {key: inv[gear[key]] if gear[key] != -1 else Empty() for key in gear}
 		self.status = status
 		# sort status effects by duration; change '1' to '0' to sort by name
@@ -1107,36 +1142,36 @@ class Player(Creature):
 		hit = minm(1,maxm(99, self.ACCU() - target.EVSN()))
 		if diceRoll(1,100,0) <= hit:
 			print()
-			crit = True if diceRoll(1,100,0) <= self.CRIT() else False
+			crit = diceRoll(1,100,0) <= self.CRIT()
 			attack = self.ATCK()
 			if crit:
-				print("critical hit!")
+				print("Critical hit!")
 				attack *= 2
 			damage = minm(0, attack - target.DFNS())
 			target.takedmg(damage,self.weapon2.type,self,G,W)
 			if target.alive == False:
 				return
 		else:
-			print("aw it missed")
+			print("Aw it missed")
 
 	def attackCreature(self,target,G,W):
 		n = minm(1, self.ATSP() // target.ATSP())
 		print(f"{n} attacks:")
 		for i in range(n):
 			print(f"\n{ordinal(i+1)} attack")
-			# what about if weapon is ranged?
+			# TODO: what about if weapon is ranged?
 			hit = minm(1,maxm(99, self.ACCU() - target.EVSN()))
 			if diceRoll(1,100,0) <= hit:
 				crit = diceRoll(1,100,0) <= self.CRIT()
 				attack = self.ATCK()
 				if crit:
-					print("critical hit!")
+					print("Critical hit!")
 					attack *= 2
 				damage = minm(0, attack - target.DFNS())
 				target.takedmg(damage,self.weapon.type,self,G,W)
 				if target.alive == False:	return
 			else:
-				print("aw it missed")
+				print("Aw it missed")
 			if self.weapon2 != Empty():	self.dualAttack(target,G,W)
 			if target.alive == False:	return
 
@@ -1365,7 +1400,8 @@ class Passage(Fixture):
 			if len(self.connections) == 1:
 				dir = self.connections.keys()[0]
 			else:
-				dir = input("Which direction will you go?\n> ")
+				msg = f"Which direction will you go on the {self.name}?\n> "
+				dir = input(msg)
 		if dir not in self.connections:
 			print(f"The {self.name} does not go '{dir}'")
 			return False

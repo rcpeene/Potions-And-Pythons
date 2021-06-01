@@ -1,32 +1,36 @@
 
 DESIGN FOR POTIONS AND PYTHONS ALPHA
 
-TODO to add to this document:
-a description of Go()
-a description of passages
-a description of status conditions
-a description of all the object search functions and methodology (also described the object tree)
-include discussion of "source" object labels
-a description of equipping (equipping doesnt remove it from your inventory), but carrying allows something to be equipped while not in your inv?
-
 Contents (WIP):
+SECTION 1 - reading this code project
 code styleguide
-definition of "command", "verb", "action", "object", "source", and other terms
-world network design
-room
-passages
+description of each file in source code
+definition of "command", "verb", "action", "object", "source", "P", "W" and other terms (like "d")
+
+SECTION 2 - Fundamental Objects (Game, items, creatures, the player)
+Game
 items
 creature stats and creatures
 status conditions
-object search methodology
-input processing, parsing, interpreting, executing methodology
+the player
+
+SECTION 3 - room objects and world implementation/design
+room
+passages and room exits (passages should not be contained in other objects, passage connections must not conflict with room exits)
+world network design
+object search methodology (and the object tree)
 world file, and saving methodology
 world file and parsing methodology
+
+SECTION 4 - parsing
+input processing, parsing, interpreting, executing methodology
 go function methodology
 attack function methodology
-equip function methodology
+equip function methodology (equipping doesnt remove it from your inventory), but carrying allows something to be equipped while not in your inv?
 effects methodology
 spell methodology
+
+
 
 NOTES ON THE CONVENTIONS AND FORMATTING USED IN THIS CODE PROJECT
 -source files are named with capital letters to distinguish them from python modules
@@ -126,37 +130,37 @@ main() runs a parsing loop, that loops taking valid input
 HOW PARSING INPUT WORKS (EXAMPLE)
 """
 What will you do?
-> I will attack the Green Snake, with my sword.
+> I will attack the Green Snake, with my Iron Sword.
 """
 
 In the above example, the user provides the raw input:
-	"I will attack the Green Snake, with my sword."
+	"I will attack the Green Snake, with my Iron Sword."
 
-input processing in getcmd():
+- input processing in processCmd():
 
 First, the raw input is turned to lowercase:
-	"i will attack the green snake, with my sword."
+	"i will attack the green snake, with my iron sword."
 Then, the input is purified by removing extraneous symbols:
-	"i will attack the green snake with my sword"
-Then, the input is split into a list of words:
-	['i','will','attack','the','green','snake','with','my','sword']
+	"i will attack the green snake with my iron sword"
+Then, the input is split by spaces into a list of words:
+	["i","will","attack","the","green","snake","with","my","iron","sword"]
 Next, articles and determiners (and other extraneous words) are removed:
-	['attack','green','snake','with','sword']
-The nounify step combines words which appear to be a single meaningful term:
-	['attack','green snake','with','sword']
+	["attack","green","snake","with","iron","sword"]
+The nounify() step combines words which appear to be a single meaningful term:
+	["attack","green snake","with","iron sword"]
 
-parsing input in parse():
+- parsing input in parse():
 
-the processed command is taken, and the verb is assumed to be the first word:
-	verb = 'attack'
+the verb is assumed to be the first word of the processed command:
+	verb = "attack"
 If the command is multiple words, the preposition is found (if it exists) by comparing each word to a set of known prepositions. In this case:
-	prep = 'with'
-if there are more words, the direct object is assumed to be the first word after the verb which is not a preposition. In this case:
-	dobj = 'green snake'
-if there are still more words, the indirect object is the last word after the preposition or the direct object, which is not a preposition. In this case:
-	iobj = 'sword'
+	prep = "with"
+if there are more words, the direct object is assumed to be the first word after the verb that is not a preposition. In this case:
+	dobj = "green snake"
+if there are still more words, the indirect object is the first word after the preposition or direct object. In this case:
+	iobj = "iron sword"
 
-So parse() assigns terms to verb, dobj, iobj, and prep. The nature of this input parser is such that it cannot accurately parse input with more than these four important terms. So it cannot properly interpret arbitrarily complex input.
+So parse() assigns terms to verb, dobj, iobj, and prep. The nature of this input parser is such that it cannot accurately parse input with more than these four important terms. It cannot properly interpret arbitrarily complex input.
 
 
 
@@ -609,12 +613,11 @@ e: essential [dev] - weapons that transcend the universe
 STATUS EFFECTS:
 
 status conditions exist in the creatures status list as list pairs
-of condition name and duration
+of condition name and duration.
 negative durations have special meanings:
 -1 means the condition lasts as long as the player is in the current room
 -2 means the condition permanent until it is removed by some general source
 -3 or less means the condition is permanent until removed by a specific source
-
 
 curses;
 
@@ -896,6 +899,8 @@ so these dungeons are generally just clusters of room nodes in the world graph t
 
 -regular forest (starting location)
 -the gallery
+-mobile massive wizard school (with portal entrances around the world)
+-a buried giant (inside of which is a dungeon? rooms like "giant foot")
 -haunted manor, abandoned manor on a hill thats v spooky
 -ancient mystical forest, full of illusions thats difficult to navigate
 -the catacombs, simple basic religious dungeon under a giant old cathedral
@@ -1033,4 +1038,6 @@ stop time everywhere (bool in game class)
 
 MISC IDEAS:
 
+sign that says "no philandering!"
 stoats, lemmings as creatures
+something called "The Wizard's Fee"

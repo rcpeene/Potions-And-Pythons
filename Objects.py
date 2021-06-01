@@ -337,7 +337,8 @@ class Wall(Passage):
 			if len(self.connections) == 1:
 				dir = self.connections[0]
 			else:
-				dir = input("Which direction will you go?\n> ")
+				msg = f"Which direction will you go on the {self.name}?\n> "
+				dir = input(msg)
 		if dir not in self.connections:
 			print(f"The {self.name} does not go '{dir}'")
 			return False
