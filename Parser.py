@@ -303,8 +303,7 @@ def Attack(dobj,iobj,prep):
 			iobj = "fist"
 		elif P.gear["right"] == Empty() and P.gear["left"] == Empty():
 			iobj = getNoun("What will you attack with?")
-			if iobj in cancels:
-				return False
+			if iobj in cancels:	return False
 	weapon = P.weapon
 	if iobj != None:
 		weapon = P.inGear(iobj)
@@ -317,6 +316,7 @@ def Attack(dobj,iobj,prep):
 			return False
 
 	if dobj == None:	dobj = getNoun("What will you attack?")
+	if dobj in cancels:	return False
 	target = G.currentroom.inOccupants(dobj)
 	if target == None:	target = G.currentroom.inContents(dobj)
 	if dobj in {"myself","me"}: target = P
@@ -691,28 +691,9 @@ def GoVertical(dir,passage=None):
 	if hasMethod(passage,"Traverse"):
 		return passage.Traverse(P,W,G,dir)
 
-def Go(dobj,iobj,prep):
-	preps = {"down","through","to","toward","up","in","into","on","onto",None}
-	if prep not in preps:
-		print("Command not understood")
-		return False
-	dir,dest,passage = None,None,None
-	if dobj == None and iobj == None and prep == None:
-		dobj,iobj,prep = parseWithoutVerb("Where will you go?",preps)
-	# if any terms are abbreviations for a direction, expand them
-	dobj,iobj,prep = map(expandDir,[dobj,iobj,prep])
-	if prep not in preps:
-		print("Command not understood")
-		return False
-
-	if dobj in directions.values():		dir,dobj = dobj,None
-	elif iobj in directions.values():	dir = iobj
-	elif prep in directions.values():	dir = prep
-	# special cases
-	if dobj == None:	dobj = iobj
-	if dobj == "back":	dobj = G.prevroom.name
-
-	# disambiguation with dir and dest
+def ExecuteGo(dobj,dir,dest,passage):
+	# if the input contains a dir, validate the dir...
+	# and assign either destination room name or passage
 	if dir != None:
 		if dir in G.currentroom.exits:
 			dest = G.currentroom.exits[dir]
@@ -722,6 +703,7 @@ def Go(dobj,iobj,prep):
 			print(f"There is no exit leading {dir} here")
 			return False
 
+	# further assign passage and dest depending on if they are valid terms
 	if passage == None:
 		passage = G.currentroom.search(dobj)
 	if passage == None and dobj in G.currentroom.exits.values():
@@ -730,11 +712,38 @@ def Go(dobj,iobj,prep):
 		dir = G.currentroom.getDirFromDest(dobj)
 		passage = G.currentroom.getPassageFromDir(dir)
 
+	# call one of three functions to actually change rooms
+	# depends if they going directly, traversing a passage, or going vertically
 	if dir == "up" or dir == "down":	return GoVertical(dir,passage)
 	if hasMethod(passage,"Traverse"):	return passage.Traverse(P,W,G,dir)
 	if dest != None:					return G.changeRoom(W[dest],P,W)
 	print(f"There is no exit leading to a {dobj} here")
 	return False
+
+def Go(dobj,iobj,prep):
+	preps = {"down","through","to","toward","up","in","into","on","onto",None}
+	if prep not in preps:
+		print("Command not understood")
+		return False
+	dir,dest,passage = None,None,None
+	if dobj == None and iobj == None and prep == None:
+		dobj,iobj,prep = parseWithoutVerb("Where will you go?",preps)
+	if dobj in cancels:	return False
+
+	# if any terms are abbreviations for a direction, expand them
+	dobj,iobj,prep = map(expandDir,[dobj,iobj,prep])
+	if prep not in preps:
+		print("Command not understood")
+		return False
+
+	# if any terms are a direction, set dir
+	if dobj in directions.values():		dir,dobj = dobj,None
+	elif iobj in directions.values():	dir = iobj
+	elif prep in directions.values():	dir = prep
+	if dobj == None:	dobj = iobj
+	if dobj == "back":	dobj = G.prevroom.name
+
+	return ExecuteGo(dobj,dir,dest,passage)
 
 # add in the ability to try to 'grab' creatures?
 def Grab(dobj,iobj,prep):

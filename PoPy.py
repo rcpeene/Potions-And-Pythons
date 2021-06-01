@@ -37,8 +37,6 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# revise design.txt to accomodate newly renamed functions
-
 # really consider what attributes to give items. maybe give them a value and a size attribute.
 # give passages complete "connections" rather than just directions, ie directions and destinations
 # add hide/crouch/crawl

@@ -1,7 +1,18 @@
 
 DESIGN FOR POTIONS AND PYTHONS ALPHA
 
-Contents (WIP):
+Contents:
+SECTION 1 - reading this code project
+SECTION 2 - Fundamental objects
+SECTION 3 - Room objects and world implementation
+SECTION 4 - Saving and loading game data
+SECTION 5 - parsing and interpreting user input
+SECTION 6 - weapons, armor and combat
+SECTION 7 - spells and effects
+SECTION 8 - food, crafting, and cooking
+SECTION 9 - creature behavior and NPCs
+
+
 SECTION 1 - reading this code project
 code styleguide
 description of each file in source code
@@ -19,16 +30,32 @@ room
 passages and room exits (passages should not be contained in other objects, passage connections must not conflict with room exits)
 world network design
 object search methodology (and the object tree)
-world file, and saving methodology
-world file and parsing methodology
 
-SECTION 4 - parsing
+SECTION 4 - saving and loading and menu
+menu functions
+intro animation
+background data parsing functions
+world file, and saving methodology
+world file, and parsing methodology
+
+SECTION 5 - parsing
 input processing, parsing, interpreting, executing methodology
 go function methodology
 attack function methodology
 equip function methodology (equipping doesnt remove it from your inventory), but carrying allows something to be equipped while not in your inv?
 effects methodology
 spell methodology
+
+SECTION 6 - weapons, armor, equipment, and combat
+
+SECTION 7 - spells and effects
+
+SECTION 8 - food, crafting, and cooking
+
+SECTION 9 - creature behavior and NPCs
+
+
+
 
 
 
@@ -45,19 +72,19 @@ NOTES ON THE CONVENTIONS AND FORMATTING USED IN THIS CODE PROJECT
 
 -functions typically use camelCase for naming, see 3 exceptions below
 
--Action functions are named with single capitalized words. Action functions are functions in Parser.py that are called as a result of player actions, or methods which are called by a corresponding Parser.py action function. For instance, the Look() function, which may call a Look() method on an item. This is to distinguish these functions from certain python keywords and built-ins
+-Action functions are named with single capitalized words. Action functions are functions in Parser.py that are called as a result of player commands, or methods which are called by a corresponding Parser.py action function. For instance, the Look() function, which may call a Look() method on an item. This is to distinguish these functions from certain python keywords and built-ins
 
 -functions with names that are multiple abbreviated words are purely lowercase
 
 -the Creature methods which return the ability score for a creature are denoted purely in capital letters, such as MXHP(), and ATCK()
 
--classes are named with capital letters
+-classes are named with capital first-letters
 
 -typically, instances of objects are either denoted with capital letters, or with words. For example, an instance of the Item() class may either be I, item, or some other word depending on the use case.
 
 -the global objects P, W, and G refer to the Player, World, and Game objects
 
--typically, capital S refers to a "source" item. That is, an item which contains another item, usually I.
+-typically, capital S refers to a "source" item. That is, an item which contains another item, usually called I.
 
 -strings are denoted with "", unless it is necessary to use a string that contains " in it, in which case, the entire function of relevance uses '' to denote strings
 
@@ -65,7 +92,7 @@ NOTES ON THE CONVENTIONS AND FORMATTING USED IN THIS CODE PROJECT
 	f"There is no '{obj.name}' here"
 	f"There is {listItems()} in this room"
 	"You take the " + item.name
-	"There is " + gprint("a",obj.anem,3,1)
+	"There is " + gprint("a",obj.name,3,1)
 
 
 

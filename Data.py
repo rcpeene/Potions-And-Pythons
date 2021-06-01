@@ -6,7 +6,7 @@
 # 1. Useful strings			(Useful strings of data primarily used in Parser.py)
 # 2. Useful sets			(Sets of strings primarily used in Parser.py)
 # 3. Game term dictionary	(Game terms used by Define() in Parse.py)
-# 4. Intro Logo Data		(strings and lists used for the intro animation)
+# 4. Intro Logo Data		(Strings and lists used for the intro animation)
 
 ####################
 ## USEFUL STRINGS ##
@@ -16,7 +16,7 @@ menuinstructions = "\nType 'info' for information on how to play\nType 'new' to 
 
 gameinfo = "="*64 + "\n\nPotions & Pythons\nv.Alpha\nBy Carter Peene, 2021\n\nTo play, type a command of the form:\n[verb] [*noun] [*preposition] [*noun]\nOR\n[verb] [*preposition] [*noun]\n\n* denotes a term that can be omitted when unnecessary\nArticles, determiners, and most symbols are removed from your input\n\nGet a list of valid commands by typing 'help'\nGet a list of command examples by typing 'examples'\nSee your main player statistics by typing 'stats' and 'traits'\nSee a description of your current location by typing 'here'\nLearn about most game terms and commands by typing 'define [term]'\n\n" + "="*64
 
-examples = "\nValid input examples include:\n- go\n- go north\n- go nw\n- go up the stairs\n- go back\n- go to tunnel\n- look at python\n- i will fight the python!\n- hit the python with my sword\n- attack python sword\n- equip the sword\n- unequip sword\n- take red potion\n- take the red potion from the chest\n- put red potion in chest\n- put red potion chest\n- drop the red potion\n- close chest"
+examples = "\nValid input examples include:\n- go\n- go north\n- go nw\n- go up the stairs\n- go back\n- go to tunnel\n- look at python\n- i will fight the python!\n- hit the python with my sword\n- attack python sword\n- equip a sword\n- unequip sword\n- take red potion\n- take the red potion from the chest\n- put red potion in chest\n- put red potion chest\n- drop the red potion\n- close chest"
 
 symbols = ".,!?~`\"()[]{}<>+=/*&^%$#@\t"
 
@@ -35,13 +35,13 @@ magicaldmg = "inrv"
 
 articles = {"a","an","her","his","i","its","my","out","that","the","their","this","will"}
 
-cancels = {"back","cancel","nevermind","no","undo"} # done,end
+cancels = {"cancel","done","end","nevermind","no","undo"}
 
 yesses = {"absolutely","affirmative","aye","certainly","definitely","indeed","ja","ok","okay","oui","si","sure","surely","y","ya","yaa","yaaa","yaaaa","ye","yea","yeah","yes","yess","yesss","yup"}
 
 noes = {"absolutely not","certainly not","definitely not","n","na","nah","nahh","nahhh","nay","negative","negatory","nein","no","noo","nooo","noooo","nope"}
 
-# note that "d" and "u" are included here as abbreviations of "up" and "down"
+# note that "u" and "d" are included here as abbreviations of "up" and "down"
 # this is because "up" and "down" are also in the "directions" dict
 # they are not necessary entries here, but make interpreting more consistent...
 # for use in the Go() action functions
@@ -60,13 +60,13 @@ directions = {"n":"north","ne":"northeast","e":"east","se":"southeast","s":"sout
 
 dmgtypes = {"a":"acid","b":"bludgeoning","c":"cold","e":"essential","f":"fire","i":"psychic","l":"lightning","n":"necrotic","p":"piercing","r":"radiant","s":"slashing","t":"thunder","v":"force","x":"poison"}
 
-# gear dict used to initialize a player object
+# gear dict used to initialize the player object
 initgear = {"head":-1, "body":-1, "left":-1, "right":-1, "legs":-1}
 
+# trait list used to initialize the player object
 inittraits = [1,1,1,1,1,1,1,1,1,1]
 
 instantactions = {"describe","define","gear","help","hp","info","information","inventory","inv","level","lv","money","mp","quit","room","rp","save","status","time","traits","xp"}
-
 
 # the following are tuples because their order should be preserved for printing
 
