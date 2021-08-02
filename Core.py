@@ -12,7 +12,6 @@ from time import sleep
 from random import randint,choice
 from math import floor, log10
 from bisect import insort
-# import json
 
 from Data import *
 
@@ -181,65 +180,6 @@ def min1(n): return 1 if n < 1 else n
 # returns a number, n, with an upper bound of m
 def maxm(m,n): return m if n > m else n
 
-
-# searches a string, text, starting at start index, for matching parenthesis
-# returns the index of the closing parenthesis that matches the open parenthesis
-# ignores characters which are between quotations ""
-def findMatchingParenth(text,start):
-	o = text[start]
-	if o == '(':	c = ')'
-	elif o == '[':	c = ']'
-	elif o == '{':	c = '}'
-	elif o == '<':	c = '>'
-	else:	raise Exception('start character not a valid parenthesis')
-	inString = False
-	depth = 0
-	i = start
-	while i < len(text):
-		if text[i] == '"':	inString = not inString
-		if text[i] == o and not inString:	depth += 1
-		if text[i] == c and not inString:	depth -= 1
-		if depth == 0:		return i
-		i += 1
-	raise Exception('no matching parenthesis found')
-
-# takes a set of symbols which count as delimiters
-# searches a string, text, starting at start index for the next delimiter symbol
-# ignores characters which are between quotations ""
-# returns the index of the next delimiter
-# if no delimiter is found, returns the length of text
-def findNextDelimiter(symbols,text,start):
-	inString = False
-	for i in range(start,len(text)):
-		if text[i] == '"':
-			inString = not inString
-		if text[i] in symbols and not(inString):
-			return i
-	return len(text)
-
-# searches through a list of strings, starting at index l
-# returns the lowest index of the string which begins with a given symbol
-def findLineStartsWith(lines,symbol,start):
-	l = start
-	while l < len(lines):
-		if lines[l][0] == symbol:
-			return l
-		l += 1
-
-# takes an object of class Empty(), Creature(), Item(), or Passage()
-# writes all the text necessary to store an object's class and its attributes
-def writeObj(fd,obj):
-	classname = obj.__class__.__name__
-	if isinstance(obj, Empty):
-		fd.write("")
-		return
-	elif isinstance(obj,Item):	fd.write("$")
-	elif isinstance(obj,Creature):	fd.write("!")
-	else:	raise Exception("trying to write obj which is not Item or Creature")
-	fd.write(classname + " (")
-	obj.writeAttributes(fd)
-	fd.write(")")
-
 # the room, creatures, and some items can contain items within themselves...
 # thus all objects within a room can be thought of as a tree graph...
 # where each node is an item or creature, and the root is the room
@@ -320,6 +260,7 @@ def objTreeToSet(root,d=0,getSources=False):
 		# unionize the set of all items with item I's set
 		A = A | objTreeToSet(I,d=d,getSources=getSources)
 	return A
+
 
 ############################
 ## SUPERCLASS DEFINITIONS ##
@@ -445,7 +386,7 @@ class Game():
 			if C in room.occupants:
 				room.removeCreature(C)
 
-	# perhaps unnecessary code
+	## perhaps unnecessary code
 	# def destroyItem(self,I,W):
 	# 	for room in self.renderedRooms(W):
 	# 		allObjects = objTreeToSet(room,d=3,getSources=True)
@@ -651,10 +592,6 @@ class Item():
 	def __hash__(self):
 		return hash(frozenset(self.__dict__)) * hash(id(self))
 
-	def writeAttributes(self,fd):
-		fd.write(f'"{self.name}", "{self.desc}", ')
-		fd.write(f'{self.weight}, {self.durability}')
-
 	# used to create a generic Weapon() if this item is used to attack something
 	def improviseWeapon(self):
 		#TODO: if item is too large/heavy, make it two-handed
@@ -730,13 +667,6 @@ class Creature():
 	def __lt__(self,other):
 		return self.MVMT() < other.MVMT()
 
-	def testPython(self):
-		print(self.inv)
-		for item1 in inv:
-			for item2 in inv:
-				print("cmp:",item1,"with",item2,end='')
-				print(" ! " if item1 == item2 else " ? ")
-
 	# converts the gear dict to a form more easily writable to a save file
 	# replaces all objects in gear.values() with an integer which represents...
 	# the index of the equipped object in the creature's inventory
@@ -773,36 +703,6 @@ class Creature():
 		thisobj = cls(d["name"],d["desc"],d["hp"],d["mp"],d["traits"],d["money"],d["inv"],d["gear"],d["status"])
 		return thisobj
 
-	def writeAttributes(self,fd):
-		fd.write(f'"{self.name}", "{self.desc}", ')
-		fd.write(f'{self.hp}, {self.mp}, ')
-		fd.write(f'[{self.STR},{self.SPD},{self.SKL},{self.STM},{self.CON},')
-		fd.write(f'{self.CHA},{self.INT},{self.WIS},{self.FTH},{self.LCK}]')
-		fd.write(f', {self.money}, ')
-
-		if len(self.inv) != 0:	fd.write('\n\t')
-		fd.write('[')
-		for i in range(len(self.inv)):
-			writeObj(fd,self.inv[i])
-			if i != len(self.inv)-1:	fd.write(',\n\t')
-		fd.write('], ')
-
-		gearList = list(self.compressGear().items())
-		if len(gearList) != 0:		fd.write('\n\t')
-		fd.write('{')
-		for k in range(len(gearList)):
-			fd.write(f'"{gearList[k][0]}": {gearList[k][1]}')
-			if k != len(gearList)-1:	fd.write(', ')
-		fd.write('}, ')
-
-		if len(self.status) != 0:	fd.write('\n\t')
-		fd.write('[')
-		statuslist = list(self.status)
-		for j in range(len(statuslist)):
-			fd.write(f'["{statuslist[j][0]}",{statuslist[j][1]}]')
-			if j != len(statuslist)-1:	fd.write(', ')
-		fd.write(']')
-
 	# returns sum of the weight of all items in player inventory
 	def invWeight(self):
 		weight = 0
@@ -817,7 +717,6 @@ class Creature():
 		if lower:
 			return [item.name.lower() for item in self.inv]
 		return [item.name for item in self.inv]
-
 
 	# just a function wrapper for functions that call contentNames on objects
 	def contentNames(self):
@@ -1068,12 +967,6 @@ class Player(Creature):
 		thisobj = cls(d["name"],d["desc"],d["hp"],d["mp"],d["traits"],d["money"],d["inv"],d["gear"],d["status"],d["xp"],d["rp"],d["crouched"])
 		return thisobj
 
-	def writeAttributes(self,fd):
-		super(Player,self).writeAttributes(fd)
-		fd.write(", ")
-		if len(self.status) != 0:	fd.write("\n\t")
-		fd.write(f"{self.xp}, {self.rp}, {self.crouched}")
-
 	# wrapper for objSearch, sets the degree of the search 2 by default
 	# returns an item in player inv object tree whose name matches given term
 	def search(self,term,d=2,getSource=False,getPath=False,reqSource=None):
@@ -1319,6 +1212,7 @@ class Player(Creature):
 			print("You have no weapons")
 		else:	columnPrint(self.weapons,12,12)
 
+
 ##########################
 ## SUBCLASS DEFINITIONS ##
 ##########################
@@ -1441,20 +1335,6 @@ class Passage(Fixture):
 		self.connections = connections
 		self.descname = descname
 
-	def writeAttributes(self,fd):
-		fd.write(f'"{self.name}", "{self.desc}", ')
-		fd.write(f'{self.weight}, {self.durability},')
-
-		connectionsList = list(self.connections.items())
-		if len(connectionsList) != 0:		fd.write('\n\t')
-		fd.write('{')
-		for k in range(len(connectionsList)):
-			fd.write(f'"{connectionsList[k][0]}": {connectionsList[k][1]}')
-			if k != len(connectionsList)-1:	fd.write(', ')
-		fd.write('}, ')
-		fd.write(f'"{self.descname}"')
-
-
 	def Traverse(self,P,W,G,dir=None):
 		if dir == None:
 			if len(self.connections) == 1:
@@ -1479,12 +1359,6 @@ class Weapon(Item):
 		self.range = range
 		self.twohanded = bool(twohanded)
 		self.type = type
-
-	# weapon is stored as normal item data with an additional 4 ints at the end
-	def writeAttributes(self, fd):
-		super(Weapon,self).writeAttributes(fd)
-		fd.write(f', {self.might}, {self.sleight}, {self.sharpness}, ')
-		fd.write(f'{self.range}, {1 if self.twohanded else 0}, "{self.type}"')
 
 	def print(self):
 		print(f"{self.name} {self.might} {self.sleight}")
@@ -1598,6 +1472,7 @@ def destroyItemsByType(R,Type,d=0,msg=""):
 # creating some obstacle
 # changing current room
 # to simply give the player information
+
 
 #######################
 ## EFFECT DICTIONARY ##

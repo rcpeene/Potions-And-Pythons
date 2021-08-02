@@ -1,0 +1,443 @@
+{
+	"big tree": {
+		"name": "big tree",
+		"desc": "A very large tree stands before you. Much larger than any trees in the surrounding forest. It's looming height and cold shade feel imposing. To the north, a clearing can be seen in the distance. To the west, more woods. To the south, a clearing with a grassy hill.",
+		"exits": {
+			"north": "field",
+			"south": "glen",
+			"west": "boulder"
+		},
+		"contents": [
+			{
+				"name": "Amulet of Poisoned",
+				"desc": "a green amulet shaped like a teardrop",
+				"weight": 2,
+				"durability": 10,
+				"effect": "addCondition(P,['poisoned',10])",
+				"__class__": "Controller"
+			}
+		],
+		"occupants": [],
+		"status": [],
+		"__class__": "Room"
+	},
+	"boulder": {
+		"name": "boulder",
+		"desc": "A grey boulder the size of a mammoth rests here, surrounded by a few other large rocks. To the north, the forest thins. To the east, the forest seems greener. To the west, the forest grows darker.",
+		"exits": {
+			"north": "field",
+			"east": "big tree",
+			"west": "pit"
+		},
+		"contents": [],
+		"occupants": [],
+		"status": [],
+		"__class__": "Room"
+	},
+	"brook": {
+		"name": "brook",
+		"desc": "A softly babbling brook flows here. Only a few feet wide, it rolls past moist rocks and a muddy bank. To the east is a clearing with a grassy hill. To the west, the brook continues.",
+		"exits": {
+			"east": "glen",
+			"west": "pond"
+		},
+		"contents": [],
+		"occupants": [],
+		"status": [],
+		"__class__": "Room"
+	},
+	"cabin": {
+		"name": "cabin",
+		"desc": "You are in a short hallway made of wooden walls. There is a grimey dark purple carpet below you. There are four doors. The front door is on the west end of the hallway, as well as a door on the east end of the hallway. There is also a door in the north and south walls of this hall.",
+		"exits": {
+			"north": "cabin kitchen",
+			"east": "cabin bathroom",
+			"south": "cabin quarters",
+			"west": "cliffside"
+		},
+		"contents": [],
+		"occupants": [],
+		"status": [],
+		"__class__": "Room"
+	},
+	"cabin kitchen": {
+		"name": "cabin kitchen",
+		"desc": "A decrepit kitchen. The",
+		"exits": {},
+		"contents": [],
+		"occupants": [],
+		"status": [],
+		"__class__": "Room"
+	},
+	"cabin bathroom": {
+		"name": "cabin bathroom",
+		"desc": "",
+		"exits": {},
+		"contents": [],
+		"occupants": [],
+		"status": [],
+		"__class__": "Room"
+	},
+	"cabin quarters": {
+		"name": "cabin quarters",
+		"desc": "",
+		"exits": {},
+		"contents": [],
+		"occupants": [],
+		"status": [],
+		"__class__": "Room"
+	},
+	"cave": {
+		"name": "cave",
+		"desc": "A wet cave. You are surrounded by stalactites above and stalagmites around. Dripping sounds can be heard echoing throughout the cave. A dim light can be seen down a tunnel to the north.",
+		"exits": {
+			"north": "tunnel",
+			"up": "glen"
+		},
+		"contents": [
+			{
+				"name": "stairwell",
+				"desc": "stairs leading up into the light and down into the dark",
+				"weight": -1,
+				"durability": -1,
+				"connections": {
+					"up": "pit",
+					"down": "cabin"
+				},
+				"descname": "stairwell that goes up and down",
+				"__class__": "Passage"
+			},
+			{
+				"name": "compass",
+				"desc": "a plain steel compass with a red arrow",
+				"weight": 2,
+				"durability": 10,
+				"__class__": "Compass"
+			},
+			{
+				"name": "Amulet of Swords",
+				"desc": "a red amulet shaped like a sword",
+				"weight": 2,
+				"durability": 10,
+				"effect": "spawnItem(G, Sword('sword', 'a plain iron sword', 8, 10, 2, 2, 2, 0, False, 's'))",
+				"__class__": "Controller"
+			},
+			{
+				"name": "red potion",
+				"desc": "a red bubbly brew in a glass bottle",
+				"weight": 6,
+				"durability": 3,
+				"__class__": "Potion"
+			},
+			{
+				"name": "sword",
+				"desc": "a plain iron sword",
+				"weight": 8,
+				"durability": 10,
+				"might": 2,
+				"sleight": 2,
+				"sharpness": 2,
+				"range": 0,
+				"twohanded": false,
+				"type": "s",
+				"__class__": "Sword"
+			},
+			{
+				"name": "sword",
+				"desc": "a plain iron sword",
+				"weight": 8,
+				"durability": 10,
+				"might": 2,
+				"sleight": 2,
+				"sharpness": 2,
+				"range": 0,
+				"twohanded": false,
+				"type": "s",
+				"__class__": "Sword"
+			}
+		],
+		"occupants": [
+			{
+				"name": "python",
+				"desc": "a brown snake",
+				"hp": 20,
+				"mp": 0,
+				"money": 0,
+				"inv": [
+					{
+						"name": "sword",
+						"desc": "a plain iron sword",
+						"weight": 8,
+						"durability": 10,
+						"might": 2,
+						"sleight": 2,
+						"sharpness": 2,
+						"range": 0,
+						"twohanded": false,
+						"type": "s",
+						"__class__": "Sword"
+					},
+					{
+						"name": "sword",
+						"desc": "a plain iron sword",
+						"weight": 8,
+						"durability": 10,
+						"might": 2,
+						"sleight": 2,
+						"sharpness": 2,
+						"range": 0,
+						"twohanded": false,
+						"type": "s",
+						"__class__": "Sword"
+					},
+					{
+						"name": "breadroll",
+						"desc": "a small roll of bread",
+						"weight": 1,
+						"durability": 10,
+						"__class__": "Bread"
+					}
+				],
+				"status": [
+					[
+						"angered",
+						-2
+					],
+					[
+						"poisoned",
+						10
+					]
+				],
+				"gear": {
+					"hand": 0,
+					"head": 0,
+					"mouth": -1
+				},
+				"traits": [
+					2,
+					2,
+					2,
+					2,
+					2,
+					2,
+					2,
+					2,
+					2,
+					2
+				],
+				"__class__": "Animal"
+			}
+		],
+		"status": [
+			[
+				"darkness",
+				-1
+			],
+			[
+				"poisonous",
+				3
+			]
+		],
+		"__class__": "Room"
+	},
+	"cliffside": {
+		"name": "cliffside",
+		"desc": "A small log cabin resides here. Moss and vines cover what may have once been a reddish colored home. Rays of light peak through the canopy, landing on the dusty roof. All sides of this cabin are surrounded by insurmountable cliffs except the forest to the east.",
+		"exits": {
+			"east": "pond",
+			"up": "glen"
+		},
+		"contents": [
+			{
+				"name": "cliff",
+				"desc": "a dark rocky cliff leading high up",
+				"weight": -1,
+				"durability": -1,
+				"connections": {
+					"up": "glen"
+				},
+				"descname": "cliff leading up",
+				"cr": 30,
+				"__class__": "Wall"
+			},
+			{
+				"name": "doorbell",
+				"desc": "a bronze bell hanging near the door of the cabin",
+				"weight": 2,
+				"durability": 10,
+				"effect": "changeMode",
+				"__class__": "Switch"
+			}
+		],
+		"occupants": [],
+		"status": [],
+		"__class__": "Room"
+	},
+	"field": {
+		"name": "field",
+		"desc": "A large open field before you. To the south and southwest, a forest grows.",
+		"exits": {
+			"south": "big tree",
+			"southwest": "boulder"
+		},
+		"contents": [],
+		"occupants": [],
+		"status": [],
+		"__class__": "Room"
+	},
+	"glen": {
+		"name": "glen",
+		"desc": "A small grassy glen, surrounded on most sides by a dense forest. To the north, you see no end to the trees. A rocky hill to the south shows a gaping cave entrance. To the west, the trees are verdant.",
+		"exits": {
+			"north": "big tree",
+			"south": "tunnel",
+			"west": "brook"
+		},
+		"contents": [
+			{
+				"name": "sign",
+				"desc": "A wooden sign",
+				"weight": 100,
+				"durability": 7,
+				"text": "Welcome to the Land!\nWatch out for Snakes.",
+				"__class__": "Sign"
+			},
+			{
+				"name": "chest",
+				"desc": "a large wooden chest",
+				"weight": 4,
+				"durability": 10,
+				"open": false,
+				"contents": [
+					{
+						"name": "capsule",
+						"desc": "a metal capsule",
+						"weight": 1,
+						"durability": 10,
+						"open": false,
+						"contents": [],
+						"keyids": [
+							1
+						],
+						"locked": true,
+						"__class__": "Lockbox"
+					},
+					{
+						"name": "small chest",
+						"desc": "a small wooden chest",
+						"weight": 4,
+						"durability": 10,
+						"open": false,
+						"contents": [
+							{
+								"name": "blue potion",
+								"desc": "a blue bubbly brew in a glass bottle",
+								"weight": 6,
+								"durability": 3,
+								"__class__": "Potion"
+							},
+							{
+								"name": "breadroll",
+								"desc": "a small roll of bread",
+								"weight": 1,
+								"durability": 10,
+								"__class__": "Bread"
+							}
+						],
+						"__class__": "Box"
+					}
+				],
+				"__class__": "Box"
+			},
+			{
+				"name": "table",
+				"desc": "an oaken table",
+				"weight": 40,
+				"durability": 5,
+				"contents": [
+					{
+						"name": "blue potion",
+						"desc": "a blue bubbly brew in a glass bottle",
+						"weight": 6,
+						"durability": 3,
+						"__class__": "Potion"
+					}
+				],
+				"descname": "table with things on it",
+				"__class__": "Table"
+			},
+			{
+				"name": "blue potion",
+				"desc": "a blue bubbly brew in a glass bottle",
+				"weight": 6,
+				"durability": 3,
+				"__class__": "Potion"
+			}
+		],
+		"occupants": [],
+		"status": [],
+		"__class__": "Room"
+	},
+	"pit": {
+		"name": "pit",
+		"desc": "A deep black pit, big enough for a horse breaks the treeline in the forest. You cannot see the bottom. To the east, the green forest continues. To the south, the forest seems muddier.",
+		"exits": {
+			"east": "boulder",
+			"south": "pond"
+		},
+		"contents": [],
+		"occupants": [],
+		"status": [],
+		"__class__": "Room"
+	},
+	"pond": {
+		"name": "pond",
+		"desc": "A little brook flows into a medium-sized pond here. Lilypads and small green fish can be seen. To the north, the forest gets drier. The brook flows from the east. To the west, the forest gets denser.",
+		"exits": {
+			"north": "pit",
+			"east": "brook",
+			"west": "cliffside"
+		},
+		"contents": [
+			{
+				"name": "iron key",
+				"desc": "a plain iron key",
+				"weight": 1,
+				"durability": 6,
+				"id": 1,
+				"__class__": "Key"
+			}
+		],
+		"occupants": [],
+		"status": [],
+		"__class__": "Room"
+	},
+	"tunnel": {
+		"name": "tunnel",
+		"desc": "A long tunnel. To the north, a bright opening can be seen. To the south, a dark cave beckons.",
+		"exits": {
+			"north": "glen",
+			"south": "cave"
+		},
+		"contents": [
+			{
+				"name": "breadroll",
+				"desc": "a small roll of bread",
+				"weight": 1,
+				"durability": 10,
+				"__class__": "Bread"
+			},
+			{
+				"name": "Tunic",
+				"desc": "a magic green cloth tunic",
+				"weight": 10,
+				"durability": -1,
+				"prot": 100,
+				"__class__": "Tunic"
+			}
+		],
+		"occupants": [],
+		"status": [],
+		"__class__": "Room"
+	}
+}

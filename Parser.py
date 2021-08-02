@@ -199,18 +199,21 @@ def Get(command):
 		obj = G
 	elif objname in {"here","room"}:
 		obj = G.currentroom
+	elif objname in {"w","world"}:
+		obj = W
 	else:
 		obj = objSearch(objname,G.currentroom,d=3)
-	print("==== obj: ",obj)
 	if obj == None:
 		try: obj = W[objname]
 		except:	pass
 	if obj == None:
 		print("Object not found")
 		return
-	attrString = command[2]
-	try:	print(getattr(obj,attrString))
-	except:	print("Attribute does not exist")
+	try:
+		attrString = command[2]
+		print(getattr(obj,attrString))
+	except:
+		print("Attribute does not exist")
 
 def Learn(command):
 	try:	P.gainxp(int(command[1]))

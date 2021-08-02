@@ -2,10 +2,9 @@
 # This file contains the classes used in the game and the dicts to identify them
 # This file is dependent on Core.py and is a dependency of Menu.py
 
-# It consists of three main parts;
+# It consists of two main parts;
 # 1. Class definitions		(all specific item and creature definitions)
-# 2. Item dictionary		(used to identify item objects from strings)
-# 3. Creature dictionary	(used to identify creature objects from strings)
+# 2. strToClass() function	(function which returns class object from string)
 
 from Core import *
 
@@ -29,16 +28,6 @@ class Box(Item):
 		Item.__init__(self,name,desc,weight,durability)
 		self.open = open
 		self.contents = contents
-
-	def writeAttributes(self,fd):
-		super(Box,self).writeAttributes(fd)
-		fd.write(f", {self.open}, ")
-		if len(self.contents) != 0:	fd.write("\n\t")
-		fd.write("[")
-		for i in range(len(self.contents)):
-			writeObj(fd,self.contents[i])
-			if i != len(self.contents) - 1:	fd.write(",\n\t")
-		fd.write("]")
 
 	# takes a string, term, and searches the box's contents
 	# if an item is found that matches term, return it, otherwise, return None
@@ -102,11 +91,6 @@ class Controller(Item):
 		Item.__init__(self,name,desc,weight,durability)
 		self.effect = effect
 
-	# has an effect string which is used as a key in an 'effects' dict
-	def writeAttributes(self,fd):
-		super(Controller,self).writeAttributes(fd)
-		fd.write(', "' + self.effect + '"')
-
 	# triggers some effect using the effect string to call related function
 	def Trigger(self,P,W,G):
 		eval(self.effect)
@@ -121,10 +105,6 @@ class Door(Fixture):
 		# connection is a 4-tuple of the form:
 		# (outDirection, outLocation, inDirection, inLocation)
 		self.outconnection = connections[0]
-
-	def writeAttributes(self,fd):
-		super(Door,self).writeAttributes(fd)
-		fd.write(f', "{self.open}", {self.connections}')
 
 	# sets open bool to true, triggers the effect
 	def Open(self,Currentroom,W):
@@ -165,10 +145,6 @@ class Lockbox(Box):
 		Box.__init__(self,name,desc,weight,durability,open,contents)
 		self.keyids = keyids
 		self.locked = locked
-
-	def writeAttributes(self,fd):
-		super(Lockbox,self).writeAttributes(fd)
-		fd.write(f", {self.locked}")
 
 	# sets open bool to true, prints its contents
 	def Open(self):
@@ -248,10 +224,6 @@ class Sign(Item):
 		Item.__init__(self,name,desc,durability,weight)
 		self.text = text
 
-	def writeAttributes(self,fd):
-		super(Sign,self).writeAttributes(fd)
-		fd.write(', "' + self.text + '"')
-
 	# prints the text on the sign in quotes
 	def Look(self):
 		print('\n"' + self.text + '"')
@@ -260,11 +232,6 @@ class Switch(Fixture):
 	def __init__(self,name,desc,weight,durability,effect):
 		Fixture.__init__(self,name,desc,weight,durability)
 		self.effect = effect
-
-	# has an effect string which is used as a key in an 'effects' dict
-	def writeAttributes(self,fd):
-		super(Switch,self).writeAttributes(fd)
-		fd.write(', "' + self.effect + '"')
 
 	# triggers some effect using the effect name to find related function
 	def Trigger(self,P,W,G):
@@ -282,16 +249,6 @@ class Table(Fixture):
 		Fixture.__init__(self,name,desc,weight,durability)
 		self.contents = contents
 		self.descname = descname
-
-	def writeAttributes(self,fd):
-		super(Table,self).writeAttributes(fd)
-		fd.write(',')
-		if len(self.contents) != 0:	fd.write('\n\t')
-		fd.write('[')
-		for i in range(len(self.contents)):
-			writeObj(fd,self.contents[i])
-			if i != len(self.contents) - 1:	fd.write(',\n\t')
-		fd.write(f'], "{self.descname}"')
 
 	# takes a string, term, and searches the box's contents
 	# if an item is found that matches term, return it, otherwise, return None
@@ -356,44 +313,12 @@ class Wall(Passage):
 		return True
 
 
-#####################
-## ITEM DICTIONARY ##
-#####################
+#########################
+## strToClass Function ##
+#########################
 
 def strToClass(classname):
 	if classname in globals():
 		return globals()[classname]
 	else:
 		return None
-
-
-items = {
-	"":Empty,
-	"Bottle":Bottle,
-	"Box":Box,
-	"Bread":Bread,
-	"Compass":Compass,
-	"Controller":Controller,
-	"Door":Door,
-	"Item":Item,
-	"Lockbox":Lockbox,
-	"Passage":Passage,
-	"Potion":Potion,
-	"Shard":Shard,
-	"Sign":Sign,
-	"Switch":Switch,
-	"Sword":Sword,
-	"Table":Table
-}
-
-
-#########################
-## CREATURE DICTIONARY ##
-#########################
-
-creatures = {
-	"Animal":Animal,
-	"Creature":Creature,
-	"Monster":Monster,
-	"Person":Person
-}

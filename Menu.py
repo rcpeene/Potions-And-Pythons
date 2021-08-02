@@ -19,37 +19,7 @@ from Objects import *
 ## WRITE DATA FUNCTIONS ##
 ##########################
 
-# writes the player object to a file, probably named player.popy
-def writePlayer(filename,P):
-	pfd = open(filename,"w")
-	P.writeAttributes(pfd)
-	pfd.close()
-
-# writes the world dictionary to a file, probably named "world.popy"
-def writeWorld(filename,W):
-	wfd = open(filename,'w')
-	# write each room in the world dict
-	for roomname in W:
-		room = W[roomname]
-		# name denoted by '#', description denoted by '@'
-		wfd.write(f'#{roomname}\n')
-		wfd.write(f'@{room.desc}\n')
-		# write each exit direction and name, denoted by '%'
-		for exit in room.exits:
-			wfd.write(f'%"{exit}": "{room.exits[exit]}"\n')
-		# write each item name, denoted by '$'
-		for item in room.contents:
-			writeObj(wfd,item)
-			wfd.write('\n')
-		# write each creature name, denoted by '#'
-		for creature in room.occupants:
-			writeObj(wfd,creature)
-			wfd.write('\n')
-		# ends a room block with a '~' and some newlines
-		wfd.write("~\n\n")
-	wfd.close()
-
-# just writes the game object to a file, probably named "game.popy"
+# just writes the game object to a file, probably named "game.txt"
 def writeGame(filename,G):
 	gfd = open(filename,"w")
 	gfd.write(str(G.mode) + "\n")
@@ -58,11 +28,9 @@ def writeGame(filename,G):
 	gfd.write(str(G.time) + "\n")
 	gfd.close()
 
-
-JSONprimitives = {dict,list,str,int,float,bool,None}
-
 class worldEncoder(json.JSONEncoder):
 	def default(self, o):
+		JSONprimitives = {dict,list,str,int,float,bool,None}
 		if type(o) == set:
 			return {"__class__":"set","setdata":list(o)}
 		# elif type(o) == Room:
@@ -110,151 +78,12 @@ def writeJSON(filename,W):
 	with open(filename,"w") as fd:
 		json.dump(W,fd,cls=worldEncoder,indent="\t")
 
+
 #########################
 ## READ DATA FUNCTIONS ##
 #########################
 
-# takes text between quotations and replaces \n and \t with respective values
-def readString(text):
-	quote = text[0]
-	start = 1
-	end = text.find(quote,start)
-	string = text[start:end]
-	return string.replace('\\n','\n').replace('\\t','\t')
-
-# strips whitepsace and casts text to integer
-def readInt(text):
-	return int(text.strip())
-
-# strips whitespace and casts text to corresponding boolean value
-def readBool(text):
-	text = text.strip()
-	if text == "False":		return False
-	elif text == "True":	return True
-	else:	raise Exception("Text is not boolean value")
-
-# reads the given text as a list, delimited by both ':' and ',' then...
-# casts that list to a dict by iterating through every other index in the list
-def readDict(text):
-	l = readList(text,',:')
-	try:	return {l[i]: l[i+1] for i in range(0,len(l),2)}
-	except: raise Exception("Dict data not convertable from list to dict")
-
-# reads a list from text, given a set of delimiters (usually just ',')
-# takes text BETWEEN the brackets (dont include the brackets in text input)
-# iterates through the text with i and finds the index of the next delimiter
-# isolates text between i and next delimiter, assigns it to elemtext
-# attempts to define elem by passing elemtext to the appropriate read function
-# skips i to the index following the last delimiter that was used
-# if elemtext is correctly read into a data type, append that data to the list
-def readList(text,delimiters):
-	list = []
-	i = 0
-	while i < len(text):
-		elem = None
-		delimiter = findNextDelimiter(delimiters,text,i)
-		elemtext = text[i:delimiter].strip()
-		if elemtext[0] in {'"'}:
-			elem = readString(elemtext)
-			i = delimiter + 1
-		elif elemtext[0] in numsymbols:
-			elem = readInt(elemtext)
-			i = delimiter + 1
-		elif elemtext == 'True' or elemtext == 'False':
-			elem = readBool(elemtext)
-			i = delimiter + 1
-		elif elemtext[0] == '[':
-			liststart = text.find('[',i)
-			listend = findMatchingParenth(text,liststart)
-			listtext = text[liststart+1:listend]
-			elem = readList(listtext,',')
-			i = findNextDelimiter(delimiters,text,listend) + 1
-		elif elemtext[0] == '{':
-			symbol = elemtext[0]
-			dictstart = text.find(symbol,i)
-			dictend = findMatchingParenth(text,dictstart)
-			dicttext = text[dictstart+1:dictend]
-			elem = readDict(dicttext)
-			i = findNextDelimiter(delimiters,text,dictend) + 1
-		elif elemtext[0] in {'$','!'}: # the element is be an object
-			tag = elemtext[0]
-			objStart = text.find(tag,i)
-			open = text.find('(',i)
-			close = findMatchingParenth(text,open)
-			elem = readObj(text[objStart:close+1])
-			i = findNextDelimiter(delimiters,text,close) + 1
-		else:
-			raise Exception('Unreadable data element in list: ' + elemtext)
-		list.append(elem)
-	return list
-
-# reads object text of the form: ?Classname (attribute1,attribute2...)
-# where ? is a tag '$' or '!' which signifies the broad type of object
-# instantiates an Item() or Creature() object and returns it
-def readObj(objtext):
-	tag = objtext[0]
-	open = objtext.index("(")
-	classname = objtext[1:open].strip()
-	close = findMatchingParenth(objtext,open)
-	attributetext = objtext[open+1:close]
-	attributes = readList(attributetext,",")
-	classobj = strToClass(classname)
-	return classobj(*attributes)
-
-# takes roomtext, a list of lines of data, as input, as well as the world dict
-# instantiates a Room() object from roomtext and adds the room to the world dict
-def readRoom(roomtext,world):
-	name = ""
-	desc = ""
-	exits = {}
-	contents = []
-	occupants = []
-	roomeffects = []
-	# for each line in roomtext
-	for l in range(len(roomtext)):
-		line = roomtext[l]
-		if line[0] == "#":		# room name
-			name = line[1:-1]
-		elif line[0] == "@":	# room description
-			desc = line[1:-1]
-		elif line[0] == "%":	# room exit
-			colon = line.index(":")
-			key = readString(line[1:colon].strip())
-			value = readString(line[colon+1:-1].strip())
-			exits[key] = value
-		elif line[0] in {"$","!"}:	# Item() or Creature()
-			tag = line[0]
-			objtext = " ".join(roomtext[l:])
-			obj = readObj(objtext)
-			if tag == "$":	contents.append(obj)
-			if tag == "!":	occupants.append(obj)
-		elif line[0] == "*":	# room effects			symbol = elemtext[0]
-			listtext = " ".join(roomtext[l:])
-			start = listtext.index("[")
-			end = findMatchingParenth(listtext,start)
-			roomeffects = readList(listtext[start+1:end],",")
-		elif line[0] == "~":	# end room data
-			world[name] = Room(name,desc,exits,contents,occupants,roomeffects)
-
-# reads all data in the world file, probably named "world.popy"
-# returns the World object as a dictionary of string: Room() pairs
-def readWorld(filename):
-	world = {}
-	wfd = open(filename,"r")
-	worldtext = wfd.readlines()
-	l = 0
-	while l < len(worldtext):
-		if worldtext[l][0] == "#":
-			endroomtext = findLineStartsWith(worldtext,"~",l)
-			roomtext = worldtext[l:endroomtext+1]
-			readRoom(roomtext,world)
-			l = endroomtext
-		else:
-			l += 1
-	wfd.close()
-	return world
-
-# reads the global game class file, probably named "game.popy"
+# reads the global game class file, probably named "game.txt"
 # takes the world dict as input, returns the Game object
 def readGame(filename,W):
 	gfd = open(filename,"r")
@@ -265,16 +94,6 @@ def readGame(filename,W):
 	time = int(gametext[3][:-1])		# fourth line is time int
 	gfd.close()
 	return Game(mode,W[currentroom],W[prevroom],time)
-
-# reads the player file, probably named "player.popy"
-# returns the Player object
-def readPlayer(filename):
-	pfd = open(filename, "r")
-	playertext = pfd.readlines()
-	playertext = " ".join(playertext)
-	attributes = readList(playertext,",")
-	pfd.close()
-	return Player(*attributes)
 
 
 ####################
@@ -313,11 +132,9 @@ def saveGame(P,W,G):
 
 	# write world, player, and game files
 	os.chdir(savename)
-	# writeWorld("world.popy", W)
 	writeJSON("world.json", W)
-	# writePlayer("player.popy", P)
 	writeJSON("player.json", P)
-	writeGame("game.popy", G)
+	writeGame("game.txt", G)
 	os.chdir("..")
 	os.chdir("..")
 	sleep(1)
@@ -344,17 +161,17 @@ def loadGame(filename):
 		os.chdir("..")
 		return mainMenu()
 	# try to load the player, world, and game objects
-	# try:
-	os.chdir(savename)
-	P = readJSON("player.json")
-	W = readJSON("world.json")
-	G = readGame("game.popy",W)
+	try:
+		os.chdir(savename)
+		P = readJSON("player.json")
+		W = readJSON("world.json")
+		G = readGame("game.txt",W)
 	# # hopefully load doesn't fail, that would suck
-	# except:
-	# 	print("Could not load game, save file corrupted\n")
-	# 	os.chdir("..")
-	# 	os.chdir("..")
-	# 	return mainMenu()
+	except:
+		print("Could not load game, save file corrupted\n")
+		os.chdir("..")
+		os.chdir("..")
+		return mainMenu()
 
 	os.chdir("..")
 	os.chdir("..")
@@ -432,7 +249,7 @@ def createCharacter():
 # starts a new game and returns player, world, and game objects
 def newGame():
 	# tries to load a clean new world from initial world file
-	W = readWorld("world.popy")
+	W = readJSON("World.json")
 	# initializes from the character creation screen
 	P = createCharacter()
 	# initializes the game at the "cave" room
@@ -446,7 +263,7 @@ def newGame():
 
 # automatically starts a new game with a premade character for easy testing
 def testGame():
-	W = readWorld("world.popy")
+	W = readJSON("World.json")
 	traits = [4 for _ in range(10)]
 	C = Compass("compass", "a plain steel compass with a red arrow", 2, 10)
 	status = [["fireproof",-1], ["poisoned",5], ["cursed",-2], ["immortal",-1],
@@ -663,62 +480,3 @@ def gameIntro():
 	print(logo+"\n"*7)
 	sleep(0.625)
 	endIntro()
-
-
-################################################################################
-#
-# THE FOLLOWING CODE COULD BE USED FOR A FUTURE TRANSITION TO SAVING GAME DATA IN JSON FORMAT
-#
-# Note: the current main incompatability with this code is the fact that some objects' __init__ method takes the data in a way takes parameters which do not have a 1:1 relationship with the object attributes.
-# for instance, python.__init__() takes many numerical attributes as an array, but the attributes are not stored like this in JSON format.
-#
-################################################################################
-#
-# import json
-# JSONprimitives = {dict,list,str,int,float,bool,None}
-
-# class worldEncoder(json.JSONEncoder):
-# 	def default(self, o):
-# 		if type(o) == set:
-# 			return {"__class__":"set","setdata":list(o)}
-# 		# elif type(o) == Room:
-# 		# 	return o.__dict__
-# 		elif type(o) not in JSONprimitives:
-# 			d = o.__dict__
-# 			d["__class__"] = o.__class__.__name__
-# 			return d
-# 			# return [o.__class__.__name__] + list(o.__dict__.values())
-# 		else:
-# 			return o
-#
-# def default(d):
-# 	print(type(d))
-# 	if "__class__" in d and d["__class__"] == "set":
-# 		return set(d["setdata"])
-# 	elif "__class__" in d.keys():
-# 		objClassname = d["__class__"]
-# 		del d["__class__"]
-#
-# 		objAttributes = list(d.values())
-# 		print("========================: " + d["name"] + str(objAttributes))
-# 		if objClassname == "Room":
-# 			return Room(*objAttributes)
-# 		elif objClassname == "Empty":
-# 			return Empty()
-# 		elif objClassname in creatures:
-# 			return creatures[objClassname](*objAttributes)
-# 		elif objClassname in items:
-# 			return items[objClassname](*objAttributes)
-# 		else:
-# 			raise Exception("ERROR in decoding JSON object class type")
-# 	else:
-# 		return d
-#
-# def readJSON(filename):
-# 	with open(filename,"r") as fd:
-# 		W = json.load(fd,object_hook=default)
-# 	return W
-#
-# def writeJSON(filename,W):
-# 	with open(filename,"w") as fd:
-# 		json.dump(W,fd,cls=worldEncoder,indent="\t")
