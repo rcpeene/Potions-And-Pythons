@@ -4,8 +4,8 @@
 
 from Parser import *
 
-# note: some startup code is run in Parser.py before main is called
-def main():
+# note: some startup code is run in Parser.py before main code is run
+if __name__ == "__main__":
 	while True:
 		G.sortOccupants(W)
 
@@ -28,9 +28,6 @@ def main():
 		G.whoseturn = None
 		G.incrementTime(P,W)
 
-if __name__ == "__main__":
-	main()
-
 
 
 ################################################################################
@@ -38,12 +35,12 @@ if __name__ == "__main__":
 # CURRENT TASKS
 
 # really consider what attributes to give items. maybe give them a value and a size attribute.
-# give passages complete "connections" rather than just directions, ie directions and destinations
 # add hide/crouch/crawl
 # test newest actions
 # when creature die, make it so they drop items maybe? instead of to player inv?
 # fix Go() when they dont have a compass
 # examine output grammar/statements for lower level actions (in case non-player creatures do actions, we dont want it to print the same msgs)
+# add creatures with many limbs (or can equip more than 2 weapons/shields)
 
 # add carry/put down (HOW IS THIS GONNA WORK? does it equip the creature? while they are restraining is the player unable to do anything else?)
 # organize method names in Core.py, jesus christ
@@ -91,7 +88,7 @@ if __name__ == "__main__":
 
 # FUTURE IMPROVEMENTS
 
-# fill out definitions more
+# fill out definitions more, change definitions of some things to be more expository and fantastical
 # consider making objects hideable based on something other than weight
 # add quicksave and autosave, possibly include recent save name in Game() class
 # add signal handling: ctrl+s to save, ctrl+q to quit?
@@ -160,52 +157,3 @@ if __name__ == "__main__":
 # 	preps = {toward, none}
 # 	I,R,prep = interpretSearch(dobj,iobj,prep,preps,dobjSearch,iobjSearch)
 #
-#
-
-
-"""
-def Go(dobj,iobj,prep):
-	preps = {"down","through","to","toward","up","in","into","on","onto"}
-	dir = None
-	if dobj == None and iobj == None and prep == None:
-		dobj,iobj,prep = parseWithoutVerb("Where will you go?",preps)
-	dobj,iobj,prep = map(expandDir,[dobj,iobj,prep])
-	if prep != None and prep not in preps:
-		print("Command not understood")
-		return False
-
-	if dobj == None:	dobj = iobj
-	if dobj in directions.values():
-		dir = dobj
-		dobj = None
-	elif prep in directions.values():
-		dir = prep
-	if dobj == None:	dobj = iobj
-	print(f"dobj: {dobj}\niobj: {iobj}\nprep: {prep}\ndir: {dir}")
-
-	if dobj == "back":	dobj = G.prevroom.name
-	if dobj == G.currentroom.name:
-		print("You are already there")
-		return False
-
-	allExits = G.currentroom.allExits()
-	if dir in allExits.keys() and dir not in G.currentroom.exits:
-		dobj = G.currentroom.getPassageFromDir(dir).name
-	passage = G.currentroom.inContents(dobj)
-	if passage:
-		if hasMethod(passage,"Traverse"):
-			return passage.Traverse(P,W,G,dir)
-
-	if dir in allExits.keys():
-		dobj = allExits[dir]
-	if "up" in allExits.keys() and allExits["up"] == dobj:
-		return GoVertical("up")
-	if "down" in allExits.keys() and allExits["down"] == dobj:
-		return GoVertical("down")
-	if dobj in allExits.values():
-		return G.changeRoom(W[dobj],P,W)
-
-	if dir in directions.values(): print(f"There is no exit leading {dir} here")
-	else: print(f"There is no exit leading to a '{dobj}' here")
-	return False
-"""

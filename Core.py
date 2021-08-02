@@ -23,6 +23,8 @@ from Data import *
 
 def hasMethod(obj,methodname):
 	possibleMethod = getattr(obj,methodname,None)
+	if not possibleMethod:
+		possibleMethod = getattr(obj.__class__,methodname,None)
 	if possibleMethod != None and callable(possibleMethod):
 		return True
 	return False
@@ -153,11 +155,11 @@ def listItems(items):
 
 # prints a question, gets a yes or no, returns True or False respectively
 def yesno(question):
-	command = input(question + '\n> ').lower()
-	if command in yesses:	return True
-	elif command in noes:	return False
-	print("Enter yes or no")
-	return yesno(question)
+	while True:
+		command = input(question + '\n> ').lower()
+		if command in yesses:	return True
+		elif command in noes:	return False
+		print("Enter yes or no")
 
 # rolls n dice of range d adds a modifier m, returns number
 def diceRoll(n,d,m):
@@ -170,8 +172,15 @@ def diceRoll(n,d,m):
 # returns a number, n, with a lower bound of m
 def minm(m,n): return m if n < m else n
 
-#returns a number, n, with an upper bound of m
+# returns a number, n, with a lower bound of 0
+def min0(n): return 0 if n < 0 else n
+
+# returns a number, n, with a lower bound of 1
+def min1(n): return 1 if n < 1 else n
+
+# returns a number, n, with an upper bound of m
 def maxm(m,n): return m if n > m else n
+
 
 # searches a string, text, starting at start index, for matching parenthesis
 # returns the index of the closing parenthesis that matches the open parenthesis
@@ -649,7 +658,7 @@ class Item():
 	# used to create a generic Weapon() if this item is used to attack something
 	def improviseWeapon(self):
 		#TODO: if item is too large/heavy, make it two-handed
-		return Weapon(self.name,self.desc,self.weight,self.durability,minm(1,self.weight//4),0,0,0,False,"b")
+		return Weapon(self.name,self.desc,self.weight,self.durability,min1(self.weight//4),0,0,0,False,"b")
 
 	def describe(self):
 		print("It's " + gprint("a",self.name,3,1), end="")
@@ -687,6 +696,7 @@ class Creature():
 		self.inv = inv
 		# convert gear from its stored form in files to its runtime form
 		self.gear = {key: inv[gear[key]] if gear[key] != -1 else Empty() for key in gear}
+
 		self.status = status
 		# sort status effects by duration; change '1' to '0' to sort by name
 		self.status.sort(key=lambda x: x[1])
@@ -720,6 +730,13 @@ class Creature():
 	def __lt__(self,other):
 		return self.MVMT() < other.MVMT()
 
+	def testPython(self):
+		print(self.inv)
+		for item1 in inv:
+			for item2 in inv:
+				print("cmp:",item1,"with",item2,end='')
+				print(" ! " if item1 == item2 else " ? ")
+
 	# converts the gear dict to a form more easily writable to a save file
 	# replaces all objects in gear.values() with an integer which represents...
 	# the index of the equipped object in the creature's inventory
@@ -734,6 +751,27 @@ class Creature():
 			try:	C[key] = self.inv.index(item)
 			except:	raise Exception("gear item not found in inventory")
 		return C
+
+	def convertToJSON(self):
+		compressedGear = self.compressGear()
+		d = self.__dict__.copy()
+		dictkeys = list(d.keys())
+		for key in dictkeys:
+			if key in traits or key in {"gear","weapon","weapon2","shield","shield2","alive","alert","seesPlayer","sawPlayer"}:
+				del d[key]
+		d["gear"] = compressedGear
+		d["traits"] = [self.STR,self.SKL,self.SPD,self.STM,self.CON,self.CHA,self.INT,self.WIS,self.FTH,self.LCK]
+		d["__class__"] = self.__class__.__name__
+		return d
+
+	@classmethod
+	def convertFromJSON(cls,d):
+		# thisobj = cls(0,0,0,0,[0 for i in range(10)],0,0,{},[])
+		# for key in d:
+		# 	val = dict[key]
+		# 	setattr(thisobj,key,val)
+		thisobj = cls(d["name"],d["desc"],d["hp"],d["mp"],d["traits"],d["money"],d["inv"],d["gear"],d["status"])
+		return thisobj
 
 	def writeAttributes(self,fd):
 		fd.write(f'"{self.name}", "{self.desc}", ')
@@ -755,8 +793,8 @@ class Creature():
 		for k in range(len(gearList)):
 			fd.write(f'"{gearList[k][0]}": {gearList[k][1]}')
 			if k != len(gearList)-1:	fd.write(', ')
-
 		fd.write('}, ')
+
 		if len(self.status) != 0:	fd.write('\n\t')
 		fd.write('[')
 		statuslist = list(self.status)
@@ -770,6 +808,9 @@ class Creature():
 		weight = 0
 		for item in self.inv: weight += item.Weight()
 		return weight
+
+	def handheldWeight(self):
+		return self.weapon.weight + self.weapon2.weight + self.shield.weight + self.shield2.weight
 
 	# returns a list of names of all items in player inventory
 	def invNames(self,lower = False):
@@ -807,7 +848,7 @@ class Creature():
 
 	def improviseWeapon(self):
 		#TODO: if item is too large/heavy, make it two-handed
-		return Weapon(self.name,self.desc,self.CON,self.CON,minm(1,self.Weight()//4),0,0,0,False,"b")
+		return Weapon(self.name,self.desc,self.CON,self.CON,min1(self.Weight()//4),0,0,0,False,"b")
 
 	# only used by equip and unequip to reassign several attributes
 	# specifically, weapon, weapon2, shield, shield2
@@ -941,11 +982,11 @@ class Creature():
 	def ACCU(self): return 50 + 2*self.SKL + self.LCK + self.weapon.sleight
 	def ATCK(self): return diceRoll(self.STR, self.weapon.might, 0)
 	def ATHL(self): return self.STR + self.SKL + self.STM
-	def ATSP(self): return self.SPD - minm(0,self.weapon.weight//4 - self.CON) - minm(0,self.weapon2.weight//4 - self.CON) - minm(0,self.shield.weight//4 - self.CON)
+	def ATSP(self): return self.SPD - min0(self.handheldWeight()//4 - self.CON)
 	def BRDN(self): return self.CON * self.STR * 4 + 60
-	def CAST(self): return self.WIS + self.FTH + self.INT - minm(0,self.gearWeight()//4 - self.CON)
+	def CAST(self): return self.WIS + self.FTH + self.INT - min0(self.gearWeight()//4 - self.CON)
 	def CRIT(self): return self.SKL + self.LCK + self.weapon.sharpness
-	def CSSP(self): return self.WIS - minm(0,self.invWeight() - self.BRDN()) - minm(0,self.gearWeight()//4 - self.CON)
+	def CSSP(self): return self.WIS - min0(self.invWeight() - self.BRDN()) - min0(self.gearWeight()//4 - self.CON)
 	def DCPT(self): return 2*self.CHA + self.INT
 	def DFNS(self): return self.CON + self.armor()
 	def ENDR(self): return 2*self.STM + self.CON
@@ -953,13 +994,13 @@ class Creature():
 	def INVS(self): return 2*self.INT + self.WIS
 	def KNWL(self): return 2*self.INT + self.LCK
 	def LOOT(self): return 2*self.LCK + self.FTH
-	def MVMT(self): return self.SPD + self.STM + 10 - minm(0,self.invWeight() - self.BRDN()) - minm(0,self.gearWeight()//4 - self.CON)
+	def MVMT(self): return self.SPD + self.STM + 10 - min0(self.invWeight() - self.BRDN()) - min0(self.gearWeight()//4 - self.CON)
 	def MXHP(self): return self.level()*self.CON + self.STM
 	def MXMP(self): return self.level()*self.WIS + self.STM
 	def PRSD(self): return 2*self.CHA + self.WIS
 	def RESC(self): return 2*self.FTH + self.STM
 	def RITL(self): return 2*self.FTH + self.LCK
-	def SLTH(self): return ( 2*self.SKL + self.INT - minm(0,self.invWeight() - self.BRDN()) ) * 2*self.hasCondition("hiding")
+	def SLTH(self): return ( 2*self.SKL + self.INT - min0(self.invWeight() - self.BRDN()) ) * 2*self.hasCondition("hiding")
 	def SPLS(self): return 2*self.INT
 	def TNKR(self): return 2*self.INT + self.SKL
 
@@ -988,7 +1029,7 @@ class Creature():
 		if(f"{type} resistance" in self.status):	dmg //= 2
 		if(f"{type} immunity" in self.status):		dmg = 0
 		print(f"Took {dmg} {dmgtypes[type]} damage")
-		self.hp = minm(0, self.hp-dmg)	#player hp lowered to a minimum of 0
+		self.hp = min0( self.hp-dmg)	#player hp lowered to a minimum of 0
 		if(self.hp == 0):
 			self.death(P,G,W)
 
@@ -1022,11 +1063,16 @@ class Player(Creature):
 		self.rp = rp
 		self.crouched = crouched
 
+	@classmethod
+	def convertFromJSON(cls,d):
+		thisobj = cls(d["name"],d["desc"],d["hp"],d["mp"],d["traits"],d["money"],d["inv"],d["gear"],d["status"],d["xp"],d["rp"],d["crouched"])
+		return thisobj
+
 	def writeAttributes(self,fd):
 		super(Player,self).writeAttributes(fd)
 		fd.write(", ")
 		if len(self.status) != 0:	fd.write("\n\t")
-		fd.write(f"{self.xp}, {self.rp}")
+		fd.write(f"{self.xp}, {self.rp}, {self.crouched}")
 
 	# wrapper for objSearch, sets the degree of the search 2 by default
 	# returns an item in player inv object tree whose name matches given term
@@ -1091,7 +1137,7 @@ class Player(Creature):
 		if(f"{type} resistance" in self.status):	dmg /= 2
 		if(f"{type} immunity" in self.status):		dmg = 0
 		print(f"You took {dmg} {dmgtypes[type]} damage")
-		self.hp = minm(0, self.hp-dmg)	#player hp lowered to a minimum of 0
+		self.hp = min0( self.hp-dmg)	#player hp lowered to a minimum of 0
 		if(self.hp == 0):
 			self.death()
 
@@ -1139,7 +1185,7 @@ class Player(Creature):
 		return count
 
 	def dualAttack(self,target,G,W):
-		hit = minm(1,maxm(99, self.ACCU() - target.EVSN()))
+		hit = min1(maxm(99, self.ACCU() - target.EVSN()))
 		if diceRoll(1,100,0) <= hit:
 			print()
 			crit = diceRoll(1,100,0) <= self.CRIT()
@@ -1147,7 +1193,7 @@ class Player(Creature):
 			if crit:
 				print("Critical hit!")
 				attack *= 2
-			damage = minm(0, attack - target.DFNS())
+			damage = min0( attack - target.DFNS())
 			target.takedmg(damage,self.weapon2.type,self,G,W)
 			if target.alive == False:
 				return
@@ -1155,19 +1201,19 @@ class Player(Creature):
 			print("Aw it missed")
 
 	def attackCreature(self,target,G,W):
-		n = minm(1, self.ATSP() // target.ATSP())
+		n = min1( self.ATSP() // min1(target.ATSP()))
 		print(f"{n} attacks:")
 		for i in range(n):
 			print(f"\n{ordinal(i+1)} attack")
 			# TODO: what about if weapon is ranged?
-			hit = minm(1,maxm(99, self.ACCU() - target.EVSN()))
+			hit = min1(maxm(99, self.ACCU() - target.EVSN()))
 			if diceRoll(1,100,0) <= hit:
 				crit = diceRoll(1,100,0) <= self.CRIT()
 				attack = self.ATCK()
 				if crit:
 					print("Critical hit!")
 					attack *= 2
-				damage = minm(0, attack - target.DFNS())
+				damage = min0( attack - target.DFNS())
 				target.takedmg(damage,self.weapon.type,self,G,W)
 				if target.alive == False:	return
 			else:
@@ -1394,6 +1440,20 @@ class Passage(Fixture):
 		self.durability = durability
 		self.connections = connections
 		self.descname = descname
+
+	def writeAttributes(self,fd):
+		fd.write(f'"{self.name}", "{self.desc}", ')
+		fd.write(f'{self.weight}, {self.durability},')
+
+		connectionsList = list(self.connections.items())
+		if len(connectionsList) != 0:		fd.write('\n\t')
+		fd.write('{')
+		for k in range(len(connectionsList)):
+			fd.write(f'"{connectionsList[k][0]}": {connectionsList[k][1]}')
+			if k != len(connectionsList)-1:	fd.write(', ')
+		fd.write('}, ')
+		fd.write(f'"{self.descname}"')
+
 
 	def Traverse(self,P,W,G,dir=None):
 		if dir == None:

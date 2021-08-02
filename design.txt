@@ -37,8 +37,9 @@ intro animation
 background data parsing functions
 world file, and saving methodology
 world file, and parsing methodology
+discuss attributes and writeAttributes
 
-SECTION 5 - parsing
+SECTION 5 - parsing and interpreting
 input processing, parsing, interpreting, executing methodology
 go function methodology
 attack function methodology
@@ -776,6 +777,7 @@ Norman's etc.
 Camphor Staff (or sm othr tree idk) Gingko Staff? etc,
 willow staff, banyan, aspen, birch, elm, sycamore
 Pantalon
+Step Reckoner
 (Magic?) Umbrella
 Shrunken heads
 Magic Teapot (or just a normal teapot idk)

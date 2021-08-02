@@ -329,7 +329,7 @@ class Table(Fixture):
 
 class Wall(Passage):
 	def __init__(self,name,desc,weight,durability,connections,descname,cr):
-		Passage.__init__(self,name,weight,durability,desc,connections,descname)
+		Passage.__init__(self,name,desc,weight,durability,connections,descname)
 		self.cr = cr
 
 	def Traverse(self,P,W,G,dir=None):
@@ -361,7 +361,10 @@ class Wall(Passage):
 #####################
 
 def strToClass(classname):
-	return globals()[classname]
+	if classname in globals():
+		return globals()[classname]
+	else:
+		return None
 
 
 items = {

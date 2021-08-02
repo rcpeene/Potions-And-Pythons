@@ -201,6 +201,7 @@ def Get(command):
 		obj = G.currentroom
 	else:
 		obj = objSearch(objname,G.currentroom,d=3)
+	print("==== obj: ",obj)
 	if obj == None:
 		try: obj = W[objname]
 		except:	pass

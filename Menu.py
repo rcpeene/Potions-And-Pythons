@@ -10,6 +10,7 @@
 
 import sys
 import os
+import json
 
 from Objects import *
 
@@ -58,6 +59,57 @@ def writeGame(filename,G):
 	gfd.close()
 
 
+JSONprimitives = {dict,list,str,int,float,bool,None}
+
+class worldEncoder(json.JSONEncoder):
+	def default(self, o):
+		if type(o) == set:
+			return {"__class__":"set","setdata":list(o)}
+		# elif type(o) == Room:
+		# 	return o.__dict__
+		elif hasMethod(o,"convertToJSON"):
+			return o.convertToJSON()
+		elif type(o) not in JSONprimitives:
+			d = o.__dict__
+			d["__class__"] = o.__class__.__name__
+			return d
+			# return [o.__class__.__name__] + list(o.__dict__.values())
+		else:
+			return o
+
+def default(d):
+	# print("==== converting object of type: " + str(type(d)))
+	if "__class__" in d and d["__class__"] == "set":
+		return set(d["setdata"])
+	elif "__class__" in d.keys():
+		objClassname = d["__class__"]
+		del d["__class__"]
+		objClass = strToClass(objClassname)
+		objAttributes = list(d.values())
+		# print("========: " + d["name"] + " " + str(objAttributes))
+
+		if objClassname == "Room":
+			return Room(*objAttributes)
+		elif objClassname == "Empty":
+			return Empty()
+		elif objClass != None:
+			if hasMethod(objClass,"convertFromJSON"):
+				return objClass.convertFromJSON(d)
+			return objClass(*objAttributes)
+		else:
+			raise Exception("ERROR in decoding JSON object class type: " + objClassname)
+	else:
+		return d
+
+def readJSON(filename):
+	with open(filename,"r") as fd:
+		W = json.load(fd,object_hook=default)
+	return W
+
+def writeJSON(filename,W):
+	with open(filename,"w") as fd:
+		json.dump(W,fd,cls=worldEncoder,indent="\t")
+
 #########################
 ## READ DATA FUNCTIONS ##
 #########################
@@ -102,7 +154,7 @@ def readList(text,delimiters):
 		elem = None
 		delimiter = findNextDelimiter(delimiters,text,i)
 		elemtext = text[i:delimiter].strip()
-		if elemtext[0] == '"':
+		if elemtext[0] in {'"'}:
 			elem = readString(elemtext)
 			i = delimiter + 1
 		elif elemtext[0] in numsymbols:
@@ -112,8 +164,7 @@ def readList(text,delimiters):
 			elem = readBool(elemtext)
 			i = delimiter + 1
 		elif elemtext[0] == '[':
-			symbol = elemtext[0]
-			liststart = text.find(symbol,i)
+			liststart = text.find('[',i)
 			listend = findMatchingParenth(text,liststart)
 			listtext = text[liststart+1:listend]
 			elem = readList(listtext,',')
@@ -179,7 +230,6 @@ def readRoom(roomtext,world):
 			if tag == "!":	occupants.append(obj)
 		elif line[0] == "*":	# room effects			symbol = elemtext[0]
 			listtext = " ".join(roomtext[l:])
-			print(listtext)
 			start = listtext.index("[")
 			end = findMatchingParenth(listtext,start)
 			roomeffects = readList(listtext[start+1:end],",")
@@ -263,8 +313,10 @@ def saveGame(P,W,G):
 
 	# write world, player, and game files
 	os.chdir(savename)
-	writeWorld("world.popy", W)
-	writePlayer("player.popy", P)
+	# writeWorld("world.popy", W)
+	writeJSON("world.json", W)
+	# writePlayer("player.popy", P)
+	writeJSON("player.json", P)
 	writeGame("game.popy", G)
 	os.chdir("..")
 	os.chdir("..")
@@ -294,8 +346,8 @@ def loadGame(filename):
 	# try to load the player, world, and game objects
 	# try:
 	os.chdir(savename)
-	P = readPlayer("player.popy")
-	W = readWorld("world.popy")
+	P = readJSON("player.json")
+	W = readJSON("world.json")
 	G = readGame("game.popy",W)
 	# # hopefully load doesn't fail, that would suck
 	# except:
