@@ -45,6 +45,15 @@ class worldEncoder(json.JSONEncoder):
 		else:
 			return o
 
+def writeJSON(filename,W):
+	with open(filename,"w") as fd:
+		json.dump(W,fd,cls=worldEncoder,indent="\t")
+
+
+#########################
+## READ DATA FUNCTIONS ##
+#########################
+
 def default(d):
 	# print("==== converting object of type: " + str(type(d)))
 	if "__class__" in d and d["__class__"] == "set":
@@ -73,15 +82,6 @@ def readJSON(filename):
 	with open(filename,"r") as fd:
 		W = json.load(fd,object_hook=default)
 	return W
-
-def writeJSON(filename,W):
-	with open(filename,"w") as fd:
-		json.dump(W,fd,cls=worldEncoder,indent="\t")
-
-
-#########################
-## READ DATA FUNCTIONS ##
-#########################
 
 # reads the global game class file, probably named "game.txt"
 # takes the world dict as input, returns the Game object
@@ -240,11 +240,13 @@ def delete(filename):
 	print()
 	return mainMenu()
 
-# just asks for player name, starts everything else at initial values
+# asks for player name and description, starts everything else at initial values
 def createCharacter():
 	name = input("What is your name?\n> ")
-	while len(name) == 0: name = input('> ')
-	return Player(name,"a guy",1,1,inittraits,0,[],initgear,[],False,0,0)
+	while len(name) == 0: name = input("> ")
+	desc = input("Describe yourself\n> ")
+	while len(desc) == 0: desc = input("> ")
+	return Player(name,desc,1,1,inittraits,0,[],initgear,[],False,0,0)
 
 # starts a new game and returns player, world, and game objects
 def newGame():
@@ -265,10 +267,13 @@ def newGame():
 def testGame():
 	W = readJSON("World.json")
 	traits = [4 for _ in range(10)]
-	C = Compass("compass", "a plain steel compass with a red arrow", 2, 10)
+
+	inv = [Compass("compass", "a plain steel compass with a red arrow", 2, 10)]
+
 	status = [["fireproof",-1], ["poisoned",5], ["cursed",-2], ["immortal",-1],
 	["sharpshooter",50],["invisible",15], ["poisoned",-1]]
-	P = Player("Norman","a hero",24,24,traits,1000,[C],initgear,status,1585,100,False)
+
+	P = Player("Norman","a hero",24,24,traits,1000,inv,initgear,status,1585,100,False)
 
 	clearScreen()
 	G = Game(0,W["cave"],W["tunnel"],0)
@@ -280,6 +285,8 @@ def testGame():
 # loops until a new game is made, a save is loaded, or the game is quit
 # n denotes how many times mainMenu has recurred
 def mainMenu():
+	# handle case when running code from src directory instead of main directory
+	if 'src' in os.getcwd(): os.chdir("..")
 	while True:
 		print(menuinstructions)
 		g = input("> ").lower().split()

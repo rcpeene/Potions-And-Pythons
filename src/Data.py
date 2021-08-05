@@ -55,7 +55,6 @@ compounds = {"downstairs"}
 # used in nounify() in Parser.py to combine multiple words that might have a single meaning as a whole term
 miscexpressions = {"it all","spell list"}
 
-# maps abbreviated directions to full direction words
 directions = {"n":"north","ne":"northeast","e":"east","se":"southeast","s":"south","sw":"southwest","w":"west","nw":"northwest","u":"up","d":"down","b":"beyond"}
 
 dmgtypes = {"a":"acid","b":"bludgeoning","c":"cold","e":"essential","f":"fire","i":"psychic","l":"lightning","n":"necrotic","p":"piercing","r":"radiant","s":"slashing","t":"thunder","v":"force","x":"poison"}
@@ -66,18 +65,26 @@ initgear = {"head":-1, "body":-1, "left":-1, "right":-1, "legs":-1}
 # trait list used to initialize the player object
 inittraits = [1,1,1,1,1,1,1,1,1,1]
 
+# action verbs which should not take any in-game time to execute
 instantactions = {"describe","define","gear","help","hp","info","information","inventory","inv","level","lv","money","mp","quit","room","rp","save","status","time","traits","xp"}
+
 
 # the following are tuples because their order should be preserved for printing
 
+
+# base Creature stats
 traits = ("STR","SKL","SPD","STM","CON","CHA","INT","WIS","FTH","LCK")
 
+# derived creature stats. they can be found as Creature methods
 abilities = ("ACCU","ATCK","ATHL","ATSP","BRDN","CAST","CRIT","CSSP","DCPT","DFNS","ENDR","EVSN","INVS","KNWL","LOOT","MVMT","MXHP","MXMP","PRSD","RESC","RITL","SLTH","SPLS","TNKR")
 
+# verb commands which may only be entered as single, lonesome words
 shortverbs = ("back","clear","cry","dance","examples","help","info","information","laugh","quit","return","here","save","scream","shout","sing","time","yawn","yell")
 
+# commands which just serve to print stats to the player
 statcommands = ("abilities","accu","atck","athl","atsp","brdn","cast","crit","cssp","dcpt","dfns","endr","evsn","gear","hp","inventory","inv","invs","knwl","level","loot","lv","money","mp","mvmt","mxhp","mxmp","prsd","resc","ritl","rp","slth","spls","stats","status","tnkr","traits","weapons","xp")
 
+# all valid verbs which are not a shortverb or a statcommand
 verbs = ("attack","bite","break","build","carry","cast","catch","climb","close","craft","crawl","create","cross","crouch","cut","dash","define","describe","do","dodge","doff","don","drink","drop","duck","dump","eat","enter","equip","escape","examine","exit","feed","feel","fight","fill","find","fish","follow","get","give","go","grab","grapple","head","hear","hide","hit","ignite","insert","jump","kick","kill","lay","leave","lick","light","listen","lock","look","make","mount","move","obtain","open","pet","pick","pick up","place","play","point","pour","pray","pull","punch","push","put","put down","put on","quaff","read","release","remove","rest","restrain","return","ride","ring","rub","run","search","set","shove","shut","slap","sleep","slice","smell","sniff","speak","steal","stomp","stow","strike","struggle","swim","take","take off","talk","taste","throw","tie","tinker","toss","touch","travel","trip","unequip","unlock","untie","use","view","wait","walk","wave","wear")
 # trade/buy/sell, brew/cook, dig, leap, blow/breath, clap, scratch, spit, dive, lift, observe, think, write, laydown/sitdown, fuck, shit on
 
@@ -330,6 +337,7 @@ definitions = {
 ## INTRO LOGO DATA ##
 #####################
 
+# static final logo after animation
 logo = "\
  ______________________		\n\
 |   __  \   __\   ___  \	\n\
@@ -339,6 +347,7 @@ logo = "\
 |  |    \ \_\  \__\  \		\n\
 |__|     \_______/ \__\		"
 
+# animation logo which serves as the 'background'
 logoLines = ["",
 " ______________________	",
 "|   __  \   __\   ___  \	",
@@ -349,6 +358,7 @@ logoLines = ["",
 "|__|     \_______/ \__\	",
 "","","","","","",""]
 
+# animation logo which serves as the moving 'foreground'
 popyLines = ["",
 " _ POTIONS  &  PYTHONS 	",
 "|  POTIONS  &  PYTHONS \	",

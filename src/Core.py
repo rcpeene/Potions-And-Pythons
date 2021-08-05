@@ -20,6 +20,8 @@ from Data import *
 ## CORE FUNCTIONS ##
 ####################
 
+# returns bool indicating whether an obj has a method with the given string name
+# used as a shortcut for more readable code than the traditional method
 def hasMethod(obj,methodname):
 	possibleMethod = getattr(obj,methodname,None)
 	if not possibleMethod:
@@ -34,6 +36,7 @@ def clearScreen():
 	# except: os.system("clear")
 	print("\n"*64)
 
+# clears pending keyboard input. strategy varies by operating system.
 def flushInput():
 	try:
 		import msvcrt
@@ -43,6 +46,8 @@ def flushInput():
 		import sys, termios
 		termios.tcflush(sys.stdin,termios.TCIOFLUSH)
 
+# checks for any keyboard input
+# TODO: add functionality for non-windows operating systems
 def kbInput():
 	try:
 		import msvcrt
@@ -50,13 +55,13 @@ def kbInput():
 	except ImportError:
 		print("cannot check for keyboard input on non-windows OS")
 
-# prints a timed ellipsis, used for transitions
+# prints a timed ellipsis, used for dramatic transitions
 def ellipsis(n):
 	for i in range(n):
 		sleep(1)
 		print(".")
 
-# prints a list of strings l into n columns of width w characters
+# prints a list of strings, l, into n columns of width w characters
 def columnPrint(l,n,w):
 	print()
 	# k is the number of characters that have been printed in the current row
@@ -77,7 +82,7 @@ def columnPrint(l,n,w):
 		k += spaces
 	print()
 
-# grammar print, adds punctuation and determiners
+# grammar print; adds punctuation and determiners
 # n is the 'number' of an item, denoting its plurality
 def gprint(det,text,pos,n):
 	if text[0] in vowels and det == "a":
@@ -95,7 +100,7 @@ def gprint(det,text,pos,n):
 	string = string + " "
 	return string
 
-# capitalizes all the words in a string
+# capitalizes the first letter of all the words in a string
 def capWords(string):
 	listString = string.split(' ')
 	cappedString = ''
@@ -111,6 +116,8 @@ def ordinal(n):
 	else:					suffix = "th"
 	return str(n) + suffix
 
+# returns an abbreviated direction into an expanded one
+# for example, converts 'nw' -> 'northwest' or 'u' -> 'up'
 def expandDir(term):
 	if term in directions:	return directions[term]
 	else:					return term
@@ -180,25 +187,29 @@ def min1(n): return 1 if n < 1 else n
 # returns a number, n, with an upper bound of m
 def maxm(m,n): return m if n > m else n
 
+
+
 # the room, creatures, and some items can contain items within themselves...
 # thus all objects within a room can be thought of as a tree graph...
 # where each node is an item or creature, and the root is the room
 # the player object can also be thought of this way where the player is the root
-
 # this function recursively searches the tree of objects for an object...
 # whose name matches the given term, (not case sensitive)
-# if returnPath; returns a list of the path from the found node to the root node
-# elif returnSource; returns a tuple of the found node and its parent
-# if reqSource != None, then the search only succeeds if it finds an object...
+
+# if returnPath: returns a list; the path from the found node to the root node
+# elif returnSource: returns a tuple; the found node and its parent
+# if reqSource != None: then the search only succeeds if it finds an object...
 # which belongs to a parent object whose name matches reqSource
 
 # d is the 'degree' of the search; how thorough it is'
-# if d is 3, searches through all objects from the root
-# elif d is 2, searches through all objects which are not locked
-# elif d is 1, searches through objects which are not locked and not in...
+# if d is 3: searches through all objects from the root
+# elif d is 2: searches through all objects which are not locked
+# elif d is 1: searches through objects which are not locked and not in...
 # creature inventories; i.e. objects which are "accessible" to the player
-# if d is 0, searches through items which are not "closed" and not in...
+# if d is 0: searches through items which are not "closed" and not in...
 # creature inventories; i.e. objects which are "visible" to the player
+
+# this function is a wrapper for objSearchRecur
 def objSearch(term,root,d=0,getPath=False,getSource=False,reqSource=None):
 	O,S,path = objSearchRecur(term,root,[],d,reqSource)
 	if getPath:		return O,path
@@ -207,29 +218,29 @@ def objSearch(term,root,d=0,getPath=False,getSource=False,reqSource=None):
 
 def objSearchRecur(term,node,path,d,reqSource):
 	S = None						# source object is initially None
-	O = None						# object is initially None
+	O = None						# target object is initially None
 	# choose list of objects to search through depending on the node's type
 	if isinstance(node,Room):	searchThrough = node.contents + node.occupants
 	elif hasattr(node,"contents"):	searchThrough = node.contents
 	elif hasattr(node,"inv"):		searchThrough = node.inv
-	# if node is unsearchable, return
+	# if node is unsearchable: return
 	else:	return O,S,path
-	# first, just searches objects in the "top level" of the tree
+	# firstly, just search objects in the "top level" of the tree
 	for I in searchThrough:
 		# don't search the current node if it is not the required source
 		if reqSource != None and reqSource != node.name:	break
 		if I.name.lower() == term:
 			S,O = node,I
 			break
-	# then, recursively searches each object's subtree
+	# then, recursively search each object's subtree
 	for I in searchThrough:
 		# if target object was already found, no need to search deeper
 		if O != None:	break
-		# depending on the degree, skips closed, locked, or creature objects
+		# depending on the degree, may skip closed, locked, or creature objects
 		if d == 0 and hasattr(I,"open") and not I.open:		continue
 		elif (d <= 1) and isinstance(I,Creature):			continue
 		elif d <= 2 and hasattr(I,"locked") and I.locked:	continue
-		# recur objSearch on each object node, I
+		# recur the search on each object node, I
 		O,S,path = objSearchRecur(term,I,path,d,reqSource)
 	# if an object was found, append the search path before returning
 	if O != None:	path.append(node)
@@ -266,7 +277,7 @@ def objTreeToSet(root,d=0,getSources=False):
 ## SUPERCLASS DEFINITIONS ##
 ############################
 
-# used for general instances that must have certain attributes, but can all be 0
+# Empty is a class usually used as a placeholder for items. It serves to act as a dummy item which has mostly null values
 class Empty():
 	def __init__(self):
 		self.name = "[empty]"
@@ -283,30 +294,35 @@ class Empty():
 	def __str__(self):
 		return "{}".format(self.name)
 
-	def __eq__(self, other) :
+	def __eq__(self, other):
 		if isinstance(other, self.__class__):
 			return self.__dict__ == other.__dict__
 		else:
 			return False
-
-	def writeAttributes(self, fd):
-		fd.write("")
 
 	def Weight(self):	return 0
 
 	def improviseWeapon(self):
 		return Weapon("empty hand","",0,-1,1,0,0,0,False,"b")
 
-# contains attributes that are used globally throughout the game
+# The Game class stores a series of global data about the game that is not...
+# contained in the global world dict, W, including things like the time,...
+# a pointer to the current room and previous room, and a pointer to the...
+# Creature who is currently taking a turn.
+# It also offers a series of methods for identifying the currently rendered...
+# rooms and finding information about the currently rendered rooms.
 class Game():
 	def __init__(self,mode,currentroom,prevroom,time):
 		self.mode = mode
 		self.currentroom = currentroom
 		self.prevroom = prevroom
+		# the number of game loops that have elapsed since the game's start
 		self.time = time
+		# the creature whose turn it is
 		self.whoseturn = None
+		# stores the last command before processing. Used for cheatcode input
 		self.lastRawCommand = None
-		# pronoun attributes store an object which may be...
+		# these pronoun attributes will store an object which may be...
 		# implied by that pronoun from user input
 		self.it = None
 		self.they = None
@@ -314,11 +330,15 @@ class Game():
 		self.him = None
 
 	def startUp(self,P,W):
+		P.printStats()
+		print()
 		self.currentroom.describe()
 
 	def describeRoom(self):
 		self.currentroom.describe()
 
+	# passes time for each room, and each creature in each room
+	# important for decrementing the duration counter on all status conditions
 	def incrementTime(self,P,W):
 		self.time += 1
 		P.passTime(1)
@@ -333,6 +353,7 @@ class Game():
 		self.her = None
 		self.him = None
 
+	# sets pronoun attributes based on the type of object
 	def setPronouns(self,obj):
 		if not isinstance(obj,Person):
 			self.it = obj
@@ -344,11 +365,13 @@ class Game():
 			elif obj.gender == "f":
 				self.her = obj
 
+	# sorts the occupants of each room based on their MVMT() stat
 	def sortOccupants(self,W):
 		for room in self.renderedRooms(W):
 			room.sortOccupants()
 
 	# recursively adds all adjacent rooms to the set of found rooms
+	# used by renderedRooms()
 	# n is the path length at which the search stops
 	# Sroom is the "source" room, or the current node in the search
 	def roomFinder(self,n,Sroom,pathlen,foundrooms,W):
@@ -363,7 +386,9 @@ class Game():
 	def renderedRooms(self,W):
 		# constant render distance of rooms in world
 		REND_DIST = 3
+		# the set of found rooms initially includes only the current room
 		R = {self.currentroom}
+		# add all rooms within a distance of REND_DIST to R
 		self.roomFinder(REND_DIST,self.currentroom,0,R,W)
 		return R
 
@@ -373,6 +398,7 @@ class Game():
 		R.remove(self.currentroom)
 		return R
 
+	# exits the previous room and enters the new room
 	def changeRoom(self,newroom,P,W):
 		self.clearPronouns()
 		self.prevroom.exit(P,W,self)
@@ -395,6 +421,8 @@ class Game():
 	# 				source.removeItem(object)
 
 	# returns a list of objects in rendered rooms which fit a certain condition
+	# key is a function which identifies a condition about the obj
+	# d is the 'degree' of the search. See objSearch() for details
 	def searchRooms(self,key,W,d=3):
 		matchingObjects = []
 		for room in self.renderedRooms(W):
@@ -405,6 +433,8 @@ class Game():
 		return matchingObjects
 
 	# returns a set of all objects in the world (does not include player inv)
+	# if getSources: returns a set of pairs of the form (source, obj)...
+	# where source is the parent object which 'contains' obj
 	def getAllObjects(self,W,getSources=False):
 		allObjects = []
 		for room in self.renderedRooms(W):
@@ -413,14 +443,26 @@ class Game():
 				allObjects.append(elem)
 		return allObjects
 
-	# true if there's an object in rendered rooms whose name matches objname
+	# True if there's an object in rendered rooms whose name matches objname
+	# not case sensitive
 	def inWorld(self,objname,W):
 		key = lambda obj: obj.name.lower() == objname
 		objects = self.searchRooms(key,W)
 		return len(objects) > 0
 
+# The Room class is the fundamental unit of the game's World.
+# Each key in the World dict, W, is a string, the name of a given
+# room, and each value in the World dict is a room object.
 
-# used to define all rooms in the world
+# Importantly, each room contains an exits dict, whose keys are directions...
+# such as 'north', 'up', or 'beyond', and whose values are the string names...
+# of the room that it leads to.
+
+# Thus, from any room, there are some directions which will yield a room name, # which can be plugged into the World dict to yield the neighboring room object
+
+# In this way, every Room object can be thought of like a node in a large...
+# directed graph, facilitated by the World dict, where the exits dict specifies
+# the edges from a given node to its neighboring nodes.
 class Room():
 	def __init__(self,name,desc,exits,contents,occupants,status):
 		self.name = name
@@ -446,21 +488,29 @@ class Room():
 		if len(self.occupants) != 0:
 			print("There is " + listItems(self.occupants))
 
+	# sort all Creatures occupying the room by their MVMT() value, descending
 	def sortOccupants(self):
 		self.occupants.sort(key=lambda x: x.MVMT(), reverse=True)
 
+	# add connection to a neighboring Room
+	# to ensure a bidirectional connectiom between Rooms...
+	# this method would have to be called for both rooms.
 	def addConnection(self,dir,loc):
 		self.exits[dir] = loc
 
+	# returns a list of Passage objects within the room's contents
 	def getPassages(self):
 		return [item for item in self.contents if isinstance(item,Passage)]
 
+	# given a direction (like 'north' or 'down)...
+	# return the first Passage object with that direction in its connections
 	def getPassageFromDir(self,dir):
 		for passage in self.getPassages():
 			if dir in passage.connections:
 				return passage
 		return None
 
+	# if the given room object, dest, is in one of the rooms exits, then find the direction it is in from the room.
 	def getDirFromDest(self,dest):
 		if dest in self.allExits().values():
 			idx = list(self.allExits().values()).index(dest)
@@ -488,11 +538,13 @@ class Room():
 		self.describeContents()
 		self.describeOccupants()
 
+	# describe the room, and apply any room effects to the player
 	def enter(self,P,W,G):
 		self.describe()
 		# for tuple in effectslist:
 		# 	func name = tuple
 
+	# remove any room effects from the player
 	def exit(self,P,W,G):
 		pass
 
@@ -510,6 +562,8 @@ class Room():
 		if C in self.occupants:
 			self.occupants.remove(C)
 
+	# wrapper for objSearch()
+	# recursively searches the room for an object whose name matches given term
 	def search(self,term,d=0,getSource=False,getPath=False,reqSource=None):
 		return objSearch(term,self,d=d,
 		getSource=getSource,getPath=getPath,reqSource=reqSource)
@@ -534,12 +588,13 @@ class Room():
 	def occupantNames(self):
 		return [creature.name for creature in self.occupants]
 
+	# add a status condition to the room with a name and duration
 	def addCondition(self,name,dur,stackable=False):
 		# TODO: include stackability
 		pair = [name,dur]
 		insort(self.status,pair)
 
-	# removes all condition of the same name
+	# removes all conditions of the same name
 	# if reqDuration is given, only removes conditions with that duration
 	def removeCondition(self,name,reqDuration=None):
 		for condname,duration in self.status:
@@ -547,6 +602,8 @@ class Room():
 				if reqDuration == None or reqDuration == duration:
 					self.status.remove([condname,duration])
 
+	# returns True if the room has a status condition with given name.
+	# if reqDuration is given, only returns True if duration matches reqDur
 	def hasCondition(self,name,reqDuration=None):
 		for condname,duration in self.status:
 			if condname == name:
@@ -554,6 +611,8 @@ class Room():
 					return True
 		return False
 
+	# decrements the duration for each status condition applied to the room by t
+	# removes status conditions whose duration is lowered past 0
 	def passTime(self,t):
 		for condition in self.status:
 			# if condition is a special condition, ignore it
@@ -566,7 +625,9 @@ class Room():
 			if condition[1] <= 0:
 				self.removeCondition(condition[0],0)
 
-# general item class, all items come with a name, description, weight
+# The Item class is the main game object class of things that cannot move
+# Anything in a Room that is not a Creature will be an Item
+# All items come with a name, description, weight, and durability
 class Item():
 	def __init__(self,name,desc,weight,durability):
 		self.name = name
@@ -592,7 +653,7 @@ class Item():
 	def __hash__(self):
 		return hash(frozenset(self.__dict__)) * hash(id(self))
 
-	# used to create a generic Weapon() if this item is used to attack something
+	# Used to create a generic Weapon() if this item is used to attack something
 	def improviseWeapon(self):
 		#TODO: if item is too large/heavy, make it two-handed
 		return Weapon(self.name,self.desc,self.weight,self.durability,min1(self.weight//4),0,0,0,False,"b")
@@ -610,7 +671,11 @@ class Item():
 	def Break(self,G,W,S):
 		S.removeItem(self)
 
-# general creature class for all living things in the game
+# The Creature class is the main class for anything in the game that can act
+# Anything in a Room that is not an Item will be a Creature
+# The Player is a Creature too
+# Creatures have 10 base stats, called traits
+# They also have abilities; stats which are derived from traits through formulas
 class Creature():
 	def __init__(self,name,desc,hp,mp,traits,money,inv,gear,status):
 		self.name = name
@@ -682,18 +747,26 @@ class Creature():
 			except:	raise Exception("gear item not found in inventory")
 		return C
 
+	# returns a dict which contains all the necessary information to store...
+	# this object instance as a JSON object when saving the game
 	def convertToJSON(self):
+		# convert the gear dict to a form more easily writable in a JSON object
 		compressedGear = self.compressGear()
 		d = self.__dict__.copy()
 		dictkeys = list(d.keys())
+		# these attributes do not get stored between saves (except gear)
 		for key in dictkeys:
 			if key in traits or key in {"gear","weapon","weapon2","shield","shield2","alive","alert","seesPlayer","sawPlayer"}:
 				del d[key]
 		d["gear"] = compressedGear
+		# convert traits to a form more easily writable in a JSON object
 		d["traits"] = [self.STR,self.SKL,self.SPD,self.STM,self.CON,self.CHA,self.INT,self.WIS,self.FTH,self.LCK]
+		# ensure that the class is stored as well for determining...
+		# which class to instantiate when loading data
 		d["__class__"] = self.__class__.__name__
 		return d
 
+	# returns an instance of this class given a dict from a JSON file
 	@classmethod
 	def convertFromJSON(cls,d):
 		# thisobj = cls(0,0,0,0,[0 for i in range(10)],0,0,{},[])
@@ -703,12 +776,13 @@ class Creature():
 		thisobj = cls(d["name"],d["desc"],d["hp"],d["mp"],d["traits"],d["money"],d["inv"],d["gear"],d["status"])
 		return thisobj
 
-	# returns sum of the weight of all items in player inventory
+	# returns sum of the weight of all items in the inventory
 	def invWeight(self):
 		weight = 0
 		for item in self.inv: weight += item.Weight()
 		return weight
 
+	# returns the sum of the weight of all items being held
 	def handheldWeight(self):
 		return self.weapon.weight + self.weapon2.weight + self.shield.weight + self.shield2.weight
 
@@ -823,12 +897,33 @@ class Creature():
 			print(f"It's {gprint('a',self.name,3,1)}", end="")
 		print(self.desc)
 
+	# try to add an Item to Inventory
+	# it will fail if the inventory is too heavy
 	def addItem(self,I):
 		if self.invWeight() + I.Weight() > self.BRDN() * 2:
 			return False
 		insort(self.inv,I)
 		return True
 
+	# obtain an item by first checking if it can be added to Inventory
+	# if it is added, remove it from source location
+	# if it has an Obtain() method, call that
+	# finally, check if the new inventory weight has hindered the creature
+	def obtainItem(self,I,S,W,G,msg=None):
+		if self.addItem(I):
+			S.removeItem(I)
+			if msg != None:
+				print(msg)
+			if hasMethod(I,"Obtain"):
+				I.Obtain(self,W,G)
+			self.checkHindered()
+			return True
+		return False
+
+	# remove an Item from Inventory
+	# if it was equipped, unequip it
+	# if it has a Drop() method, call that
+	# check if still hindered
 	def removeItem(self,I):
 		if I in self.gear.values():
 			self.unequip(I)
@@ -871,9 +966,8 @@ class Creature():
 		return False
 
 	def checkHindered():
-		if self.invWeight() + I.Weight() > self.BRDN():
+		if self.invWeight() > self.BRDN():
 			if not self.hasCondition("hindered"):
-				print("Your inventory grows heavy")
 				self.addCondition("hindered",-3)
 
 	# these are creature stats that are determined dynamically with formulas
@@ -1058,7 +1152,6 @@ class Player(Creature):
 					if not self.hasCondition(condname):
 						print("You are no longer " + condname)
 
-
 	def obtainItem(self,I,S,W,G,msg=None):
 		if self.addItem(I):
 			S.removeItem(I)
@@ -1066,9 +1159,16 @@ class Player(Creature):
 				print(msg)
 			if hasMethod(I,"Obtain"):
 				I.Obtain(self,W,G)
+			self.checkHindered()
 			return True
 		print(f"You can't take the {I.name}, your Inventory is too full")
 		return False
+
+	def checkHindered():
+		if self.invWeight() > self.BRDN():
+			if not self.hasCondition("hindered"):
+				print("Your Inventory grows heavy")
+				self.addCondition("hindered",-3)
 
 	def countCompasses(self):
 		count = 0
