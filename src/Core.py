@@ -116,6 +116,14 @@ def ordinal(n):
 	else:					suffix = "th"
 	return str(n) + suffix
 
+def extractConditionInfo(roomCondition):
+	if not roomCondition.startswith("AREA"):
+		raise Exception("extracting condition info from invalid area condition")
+	condInfo = roomCondition.split(" ")
+	name = ' '.join(condInfo[1:-1])
+	dur = int(condInfo[-1])
+	return [name,dur]
+
 # returns an abbreviated direction into an expanded one
 # for example, converts 'nw' -> 'northwest' or 'u' -> 'up'
 def expandDir(term):
@@ -209,7 +217,7 @@ def maxm(m,n): return m if n > m else n
 # if d is 0: searches through items which are not "closed" and not in...
 # creature inventories; i.e. objects which are "visible" to the player
 
-# this function is a wrapper for objSearchRecur
+# this function is a wrapper for objSearchRecur()
 def objSearch(term,root,d=0,getPath=False,getSource=False,reqSource=None):
 	O,S,path = objSearchRecur(term,root,[],d,reqSource)
 	if getPath:		return O,path
@@ -310,7 +318,7 @@ class Empty():
 # a pointer to the current room and previous room, and a pointer to the...
 # Creature who is currently taking a turn.
 # It also offers a series of methods for identifying the currently rendered...
-# rooms and finding information about the currently rendered rooms.
+# rooms and finding information about them.
 class Game():
 	def __init__(self,mode,currentroom,prevroom,time):
 		self.mode = mode
@@ -322,8 +330,8 @@ class Game():
 		self.whoseturn = None
 		# stores the last command before processing. Used for cheatcode input
 		self.lastRawCommand = None
-		# these pronoun attributes will store an object which may be...
-		# implied by that pronoun from user input
+		# these pronoun attributes will point to an object which the user may...
+		# implicitly refer to with the given pronoun in their user input
 		self.it = None
 		self.they = None
 		self.her = None
@@ -420,16 +428,23 @@ class Game():
 	# 			if object is I:
 	# 				source.removeItem(object)
 
-	# returns a list of objects in rendered rooms which fit a certain condition
+	# returns a list of objects in current room which fit a certain condition
 	# key is a function which identifies a condition about the obj
 	# d is the 'degree' of the search. See objSearch() for details
-	def searchRooms(self,key,W,d=3):
+	def searchRoom(self,room=None,key=lambda x:x,d=3):
+		if room == None: room = self.currentroom
+		matchingObjects = []
+		allObjects = objTreeToSet(room,d=d)
+		for obj in allObjects:
+			if key(obj):
+				matchingObjects.append(obj)
+		return matchingObjects
+
+	# returns a list of objects in rendered rooms which fit a certain condition
+	def searchRooms(self,W,key=lambda x:x,d=3):
 		matchingObjects = []
 		for room in self.renderedRooms(W):
-			allObjects = objTreeToSet(room,d=d)
-			for obj in allObjects:
-				if key(obj):
-					matchingObjects.append(obj)
+			matchingObjects += self.searchRoom(room,key=key,d=d)
 		return matchingObjects
 
 	# returns a set of all objects in the world (does not include player inv)
@@ -447,7 +462,7 @@ class Game():
 	# not case sensitive
 	def inWorld(self,objname,W):
 		key = lambda obj: obj.name.lower() == objname
-		objects = self.searchRooms(key,W)
+		objects = self.searchRooms(W,key)
 		return len(objects) > 0
 
 # The Room class is the fundamental unit of the game's World.
@@ -538,15 +553,20 @@ class Room():
 		self.describeContents()
 		self.describeOccupants()
 
-	# describe the room, and apply any room effects to the player
-	def enter(self,P,W,G):
-		self.describe()
-		# for tuple in effectslist:
-		# 	func name = tuple
+	# describe the room, and apply any room effects to the creature entering
+	def enter(self,creature,W,G):
+		# if the player is entering the room, describe the room
+		if type(creature) == Player:	self.describe()
+		for cond,dur in self.status:
+			if cond.startswith("AREA"):
+				[name,dur] = extractConditionInfo(cond)
+				creature.addCondition(name,dur)
 
-	# remove any room effects from the player
-	def exit(self,P,W,G):
-		pass
+	# remove any room effects from the creature exiting
+	def exit(self,creature,W,G):
+		condsToRemove = [pair for pair in creature.status if pair[1] == -1]
+		for cond,dur in condsToRemove:
+			creature.removeCondition(cond,-1)
 
 	def addItem(self,I):
 		insort(self.contents,I)
@@ -588,19 +608,38 @@ class Room():
 	def occupantNames(self):
 		return [creature.name for creature in self.occupants]
 
+	def addAreaCondition(G,areacond):
+		cond,dur = extractConditionInfo(areacond)
+		key = lambda x: hasMethod(x,"addCondition")
+		for creature in G.searchRoom(W,key):
+			creature.addCondition(cond,dur)
+
+	def addAreaCondition(G,areacond):
+		cond,dur = extractConditionInfo(areacond)
+		# depending on how you want room conditions to work, perhaps remove this
+		if dur != -1:
+			return
+		key = lambda x: hasMethod(x,"removeCondition")
+		for creature in G.searchRoom(W,key):
+			creature.removeCondition(cond,-1)
+
 	# add a status condition to the room with a name and duration
-	def addCondition(self,name,dur,stackable=False):
+	def addCondition(self,G,name,dur,stackable=False):
 		# TODO: include stackability
 		pair = [name,dur]
 		insort(self.status,pair)
+		if name.startswith("AREA"):
+			self.addAreaCondition(G,name)
 
 	# removes all conditions of the same name
 	# if reqDuration is given, only removes conditions with that duration
-	def removeCondition(self,name,reqDuration=None):
+	def removeCondition(self,G,name,reqDuration=None):
 		for condname,duration in self.status:
 			if condname == name:
 				if reqDuration == None or reqDuration == duration:
 					self.status.remove([condname,duration])
+					if condname.startswith("AREA"):
+						self.removeAreaCondition(G,condname)
 
 	# returns True if the room has a status condition with given name.
 	# if reqDuration is given, only returns True if duration matches reqDur
@@ -946,9 +985,11 @@ class Creature():
 				self.removeCondition(condition[0],0)
 
 	def addCondition(self,name,dur,stackable=False):
-		# TODO: include stackability
+		if self.hasCondition(name) and not stackable:
+			return False
 		pair = [name,dur]
 		insort(self.status,pair)
+		return True
 
 	# removes all condition of the same name
 	# if reqDuration is given, only removes conditions with that duration
@@ -1137,7 +1178,7 @@ class Player(Creature):
 		return heal
 
 	def addCondition(self,name,dur,stackable=False):
-		# TODO: include stackability
+		# TODO: include stackability (conditions which can exist multiple times)
 		pair = [name,dur]
 		insort(self.status,pair)
 		print("You are " + name)

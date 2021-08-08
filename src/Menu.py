@@ -271,7 +271,7 @@ def testGame():
 	inv = [Compass("compass", "a plain steel compass with a red arrow", 2, 10)]
 
 	status = [["fireproof",-1], ["poisoned",5], ["cursed",-2], ["immortal",-1],
-	["sharpshooter",50],["invisible",15], ["poisoned",-1]]
+	["sharpshooter",50], ["invisible",15], ["poisoned",-1]]
 
 	P = Player("Norman","a hero",24,24,traits,1000,inv,initgear,status,1585,100,False)
 

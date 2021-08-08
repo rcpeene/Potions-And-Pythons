@@ -643,9 +643,44 @@ STATUS EFFECTS:
 status conditions exist in the creatures status list as list pairs
 of condition name and duration.
 negative durations have special meanings:
--1 means the condition lasts as long as the player is in the current room
--2 means the condition permanent until it is removed by some general source
+-1 means the condition is inflicted by being in the current room. It will end when the player leaves the room or when the room's condition's duration ends
+-2 means the condition is permanent until it is removed by some general source
 -3 or less means the condition is permanent until removed by a specific source
+
+rooms have status effects too. And rooms can harbor condition which afflict creatures in the room with other status conditions. When this happens, the room condition's name will contain the information about the condition to inflict upon the creatures. For instance, if a room is filled with poisonous gas for 30 time units and will poison all creatures that enter until they leave (or until the rooms condition wears off). the rooms condition pair would be of the form:
+
+["afflict poisoned -1", 30]
+
+if the room is simply on fire for 10 more time units, and will ignite any creatures in the room for 15 units, even leaving the room will not save them after being set ablaze. In this case, the room's condition pair would be of the form:
+
+["afflict on fire 15", 10]
+
+
+
+
+room.enter(self,creature):
+	for each status condition of the room:
+		if status condition begins with "afflict":
+			add status condition to creature with given duration
+
+room.passTime(self):
+	for each condition:
+		if condition begins with afflict:
+			try to add it to each creature with given duration (if they dont already have it)
+
+################### you're working on this one atm ##############
+
+room.removeCondition():
+	if condition name begins with "afflict":
+		if condition is the only condition of that name in the room:
+			for each creature:
+				remove status condition of that name
+
+room.exit(creature)"
+	for each condition on the creature with a -1:
+		remove it
+
+
 
 curses;
 
@@ -908,7 +943,7 @@ Pitanga
 Plum
 Pricklepear - thornshield
 Pineapple
-Pomogranate
+Pomegranate
 Quince
 
 Raspberry
@@ -1019,10 +1054,9 @@ Note: these are not specific spell ideas, but general things a spell could do, t
 
 add a status effect
 remove a status effect
-deal area damage (to whole room)
-deal area damage only to certain types of creatures
-deal target damage
-heal a creature
+deal area damage/heal (to whole room)
+deal area damage/heal only to creatures which fit a condition
+deal target damage/heal
 improving weapon stats
 changing weapon damage type
 repair an item
@@ -1034,7 +1068,7 @@ unlock an item
 lock an item
 locate an item? in the world or nearby
 create a lasting room effect (like preventing entering an exiting, zero gravity, darkness)
-alter the terrain (affecting fixtures)
+alter the terrain (affecting fixtures and passages)
 create a portal to somewhere (mansion, hut, another room) (permanent/temp)
 break an item
 ignite things
@@ -1062,6 +1096,13 @@ resurrect a dead creature
 create a zombie
 teleport somewhere
 stop time everywhere (bool in game class)
+
+
+^^^^^^^^^^^^
+for magical area effects, you could basically have a function which takes a list of objects (probably contents, occupants or both), an effects function, and an optional key as an argument.
+
+it essentially maps the magical effect function to every object in the given list that fits the key. if there is no key, it is applied to all things in the rooms list
+
 
 
 
