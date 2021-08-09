@@ -291,7 +291,7 @@ def mainMenu():
 		print(menuinstructions)
 		g = input("> ").lower().split()
 		if len(g) == 0: 						continue
-		if g[0] == "info" and len(g) == 1:		print("\n"*64+gameinfo+"\n")
+		if g[0] == "info" and len(g) == 1:		print("\n"*64+gameinfo)
 		if g[0] == "new" and len(g) == 1:		return newGame()
 
 		if g[0] == "load" and len(g) == 1:		return loadGame(None)
