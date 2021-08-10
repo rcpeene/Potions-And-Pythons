@@ -39,9 +39,9 @@ class worldEncoder(json.JSONEncoder):
 			return o.convertToJSON()
 		elif type(o) not in JSONprimitives:
 			d = o.__dict__
-			d["__class__"] = o.__class__.__name__
+			# this is done so the class key appears first in the JSON object
+			d = {"__class__": o.__class__.__name__} | d
 			return d
-			# return [o.__class__.__name__] + list(o.__dict__.values())
 		else:
 			return o
 

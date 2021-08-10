@@ -800,9 +800,7 @@ class Creature():
 		d["gear"] = compressedGear
 		# convert traits to a form more easily writable in a JSON object
 		d["traits"] = [self.STR,self.SKL,self.SPD,self.STM,self.CON,self.CHA,self.INT,self.WIS,self.FTH,self.LCK]
-		# ensure that the class is stored as well for determining...
-		# which class to instantiate when loading data
-		d["__class__"] = self.__class__.__name__
+		d = {"__class__":self.__class__.__name__} | d
 		return d
 
 	# returns an instance of this class given a dict from a JSON file
