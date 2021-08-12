@@ -297,7 +297,7 @@ class Empty():
 		self.type = "e"
 
 	def __repr__(self):
-		return "{}".format(self.name)
+		return f"<empty>"
 
 	def __str__(self):
 		return "{}".format(self.name)
@@ -433,12 +433,7 @@ class Game():
 	# d is the 'degree' of the search. See objSearch() for details
 	def searchRoom(self,room=None,key=lambda x:x,d=3):
 		if room == None: room = self.currentroom
-		matchingObjects = []
-		allObjects = objTreeToSet(room,d=d)
-		for obj in allObjects:
-			if key(obj):
-				matchingObjects.append(obj)
-		return matchingObjects
+		return list(filter(key, objTreeToSet(room,d=d)))
 
 	# returns a list of objects in rendered rooms which fit a certain condition
 	def searchRooms(self,W,key=lambda x:x,d=3):
@@ -447,15 +442,14 @@ class Game():
 			matchingObjects += self.searchRoom(room,key=key,d=d)
 		return matchingObjects
 
-	# returns a set of all objects in the world (does not include player inv)
+	# returns a set of all objects in the rendered world
+	# does not include the player or anything in player inv
 	# if getSources: returns a set of pairs of the form (source, obj)...
 	# where source is the parent object which 'contains' obj
 	def getAllObjects(self,W,getSources=False):
-		allObjects = []
+		allObjects = set()
 		for room in self.renderedRooms(W):
-			roomObjects = objTreeToSet(room,d=3,getSources=getSources)
-			for elem in roomObjects:
-				allObjects.append(elem)
+			allObjects |= objTreeToSet(room,d=3,getSources=getSources)
 		return allObjects
 
 	# True if there's an object in rendered rooms whose name matches objname
@@ -488,7 +482,7 @@ class Room():
 		self.status = status
 
 	def __repr__(self):
-		return f"#{self.name}"
+		return f"Room({self.name}, {self.desc}, {self.exits}...)"
 
 	def __str__(self):
 		return f"#{self.name}"
@@ -675,7 +669,7 @@ class Item():
 		self.durability = durability
 
 	def __repr__(self):
-		return f"${self.name}"
+		return f"Item({self.name}, {self.desc}, {self.weight}, {self.durability})"
 
 	def __str__(self):
 		return f"${self.name}"
@@ -754,7 +748,8 @@ class Creature():
 		self.sawPlayer = -1
 
 	def __repr__(self):
-		return f"!{self.name}"
+		traits = [self.STR, self.SPD, self.SKL, self.STM, self.CON, self.CHA, self.INT, self.WIS, self.FTH, self.LCK]
+		return f"Creature({self.name}, {self.desc}, {self.hp}, {self.mp}, {traits}, {self.money} ...)"
 
 	def __str__(self):
 		return f"!{self.name}"
@@ -1089,11 +1084,10 @@ class Creature():
 
 # the class representing the player, contains all player stats
 class Player(Creature):
-	def __init__(self,name,desc,hp,mp,traits,money,inv,gear,status,xp,rp,crouched):
+	def __init__(self,name,desc,hp,mp,traits,money,inv,gear,status,xp,rp):
 		Creature.__init__(self,name,desc,hp,mp,traits,money,inv,gear,status)
 		self.xp = xp
 		self.rp = rp
-		self.crouched = crouched
 
 	@classmethod
 	def convertFromJSON(cls,d):
@@ -1107,15 +1101,16 @@ class Player(Creature):
 		d=d,getSource=getSource,getPath=getPath,reqSource=reqSource)
 
 	# wrapper for objTreeToSet()
-	# returns player inventory as a set of all items
+	# returns player Inventory as a set of all items in the Item Tree
 	def invSet(self):
 		return objTreeToSet(self,d=2)
 
 	def weapons(self):
 		return [I for I in self.inv if isinstance(I,Weapon)]
 
-	# weird formula right? returns an integer greater than 1 rounded down
-	# graph it if you want to know what the curve looks like
+	# weird formula right? returns a positive number rounded down to nearest int
+	# to see an approximate curve, graph y = 5*log10(x/10)
+	# note that a lower bound is set to level 1 when xp < 16
 	def level(self):
 		return 1 if self.xp < 16 else floor(5*log10(self.xp/10))
 

@@ -188,7 +188,15 @@ if there are more words, the direct object is assumed to be the first word after
 if there are still more words, the indirect object is the first word after the preposition or direct object. In this case:
 	iobj = "iron sword"
 
-So parse() assigns terms to verb, dobj, iobj, and prep. The nature of this input parser is such that it cannot accurately parse input with more than these four important terms. It cannot properly interpret arbitrarily complex input.
+So parse() assigns terms to verb, dobj, iobj, and prep. Often, some or all of these terms may not exist in the user input, in which case they are set to the value of None. The nature of this input parser is such that it cannot accurately parse input with more than these four important terms. It cannot properly interpret arbitrarily complex input.
+
+Once these four terms are determined from parsing, the verb is used to identify the corresponding action function to call with the other three terms as parameters. Like so:
+
+	actionFunc(dobj,iobj,prep)
+
+At which point the action function may ask for more input, do additional interpretation, or execute the action with the input it has.
+
+
 
 
 

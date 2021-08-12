@@ -243,6 +243,11 @@ def Teleport(command):
 	if location in W:	G.changeRoom(W[location],P,W)
 	else:				print("Location not in world")
 
+def Test(command):
+	allItems = list(filter(lambda x: isinstance(x,Item),objTreeToSet(G.currentroom)))
+	print(allItems)
+	return True
+
 def Warp(command):
 	try:	G.time += int(command[1])
 	except:	print("Value not number")
@@ -676,6 +681,9 @@ def Fish(dobj,iobj,prep):
 
 def Follow(dobj,iobj,prep):
 	print("following")
+
+def Fuck(dobj,iobj,prep):
+	print("I'm not sure I, the game developer, can allow that")
 
 def Give(dobj,iobj,prep):
 	print("giveing")
@@ -1146,10 +1154,6 @@ def Take(dobj,iobj,prep):
 	msg = f"You take {det} {I.name}{appendstring}"
 	return P.obtainItem(I,S,W,G,msg)
 
-def Test(dobj,iobj,prep):
-	print(f"dobj: {dobj}\niobj: {iobj}\nprep: {prep}")
-	return True
-
 def Touch(dobj,iobj,prep):
 	print("touching")
 
@@ -1247,7 +1251,7 @@ cheatcodes = {
 	"\\mod":Mode,
 	"\\pot":Pypot,
 	"\\set":Set,
-	# "\\tst":Test,
+	"\\tst":Test,
 	"\\tpt":Teleport,
 	"\\wrp":Warp
 }
@@ -1329,6 +1333,7 @@ actions = {
 "find":Find,
 "fish":Fish,
 "follow":Follow,
+"fuck":Fuck,
 "get":Take,
 "give":Give,
 "go":Go,
