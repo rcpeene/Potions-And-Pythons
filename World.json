@@ -155,6 +155,10 @@
 				"range": 0,
 				"twohanded": false,
 				"type": "s"
+			},
+			{
+				"__class__": "Pylars",
+				"value": 4
 			}
 		],
 		"occupants": [

@@ -162,16 +162,16 @@ def loadGame(filename):
 		return mainMenu()
 	os.chdir(savename)
 	# try to load the player, world, and game objects
-	try:
-		P = readJSON("player.json")
-		W = readJSON("world.json")
-		G = readGame("game.txt",W)
+	# try:
+	P = readJSON("player.json")
+	W = readJSON("world.json")
+	G = readGame("game.txt",W)
 	# # hopefully load doesn't fail, that would suck
-	except:
-		print("Could not load game, save data corrupted\n")
-		os.chdir("..")
-		os.chdir("..")
-		return mainMenu()
+	# except:
+	# 	print("Could not load game, save data corrupted\n")
+	# 	os.chdir("..")
+	# 	os.chdir("..")
+	# 	return mainMenu()
 
 	os.chdir("..")
 	os.chdir("..")

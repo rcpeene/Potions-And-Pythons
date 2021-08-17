@@ -933,9 +933,15 @@ class Creature():
 			print(f"It's {gprint('a',self.name,3,1)}", end="")
 		print(self.desc)
 
+	# adds money
+	def gainMoney(self,money):
+		self.money += money
+
 	# try to add an Item to Inventory
 	# it will fail if the inventory is too heavy
 	def addItem(self,I):
+		if isinstance(I,Pylars):
+			return True
 		if self.invWeight() + I.Weight() > self.BRDN() * 2:
 			return False
 		insort(self.inv,I)
@@ -950,8 +956,7 @@ class Creature():
 			S.removeItem(I)
 			if msg != None:
 				print(msg)
-			if hasMethod(I,"Obtain"):
-				I.Obtain(self,W,G)
+			I.Obtain(self,W,G)
 			self.checkHindered()
 			return True
 		return False
@@ -1003,7 +1008,7 @@ class Creature():
 					return True
 		return False
 
-	def checkHindered():
+	def checkHindered(self):
 		if self.invWeight() > self.BRDN():
 			if not self.hasCondition("hindered"):
 				self.addCondition("hindered",-3)
@@ -1049,9 +1054,9 @@ class Creature():
 		self.alive = False
 		print("agh its... ded?")
 		G.destroyCreature(self,W)
-		#drop some wealth or items if its players turn
 		if G.whoseturn is P:
 			P.gainxp(10)
+			# TODO make this just drop gold or loot in the room, not P.gainMoney
 			P.gainMoney(P.LOOT())
 
 	# takes incoming damage, accounts for damage vulnerability or resistance
@@ -1095,7 +1100,7 @@ class Player(Creature):
 
 	@classmethod
 	def convertFromJSON(cls,d):
-		thisobj = cls(d["name"],d["desc"],d["hp"],d["mp"],d["traits"],d["money"],d["inv"],d["gear"],d["status"],d["xp"],d["rp"],d["crouched"])
+		thisobj = cls(d["name"],d["desc"],d["hp"],d["mp"],d["traits"],d["money"],d["inv"],d["gear"],d["status"],d["xp"],d["rp"])
 		return thisobj
 
 	# wrapper for objSearch, sets the degree of the search 2 by default
@@ -1195,14 +1200,13 @@ class Player(Creature):
 			S.removeItem(I)
 			if msg != None:
 				print(msg)
-			if hasMethod(I,"Obtain"):
-				I.Obtain(self,W,G)
+			I.Obtain(self,W,G)
 			self.checkHindered()
 			return True
 		print(f"You can't take the {I.name}, your Inventory is too full")
 		return False
 
-	def checkHindered():
+	def checkHindered(self):
 		if self.invWeight() > self.BRDN():
 			if not self.hasCondition("hindered"):
 				print("Your Inventory grows heavy")
@@ -1439,27 +1443,6 @@ Set status
 
 '''
 
-class Monster(Creature):
-	def isArmed():
-		# returns true if monster is armed
-		pass
-
-	def hasHealing():
-		# returns true is monster has healing potion or food
-		pass
-
-	def playerBloodied():
-		# returns true if monster believes player is bloodied
-		pass
-
-	def playerArmed():
-		# returns true if monster believes player is armed
-		pass
-
-class Person(Creature):
-	def act(self,P,G,room):
-		pass
-
 # almost identical to the item class, but fixtures may not be removed from their initial location. Fixtures also have a size attribute
 class Fixture(Item):
 	def __init__(self,name,desc,weight,durability):
@@ -1488,6 +1471,20 @@ class Passage(Fixture):
 		newroom = W[self.connections[dir]]
 		G.changeRoom(newroom,P,W)
 		return True
+
+class Pylars(Item):
+	def __init__(self,value):
+		self.name = str(value) + " Pylars"
+		self.desc = str(value) + "glistening coins made of an ancient metal"
+		self.value = value
+
+	# returns a dict which contains all the necessary information to store...
+	# this object instance as a JSON object when saving the game
+	def convertToJSON(self):
+		return {"__class__":self.__class__.__name__, "value": self.value}
+
+	def Obtain(self,creature,W,G):
+		creature.gainMoney(self.value)
 
 class Weapon(Item):
 	def __init__(self,name,desc,weight,durability,might,sleight,sharpness,range,twohanded,type):
@@ -1535,6 +1532,31 @@ class Greaves(Armor):
 class Compass(Item):
 	def Orient(self):
 		print("Orienting you northward!")
+
+
+
+
+class Monster(Creature):
+	def isArmed():
+		# returns true if monster is armed
+		pass
+
+	def hasHealing():
+		# returns true is monster has healing potion or food
+		pass
+
+	def playerBloodied():
+		# returns true if monster believes player is bloodied
+		pass
+
+	def playerArmed():
+		# returns true if monster believes player is armed
+		pass
+
+class Person(Creature):
+	def act(self,P,G,room):
+		pass
+
 
 
 #######################
