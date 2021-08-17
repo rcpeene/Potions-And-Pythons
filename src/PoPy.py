@@ -11,10 +11,12 @@ if __name__ == "__main__":
 		G.sortOccupants(W)
 
 		# take user input until player successfully performs an action
+		G.silent = False
 		G.whoseturn = P
 		while not parse(0):	continue
 
 		# creatures in current room's turn
+		G.activeroom = G.currentroom
 		for creature in G.currentroom.occupants:
 			G.whoseturn = creature
 			creature.act(P,G,G.currentroom)
@@ -22,10 +24,10 @@ if __name__ == "__main__":
 		# creatures in nearby rooms' turn
 		G.silent = True
 		for room in G.nearbyRooms(W):
+			G.activeroom = room
 			for creature in room.occupants:
 				G.whoseturn = creature
 				creature.act(P,G,room)
-		G.silent = False
 
 		# pass the time after everyone has acted
 		G.whoseturn = None

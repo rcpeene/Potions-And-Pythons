@@ -798,7 +798,7 @@ def Hide(dobj,iobj,prep):
 		return False
 
 	G.setPronouns(I)
-	if not isinstance(I,Fixture):
+	if not isinstance(I,Fixture) or I.weight < 50:
 		print("You can't hide behind " + I.name)
 		return False
 

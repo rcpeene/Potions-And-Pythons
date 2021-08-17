@@ -593,7 +593,7 @@ MAKING AN ATTACK:
 turn order is determined by ATSP:
     order is highest to lowest attack speed,
     ties are settled by the highest SPD
-    ties of SPD are settled by 'defender goes first'
+    ties of SPD are settled by 'attacker goes first'
 number of attacks is determined:
     n = floor(ATSP / target.ATSP) //maybe
 for each attack:
@@ -666,28 +666,6 @@ if the room is simply on fire for 10 more time units, and will ignite any creatu
 
 
 
-room.enter(self,creature):
-	for each status condition of the room:
-		if status condition begins with "afflict":
-			add status condition to creature with given duration
-
-room.passTime(self):
-	for each condition:
-		if condition begins with afflict:
-			try to add it to each creature with given duration (if they dont already have it)
-
-################### you're working on this one atm ##############
-
-room.removeCondition():
-	if condition name begins with "afflict":
-		if condition is the only condition of that name in the room:
-			for each creature:
-				remove status condition of that name
-
-room.exit(creature)"
-	for each condition on the creature with a -1:
-		remove it
-
 
 
 curses;
@@ -731,8 +709,8 @@ vulnerability to a damage type
 raising fondness of creature
 raising fear of creature
 insanity
-rage (for any target)
-ire (for a target)
+rage (aggression for all targets)
+ire (aggression for a target)
 bloodied
 lignified
 petrified
@@ -766,7 +744,7 @@ hunters mark
 
 EQUIPMENT PROPERTIES:
 
-	weapon;
+	WEAPON;
 	nimble - bonus to attack speed
 	keen - weapon doesn't lose sharpness
 	striker - increased chance to hit/crit
@@ -792,7 +770,7 @@ EQUIPMENT PROPERTIES:
 	wood
 	glass
 
-	armor;
+	ARMOR;
 	sanguine - overflow defense heals
 	fortitude - invulnerability to a dmg type
 	patient
@@ -942,7 +920,7 @@ Muskmelon - immune to poison
 Olive
 Orange
 
-Passionfruit - bonus to social interaction
+Passionfruit - bonus to social interaction (love stat)
 Peach
 Pear
 Persimmon
@@ -958,7 +936,7 @@ Raspberry
 Seaberry - water breathing
 Starfruit
 Strawberry
-Watermelon
+Watermelon - water walking?
 
 
 
@@ -991,6 +969,7 @@ several settlements exist in the world (aim for like at least 9)
 - Folkston/Folksvale
 - Ratcatcher Mill/Ratstead/Ratcatchers Pass
 - Goosetower
+- Bellfort
 
 
 THIRTEEN GODS WITH TEMPLES:

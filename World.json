@@ -358,7 +358,7 @@
 				"__class__": "Table",
 				"name": "table",
 				"desc": "an oaken table",
-				"weight": 40,
+				"weight": 50,
 				"durability": 5,
 				"contents": [
 					{

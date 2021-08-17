@@ -321,14 +321,21 @@ class Empty():
 # rooms and finding information about them.
 class Game():
 	def __init__(self,mode,currentroom,prevroom,time):
+		# the gamemode, either 0 for normal mode or 1 for god mode
 		self.mode = mode
+		# the room that the player is currently in
 		self.currentroom = currentroom
+		# the room that the player was in last
 		self.prevroom = prevroom
 		# the number of game loops that have elapsed since the game's start
 		self.time = time
+		# used for determining whether or not to print certain things
+		# usually silent is True when events happen outside the current room
 		self.silent = False
-		# the creature whose turn it is
+		# the creature who is currently acting
 		self.whoseturn = None
+		# the room that events are being executed in
+		self.activeroom = None
 		# stores the last command before processing. Used for cheatcode input
 		self.lastRawCommand = None
 		# these pronoun attributes will point to an object which the user may...
@@ -1054,10 +1061,12 @@ class Creature():
 		self.alive = False
 		print("agh its... ded?")
 		G.destroyCreature(self,W)
+		# TODO: make this just drop some random number of money not just LOOT
+		n = diceRoll(3,P.LOOT(),-2)
+		G.activeroom.addItem(Pylars(n))
+		if not G.silent: print(f"Dropped Ᵽ {n}")
 		if G.whoseturn is P:
 			P.gainxp(10)
-			# TODO make this just drop gold or loot in the room, not P.gainMoney
-			P.gainMoney(P.LOOT())
 
 	# takes incoming damage, accounts for damage vulnerability or resistance
 	def takedmg(self,dmg,type,P,G,W):
@@ -1078,6 +1087,12 @@ class Creature():
 		restrainer.addCondition("restraining",-3)
 		self.addCondition("restrained",-3)
 		return True
+
+	def Hide(self,I):
+		if 4 * self.SLTH() > I.weight:
+			self.addCondition("hiding",-3)
+		else:
+			pass
 
 	def isBloodied(self):
 		# returns true is creature has less than half health
@@ -1150,7 +1165,7 @@ class Player(Creature):
 
 	# adds money
 	def gainMoney(self,money):
-		print(f"\nYou gained Ᵽ{money}!")
+		print(f"\nYou gained Ᵽ {money}!")
 		self.money += money
 
 	# called when player hp hits 0
@@ -1319,7 +1334,7 @@ class Player(Creature):
 		columnPrint(statusdisplay,2,colWidth)
 
 	# each prints a different player stat
-	def printMoney(self): print(f"Ᵽ{self.money}")
+	def printMoney(self): print(f"Ᵽ {self.money}")
 	def printHP(self): print(f"HP: {self.hp}/{self.MXHP()}")
 	def printLV(self): print(f"LV: {self.level()}")
 	def printMP(self): print(f"MP: {self.mp}/{self.MXMP()}")
@@ -1343,7 +1358,7 @@ class Player(Creature):
 
 	# prints player level, money, hp, mp, rp, and status effects
 	def printStats(self):
-		stats = [self.name, f"Ᵽ{self.money}", f"LV: {self.level()}", f"RP: {self.rp}", f"HP: {self.hp}/{self.MXHP()}", f"MP: {self.mp}/{self.MXMP()}"]
+		stats = [self.name, f"Ᵽ {self.money}", f"LV: {self.level()}", f"RP: {self.rp}", f"HP: {self.hp}/{self.MXHP()}", f"MP: {self.mp}/{self.MXMP()}"]
 		columnPrint(stats,2,16)
 		if len(self.status) != 0:
 			self.printStatus()
