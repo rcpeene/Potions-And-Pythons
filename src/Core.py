@@ -326,6 +326,7 @@ class Game():
 		self.prevroom = prevroom
 		# the number of game loops that have elapsed since the game's start
 		self.time = time
+		self.silent = False
 		# the creature whose turn it is
 		self.whoseturn = None
 		# stores the last command before processing. Used for cheatcode input
@@ -351,6 +352,7 @@ class Game():
 		self.time += 1
 		P.passTime(1)
 		for room in self.renderedRooms(W):
+			self.silent = True if room is not self.currentroom else False
 			room.passTime(1)
 			for creature in room.occupants:
 				creature.passTime(1)
@@ -416,9 +418,11 @@ class Game():
 		return True
 
 	def destroyCreature(self,C,W):
-		for room in self.renderedRooms(W):
-			if C in room.occupants:
-				room.removeCreature(C)
+		pass
+		### change creature to be a dead creature or something
+		# for room in self.renderedRooms(W):
+		# 	if C in room.occupants:
+		# 		room.removeCreature(C)
 
 	## perhaps unnecessary code
 	# def destroyItem(self,I,W):
@@ -1352,12 +1356,13 @@ class Player(Creature):
 ##########################
 
 class Animal(Creature):
-	def act(self,P,room,silent):
-		if not silent:	print(f"\n{self.name}'s turn!")
-		self.attack(P,silent)
+	def act(self,P,G,room):
+		if not self.alive:	return
+		if not G.silent:	print(f"\n{self.name}'s turn!")
+		self.attack(P,G)
 
-	def attack(self,P,silent):
-		if not silent:	print("attack?")
+	def attack(self,P,G):
+		if not G.silent:	print("attack?")
 
 	def climb():
 		pass
@@ -1452,7 +1457,7 @@ class Monster(Creature):
 		pass
 
 class Person(Creature):
-	def act(self,P,currentroom,silent):
+	def act(self,P,G,room):
 		pass
 
 # almost identical to the item class, but fixtures may not be removed from their initial location. Fixtures also have a size attribute

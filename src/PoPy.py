@@ -7,6 +7,7 @@ from Parser import *
 # note: some startup code is run in Parser.py before main code is run
 if __name__ == "__main__":
 	while True:
+		# sort the occupants in each rendered room by their MVMT attribute
 		G.sortOccupants(W)
 
 		# take user input until player successfully performs an action
@@ -16,13 +17,15 @@ if __name__ == "__main__":
 		# creatures in current room's turn
 		for creature in G.currentroom.occupants:
 			G.whoseturn = creature
-			creature.act(P,G.currentroom,False)
+			creature.act(P,G,G.currentroom)
 
 		# creatures in nearby rooms' turn
+		G.silent = True
 		for room in G.nearbyRooms(W):
 			for creature in room.occupants:
 				G.whoseturn = creature
-				creature.act(P,room,True)
+				creature.act(P,G,room)
+		G.silent = False
 
 		# pass the time after everyone has acted
 		G.whoseturn = None
@@ -42,6 +45,7 @@ if __name__ == "__main__":
 # examine output grammar/statements for lower level actions (in case non-player creatures do actions, we dont want it to print the same msgs)
 # add creatures with many limbs (or can equip more than 2 weapons/shields)
 
+# the core game loop would have an error when iterating through each creature turn. If a creature is "inserted" or killed during iteration it could ruin things
 # add carry/put down (HOW IS THIS GONNA WORK? does it equip the creature? while they are restraining is the player unable to do anything else?)
 # organize method names in Core.py, jesus christ
 # implement escape and exit actions
