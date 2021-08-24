@@ -91,14 +91,10 @@ def processCmd(prompt,storeRawCmd=False):
 	# take input until input has any non-whitespace characters in it
 	while not any(i not in "\t " for i in rawcommand):
 		rawcommand = input("> ")
-	# for convenience, save raw command in game class
+	# for convenience, save raw command in game object
 	if storeRawCmd:	G.lastRawCommand = rawcommand.split()
 	# lowercase-ify the sentence command, copy it excluding symbols
-	rawcommand = rawcommand.lower()
-	purecommand = ""
-	for i in rawcommand:
-		if i in symbols:	purecommand = purecommand + " "
-		else:				purecommand = purecommand + i
+	purecommand = "".join([i for i in rawcommand.lower() if i not in symbols])
 	# copy command, delimited by spaces, into a list of words excluding articles
 	listcommand = [i for i in purecommand.split() if i not in articles]
 	# finally, combine certain words if they appear to make one noun term
@@ -144,7 +140,7 @@ def promptHelp(msg,n):
 # it is called on infinite loop until it returns True
 # it returns True only when the player successfully takes an action in the game
 # n denotes how many times parse has recurred
-def parse(n):
+def parse(n=0):
 	command = processCmd("What will you do?",storeRawCmd=True)
 	if len(command) == 0:
 		return promptHelp("Command not understood",n)

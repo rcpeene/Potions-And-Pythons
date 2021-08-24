@@ -82,6 +82,16 @@ def columnPrint(l,n,w):
 		k += spaces
 	print()
 
+def pluralize(term):
+	# do some checking for special words here
+	return term + "s"
+
+def singularize(term):
+	if term.endswith("s"):
+		return term[:-1]
+	else:
+		return term
+
 # grammar print; adds punctuation and determiners
 # n is the 'number' of an item, denoting its plurality
 def gprint(det,text,pos,n):
@@ -89,16 +99,17 @@ def gprint(det,text,pos,n):
 		det = "an"
 	if n > 1:
 		det = str(n)
-		text = text + "s" #pluralize the text, maybe find a more robust way
-	string = det + " " + text
+		text = pluralize(text) #pluralize the text, maybe find a more robust way
+	if "pylars" not in text.lower():
+		text = det + " " + text
 	if pos == 0:
-		string = string[0].upper() + string[1:]
+		text = text[0].upper() + text[1:]
 	elif pos == 2:
-		string = string + "."
+		text = text + "."
 	elif pos == 3:
-		string = string + ","
-	string = string + " "
-	return string
+		text = text + ","
+	text = text + " "
+	return text
 
 # capitalizes the first letter of all the words in a string
 def capWords(string):
@@ -382,6 +393,10 @@ class Game():
 			elif obj.gender == "f":
 				self.her = obj
 
+	def reapOccupants(self,W):
+		for room in self.renderedRooms(W):
+			room.reapOccupants()
+
 	# sorts the occupants of each room based on their MVMT() stat
 	def sortOccupants(self,W):
 		for room in self.renderedRooms(W):
@@ -512,9 +527,13 @@ class Room():
 	def sortOccupants(self):
 		self.occupants.sort(key=lambda x: x.MVMT(), reverse=True)
 
+	def reapOccupants(self):
+		reapCond = lambda x: True if x.alive else False
+		self.occupants = list(filter(reapCond, self.occupants))
+
 	# add connection to a neighboring Room
 	# to ensure a bidirectional connectiom between Rooms...
-	# this method would have to be called for both rooms.
+	# this method would have to be called once on each room.
 	def addConnection(self,dir,loc):
 		self.exits[dir] = loc
 

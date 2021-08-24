@@ -7,16 +7,14 @@ from Parser import *
 # note: some startup code is run in Parser.py before main code is run
 if __name__ == "__main__":
 	while True:
-		# sort the occupants in each rendered room by their MVMT attribute
-		G.sortOccupants(W)
+		G.silent = False
+		G.activeroom = G.currentroom
+		G.whoseturn = P
 
 		# take user input until player successfully performs an action
-		G.silent = False
-		G.whoseturn = P
-		while not parse(0):	continue
+		while not parse():	continue
 
 		# creatures in current room's turn
-		G.activeroom = G.currentroom
 		for creature in G.currentroom.occupants:
 			G.whoseturn = creature
 			creature.act(P,G,G.currentroom)
@@ -29,9 +27,15 @@ if __name__ == "__main__":
 				G.whoseturn = creature
 				creature.act(P,G,room)
 
-		# pass the time after everyone has acted
+		G.activeroom = None
 		G.whoseturn = None
+		# pass the time after everyone has acted
 		G.incrementTime(P,W)
+		# remove dead Creatures from room occupants
+		G.reapOccupants(W)
+		# sort the occupants in each rendered room by their MVMT attribute
+		G.sortOccupants(W)
+
 
 
 
@@ -39,15 +43,13 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# really consider what attributes to give items. maybe give them a value and a size attribute.
+# adjust how taking and listing items works (eg allow for saying "take swords")
 # add hide/crouch/crawl
-# test newest actions
-# when creature die, make it so they drop items maybe? instead of to player inv?
 # fix Go() when they dont have a compass
 # examine output grammar/statements for lower level actions (in case non-player creatures do actions, we dont want it to print the same msgs)
 # add creatures with many limbs (or can equip more than 2 weapons/shields)
+# the core game loop would have an error when iterating through each creature turn. If a creature is "inserted" or killed during iteration it could ruin things. Fix this with a "reapCreatures" method somewhere, maybe add to sortCreatures
 
-# the core game loop would have an error when iterating through each creature turn. If a creature is "inserted" or killed during iteration it could ruin things
 # add carry/put down (HOW IS THIS GONNA WORK? does it equip the creature? while they are restraining is the player unable to do anything else?)
 # organize method names in Core.py, jesus christ
 # implement escape and exit actions
@@ -79,7 +81,7 @@ if __name__ == "__main__":
 # add range and ranged weapons???
 # add new weapons
 # more switches, levers, buttons
-# ensure output is grammatically correct with creature names. (for npcs, instead of printing "the I.name" you must print just name)
+# ensure output is grammatically correct with creature names. (for npcs, instead of printing "THE I.name" you must print just name)
 
 # add object name disambiguation? (code asks "which sword will you use?"
 # add object plural type? 'there is some bread' vs 'there is a bread'

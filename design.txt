@@ -706,39 +706,40 @@ lowering a derived stat
 resistance to a damage type
 invulnerability to a damage type
 vulnerability to a damage type
-raising fondness of creature
-raising fear of creature
-insanity
+raising fondness of creature - raises fondness by some int for a creature name
+raising fear of creature - raises fondness by some int for a creature name
+insanity - creature might act randomly instead of based on input criteria
 rage (aggression for all targets)
 ire (aggression for a target)
-bloodied
-lignified
-petrified
-frozen
-paralyzed
-restrained
-burning
-poisoned
-sleep
-blinded
-deafened
-prone
-hindered
-spellbound (cant cast)
-disguised
-polymorphed
-invisible
-flying
-waterbreathing
-feather fall
-gaseous form
-truesight
-darkvision
-opulence (double money recieved)
-chefskiss (better at cooking)
-greenthumb (good at planting or something)
-in a sphere/bubble (immune to attack damage, can't attack, drop, take)
-hunters mark
+bloodied - could change creature behavior, also useful for certain effects
+lignified - creature cannot move and is flammable
+petrified - creature cannot move and is not flammable and is much heavier
+frozen - creature cannot move and is immune to cold damage
+paralyzed - creature cannot move or act
+restrained - creature cannot attack, cast, or use items
+burning - creature takes damage every turn
+poisoned - creature takes damage every turn
+sleep - creature will not act and will wake up if they are damaged
+blinded - creature cannot see, it influences their perception inputs
+deafened - creature cannot hear, it influences their perception inputs
+prone - creature moves more slowly??? idk here
+hindered - creature is slowed
+spellbound - cant cast
+disguised - creature appears to be something/someone else (idk how to do this)
+polymorphed - creature has entirely different stats and abilities (maybe store all previous stats in a JSON string)
+invisible - creature is perfectly hidden
+flying - creature can move freely in any direction
+waterbreathing - cannot drown
+feather fall - cannot take fall damage
+gaseous form - can fly and is intangible
+truesight - can see invisible things
+darkvision - can get full descriptions in darkness
+opulence - double money recieved
+chefskiss - better at cooking
+greenthumb - good at planting or something
+in a sphere/bubble - immune to physical damage, can't attack, drop, take
+hunters mark - idk??? ....
+thornshield - (thornskin maybe), when taking physical melee damage, deal damage to damager
 
 
 
