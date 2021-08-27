@@ -469,7 +469,7 @@ def Crouch(dobj,iobj,prep):
 		return Hide(dobj,iobj,prep)
 
 	P.addCondition("crouched",-3)
-	return
+	return True
 
 def Cut(dobj,iobj,prep):
 	print("cuting")
@@ -818,7 +818,7 @@ def Hide(dobj,iobj,prep):
 		return False
 
 	P.addCondition("hiding",-3)
-	return
+	return True
 
 def Ignite(dobj,iobj,prep):
 	print("igniteing")

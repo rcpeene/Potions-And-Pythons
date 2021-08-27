@@ -225,7 +225,7 @@ def maxm(m,n): return m if n > m else n
 #     /     /    \        /   |   \
 #  key  lockbox  axe  potion wand scroll
 #         |
-#       gold
+#      saffron
 
 # if returnPath: returns a list; the path from the found node to the root node
 # elif returnSource: returns a tuple; the found node and its parent
