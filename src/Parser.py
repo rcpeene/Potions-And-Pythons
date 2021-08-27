@@ -12,6 +12,7 @@
 from Menu import *
 
 
+
 ##################
 ## GAME STARTUP ##
 ##################
@@ -31,6 +32,7 @@ gameIntro()
 
 # mainMenu instantiates global objects Player, World, Game
 P, W, G = mainMenu()
+
 
 
 #######################
@@ -183,6 +185,7 @@ def parse(n=0):
 	return True
 
 
+
 ##########################################
 ## CHEATCODES AND DEV COMMAND FUNCTIONS ##
 ##########################################
@@ -262,6 +265,7 @@ def Zap(command):
 	print("Zapped objects: " + str(zappedObjects))
 
 
+
 #######################################
 ## SHORTACTION AND RELATED FUNCTIONS ##
 #######################################
@@ -292,6 +296,7 @@ def Shout(): print("AHHHHHHHHHH")
 def Sing(): print("Falalalaaaa")
 def Time(): print("Time:", G.time)
 def Yawn():	print("This is no time for slumber!")
+
 
 
 ##################################
@@ -1234,6 +1239,7 @@ def Wait(dobj,iobj,prep):
 
 def Wave(dobj,iobj,prep):
 	print("waveing")
+
 
 
 ##################################

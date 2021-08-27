@@ -9,6 +9,7 @@
 from Core import *
 
 
+
 #######################
 ## CLASS DEFINITIONS ##
 #######################
@@ -23,27 +24,24 @@ class Bottle(Item):
 			newShard = Shard("shard","a sharp shard of glass",1,-1)
 			S.addItem(newShard)
 
+
+
 class Box(Item):
 	def __init__(self,name,desc,weight,durability,open,contents):
 		Item.__init__(self,name,desc,weight,durability)
 		self.open = open
 		self.contents = contents
 
-	# takes a string, term, and searches the box's contents
-	# if an item is found that matches term, return it, otherwise, return None
-	def inContents(self,term):
-		for item in self.contents:
-			if item.name == term:	return item
-		return None
 
-	def contentNames(self):
-		return [item.name for item in self.contents]
 
-	def addItem(self,I):
-		insort(self.contents,I)
+	### Operation ###
 
-	def removeItem(self,I):
-		self.contents.remove(I)
+	# the weight of a box is equal to its own weight + weights of its contents
+	def Weight(self):
+		w = self.weight
+		for i in self.contents:
+			w += i.Weight()
+		return w
 
 	# sets open bool to true, prints its contents
 	def Open(self):
@@ -62,19 +60,33 @@ class Box(Item):
 		self.open = False
 		print(f"You close the {self.name}")
 
-	# the weight of a box is equal to its own weight + weights of its contents
-	def Weight(self):
-		w = self.weight
-		for i in self.contents:
-			w += i.Weight()
-		return w
-
 	def Look(self):
 		if len(self.contents) == 0:
 			print("It is empty")
 		else:
 			self.open = True
 			print("Inside there is " + listItems(self.contents))
+
+	def addItem(self,I):
+		insort(self.contents,I)
+
+	def removeItem(self,I):
+		self.contents.remove(I)
+
+
+
+	### Getters ###
+
+	# takes a string, term, and searches the box's contents
+	# if an item is found that matches term, return it, otherwise, return None
+	def inContents(self,term):
+		for item in self.contents:
+			if item.name == term:	return item
+		return None
+
+	def contentNames(self):
+		return [item.name for item in self.contents]
+
 
 
 class Bread(Item):
@@ -85,6 +97,8 @@ class Bread(Item):
 		S.removeItem(self)
 		if h == 0:
 			print("Yummy")
+
+
 
 class Controller(Item):
 	def __init__(self,name,desc,weight,durability,effect):
@@ -97,6 +111,8 @@ class Controller(Item):
 
 	# using the controller triggers the effect
 	def Use(self,P,W,G):	self.Trigger(P,W,G)
+
+
 
 class Door(Fixture):
 	def __init__(self,name,desc,weight,durability,open,connections):
@@ -121,13 +137,19 @@ class Door(Fixture):
 		Otherroom = W[outloc]
 		Otherroom.addConnection(indir,inloc)
 
+
+
 class Foot(Item):
 	def improviseWeapon(self):
 		return Weapon(self.name,self.desc,self.weight,self.durability,minm(1,self.weight//4),0,0,0,False,"b")
 
+
+
 class Hand(Item):
 	def improviseWeapon(self):
 		return Weapon(self.name,self.desc,self.weight,self.durability,minm(1,self.weight//4),2,0,0,False,"b")
+
+
 
 class Key(Item):
 	def __init__(self,name,desc,weight,durability,id):
@@ -140,11 +162,17 @@ class Key(Item):
 	def UnlockWith(self,box):
 		pass
 
+
+
 class Lockbox(Box):
 	def __init__(self,name,desc,weight,durability,open,contents,keyids,locked):
 		Box.__init__(self,name,desc,weight,durability,open,contents)
 		self.keyids = keyids
 		self.locked = locked
+
+
+
+	### Operation ###
 
 	# sets open bool to true, prints its contents
 	def Open(self):
@@ -196,9 +224,13 @@ class Lockbox(Box):
 		print(f"The {key.name} won't work!")
 		return True
 
+
+
 class Mouth(Item):
 	def improviseWeapon(self):
 		return Weapon(self.name,self.desc,self.weight,self.durability,minm(1,self.weight//4),0,0,4,False,"p")
+
+
 
 class Potion(Bottle):
 	# heals the player hp 1000, replaces potion with an empty bottle
@@ -214,10 +246,14 @@ class Potion(Bottle):
 		S.removeItem(self)
 		P.addItem(Bottle("bottle","an empty glass bottle",3,3))
 
+
+
 class Shard(Item):
 	#???
 	def Cut(self,P):
 		print("[you cut something?]")
+
+
 
 class Sign(Item):
 	def __init__(self,name,desc,weight,durability,text):
@@ -227,6 +263,8 @@ class Sign(Item):
 	# prints the text on the sign in quotes
 	def Look(self):
 		print('\n"' + self.text + '"')
+
+
 
 class Switch(Fixture):
 	def __init__(self,name,desc,weight,durability,effect):
@@ -240,9 +278,13 @@ class Switch(Fixture):
 	# using the switch triggers the effect
 	def Use(self,P,W,G):	self.Trigger(P,W,G)
 
+
+
 class Sword(Weapon):
 	def Cut(self,P):
 		print("[you cut something?]")
+
+
 
 class Table(Fixture):
 	def __init__(self,name,desc,weight,durability,contents,descname):
@@ -250,15 +292,9 @@ class Table(Fixture):
 		self.contents = contents
 		self.descname = descname
 
-	# takes a string, term, and searches the box's contents
-	# if an item is found that matches term, return it, otherwise, return None
-	def inContents(self,term):
-		for item in self.contents:
-			if item.name == term:	return item
-		return None
 
-	def contentNames(self):
-		return [item.name for item in self.contents]
+
+	### Operation ###
 
 	def addItem(self,I):
 		insort(self.contents,I)
@@ -271,11 +307,29 @@ class Table(Fixture):
 		elif len(self.contents) == 0:
 			self.descname = f"empty {self.name}"
 
+
+
+	### Getters ###
+
 	# the weight of a box is equal to its own weight + weights of its contents
 	def Weight(self):
 		w = self.weight
 		for i in self.contents:	w += i.Weight()
 		return w
+
+	# takes a string, term, and searches the box's contents
+	# if an item is found that matches term, return it, otherwise, return None
+	def inContents(self,term):
+		for item in self.contents:
+			if item.name == term:	return item
+		return None
+
+	def contentNames(self):
+		return [item.name for item in self.contents]
+
+
+
+	### User Output ###
 
 	def describe(self):
 		print(self.descname)
@@ -283,6 +337,8 @@ class Table(Fixture):
 			print("On it is " + listItems(self.contents))
 		else:
 			print("There is nothing on it")
+
+
 
 class Wall(Passage):
 	def __init__(self,name,desc,weight,durability,connections,descname,cr):
@@ -311,6 +367,7 @@ class Wall(Passage):
 		print(f"You climb {dir} the {self.name}")
 		G.changeRoom(W[self.connections[dir]],P,W)
 		return True
+
 
 
 #########################

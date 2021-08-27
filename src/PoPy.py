@@ -43,8 +43,8 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# adjust how taking and listing items works (eg allow for saying "take swords")
 # add hide/crouch/crawl
+# determine what can be hid behind
 # fix Go() when they dont have a compass
 # examine output grammar/statements for lower level actions (in case non-player creatures do actions, we dont want it to print the same msgs)
 # add creatures with many limbs (or can equip more than 2 weapons/shields)
@@ -60,15 +60,14 @@ if __name__ == "__main__":
 # add some preliminary spells and add effects file
 # split creatures and objects into different files
 
-# figure out a thing that removes dead bodies outside of render distance
+# adjust how taking and listing items works (eg allow for saying "take swords")
 # consider adding alternative names (this would change search funcs a lot)
 # consider enter, exit functions in room
 # reevaluate effect functions, is there a way to reference a function by string?
 # how will amulet effects work??
 
 # add Steal
-# determine what can be hid behind
-# add magic beans or food to pour stuff one
+# add magic beans or food to pour stuff on
 # "drink from the fountain"
 # make a list of all possible uses and inputs for each action and systematically test them. Revise the world to accomodate them
 

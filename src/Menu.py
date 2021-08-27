@@ -15,6 +15,7 @@ import json
 from Objects import *
 
 
+
 ##########################
 ## WRITE DATA FUNCTIONS ##
 ##########################
@@ -48,6 +49,7 @@ class worldEncoder(json.JSONEncoder):
 def writeJSON(filename,W):
 	with open(filename,"w") as fd:
 		json.dump(W,fd,cls=worldEncoder,indent="\t")
+
 
 
 #########################
@@ -94,6 +96,7 @@ def readGame(filename,W):
 	time = int(gametext[3][:-1])		# fourth line is time int
 	gfd.close()
 	return Game(mode,W[currentroom],W[prevroom],time)
+
 
 
 ####################
@@ -301,6 +304,7 @@ def mainMenu():
 
 		if g[0] == "quit" and len(g) == 1:		sys.exit()
 		if g[0] == "test" and len(g) == 1:		return testGame()
+
 
 
 ##########################
