@@ -63,6 +63,7 @@ def ellipsis(n):
 		print(".")
 
 # prints a list of strings, l, into n columns of width w characters
+# if an element is longer than one column, it takes up as many columns as needed
 def columnPrint(l,n,w):
 	print()
 	# k is the number of characters that have been printed in the current row
@@ -128,6 +129,7 @@ def ordinal(n):
 	else:					suffix = "th"
 	return str(n) + suffix
 
+# used on room area conditions to extract the info of the condition it casuses
 def extractConditionInfo(roomCondition):
 	if not roomCondition.startswith("AREA"):
 		raise Exception("extracting condition info from invalid area condition")
@@ -210,11 +212,20 @@ def maxm(m,n): return m if n > m else n
 
 
 # the room, creatures, and some items can contain items within themselves...
-# thus all objects within a room can be thought of as a tree graph...
+# thus all objects within a room can be thought of as a tree...
 # where each node is an item or creature, and the root is the room
 # the player object can also be thought of this way where the player is the root
 # this function recursively searches the tree of objects for an object...
 # whose name matches the given term, (not case sensitive)
+# the object tree might look as follows
+
+#            _____Room_____
+#          /    /     \     \
+#      cat   chest  sword  wizard
+#     /     /    \        /   |   \
+#  key  lockbox  axe  potion wand scroll
+#         |
+#       gold
 
 # if returnPath: returns a list; the path from the found node to the root node
 # elif returnSource: returns a tuple; the found node and its parent
@@ -231,40 +242,43 @@ def maxm(m,n): return m if n > m else n
 
 # this function is a wrapper for objSearchRecur()
 def objSearch(term,root,d=0,getPath=False,getSource=False,reqSource=None):
-	O,S,path = objSearchRecur(term,root,[],d,reqSource)
-	if getPath:		return O,path
-	elif getSource:	return O,S
-	else:			return O
+	target,source,path = objSearchRecur(term,root,[],d,reqSource)
+	if getPath:		return target,path
+	elif getSource:	return target,source
+	else:			return target
 
 def objSearchRecur(term,node,path,d,reqSource):
-	S = None						# source object is initially None
-	O = None						# target object is initially None
+	target,source = None,None
 	# choose list of objects to search through depending on the node's type
 	if isinstance(node,Room):	searchThrough = node.contents + node.occupants
 	elif hasattr(node,"contents"):	searchThrough = node.contents
 	elif hasattr(node,"inv"):		searchThrough = node.inv
 	# if node is unsearchable: return
-	else:	return O,S,path
-	# firstly, just search objects in the "top level" of the tree
-	for I in searchThrough:
+	else:	return target,source,path
+
+	# firstly, just search objects in the "top level" of the tree for a match
+	for obj in searchThrough:
 		# don't search the current node if it is not the required source
-		if reqSource != None and reqSource != node.name:	break
-		if I.name.lower() == term:
-			S,O = node,I
+		if reqSource != None and reqSource != node.name:
 			break
+		if obj.name.lower() == term:
+			source,target = node,obj
+			break
+
 	# then, recursively search each object's subtree
-	for I in searchThrough:
+	for obj in searchThrough:
 		# if target object was already found, no need to search deeper
-		if O != None:	break
+		if target != None:	break
 		# depending on the degree, may skip closed, locked, or creature objects
-		if d == 0 and hasattr(I,"open") and not I.open:		continue
-		elif (d <= 1) and isinstance(I,Creature):			continue
-		elif d <= 2 and hasattr(I,"locked") and I.locked:	continue
+		if d == 0 and hasattr(obj,"open") and not I.open:	continue
+		elif (d <= 1) and isinstance(obj,Creature):			continue
+		elif d <= 2 and hasattr(obj,"locked") and I.locked:	continue
 		# recur the search on each object node, I
-		O,S,path = objSearchRecur(term,I,path,d,reqSource)
+		target,source,path = objSearchRecur(term,obj,path,d,reqSource)
+
 	# if an object was found, append the search path before returning
-	if O != None:	path.append(node)
-	return O,S,path
+	if target != None:	path.append(node)
+	return target,source,path
 
 # this function takes the same principle as objSearch, recursively traversing...
 # the tree of objects, except that it does not search for a specific object...
@@ -280,6 +294,7 @@ def objTreeToSet(root,d=0,getSources=False):
 	elif hasattr(root,"inv"):		searchThrough = root.inv
 	# if the item is not searchable, return empty set
 	else:	return set()
+
 	for I in searchThrough:
 		# add the item to the set of all items
 		if getSources:	A.add((I,root))
@@ -410,6 +425,15 @@ class Game():
 			elif obj.gender == "f":
 				self.her = obj
 
+	def reapOccupants(self,W):
+		for room in self.renderedRooms(W):
+			room.reapOccupants()
+
+	# sorts the occupants of each room based on their MVMT() stat
+	def sortOccupants(self,W):
+		for room in self.renderedRooms(W):
+			room.sortOccupants()
+
 	def destroyCreature(self,C,W):
 		pass
 		### change creature to be a dead creature or something
@@ -429,6 +453,18 @@ class Game():
 
 	### Getters ###
 
+	# recursively adds all adjacent rooms to the set of found rooms
+	# used by renderedRooms()
+	# n is the path length at which the search stops
+	# Sroom is the "source" room, or the current node in the search
+	def roomFinder(self,n,Sroom,pathlen,foundrooms,W):
+		if pathlen >= n:
+			return
+		adjacentRooms = [W[name] for name in Sroom.allExits().values()]
+		for room in adjacentRooms:
+			foundrooms.add(room)
+			self.roomFinder(n,room,pathlen+1,foundrooms,W)
+
 	# returns set of all rooms connected to currentroom with path < REND_DIST
 	def renderedRooms(self,W):
 		# constant render distance of rooms in world
@@ -444,18 +480,6 @@ class Game():
 		R = self.renderedRooms(W)
 		R.remove(self.currentroom)
 		return R
-
-	# recursively adds all adjacent rooms to the set of found rooms
-	# used by renderedRooms()
-	# n is the path length at which the search stops
-	# Sroom is the "source" room, or the current node in the search
-	def roomFinder(self,n,Sroom,pathlen,foundrooms,W):
-		if pathlen >= n:
-			return
-		adjacentRooms = [W[name] for name in Sroom.allExits().values()]
-		for room in adjacentRooms:
-			foundrooms.add(room)
-			self.roomFinder(n,room,pathlen+1,foundrooms,W)
 
 	# returns a list of objects in current room which fit a certain condition
 	# key is a function which identifies a condition about the obj
@@ -1058,7 +1082,6 @@ class Creature():
 	def death(self,P,G,W):
 		self.alive = False
 		print("agh its... ded?")
-		G.destroyCreature(self,W)
 		# TODO: make this just drop some random number of money not just LOOT
 		n = diceRoll(3,P.LOOT(),-2)
 		G.activeroom.addItem(Pylars(n))

@@ -449,13 +449,27 @@ def Craft(dobj,iobj,prep):
 	print("crafting")
 
 def Crawl(dobj,iobj,prep):
-	print("crawling")
+	if prep in {"behind","below","beneath","under"}:
+		return Hide(dobj,iobj,prep)
+	if prep in {"in","inside","into","through"}:
+		Crouch(None,None,None)
+		Go(dobj,iobj,prep)
 
 def Cross(dobj,iobj,prep):
 	print("crossing")
 
 def Crouch(dobj,iobj,prep):
-	print("crouching")
+	if prep not in {"behind","below","beneath","inside","under",None}:
+		print("Command not understood")
+		return False
+
+	if dobj != None:
+		dobj = iobj
+	if dobj != None:
+		return Hide(dobj,iobj,prep)
+
+	P.addCondition("crouched",-3)
+	return
 
 def Cut(dobj,iobj,prep):
 	print("cuting")
@@ -1396,6 +1410,7 @@ actions = {
 "sleep":Rest,
 "slice":Cut,
 "smell":Smell,
+"sneak":Crouch,
 "sniff":Smell,
 "speak":Talk,
 "steal":Steal,

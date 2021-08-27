@@ -43,30 +43,27 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# add hide/crouch/crawl
-# determine what can be hid behind
 # fix Go() when they dont have a compass
 # examine output grammar/statements for lower level actions (in case non-player creatures do actions, we dont want it to print the same msgs)
-# add creatures with many limbs (or can equip more than 2 weapons/shields)
-# the core game loop would have an error when iterating through each creature turn. If a creature is "inserted" or killed during iteration it could ruin things. Fix this with a "reapCreatures" method somewhere, maybe add to sortCreatures
-
 # add carry/put down (HOW IS THIS GONNA WORK? does it equip the creature? while they are restraining is the player unable to do anything else?)
-# organize method names in Core.py, jesus christ
 # implement escape and exit actions
-# add a wait command (cant wait with enemies nearby)
-# there is a bug in equip where two of the same item can be equipped twice
+
 # make menu look nice instead of reprinting everything
 # add basic "cast" parsing
 # add some preliminary spells and add effects file
+# consider enter, exit functions in room
 # split creatures and objects into different files
+# add a wait command (cant wait with enemies nearby, cuz they could just kill you)
+# there is a bug in equip where two of the same item can be equipped twice
+# add creatures with many limbs (or can equip more than 2 weapons/shields)
 
+# add Steal
+# determine what can be hid behind
 # adjust how taking and listing items works (eg allow for saying "take swords")
 # consider adding alternative names (this would change search funcs a lot)
-# consider enter, exit functions in room
 # reevaluate effect functions, is there a way to reference a function by string?
 # how will amulet effects work??
 
-# add Steal
 # add magic beans or food to pour stuff on
 # "drink from the fountain"
 # make a list of all possible uses and inputs for each action and systematically test them. Revise the world to accomodate them
