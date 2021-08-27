@@ -449,11 +449,11 @@ def Craft(dobj,iobj,prep):
 	print("crafting")
 
 def Crawl(dobj,iobj,prep):
-	if prep in {"behind","below","beneath","under"}:
-		return Hide(dobj,iobj,prep)
+	if prep in {"behind","below","beneath","under",None}:
+		return Crouch(dobj,iobj,prep)
 	if prep in {"in","inside","into","through"}:
 		Crouch(None,None,None)
-		Go(dobj,iobj,prep)
+		return Go(dobj,iobj,prep)
 
 def Cross(dobj,iobj,prep):
 	print("crossing")
