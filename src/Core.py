@@ -270,9 +270,9 @@ def objSearchRecur(term,node,path,d,reqSource):
 		# if target object was already found, no need to search deeper
 		if target != None:	break
 		# depending on the degree, may skip closed, locked, or creature objects
-		if d == 0 and hasattr(obj,"open") and not I.open:	continue
-		elif (d <= 1) and isinstance(obj,Creature):			continue
-		elif d <= 2 and hasattr(obj,"locked") and I.locked:	continue
+		if d == 0 and hasattr(obj,"open") and not obj.open:		continue
+		elif (d <= 1) and isinstance(obj,Creature):				continue
+		elif d <= 2 and hasattr(obj,"locked") and obj.locked:	continue
 		# recur the search on each object node, I
 		target,source,path = objSearchRecur(term,obj,path,d,reqSource)
 
@@ -286,8 +286,7 @@ def objSearchRecur(term,node,path,d,reqSource):
 # d, the degree of the traversal, works the same as in objSearch() above
 # if getSources, the set will consist of tuples of object,source pairs
 def objTreeToSet(root,d=0,getSources=False):
-	# A is the set of all objects encountered by the traversal
-	A = set()
+	allObjects = set()
 	# determine what to search through based on the root's type
 	if isinstance(root,Room):	searchThrough = root.contents + root.occupants
 	elif hasattr(root,"contents"):	searchThrough = root.contents
@@ -295,17 +294,17 @@ def objTreeToSet(root,d=0,getSources=False):
 	# if the item is not searchable, return empty set
 	else:	return set()
 
-	for I in searchThrough:
+	for obj in searchThrough:
 		# add the item to the set of all items
-		if getSources:	A.add((I,root))
-		else:			A.add(I)
+		if getSources:	allObjects.add((obj,root))
+		else:			allObjects.add(obj)
 		# depending on the degree, skips closed, locked, or creature objects
-		if d == 0 and hasattr(I,"open") and not I.open:		continue
-		elif (d <= 1) and isinstance(I,Creature):			continue
-		elif d <= 2 and hasattr(I,"locked") and I.locked:	continue
-		# unionize the set of all items with item I's set
-		A = A | objTreeToSet(I,d=d,getSources=getSources)
-	return A
+		if d == 0 and hasattr(obj,"open") and not obj.open:		continue
+		elif (d <= 1) and isinstance(obj,Creature):				continue
+		elif d <= 2 and hasattr(obj,"locked") and obj.locked:	continue
+		# unionize the set of all items with item obj's set
+		allObjects = allObjects | objTreeToSet(obj,d=d,getSources=getSources)
+	return allObjects
 
 
 
