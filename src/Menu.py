@@ -30,21 +30,21 @@ def writeGame(filename,G):
 	gfd.close()
 
 class worldEncoder(json.JSONEncoder):
-	def default(self, o):
+	def default(self,objToWrite):
 		JSONprimitives = {dict,list,str,int,float,bool,None}
-		if type(o) == set:
-			return {"__class__":"set","setdata":list(o)}
-		# elif type(o) == Room:
-		# 	return o.__dict__
-		elif hasMethod(o,"convertToJSON"):
-			return o.convertToJSON()
-		elif type(o) not in JSONprimitives:
-			d = o.__dict__
+		if type(objToWrite) == set:
+			return {"__class__":"set","setdata":list(objToWrite)}
+		# elif type(objToWrite) == Room:
+		# 	return objToWrite.__dict__
+		elif hasMethod(objToWrite,"convertToJSON"):
+			return objToWrite.convertToJSON()
+		elif type(objToWrite) not in JSONprimitives:
+			jsonDict = objToWrite.__dict__
 			# this is done so the class key appears first in the JSON object
-			d = {"__class__": o.__class__.__name__} | d
-			return d
+			jsonDict = {"__class__": objToWrite.__class__.__name__} | jsonDict
+			return jsonDict
 		else:
-			return o
+			return objToWrite
 
 def writeJSON(filename,W):
 	with open(filename,"w") as fd:
@@ -56,15 +56,16 @@ def writeJSON(filename,W):
 ## READ DATA FUNCTIONS ##
 #########################
 
-def default(d):
-	# print("==== converting object of type: " + str(type(d)))
-	if "__class__" in d and d["__class__"] == "set":
-		return set(d["setdata"])
-	elif "__class__" in d.keys():
-		objClassname = d["__class__"]
-		del d["__class__"]
+def default(jsonDict):
+	# print("==== converting object of type: " + str(type(jsonDict)))
+	if "__class__" in jsonDict:
+		objClassname = jsonDict["__class__"]
+		del jsonDict["__class__"]
+		if objClassname == "set":
+			return set(jsonDict["setdata"])
+
 		objClass = strToClass(objClassname)
-		objAttributes = list(d.values())
+		objAttributes = list(jsonDict.values())
 		# print("========: " + d["name"] + " " + str(objAttributes))
 
 		if objClassname == "Room":
@@ -73,12 +74,12 @@ def default(d):
 			return Empty()
 		elif objClass != None:
 			if hasMethod(objClass,"convertFromJSON"):
-				return objClass.convertFromJSON(d)
+				return objClass.convertFromJSON(jsonDict)
 			return objClass(*objAttributes)
 		else:
 			raise Exception("ERROR in decoding JSON object class type: " + objClassname)
 	else:
-		return d
+		return jsonDict
 
 def readJSON(filename):
 	with open(filename,"r") as fd:
@@ -105,7 +106,8 @@ def readGame(filename,W):
 
 # saves data from player, world, and game objects to respective text files
 def saveGame(P,W,G):
-	if not os.path.exists("saves"):	#create save directory if it doesn't exist
+	# create save directory if it doesn't exist
+	if not os.path.exists("saves"):
 		os.mkdir("saves")
 	os.chdir("saves")
 
@@ -118,18 +120,19 @@ def saveGame(P,W,G):
 		print("Save name cannot be empty")
 		os.chdir("..")
 		return
-	# if the save name is unused, make a new directory
-	if not (os.path.exists(savename)):
-		try:	os.mkdir(savename)
-		except:
-			print("Invalid save name")
-			os.chdir("..")
-			return
+
 	# if the save name is used, ask to overwrite it
-	else:
+	if os.path.exists(savename):
 		print("A save file with this name already exists")
 		#if dont overwrite, then just return
 		if not (yesno("Would you like to overwrite it?")):
+			os.chdir("..")
+			return
+	# if the save name is unused, make a new directory
+	else:
+		try:	os.mkdir(savename)
+		except:
+			print("Invalid save name")
 			os.chdir("..")
 			return
 
@@ -146,22 +149,27 @@ def saveGame(P,W,G):
 
 # load a game from a save directory
 def loadGame(filename):
+	clearScreen()
 	if not (os.path.exists("saves")) or len(os.listdir(".\\saves")) == 0:
-		print("There are no save files")
+		print("\nThere are no save files\n")
+		input()
 		return mainMenu()
 	os.chdir("saves")
 
 	if filename == None:
 		# split save names into a list and display them
+		print("Save files: ")
 		saves = os.listdir()
 		columnPrint(saves,10,10)
 		savename = input("\nWhich save file will you load?\n> ")
-	else:	savename = filename
+	else:
+		savename = filename
 
 	# if user inputs a save name that doesn't exist
 	if not os.path.exists(savename):
-		print("There is no save file named '" + savename + "'\n")
+		print("\nThere is no save file named '" + savename + "'\n")
 		os.chdir("..")
+		input()
 		return mainMenu()
 	os.chdir(savename)
 	# try to load the player, world, and game objects
@@ -169,7 +177,7 @@ def loadGame(filename):
 	P = readJSON("player.json")
 	W = readJSON("world.json")
 	G = readGame("game.txt",W)
-	# # hopefully load doesn't fail, that would suck
+	# hopefully load doesn't fail, that would suck
 	# except:
 	# 	print("Could not load game, save data corrupted\n")
 	# 	os.chdir("..")
@@ -180,12 +188,14 @@ def loadGame(filename):
 	os.chdir("..")
 	ellipsis(3)
 	flushInput()
+	clearScreen()
 	# describe the current room
 	G.startUp(P,W)
 	return P, W, G
 
 # deletes all save files in 'save' directory (if the user is very, very sure)
 def deleteAll():
+	clearScreen()
 	if not yesno("Are you sure you want to delete all save files?"):
 		os.chdir("..")
 		return mainMenu()
@@ -199,20 +209,23 @@ def deleteAll():
 		os.rmdir(savename)
 	os.chdir("..")
 	sleep(1)
-	print("All save files deleted")
-	sleep(1)
+	print("\nAll save files deleted")
 	print()
+	input()
 	return mainMenu()
 
 # deletes a save file whose name is given by the user
 def delete(filename):
+	clearScreen()
 	if not os.path.exists("saves") or len(os.listdir(".\\saves")) == 0:
-		print("There are no save files")
+		print("\nThere are no save files\n")
+		input()
 		return mainMenu()
 	os.chdir("saves")
 
 	if filename == None:
 		# split save names into a list and display them
+		print("Save files: ")
 		saves = os.listdir()
 		columnPrint(saves,10,10)
 		savename = input("\nWhich save file will you delete?\n> ")
@@ -223,8 +236,9 @@ def delete(filename):
 
 	# if the user inputs a save name that doesn't exist
 	if not os.path.exists(savename):
-		print("There is no save file named '" + savename + "'\n")
+		print("\nThere is no save file named '" + savename + "'\n")
 		os.chdir("..")
+		input()
 		return mainMenu()
 	# ask for confirmation, if no, then return to menu
 	if not yesno("Are you sure you want to delete this save file?"):
@@ -238,9 +252,9 @@ def delete(filename):
 	os.rmdir(savename)
 	os.chdir("..")
 	sleep(1)
-	print("Deleted")
-	sleep(1)
+	print("\nDeleted")
 	print()
+	input()
 	return mainMenu()
 
 # asks for player name and description, starts everything else at initial values
@@ -283,28 +297,37 @@ def testGame():
 	G.mode = 1
 	return P, W, G
 
+def gameInfo():
+	clearScreen()
+	print(gameinfo)
+	input()
+	return mainMenu()
+
 # main game menu, used to instantiate global variables P, W, and G in Parser.py
 # loops until a new game is made, a save is loaded, or the game is quit
 # n denotes how many times mainMenu has recurred
 def mainMenu():
 	# handle case when running code from src directory instead of main directory
-	if 'src' in os.getcwd(): os.chdir("..")
+	if "src" in os.getcwd(): os.chdir("..")
+	clearScreen()
+	print(logo)
+	print(menuinstructions)
+
 	while True:
-		print(menuinstructions)
 		g = input("> ").lower().split()
-		if len(g) == 0: 						continue
-		if g[0] == "info" and len(g) == 1:		print("\n"*64+gameinfo)
-		if g[0] == "new" and len(g) == 1:		return newGame()
+		if len(g) == 0: 						return mainMenu()
+		elif g[0] == "info" and len(g) == 1:	return gameInfo()
+		elif g[0] == "new" and len(g) == 1:		return newGame()
 
-		if g[0] == "load" and len(g) == 1:		return loadGame(None)
-		if g[0] == "load":						return loadGame(" ".join(g[1:]))
+		elif g[0] == "load" and len(g) == 1:	return loadGame(None)
+		elif g[0] == "load":					return loadGame(" ".join(g[1:]))
 
-		if g[0] == "delete" and len(g) == 1:	return delete(None)
+		elif g[0] == "delete" and len(g) == 1:	return delete(None)
 		elif g[0] == "delete":					return delete(" ".join(g[1:]))
 
-		if g[0] == "quit" and len(g) == 1:		sys.exit()
-		if g[0] == "test" and len(g) == 1:		return testGame()
-
+		elif g[0] == "quit" and len(g) == 1:	sys.exit()
+		elif g[0] == "test" and len(g) == 1:	return testGame()
+		else:			 						return mainMenu()
 
 
 ##########################

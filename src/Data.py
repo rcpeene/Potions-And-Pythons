@@ -16,7 +16,7 @@
 
 menuinstructions = "\nType 'info' for information on how to play\nType 'new' to start a new game\nType 'load' to load a save file\nType 'delete' to delete a save file\nType 'quit' to quit the game\n"
 
-gameinfo = "="*64 + "\nPotions & Pythons\nv.Alpha\nBy Carter Peene, 2021\n\n" + "-"*64 + "\n\nTo play, type a command of the form:\n[verb] [*noun] [*preposition] [*noun]\nOR\n[verb] [*preposition] [*noun]\n\n* denotes a term that can be omitted when unnecessary\nArticles, determiners, and most symbols are removed from your input\n\n" + "-"*64 + "\n\nGet a list of valid commands by typing 'help'\nGet a list of command examples by typing 'examples'\nSee your main player statistics by typing 'stats' and 'traits'\nSee a description of your current location by typing 'here'\nLearn about most game terms and commands by typing 'define [term]'\n" + "="*64
+gameinfo = "="*64 + "\n\nPotions & Pythons\nv.Alpha\nBy Carter Peene, 2021\n\n" + "-"*64 + "\n\nTo play, type a command of the form:\n[verb] [*noun] [*preposition] [*noun]\nOR\n[verb] [*preposition] [*noun]\n\n* denotes a term that can be omitted when unnecessary\nArticles, determiners, and most symbols are removed from your input\n\n" + "-"*64 + "\n\nDuring the game, get a list of valid commands by typing 'help'\nGet a list of command examples by typing 'examples'\nSee your main player statistics by typing 'stats' and 'traits'\nSee a description of your current location by typing 'here'\nLearn about most game terms and commands by typing 'define [term]'\n\n" + "="*64
 
 examples = "\nValid input examples include:\n- go\n- go north\n- go nw\n- go up the stairs\n- go back\n- go to tunnel\n- look at python\n- i will fight the python!\n- hit the python with my sword\n- attack python sword\n- equip a sword\n- unequip sword\n- take red potion\n- take the red potion from the chest\n- put red potion in chest\n- put red potion chest\n- drop the red potion\n- close chest"
 
@@ -52,7 +52,8 @@ prepositions = {"above","across","at","behind","below","beneath","by","d","down"
 
 pronouns = {"she","he","they","her","him","them","it"}
 
-# TODO: words which will be split into two meaningful wordss
+# TODO: words which will be split into two meaningful words
+# make this a dict?
 compounds = {"downstairs"}
 
 # used in nounify() in Parser.py to combine multiple words that might have a single meaning as a whole term
@@ -82,7 +83,7 @@ traits = ("STR","SKL","SPD","STM","CON","CHA","INT","WIS","FTH","LCK")
 abilities = ("ACCU","ATCK","ATHL","ATSP","BRDN","CAST","CRIT","CSSP","DCPT","DFNS","ENDR","EVSN","INVS","KNWL","LOOT","MVMT","MXHP","MXMP","PRSD","RESC","RITL","SLTH","SPLS","TNKR")
 
 # verb commands which may only be entered as single, lonesome words
-shortverbs = ("back","clear","cry","dance","examples","help","info","information","laugh","quit","return","here","save","scream","shout","sing","time","yawn","yell")
+shortverbs = ("back","clear","cry","dance","examples","help","here","info","information","laugh","quit","return","save","scream","shout","sing","time","yawn","yell")
 
 # commands which just serve to print stats to the player
 statcommands = ("abilities","accu","atck","athl","atsp","brdn","cast","crit","cssp","dcpt","dfns","endr","evsn","gear","hp","inventory","inv","invs","knwl","level","loot","lv","money","mp","mvmt","mxhp","mxmp","prsd","resc","ritl","rp","slth","spls","stats","status","tnkr","traits","weapons","xp")

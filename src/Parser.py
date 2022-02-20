@@ -54,6 +54,7 @@ def isMeaningful(noun):
 # recursively inspects the command, which is a list of words, starting at i
 # combines multiple words into single terms that appear to be a meaningful term
 # returns the command after any relevant words are joined into one term
+# ex. ["attack","green","snake"] -> ["attack","green snake"]
 # this algorithm favors the meaningful terms which contain the most words
 def nounify(command,i):
 	# base case when end of command is reached
@@ -95,6 +96,7 @@ def processCmd(prompt,storeRawCmd=False):
 		rawcommand = input("> ")
 	# for convenience, save raw command in game object
 	if storeRawCmd:	G.lastRawCommand = rawcommand.split()
+
 	# lowercase-ify the sentence command, copy it excluding symbols
 	purecommand = "".join([i for i in rawcommand.lower() if i not in symbols])
 	# copy command, delimited by spaces, into a list of words excluding articles
@@ -396,6 +398,7 @@ def Break(dobj,iobj,prep):
 	return True
 
 def Carry(dobj,iobj,prep):
+	# TODO: identify a way to link carrier to carried without remove carried creature from Room.creatures
 	if prep != None:
 		print("Command not understood")
 		return False
@@ -404,8 +407,22 @@ def Carry(dobj,iobj,prep):
 		if dobj in cancels:
 			return False
 
+	I = G.currentroom.search(dobj)
+	if I == None: I = P.search(dobj)
+	if I == None:
+		print(f"There is no '{dobj}' here")
+		return False
 	G.setPronouns(I)
-	print("NOT IMPLEMENTED YET!!")
+
+	if isinstance(I,Item):
+		return Take(dobj,iobj,prep)
+	if not isinstance(I,Creature):
+		print(f"You can't carry the {dobj}")
+		return False
+
+	print(f"You try to pick up the {dobj}")
+	if Restrain(dobj,iobj,prep):
+		return I.Carry(P)
 
 def Cast(dobj,iobj,prep):
 	print("casting")
@@ -718,9 +735,12 @@ def GoVertical(dir,passage=None):
 	if hasMethod(passage,"Traverse"):
 		return passage.Traverse(P,W,G,dir)
 
+# not called directly from user input
+# called when the intended direction, destination, and/or passage is known
+# redirects to one of three functions to perform the room change operation
 def ExecuteGo(dobj,dir,dest,passage):
 	# if the input contains a dir, validate the dir...
-	# and assign either destination room name or passage
+	# and assign either the destination room name or passage name
 	if dir != None:
 		if dir in G.currentroom.exits:
 			dest = G.currentroom.exits[dir]
@@ -740,13 +760,14 @@ def ExecuteGo(dobj,dir,dest,passage):
 		passage = G.currentroom.getPassageFromDir(dir)
 
 	# call one of three functions to actually change rooms
-	# depends if they going directly, traversing a passage, or going vertically
+	# depends if they go normally, traverse a passage, or go vertically
 	if dir == "up" or dir == "down":	return GoVertical(dir,passage)
 	if hasMethod(passage,"Traverse"):	return passage.Traverse(P,W,G,dir)
 	if dest != None:					return G.changeRoom(W[dest],P,W)
 	print(f"There is no exit leading to a {dobj} here")
 	return False
 
+# parses user input to determine the intended direction, destination, and/or... # passage. Then calls ExecuteGo to actually carry out the action
 def Go(dobj,iobj,prep):
 	preps = {"down","through","to","toward","up","in","into","on","onto",None}
 	if prep not in preps:
@@ -791,7 +812,7 @@ def Grab(dobj,iobj,prep):
 	if isinstance(I,Item):
 		return Take(dobj,iobj,prep)
 	elif isinstance(I,Creature):
-		return Restrain(dobj,iobj,prep)
+		return Carry(dobj,iobj,prep)
 	else:
 		print(f"You cannot grab the {I.name}")
 		return False
@@ -901,7 +922,7 @@ def Look(dobj,iobj,prep):
 			return False
 
 	if dobj in {"room", "here"}:
-		G.currentroom.describe()
+		G.currentroom.describe(P)
 		return True
 	if dobj in {"me","myself",P.name}:
 		print("You are " + P.desc)
@@ -1151,6 +1172,8 @@ def Take(dobj,iobj,prep):
 		else:				print(f"There is no '{dobj}' in a '{iobj}' here")
 		return False
 	if not isinstance(I,Item):
+		if isinstance(I, Creature):
+			return Carry(dobj,iobj,prep)
 		print("You can't take the " + dobj)
 		return False
 	G.setPronouns(I)

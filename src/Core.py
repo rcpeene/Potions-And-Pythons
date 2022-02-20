@@ -54,7 +54,7 @@ def kbInput():
 		import msvcrt
 		return msvcrt.kbhit()
 	except ImportError:
-		print("cannot check for keyboard input on non-windows OS")
+		print("Cannot check for keyboard input on non-windows OS")
 
 # prints a timed ellipsis, used for dramatic transitions
 def ellipsis(n):
@@ -115,6 +115,7 @@ def pluralize(term):
 	return term + "s"
 
 def singularize(term):
+	# do some checking for special words here
 	if term.endswith("s"):
 		return term[:-1]
 	else:
@@ -129,14 +130,12 @@ def ordinal(n):
 	else:					suffix = "th"
 	return str(n) + suffix
 
-# used on room area conditions to extract the info of the condition it casuses
-def extractConditionInfo(roomCondition):
-	if not roomCondition.startswith("AREA"):
-		raise Exception("extracting condition info from invalid area condition")
-	condInfo = roomCondition.split(" ")
-	name = ' '.join(condInfo[1:-1])
-	dur = int(condInfo[-1])
-	return [name,dur]
+def ambiguateDirections(text):
+	text = text.replace("north","???")
+	text = text.replace("east","???")
+	text = text.replace("south","???")
+	text = text.replace("west","???")
+	return text
 
 # returns an abbreviated direction into an expanded one
 # for example, converts 'nw' -> 'northwest' or 'u' -> 'up'
@@ -167,19 +166,50 @@ def bagItems(items):
 			bag.append([name,1])
 	return bag
 
-# takes a list of item objects. Defines names as a bagged list of item names
+def bagObjects(objects):
+	bag = []
+	for obj in objects:
+		for entry in bag:
+			if entry[0].name == obj.name:
+				entry[1] += 1
+				break
+		else:
+			bag.append([obj,1])
+	return bag
+
+# def listItems(items):
+# 	nameBag = bagItems(namesList(items))
+# 	l = len(nameBag)
+# 	string = ""
+# 	for i in range(l):
+# 		name = nameBag[i][0]
+# 		count = nameBag[i][1]
+# 		if i == l-1:	string += gprint("a",name,1,count)
+# 		elif i == l-2:	string += gprint("a",name,3,count) + "and "
+# 		else:			string += gprint("a",name,3,count)
+# 	return string
+
+# takes a list of objects. Defines names as a bagged list of item names
 # returns a string that grammatically lists all strings in names
-def listItems(items):
-	nameBag = bagItems(namesList(items))
-	l = len(nameBag)
-	string = ""
-	for i in range(l):
-		name = nameBag[i][0]
-		count = nameBag[i][1]
-		if i == l-1:	string += gprint("a",name,1,count)
-		elif i == l-2:	string += gprint("a",name,3,count) + "and "
-		else:			string += gprint("a",name,3,count)
-	return string
+def listObjects(objects):
+	objBag = bagObjects(objects)
+	liststring = ""
+	l = len(objBag)
+	for i, (obj, count) in enumerate(objBag):
+		if i == l-1:	liststring += obj.stringName(count,False)
+		elif i == l-2:	liststring += obj.stringName(count,False) + " and "
+		else:			liststring += obj.stringName(count,False) + ", "
+	return liststring
+
+
+# used on room area conditions to extract the info of the condition it casuses
+def extractConditionInfo(roomCondition):
+	if not roomCondition.startswith("AREA"):
+		raise Exception("extracting condition info from invalid area condition")
+	condInfo = roomCondition.split(" ")
+	name = ' '.join(condInfo[1:-1])
+	dur = int(condInfo[-1])
+	return [name,dur]
 
 # prints a question, gets a yes or no, returns True or False respectively
 def yesno(question):
@@ -189,7 +219,7 @@ def yesno(question):
 		elif command in noes:	return False
 		print("Enter yes or no")
 
-# rolls n dice of range d adds a modifier m, returns number
+# rolls n dice of range d, adds a modifier m, returns number
 def diceRoll(n,d,m):
 	x = 0
 	for roll in range(n):
@@ -217,15 +247,15 @@ def maxm(m,n): return m if n > m else n
 # the player object can also be thought of this way where the player is the root
 # this function recursively searches the tree of objects for an object...
 # whose name matches the given term, (not case sensitive)
-# the object tree might look as follows
+# the object tree might look as follows:
 
-#            _____Room_____
-#          /    /     \     \
-#      cat   chest  sword  wizard
-#     /     /    \        /   |   \
-#  key  lockbox  axe  potion wand scroll
-#         |
-#      saffron
+ #           _____Room_____
+ #         /    /     \     \
+ #     cat  trunk   sword  wizard
+ #    /     /   \         /   |   \
+ # key   jar  candle  potion wand scroll
+ #        |
+ #     saffron
 
 # if returnPath: returns a list; the path from the found node to the root node
 # elif returnSource: returns a tuple; the found node and its parent
@@ -377,6 +407,7 @@ class Game():
 		self.lastRawCommand = None
 		# these pronoun attributes will point to an object which the user may...
 		# implicitly refer to with the given pronoun in their user input
+		# for instance, if the user inputs "attack him", or "take it"
 		self.it = None
 		self.they = None
 		self.her = None
@@ -526,8 +557,8 @@ class Game():
 
 
 # The Room class is the fundamental unit of the game's World.
-# Each key in the World dict, W, is a string, the name of a given
-# room, and each value in the World dict is a room object.
+# The World dict, W, consists of key:value pairs of the form,
+# room name:room object
 
 # Importantly, each room contains an exits dict, whose keys are directions...
 # such as 'north', 'up', or 'beyond', and whose values are the string names...
@@ -561,7 +592,7 @@ class Room():
 
 	### Operation ###
 
-	# add connection to a neighboring Room
+	# add one-way connection to a neighboring Room
 	# to ensure a bidirectional connectiom between Rooms...
 	# this method would have to be called once on each room.
 	def addConnection(self,dir,loc):
@@ -585,9 +616,9 @@ class Room():
 	def sortOccupants(self):
 		self.occupants.sort(key=lambda x: x.MVMT(), reverse=True)
 
+	# remove all dead creatures from occupants list
 	def reapOccupants(self):
-		reapCond = lambda x: True if x.alive else False
-		self.occupants = list(filter(reapCond, self.occupants))
+		self.occupants = list(filter(lambda x: x.alive, self.occupants))
 
 	def addAreaCondition(G,areacond):
 		cond,dur = extractConditionInfo(areacond)
@@ -639,7 +670,8 @@ class Room():
 	# describe the room, and apply any room effects to the creature entering
 	def enter(self,creature,W,G):
 		# if the player is entering the room, describe the room
-		if type(creature) == Player:	self.describe()
+		if type(creature) == Player:
+			self.describe(creature)
 		for cond,dur in self.status:
 			if cond.startswith("AREA"):
 				[name,dur] = extractConditionInfo(cond)
@@ -730,6 +762,9 @@ class Room():
 	# prints room name, description, all its contents and creatures
 	def describe(self):
 		print("\n" + capWords(self.name))
+		# if P.countCompasses() == 0:
+		# 	print(ambiguateDirections(self.desc))
+		# else:
 		print(self.desc)
 		self.describeContents()
 		self.describeOccupants()
@@ -737,12 +772,12 @@ class Room():
 	# prints all the contents of the room in sentence form
 	def describeContents(self):
 		if len(self.contents) != 0:
-			print("There is " + listItems(self.contents))
+			print("There is " + listObjects(self.contents))
 
 	# prints all the creatures in the room in sentence form
 	def describeOccupants(self):
 		if len(self.occupants) != 0:
-			print("There is " + listItems(self.occupants))
+			print("There is " + listObjects(self.occupants))
 
 
 
@@ -805,9 +840,23 @@ class Item():
 	### User Output ###
 
 	def describe(self):
-		print("It's " + gprint("a",self.name,3,1), end="")
+		print("It's " + self.stringName(False))
 		print(self.desc)
 
+	def stringName(self,n=-1,definite=True,cap=False):
+		strname = self.descname if hasattr(self,"descname") else self.name
+		if definite:
+			strname = "the " + strname
+		elif strname[0] in vowels and n == 1:
+			strname = "an " + strname
+		elif n == 1:
+			strname = "a " + strname
+		if cap:
+			strname = capWords(strname)
+		if n > 1:
+			strname += "s"
+			strname = str(n) + " " + strname
+		return strname
 
 
 # The Creature class is the main class for anything in the game that can act
@@ -998,9 +1047,11 @@ class Creature():
 
 		# ensure that weapons are of type Weapon
 		if not isinstance(self.weapon,Weapon):
-			self.weapon = self.weapon.improviseWeapon()
+			if hasMethod(self.weapon,"improviseWeapon"):
+				self.weapon = self.weapon.improviseWeapon()
 		if not isinstance(self.weapon2,Weapon):
-			self.weapon2 = self.weapon.improviseWeapon()
+			if hasMethod(self.weapon,"improviseWeapon"):
+				self.weapon2 = self.weapon.improviseWeapon()
 
 		# assign shield and shield2 based on types of gear in left and right
 		if isinstance(self.gear["right"],Shield) and isinstance(self.gear["left"],Shield):
@@ -1016,7 +1067,7 @@ class Creature():
 	def unequip(self,I):
 		gearslots = list(self.gear.keys())
 		gearitems = list(self.gear.values())
-		#finds the slot whose value is item, sets it to empty
+		# finds the slot whose value is I, sets it to empty
 		slot = gearslots[gearitems.index(I)]
 		self.gear[slot] = Empty()
 		self.assignWeaponAndShield()
@@ -1040,7 +1091,7 @@ class Creature():
 		self.unequip(self.gear["left"])
 		self.gear["left"] = self.gear["right"]
 		self.gear["right"] = I
-		if hasattr(I, "twohanded") and I.twohanded:
+		if (hasattr(I, "twohanded") and I.twohanded) or isinstance(I, Creature):
 			self.gear["left"] = Empty()
 		self.assignWeaponAndShield()
 		if hasMethod(I,"Equip"): I.Equip(self)
@@ -1088,13 +1139,19 @@ class Creature():
 		if G.whoseturn is P:
 			P.gainxp(10)
 
+	def Carry(self,carrier):
+		self.addCondition("carried",-3)
+		carrier.addCondition("carrying",-3,silent=True)
+		carrier.equipInHand(self)
+		return True
+
 	def Restrain(self,restrainer,item):
 		if item != None:
 			#TODO: add restraining with items? like rope??
 			pass
 		if self.ATHL() > restrainer.ATHL() or self.EVSN() > restrainer.ATHL():
 			return False
-		restrainer.addCondition("restraining",-3)
+		restrainer.addCondition("restraining",-3,silent=True)
 		self.addCondition("restrained",-3)
 		return True
 
@@ -1131,7 +1188,7 @@ class Creature():
 	def PRSD(self): return 2*self.CHA + self.WIS
 	def RESC(self): return 2*self.FTH + self.STM
 	def RITL(self): return 2*self.FTH + self.LCK
-	def SLTH(self): return ( 2*self.SKL + self.INT - min0(self.invWeight() - self.BRDN()) ) * 2*self.hasCondition("hiding")
+	def SLTH(self): return ( 2*self.SKL + self.INT - min0(self.invWeight() - self.BRDN()) ) * 2*int(self.hasCondition("hiding"))
 	def SPLS(self): return 2*self.INT
 	def TNKR(self): return 2*self.INT + self.SKL
 
@@ -1156,7 +1213,7 @@ class Creature():
 	def inInv(self,term):
 		for item in self.inv:
 			if item.name.lower() == term:	return item
-			return None
+		return None
 
 	def weapons(self):
 		return [I for I in self.inv if isinstance(I,Weapon)]
@@ -1197,10 +1254,6 @@ class Creature():
 	def handheldWeight(self):
 		return self.weapon.weight + self.weapon2.weight + self.shield.weight + self.shield2.weight
 
-	def improviseWeapon(self):
-		#TODO: if item is too large/heavy, make it two-handed
-		return Weapon(self.name,self.desc,self.CON,self.CON,min1(self.Weight()//4),0,0,0,False,"b")
-
 	def isBloodied(self):
 		# returns true is creature has less than half health
 		pass
@@ -1217,11 +1270,23 @@ class Creature():
 
 	### User Output ###
 
+	def stringName(self,n=-1,definite=True,cap=False,plural=False):
+		if definite and not plural:
+			strname = "the " + self.name
+		elif self.name[0] in vowels and not plural:
+			strname = "an " + self.name
+		elif not plural:
+			strname = "a " + self.name
+		if cap:
+			strname = capWords(strname)
+		if plural:
+			strname += "s"
+			if n > 1:
+				strname = n + strname
+		return strname
+
 	def describe(self):
-		if hasattr(self,"descname"):
-			print(f"It's {gprint('a',self.descname,3,1)}", end="")
-		else:
-			print(f"It's {gprint('a',self.name,3,1)}", end="")
+		print("It's " + self.stringName(False))
 		print(self.desc)
 
 
@@ -1283,7 +1348,7 @@ class Player(Creature):
 
 	# adds money
 	def gainMoney(self,money):
-		print(f"\nYou gained Ᵽ {money}!")
+		print(f"\nYou gained Ᵽ{money}!")
 		self.money += money
 
 	def obtainItem(self,I,S,W,G,msg=None):
@@ -1305,11 +1370,12 @@ class Player(Creature):
 		newlv = self.level()
 		if oldlv != newlv: self.levelUp(oldlv,newlv)
 
-	def addCondition(self,name,dur,stackable=False):
+	def addCondition(self,name,dur,stackable=False,silent=False):
 		# TODO: include stackability (conditions which can exist multiple times)
 		pair = [name,dur]
 		insort(self.status,pair)
-		print("You are " + name)
+		if not silent:
+			print("You are " + name)
 
 	# removes all condition of the same name
 	# if reqDuration is given, only removes conditions with that duration
@@ -1632,7 +1698,7 @@ class Passage(Fixture):
 class Pylars(Item):
 	def __init__(self,value):
 		self.name = "Pylars"
-		self.desc = str(value) + "glistening coins made of an ancient metal"
+		self.desc = str(value) + " glistening coins made of an ancient metal"
 		self.weight = value
 		self.durability = -1
 		self.descname = str(value) + " Pylars"
@@ -1654,6 +1720,16 @@ class Pylars(Item):
 	def Obtain(self,creature,W,G):
 		creature.gainMoney(self.value)
 
+	### User Output ###
+	def stringName(self,n=-1,definite=True,cap=False,plural=False):
+		strname = self.descname if hasattr(self,"descname") else self.name
+		strname = "Pylar" if self.value == 1 else "Pylars"
+		strname = str(self.value) + " " + strname
+		if definite:
+			strname = "the " + strname
+		if cap:
+			strname = capWords(strname)
+		return strname
 
 
 class Weapon(Item):
