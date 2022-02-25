@@ -2,7 +2,7 @@
 # This file contains the code to parse user input and execute player actions
 # This file is dependent on Menu.py and is a dependency of PoPy.py
 
-# It consists of five major parts;
+# It consists of five main parts;
 # 1. Game startup		(call main menu and instantiate global objects P, W, G)
 # 2. Parsing functions	(functions to parse user input)
 # 3. Action functions	(action, shortaction, cheat functions called by parse())

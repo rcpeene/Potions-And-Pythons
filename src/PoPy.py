@@ -45,9 +45,6 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# fix stringtoclass func in core.py
-# split creatures and objects into different files
-# create config file?
 # add some preliminary spells and add effects file
 # consider enter, exit functions in room
 

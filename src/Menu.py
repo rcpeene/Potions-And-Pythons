@@ -2,7 +2,7 @@
 # This file serves as an API for Parser.py to save and load game data with files
 # This file is dependent on Objects.py and is a dependency of Parser.py
 
-# It consists of four major parts;
+# It consists of four main parts;
 # 1. Write data functions	(functions to write objects P, W, and G to files)
 # 2. Read data functions	(functions to read save files; player, world, game)
 # 3. Menu functions			(functions to load, save, delete, start new games)
