@@ -45,17 +45,17 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# there is a bug in equip where two of the same item can be equipped twice
-# implement escape and exit actions
-
-# add basic "cast" parsing
+# fix stringtoclass func in core.py
+# split creatures and objects into different files
+# create config file?
 # add some preliminary spells and add effects file
 # consider enter, exit functions in room
 
-# split creatures and objects into different files
+# add resilient error handling, for file I/O, maybe in action loop
 # add a wait command (cant wait with enemies nearby, cuz they could just kill you)
 # add creatures with many limbs (or can equip more than 2 weapons/shields)
 # examine output grammar/statements for lower level actions (in case non-player creatures do actions, we dont want it to print the same msgs)
+
 
 # add carry/put down (HOW IS THIS GONNA WORK? does it equip the creature? while they are restraining is the player unable to do anything else?)
 # try "pick him up"
@@ -67,7 +67,10 @@ if __name__ == "__main__":
 # reevaluate effect functions, is there a way to reference a function by string?
 # how will amulet effects work??
 
+# there is a bug in equip where two of the same item can be equipped twice???
+# implement escape and exit actions
 # add magic beans or food to pour stuff on
+
 # "drink from the fountain"
 # make a list of all possible uses and inputs for each action and systematically test them. Revise the world to accomodate them
 

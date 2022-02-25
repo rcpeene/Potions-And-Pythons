@@ -12,8 +12,8 @@ import sys
 import os
 import json
 
-from Objects import *
-
+from Items import *
+from Creatures import *
 
 
 ##########################
@@ -64,10 +64,9 @@ def default(jsonDict):
 		if objClassname == "set":
 			return set(jsonDict["setdata"])
 
-		objClass = strToClass(objClassname)
+		objClass = strToClass(objClassname, ["Creatures","Core","Items"])
 		objAttributes = list(jsonDict.values())
 		# print("========: " + d["name"] + " " + str(objAttributes))
-
 		if objClassname == "Room":
 			return Room(*objAttributes)
 		elif objClassname == "Empty":
@@ -263,7 +262,7 @@ def createCharacter():
 	while len(name) == 0: name = input("> ")
 	desc = input("Describe yourself\n> ")
 	while len(desc) == 0: desc = input("> ")
-	return Player(name,desc,1,1,inittraits,0,[],initgear,[],0,0)
+	return Player(name,desc,1,1,inittraits,0,[],initgear,[],0,0,[])
 
 # starts a new game and returns player, world, and game objects
 def newGame():
@@ -285,11 +284,11 @@ def testGame():
 	W = readJSON("World.json")
 
 	traits = [4 for _ in range(10)]
-	inv = [Compass("compass", "a plain steel compass with a red arrow", 2, 10)]
+	inv = [Compass("compass","a plain steel compass with a red arrow",2,10)]
 	status = [["fireproof",-1], ["poisoned",5], ["cursed",-2], ["immortal",-1],
 	["sharpshooter",50], ["invisible",15], ["poisoned",-1]]
 
-	P = Player("Norman","a hero",24,24,traits,1000,inv,initgear,status,1585,100)
+	P = Player("Norman","a hero",24,24,traits,1000,inv,initgear,status,1585,100,[])
 	G = Game(0,W["cave"],W["tunnel"],0)
 
 	clearScreen()
@@ -359,6 +358,7 @@ def moveBubble(logoArray,row,col):
 		poppedBubbles += 1
 	# if char is a bubble
 	elif char in {".","o","O"}:
+		# if bubble is "O" and trapped, have chance to pop it
 		if bubbleTrapped(logoArray,row,col):
 			if char == "O" and bool(randint(0,1)):
 				logoArray[row][col] = "*"
@@ -387,6 +387,7 @@ def moveBubble(logoArray,row,col):
 
 # for each character in the array, move bubble at row,col
 # when a bubble moves, it has a chance to pop itself or other bubbles
+# returns the number of bubbles which were popped after altering them all
 def moveBubbles(logoArray):
 	poppedBubbles = 0
 	for row in range(1,len(logoArray)):
@@ -420,6 +421,7 @@ def makeNewBubbles(logoArray,n,rows):
 	for i in range(newBubbles):
 		row = 1
 		col = 0
+		# randomly select a _ position in the logoarray for the new bubble
 		while logoArray[row][col] != "_":
 			# only produce new bubbles on given rows, 2, 5, and 7 of the logo
 			row = choice(rows)
@@ -431,6 +433,7 @@ def makeNewBubbles(logoArray,n,rows):
 			logoArray[row-1][col] in {".","o","O"}:
 				row = choice([5,7])
 				col = randint(1,22)
+		# place the new bubble
 		logoArray[row][col] = "."
 	return newBubbles
 
@@ -468,7 +471,7 @@ def dynamicBubbleAnimation(t,b,n):
 		# if user presses any key, skip animation
 		if kbInput():	return False
 		growBubbles(logoArray)
-		# add a small delay for the final bubbles for pizazz
+		# add a small delay for the final three bubbles for pizazz
 		if currentBubbles < 3:	sleep(t)
 		sleep(t)
 		printLogoArray(logoArray)
@@ -485,8 +488,7 @@ def endIntro():
 # runs the intro logo animation
 # uses data from the bottom of Data.py
 def gameIntro():
-	tempLines = []
-	for line in logoLines:	tempLines.append(line)
+	tempLines = [line for line in logoLines]
 	clearScreen()
 	# print logo crawling up
 	for line in tempLines:

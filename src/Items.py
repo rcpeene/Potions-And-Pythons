@@ -1,18 +1,14 @@
-# Objects.py
-# This file contains the classes used in the game and the dicts to identify them
+# Items.py
+# This file contains the item classes used in the game
 # This file is dependent on Core.py and is a dependency of Menu.py
-
-# It consists of two main parts;
-# 1. Class definitions		(all specific item and creature definitions)
-# 2. strToClass() function	(function which returns class object from string)
 
 from Core import *
 
 
 
-#######################
-## CLASS DEFINITIONS ##
-#######################
+############################
+## ITEM CLASS DEFINITIONS ##
+############################
 
 class Bottle(Item):
 	# breaks the bottle, removes it from player inventory, and randomly...
@@ -23,7 +19,6 @@ class Bottle(Item):
 		for i in range(randint(3,6)):	#randomly generates n shards between 3,6
 			newShard = Shard("shard","a sharp shard of glass",1,-1)
 			S.addItem(newShard)
-
 
 
 class Box(Item):
@@ -374,8 +369,8 @@ class Wall(Passage):
 ## strToClass Function ##
 #########################
 
-def strToClass(classname):
-	if classname in globals():
-		return globals()[classname]
-	else:
-		return None
+# def strToClass(classname):
+# 	if classname in globals():
+# 		return globals()[classname]
+# 	else:
+# 		return None

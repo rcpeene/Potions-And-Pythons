@@ -12,6 +12,9 @@ from time import sleep
 from random import randint,choice
 from math import floor, log10
 from bisect import insort
+import inspect
+import sys
+
 
 from Data import *
 
@@ -21,12 +24,22 @@ from Data import *
 ## CORE FUNCTIONS ##
 ####################
 
+# retrieves a class object (if it exists) with className from the modules list
+def strToClass(className,moduleNames):
+	classObject = None
+	for moduleName in moduleNames:
+		try:
+			classObject = getattr(sys.modules[moduleName],className)
+		except:
+			continue
+	return classObject
+
 # returns bool indicating whether an obj has a method with the given string name
 # used as a shortcut for more readable code than the traditional method
-def hasMethod(obj,methodname):
-	possibleMethod = getattr(obj,methodname,None)
+def hasMethod(obj,methodName):
+	possibleMethod = getattr(obj,methodName,None)
 	if not possibleMethod:
-		possibleMethod = getattr(obj.__class__,methodname,None)
+		possibleMethod = getattr(obj.__class__,methodName,None)
 	if possibleMethod != None and callable(possibleMethod):
 		return True
 	return False
@@ -111,11 +124,11 @@ def capWords(string):
 	return cappedString[0:-1]	# removes trailing space character
 
 def pluralize(term):
-	# do some checking for special words here
+	# TODO: do some checking for special words here
 	return term + "s"
 
 def singularize(term):
-	# do some checking for special words here
+	# TODO: do some checking for special words here
 	if term.endswith("s"):
 		return term[:-1]
 	else:
@@ -189,7 +202,7 @@ def bagObjects(objects):
 # 		else:			string += gprint("a",name,3,count)
 # 	return string
 
-# takes a list of objects. Defines names as a bagged list of item names
+# takes a list of objects. Defines names as a bagged list of object names
 # returns a string that grammatically lists all strings in names
 def listObjects(objects):
 	objBag = bagObjects(objects)
@@ -671,7 +684,7 @@ class Room():
 	def enter(self,creature,W,G):
 		# if the player is entering the room, describe the room
 		if type(creature) == Player:
-			self.describe(creature)
+			self.describe()
 		for cond,dur in self.status:
 			if cond.startswith("AREA"):
 				[name,dur] = extractConditionInfo(cond)
@@ -1293,8 +1306,9 @@ class Creature():
 
 # the class representing the player, contains all player stats
 class Player(Creature):
-	def __init__(self,name,desc,hp,mp,traits,money,inv,gear,status,xp,rp):
+	def __init__(self,name,desc,hp,mp,traits,money,inv,gear,status,xp,rp,spells):
 		Creature.__init__(self,name,desc,hp,mp,traits,money,inv,gear,status)
+		self.spells = spells
 		self.xp = xp
 		self.rp = rp
 
