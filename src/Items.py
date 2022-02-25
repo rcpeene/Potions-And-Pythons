@@ -13,12 +13,12 @@ from Core import *
 class Bottle(Item):
 	# breaks the bottle, removes it from player inventory, and randomly...
 	# generates a number of shards between 1,5 into the room.
-	def Break(self,P,G,S):
+	def Break(self,P,G):
 		print(f"The {self.name} breaks. Shards of glass scatter everywhere")
-		S.removeItem(self)
+		self.parent.removeItem(self)
 		for i in range(randint(3,6)):	#randomly generates n shards between 3,6
 			newShard = Shard("shard","a sharp shard of glass",1,-1)
-			S.addItem(newShard)
+			self.parent.addItem(newShard)
 
 
 class Box(Item):
@@ -64,6 +64,7 @@ class Box(Item):
 
 	def addItem(self,I):
 		insort(self.contents,I)
+		I.parent = self
 
 	def removeItem(self,I):
 		self.contents.remove(I)
@@ -86,10 +87,10 @@ class Box(Item):
 
 class Bread(Item):
 	# heals 20 hp to the player, removes bread from inventory
-	def Eat(self,P,G,S):
+	def Eat(self,P,G):
 		print("You consume the bread")
 		h = P.heal(20)
-		S.removeItem(self)
+		self.parent.removeItem(self)
 		if h == 0:
 			print("Yummy")
 
@@ -229,16 +230,16 @@ class Mouth(Item):
 
 class Potion(Bottle):
 	# heals the player hp 1000, replaces potion with an empty bottle
-	def Drink(self,P,G,S):
+	def Drink(self,P,G):
 		print("You drink the potion")
 		P.heal(1000)
-		S.removeItem(self)
+		self.parent.removeItem(self)
 		P.addItem(Bottle("bottle","an empty glass bottle",3,3))
 
-	def Pour(self,P,G,S,obj=None):
+	def Pour(self,P,G,obj=None):
 		if obj != None:
 			obj.Drench(self)
-		S.removeItem(self)
+		self.parent.removeItem(self)
 		P.addItem(Bottle("bottle","an empty glass bottle",3,3))
 
 
@@ -293,6 +294,7 @@ class Table(Fixture):
 
 	def addItem(self,I):
 		insort(self.contents,I)
+		I.parent = self
 
 	def removeItem(self,I):
 		self.contents.remove(I)

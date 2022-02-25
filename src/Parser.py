@@ -2,12 +2,11 @@
 # This file contains the code to parse user input and execute player actions
 # This file is dependent on Menu.py and is a dependency of PoPy.py
 
-# It consists of five main parts;
+# It consists of four main parts;
 # 1. Game startup		(call main menu and instantiate global objects P, W, G)
 # 2. Parsing functions	(functions to parse user input)
 # 3. Action functions	(action, shortaction, cheat functions called by parse())
 # 4. Action dicts		(dictionaries used to call action functions from)
-# 5. Parser design		(docstring explaining the design of this file)
 
 from Menu import *
 
@@ -183,7 +182,7 @@ def parse(n=0):
 	# if action was instant, loop for another command
 	if verb in instantactions:	return False
 	# if action was not completed for some reason, recur
-	if not actionCompleted:		return promptHelp('',n)
+	if not actionCompleted:		return promptHelp("",n)
 	return True
 
 
@@ -223,8 +222,9 @@ def Learn(command):
 def Mode(command):
 	try:
 		G.mode = int(command[1])
-		print("mode set to " + str(G.mode))
-	except:	print("Value not number")
+		print("Mode set to " + str(G.mode))
+	except:
+		print("Value not number")
 
 def Pypot(command):
 	try:	P.money = P.money + int(command[1])
@@ -256,12 +256,12 @@ def Warp(command):
 
 def Zap(command):
 	objname = " ".join(command[1:])
-	allObjects = G.getAllObjects(W,getSources=True)
+	allObjects = G.getAllObjects(W)
 	zappedObjects = 0
-	for (obj,source) in allObjects:
+	for obj in allObjects:
 		if objname.lower() == obj.name.lower():
 			if isinstance(obj,Item):
-				obj.Break(G,W,source)
+				obj.Break(P,G)
 			elif isinstance(obj,Creature):
 				obj.death(P,G,W)
 			zappedObjects += 1
@@ -385,8 +385,8 @@ def Break(dobj,iobj,prep):
 		if dobj in cancels:
 			return False
 
-	I,source = P.search(dobj,getSource=True)
-	if I == None:	I,source = G.currentroom.search(dobj,getSource=True)
+	I = P.search(dobj)
+	if I == None:	I = G.currentroom.search(dobj)
 	if I == None:
 		print(f"There is no '{dobj}' here")
 		return False
@@ -395,7 +395,7 @@ def Break(dobj,iobj,prep):
 	if not hasMethod(I,"Break"):
 		print("You can't break the " + I.name)
 		return False
-	I.Break(P,G,source)
+	I.Break(P,G)
 	return True
 
 def Carry(dobj,iobj,prep):
@@ -617,7 +617,7 @@ def Drink(dobj,iobj,prep):
 	if not hasMethod(I,"Drink"):
 		print("You can't drink the " + I.name)
 		return False
-	I.Drink(P,G,S)
+	I.Drink(P,G)
 	return True
 
 def Drop(dobj,iobj,prep):
@@ -680,7 +680,7 @@ def Eat(dobj,iobj,prep):
 	if not hasMethod(I,"Eat"):
 		print("You can't eat the " + I.name)
 		return False
-	I.Eat(P,G,S)
+	I.Eat(P,G)
 	return True
 
 def Enter(dobj,iobj,prep):
@@ -1027,7 +1027,7 @@ def Pour(dobj,iobj,prep):
 	if prep == None:	prep = "on"
 	if R != None:		print(f"You pour your {I.name} {prep} the {R.name}")
 	else:				print(f"You pour out your {I.name}")
-	I.Pour(P,G,S)
+	I.Pour(P,G)
 	return True
 
 def Pray(dobj,iobj,prep):
@@ -1480,141 +1480,3 @@ actions = {
 "wave":Wave,
 "wear":Don
 }
-
-
-###########################
-## PARSER GENERAL DESIGN ##
-###########################
-
-# design = '''
-# INTRO
-#
-# the game basically runs an infinite loop, repeatedly taking player input. After a lot of processing and attempting to parse input, either the input is invalid and the loop repeats, or the input was valid, and some action is completed (and then the loop repeats). In principle, the parser delegates actions to action functions, and the action functions alter something about the player object, about the world object, or both (with a bit more flavor text and panache of course)
-#
-# Valid input must always begin with a valid verb. After input is processed, the "action function dictionary" maps the verb to the corresponding action function, and the action function is called, passing in the rest of the player's valid input as parameters.
-#
-# Using the passed-in command information, the action function may ask for additional information. It will then either complete the action or fail to complete it depending on the specific circumstances involved.
-#
-#
-#
-# NOTES ON PARSING AND INTERFACING BETWEEN OBJECTS AND VERBS
-#
-# there is a global dictionary of verb: action() pairs, where each verb string maps to an action() function, multiple verbs can map to the same action
-#
-# every action function must corroborate its parameters (prepositions and objects) to check if that action can be done, given the state of the player object and the environment (the current room)
-#
-# action functions will return false if the command input is not understood
-# action function will return true as long as action was understood, even if the action was not achieved
-#
-# every item should have a method for each action that is possible to be done to itself, called a reaction() function. For example, if it is possible to break a bottle object, it must contain a Break() reaction method.
-#
-# if the item can be used as an indirect object, it should be passed into the direct object's reaction() function
-#
-# some action functions only serve to redirect to other functions depending on the preposition and object parameters passed in
-#
-#
-#
-# INPUT AND PREPROCESSING:
-#
-# processCmd() takes input in the form of a string
-# (loop until input is not an empty string)
-#
-# convert to total lowercase
-#
-# remove punctuation, and invalid symbols
-# (maybe except some symbols for special situations)
-#
-# nounify
-#
-# split string into list delimited by spaces
-#
-# remove articles, and determiners
-#
-#
-#
-# OUTLINE FOR MAIN PARSER FUNCTION:
-#
-# verb = word1
-# validate verb
-# if verb is a cheat code:
-# 	call cheat function
-# 	return
-# if there's one word:
-# 	if verb is a shortverb (doesnt require an object):
-# 		pass
-# if there's two words:
-# 	dobj = word2
-# if there's three words:
-# 	if word2 is a preposition:
-# 		prep = word2
-# 		iobj = word3
-# 	elif word3 is a preposition:
-# 		dobj = word2
-# 		prep = word3
-# 	else:
-# 		dobj = word2
-# 		iobj = word3
-# if there's four words:
-# 	dobj = word2
-# 	prep = word3
-# 	iobj = word4
-# if there's more than four words:
-# 	"invalid input, command too long"
-# call action function:
-# 	validate preposition
-# 	validate dobj
-# 	validate/check for iobj
-# 	//shortverbs don't need to validate these
-# 	if verb returns false:
-# 		print("Im sorry, i didnt understand that")
-#
-#
-#
-# GENERAL FORM OF AN ACTION FUNCTION (THERE ARE MANY EXCEPTIONS):
-#
-# def action(dobj,iobj,prep)
-# 	if proposition not in verb's list of valid prepositions
-# 		return false
-# 		//many actions would include an "" empty preposition, they dont need one
-#
-# 	if the verb requires a direct object, and there is none
-# 		dobj = askforobject();
-#
-# 	if the verb requires an indirect object, and there is none
-# 		iobj = askforobject():
-#
-# 	validate/triage the choice of the direct object
-# 	depending on the action, iterate through room, then iterate through inv
-# 	if dobj == "all"
-# 		if no possible objects in room
-# 			"there's nothing in here to [verb]"
-# 		else
-# 			call action on all possible items in room
-# 	if any item/creature name == dobj
-# 		select item or creature
-# 	if not
-# 		"there is no [obj]"
-# 		return false
-#
-# 	if there's an indirect object
-# 		validate/triage the choice of the indirect object
-# 		check if this verb is in the iobj's set of use verbs
-# 		depending on the action, iterate through inv, then iterate through room
-# 			if any item/creature name == iobj
-# 			select item or creature
-#
-# 	if prep == prep1
-# 		do certain action, or call other action
-# 		...
-# 	elif prep == prep2
-# 		do a different action
-# 		...
-# 	else
-# 		do action as though there is no prep (if possible)
-#
-# 		ping the direct object like so;
-# 		if(dobj.hasattr(action) and callable(dobj.action))
-# 			dobj.action(iobj)
-#
-#
-# '''

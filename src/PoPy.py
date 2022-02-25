@@ -45,24 +45,23 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
+# reevalute AREA/room condition set up for condition
 # add some preliminary spells and add effects file
 # consider enter, exit functions in room
-
-# add resilient error handling, for file I/O, maybe in action loop
-# add a wait command (cant wait with enemies nearby, cuz they could just kill you)
-# add creatures with many limbs (or can equip more than 2 weapons/shields)
-# examine output grammar/statements for lower level actions (in case non-player creatures do actions, we dont want it to print the same msgs)
-
+# reevaluate effect functions, is there a way to reference a function by string?
+# how will amulet effects work??
 
 # add carry/put down (HOW IS THIS GONNA WORK? does it equip the creature? while they are restraining is the player unable to do anything else?)
 # try "pick him up"
+
+# add resilient error handling, for file I/O, maybe in action loop
+# add a wait command (cant wait with enemies nearby, cuz they could just kill you)
+# examine output grammar/statements for lower level actions (in case non-player creatures do actions, we dont want it to print the same msgs)
 
 # add Steal
 # determine what can be hid behind
 # adjust how taking and listing items works (eg allow for saying "take swords")
 # consider adding alternative names (this would change search funcs a lot)
-# reevaluate effect functions, is there a way to reference a function by string?
-# how will amulet effects work??
 
 # there is a bug in equip where two of the same item can be equipped twice???
 # implement escape and exit actions
@@ -74,6 +73,7 @@ if __name__ == "__main__":
 # figure out animal behavior
 # creatures attacking?
 # add monsters/monster behavior
+# add creatures with many limbs (or can equip more than 2 weapons/shields)
 # figure out combat? attack items?
 
 # add in armor and shields and protection and test them

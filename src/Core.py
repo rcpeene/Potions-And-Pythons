@@ -347,6 +347,24 @@ def objTreeToSet(root,d=0,getSources=False):
 		allObjects = allObjects | objTreeToSet(obj,d=d,getSources=getSources)
 	return allObjects
 
+# helper function for assignParents()
+# iterates through objects within the root and assigns root as their parent
+def assignParentsRecur(root):
+	if isinstance(root,Room):	searchThrough = root.contents + root.occupants
+	elif hasattr(root,"contents"):	searchThrough = root.contents
+	elif hasattr(root,"inv"):		searchThrough = root.inv
+	else:	return
+
+	for obj in searchThrough:
+		obj.parent = root
+		assignParentsRecur(obj)
+
+# iterates through each object in the object tree of each room and assigns...
+# its 'parent' attribute to the object it is contained in
+def assignParents(W):
+	for room in W.values():
+		assignParentsRecur(room)
+
 
 
 ############################
@@ -434,6 +452,7 @@ class Game():
 		self.prevroom.exit(P,W,self)
 		self.prevroom = self.currentroom
 		self.currentroom = newroom
+		P.parent = newroom
 		self.currentroom.enter(P,W,self)
 		return True
 
@@ -611,6 +630,7 @@ class Room():
 
 	def addItem(self,I):
 		insort(self.contents,I)
+		I.parent = self
 
 	def removeItem(self,I):
 		if I in self.contents:
@@ -618,6 +638,7 @@ class Room():
 
 	def addCreature(self,C):
 		insort(self.occupants,C)
+		C.parent = self
 
 	def removeCreature(self,C):
 		if C in self.occupants:
@@ -801,6 +822,7 @@ class Item():
 		self.desc = desc
 		self.weight = weight
 		self.durability = durability
+		self.parent = None
 
 
 
@@ -831,8 +853,8 @@ class Item():
 	def Obtain(self,P,W,G):
 		pass
 
-	def Break(self,G,W,S):
-		S.removeItem(self)
+	def Break(self,P,G):
+		self.parent.removeItem(self)
 
 
 
@@ -881,6 +903,7 @@ class Creature():
 		self.desc = desc
 		self.hp = hp
 		self.mp = mp
+		self.parent = None
 
 		self.STR = traits[0]
 		self.SPD = traits[1]
@@ -1008,6 +1031,7 @@ class Creature():
 		if self.invWeight() + I.Weight() > self.BRDN() * 2:
 			return False
 		insort(self.inv,I)
+		I.parent = self
 		return True
 
 	# remove an Item from Inventory
@@ -1306,9 +1330,9 @@ class Creature():
 class Player(Creature):
 	def __init__(self,name,desc,hp,mp,traits,money,inv,gear,status,xp,rp,spells):
 		Creature.__init__(self,name,desc,hp,mp,traits,money,inv,gear,status)
-		self.spells = spells
 		self.xp = xp
 		self.rp = rp
+		self.spells = spells
 
 
 
@@ -1454,7 +1478,7 @@ class Player(Creature):
 		attack = self.ATCK()
 		print(f"{attack} damage")
 		if target.durability != -1 and attack > target.durability:
-			target.Break(self,G,G.currentroom)
+			target.Break(self,P,G)
 		else:
 			print("Nothing happens")
 			return
