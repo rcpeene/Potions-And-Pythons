@@ -63,8 +63,6 @@ SECTION 9 - creature behavior and NPCs
 NOTES ON THE CONVENTIONS AND FORMATTING USED IN THIS CODE PROJECT
 -source files are named with capital letters to distinguish them from python modules
 
--other files are named in lowercase and named as .POPY files, which are just stored as ASCII plaintext
-
 -tabs	are	used	for	indentation,	not	spaces
 
 -the standard maximum line-width is 80 characters for this code, with few exceptions
@@ -79,7 +77,7 @@ NOTES ON THE CONVENTIONS AND FORMATTING USED IN THIS CODE PROJECT
 
 -the Creature methods which return the ability score for a creature are denoted purely in capital letters, such as MXHP(), and ATCK()
 
--classes are named with capital first-letters
+-classes are named with capitalized first-letters
 
 -typically, instances of objects are either denoted with capital letters, or with words. For example, an instance of the Item() class may either be I, item, or some other word depending on the use case.
 
@@ -653,7 +651,7 @@ of condition name and duration.
 negative durations have special meanings:
 -1 means the condition is inflicted by being in the current room. It will end when the player leaves the room or when the room's condition's duration ends
 -2 means the condition is permanent until it is removed by some general source
--3 or less means the condition is permanent until removed by a specific source
+-3 or lower means the condition is permanent until removed by a specific source
 
 rooms have status effects too. And rooms can harbor condition which afflict creatures in the room with other status conditions. When this happens, the room condition's name will contain the information about the condition to inflict upon the creatures. For instance, if a room is filled with poisonous gas for 30 time units and will poison all creatures that enter until they leave (or until the rooms condition wears off). the rooms condition pair would be of the form:
 
@@ -792,12 +790,23 @@ EQUIPMENT PROPERTIES:
 
 ITEM IDEAS:
 
+main types of magic items:
+rings - passive buffs
+wands - effect like "__ spells cast with this have bonus"
+staves - effect like "__ spells cast with this have bonus"
+scroll - allows you to learn a spell
+tome - allows you to learn multiple spells
+gear - wearable, can have passive effects or active effects
+
+Norman items;
 Norman's sword
 Norman's shield
 Norman's etc.
 
+holy water
+the magic map
 Camphor Staff (or sm othr tree idk) Gingko Staff? etc,
-willow staff, banyan, aspen, birch, elm, sycamore
+willow staff, banyan, aspen, birch, baobab, elm, sycamore, oak, pine, cyprus
 Pantalon
 Step Reckoner
 (Magic?) Umbrella
@@ -812,6 +821,7 @@ Caliburn
 Tyrfing (Cursed)
 Shamshir (Poisonous)
 Carnwennan (Shadow Dagger)
+
 
 Sci-fi set
 
@@ -963,6 +973,7 @@ so these dungeons are generally just clusters of room nodes in the world graph t
 -labyrinth, underground labyrinth (maybe library themed), that has magical connections to all kinds of places all over the world
 -mineshaft, underground mines maybe
 -spaceship, extra idea maybe with aliens lol
+	- in the alien spaceship have a recording or text log of a dead captain/space explorer
 -snowy peaks, maybe ice castle? something cold themed
 -hunt the wumpus map, with a WUMPUS!!! and traps and whatnot
 
@@ -971,6 +982,80 @@ several settlements exist in the world (aim for like at least 9)
 - Ratcatcher Mill/Ratstead/Ratcatchers Pass
 - Goosetower
 - Bellfort
+- Dandelot
+
+
+additional place ideas
+-the garden path "to mislead someone"
+-a very smelly tree
+-black lotus
+-a talking cave
+-The quivering quill (a spell store)
+-The stove - tavern or speakeasy or hideout
+-A casino or various luck based gambling games in the world
+-An orb "ponder the orb?" maybe multiple orbs to ponder in the world like 7
+-sign that says "no philandering!"
+
+
+misc world ideas
+-small peoples like the minish and maybe theyre quirky in some way
+-wicklewort trees
+-something called "The Wizard's Fee"
+-Eternal Stew
+-a pink potion being deadly
+-bonefire
+-label that reads "FOR SCIENTIFIC USE ONLY"
+-RICKROLL
+-the four horsemen of awesomeness (or happiness)
+-golden bug quest
+
+
+
+
+
+CHARACTER NAMES:
+	Orion - boss
+	Pax - person
+	giant swamp crocodile
+	Lilith - demon lady? (Secretly a demon lady???)
+	Somnus
+	The zodiac signs
+	The Lady of the Lake
+	Enchantress of Number(Numeral)
+	Master of Ravens
+	All-knowing demon that follows you (Laplace's Demon)
+	villain king of people
+	villain king of monsters
+	villain king of beasts
+	Balthazar the Wizard
+	Tyro
+	Sir Tom Knight (Sir Tom the Hero!)
+	Mr.Oliphant
+	Ike
+	Uther
+	Roach
+	Mito
+	A mage named Greengage
+	Demons named null and void
+	Sir Bors
+	Lugh
+	Muriel
+	Eadmer
+	Vixen
+	Gremlaw the Goblin
+	Aloy
+
+	one bbeg is the world serpent called Aeormungand (Leviathan?)
+	also an evil wizard ofc
+
+CREATURE IDEAS:
+stoats
+lemmings
+stork babies
+messenger demons
+argentavis (big bird)
+
+
 
 
 THIRTEEN GODS WITH TEMPLES:
@@ -994,6 +1079,7 @@ moon/magic/brotherhood/writing/math/truth
 
 "lord of truth"
 "queen mother"
+"the undead god"
 
 each of the gods appear in the world in a unique form, such as:
 a cat
@@ -1013,83 +1099,8 @@ a tree?
 a shadow (maybe tentacles?)
 a wisp/fairy?
 a goose?
+a flower?
 
-
-CHARACTER NAMES:
-	Orion - boss
-	Pax - person
-	giant swamp crocodile
-	Lilith - demon lady? (Secretly a demon lady???)
-	Somnus
-	The zodiac signs
-	The Lady of the Lake
-	Enchantress of Number(Numeral)
-	Master of Ravens
-	All-knowing demon that follows you (Laplace's Demon)
-	villain king of people
-	villain king of monsters
-	villain king of beasts
-	Balthazar the Wizard
-	Tyro
-
-	one bbeg is the world serpent called Aeormungand (Leviathan?)
-	also an evil wizard ofc
-
-
-
-SPELL EFFECTS:
-Note: these are not specific spell ideas, but general things a spell could do, to outline ways to implement spells and what technical limitations there are
-
-add a status effect
-remove a status effect
-deal area damage/heal (to whole room)
-deal area damage/heal only to creatures which fit a condition
-deal target damage/heal
-improving weapon stats
-changing weapon damage type
-repair an item
-
-spawning item (temporary weapon, illusion projector, food, leomund chest)
-destroy item
-destroy all items that fit a condition
-unlock an item
-lock an item
-locate an item? in the world or nearby
-create a lasting room effect (like preventing entering an exiting, zero gravity, darkness)
-alter the terrain (affecting fixtures and passages)
-create a portal to somewhere (mansion, hut, another room) (permanent/temp)
-break an item
-ignite things
-freeze things
-acid melt things
-shock things
-
-spawning creature (familiar, magic sentry, dragon)
-summon an npc
-destroy creature
-read people's minds
-command a creature
-make a creature laugh/cry/sneeze
-attract animals/creatures
-disguising self
-attracts animals
-speak with animals/monsters
-communicate with npc at a distance?
-pause a creature in time? paralyze them maybe
-pause all creatures in time
-produce illusion of a creature (probably class creature)
-create a loud sound (alert creatures)
-
-resurrect a dead creature
-create a zombie
-teleport somewhere
-stop time everywhere (bool in game class)
-
-
-^^^^^^^^^^^^
-for magical area effects, you could basically have a function which takes a list of objects (probably contents, occupants or both), an effects function, and an optional key as an argument.
-
-it essentially maps the magical effect function to every object in the given list that fits the key. if there is no key, it is applied to all things in the rooms list
 
 
 
@@ -1104,11 +1115,3 @@ DIALOGUE IDEAS:
 - some people will ask you to do something for them
 - some people will say tales and tidbits
 - some will ask you to give them stuff
-
-
-
-MISC IDEAS:
-
-sign that says "no philandering!"
-stoats, lemmings as creatures
-something called "The Wizard's Fee"

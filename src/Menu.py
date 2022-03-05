@@ -9,7 +9,6 @@
 # 4. Game Intro functions	(functions to print game intro animation)
 
 import sys
-import os
 import json
 
 from Items import *
@@ -32,6 +31,8 @@ def writeGame(filename,G):
 class worldEncoder(json.JSONEncoder):
 	def default(self,objToWrite):
 		JSONprimitives = {dict,list,str,int,float,bool,None}
+		if hasattr(objToWrite,"parent"):
+			del objToWrite.parent
 		if type(objToWrite) == set:
 			return {"__class__":"set","setdata":list(objToWrite)}
 		# elif type(objToWrite) == Room:
@@ -41,7 +42,9 @@ class worldEncoder(json.JSONEncoder):
 		elif type(objToWrite) not in JSONprimitives:
 			jsonDict = objToWrite.__dict__
 			# this is done so the class key appears first in the JSON object
-			jsonDict = {"__class__": objToWrite.__class__.__name__} | jsonDict
+			# TODO: swap the following lines for Python 3.9
+			# jsonDict = {"__class__": objToWrite.__class__.__name__} | jsonDict
+			jsonDict = {"__class__": objToWrite.__class__.__name__, **jsonDict}
 			return jsonDict
 		else:
 			return objToWrite
@@ -149,7 +152,7 @@ def saveGame(P,W,G):
 # load a game from a save directory
 def loadGame(filename):
 	clearScreen()
-	if not (os.path.exists("saves")) or len(os.listdir(".\\saves")) == 0:
+	if not (os.path.exists("saves")) or len(os.listdir("./saves")) == 0:
 		print("\nThere are no save files\n")
 		input()
 		return mainMenu()
@@ -216,7 +219,7 @@ def deleteAll():
 # deletes a save file whose name is given by the user
 def delete(filename):
 	clearScreen()
-	if not os.path.exists("saves") or len(os.listdir(".\\saves")) == 0:
+	if not os.path.exists("saves") or len(os.listdir("./saves")) == 0:
 		print("\nThere are no save files\n")
 		input()
 		return mainMenu()

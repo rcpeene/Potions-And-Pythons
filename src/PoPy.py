@@ -45,6 +45,7 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
+# retest "go" command scenarios 
 # reevalute AREA/room condition set up for condition
 # add some preliminary spells and add effects file
 # consider enter, exit functions in room
@@ -53,13 +54,13 @@ if __name__ == "__main__":
 
 # add carry/put down (HOW IS THIS GONNA WORK? does it equip the creature? while they are restraining is the player unable to do anything else?)
 # try "pick him up"
+# add Steal
+# determine what can be hid behind
 
 # add resilient error handling, for file I/O, maybe in action loop
 # add a wait command (cant wait with enemies nearby, cuz they could just kill you)
-# examine output grammar/statements for lower level actions (in case non-player creatures do actions, we dont want it to print the same msgs)
+# examine output grammar/statements for lower level actions (in case non-player creatures do actions, we dont want it to print the same msgs), alter print to use G.print which depends on silent
 
-# add Steal
-# determine what can be hid behind
 # adjust how taking and listing items works (eg allow for saying "take swords")
 # consider adding alternative names (this would change search funcs a lot)
 

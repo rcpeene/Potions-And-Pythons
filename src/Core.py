@@ -10,9 +10,12 @@ from time import sleep
 from random import randint,choice
 from math import floor, log10
 from bisect import insort
-import inspect
-import sys
+import sys, os
 
+try:
+	import msvcrt
+except:
+	import termios, select
 
 from Data import *
 
@@ -44,28 +47,29 @@ def hasMethod(obj,methodName):
 
 # prints 30 newlines
 def clearScreen():
-	# try: os.system("cls")
-	# except: os.system("clear")
-	print("\n"*64)
+	if os.name == "nt":
+		os.system("cls")
+	else:
+		os.system("clear")
+	# print("\n"*64)
 
 # clears pending keyboard input. strategy varies by operating system.
 def flushInput():
 	try:
-		import msvcrt
 		while msvcrt.kbhit():
 			msvcrt.getch()
-	except ImportError:
-		import sys, termios
+	except NameError:
 		termios.tcflush(sys.stdin,termios.TCIOFLUSH)
 
 # checks for any keyboard input
 # TODO: add functionality for non-windows operating systems
 def kbInput():
 	try:
-		import msvcrt
+		dr,dw,de = select.select([sys.stdin], [], [], 0.00001)
+		return dr != []
+	except:
 		return msvcrt.kbhit()
-	except ImportError:
-		print("Cannot check for keyboard input on non-windows OS")
+	# except NameError:
 
 # prints a timed ellipsis, used for dramatic transitions
 def ellipsis(n):
@@ -213,7 +217,7 @@ def listObjects(objects):
 	return liststring
 
 
-# used on room area conditions to extract the info of the condition it casuses
+# used on room area conditions to extract the info of the condition it causses
 def extractConditionInfo(roomCondition):
 	if not roomCondition.startswith("AREA"):
 		raise Exception("extracting condition info from invalid area condition")
@@ -992,7 +996,9 @@ class Creature():
 		d["gear"] = compressedGear
 		# convert traits to a form more easily writable in a JSON object
 		d["traits"] = [self.STR,self.SKL,self.SPD,self.STM,self.CON,self.CHA,self.INT,self.WIS,self.FTH,self.LCK]
-		d = {"__class__":self.__class__.__name__} | d
+		# TODO: swap the following lines for Python 3.9
+		# d = {"__class__":self.__class__.__name__} | d
+		d = {"__class__":self.__class__.__name__, **d}
 		return d
 
 	# returns an instance of this class given a dict from a JSON file
@@ -1340,7 +1346,7 @@ class Player(Creature):
 
 	@classmethod
 	def convertFromJSON(cls,d):
-		thisobj = cls(d["name"],d["desc"],d["hp"],d["mp"],d["traits"],d["money"],d["inv"],d["gear"],d["status"],d["xp"],d["rp"])
+		thisobj = cls(d["name"],d["desc"],d["hp"],d["mp"],d["traits"],d["money"],d["inv"],d["gear"],d["status"],d["xp"],d["rp"],d["spells"])
 		return thisobj
 
 
@@ -1717,7 +1723,7 @@ class Passage(Fixture):
 	def Traverse(self,P,W,G,dir=None):
 		if dir == None:
 			if len(self.connections) == 1:
-				dir = self.connections.keys()[0]
+				dir = list(self.connections.keys())[0]
 			else:
 				msg = f"Which direction will you go on the {self.name}?\n> "
 				dir = input(msg)

@@ -104,9 +104,21 @@
 				"durability": -1,
 				"connections": {
 					"up": "pit",
-					"down": "cabin"
+					"down": "pond"
 				},
 				"descname": "stairwell that goes up and down"
+			},
+			{
+				"__class__": "Passage",
+				"name": "hallway",
+				"desc": "hallway leading east and west",
+				"weight": -1,
+				"durability": -1,
+				"connections": {
+					"east": "boulder",
+					"west": "big tree"
+				},
+				"descname": "hallway that goes east and west"
 			},
 			{
 				"__class__": "Compass",

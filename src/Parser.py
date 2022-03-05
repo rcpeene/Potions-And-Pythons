@@ -245,9 +245,14 @@ def Teleport(command):
 	else:				print("Location not in world")
 
 def Test(command):
-	# allItems = list(filter(lambda x: isinstance(x,Item),objTreeToSet(G.currentroom)))
-	# print(allItems)
-	print(globals())
+	for i in range(10):
+		print("hello" + str(i))
+		if kbInput():
+			clearScreen()
+			flushInput()
+			return
+		sleep(1)
+		# clearScreen()
 	return True
 
 def Warp(command):
@@ -286,8 +291,13 @@ def Help():
 	print("\nVerb Commands (Does not include cheat codes and secret commands)")
 	columnPrint(verbs,10,10)
 	print("\nType 'info' for information on the game and how to play")
+	input()
+	clearScreen()
 
-def Info(): print("\n"*64 + gameinfo)
+def Info():
+	print("\n"*64 + gameinfo)
+	input()
+	clearScreen()
 
 def Laugh(): print("HAHAHAHAHA!")
 def Quit():
@@ -737,12 +747,17 @@ def Fuck(dobj,iobj,prep):
 def Give(dobj,iobj,prep):
 	print("giveing")
 
-def GoVertical(dir,passage=None):
+# called when the user wants to go "up" or "down"
+def GoVertical(dir,passage=None,dobj=None):
+	print(dir,passage,dobj)
 	if P.hasCondition("fly"):
 		newroom = G.currentroom.exits[dir]
 		print(f"You fly {dir}!")
 		return G.changeRoom(W[newroom],P,W)
 
+	if passage == None and dobj != None:
+		print(f"There is no '{dobj}' to go {dir} here")
+		return False
 	if passage == None:
 		passagename = getNoun(f"What will you go {dir}?")
 		passage = G.currentroom.search(passagename)
@@ -756,6 +771,7 @@ def GoVertical(dir,passage=None):
 # called when the intended direction, destination, and/or passage is known
 # redirects to one of three functions to perform the room change operation
 def ExecuteGo(dobj,dir,dest,passage):
+	print(dobj, dir, dest, passage)
 	# if the input contains a dir, validate the dir...
 	# and assign either the destination room name or passage name
 	if dir != None:
@@ -768,7 +784,7 @@ def ExecuteGo(dobj,dir,dest,passage):
 			return False
 
 	# further assign passage and dest depending on if they are valid terms
-	if passage == None:
+	if passage == None and dobj != None:
 		passage = G.currentroom.search(dobj)
 	if passage == None and dobj in G.currentroom.exits.values():
 	 	dest = dobj
@@ -778,7 +794,7 @@ def ExecuteGo(dobj,dir,dest,passage):
 
 	# call one of three functions to actually change rooms
 	# depends if they go normally, traverse a passage, or go vertically
-	if dir == "up" or dir == "down":	return GoVertical(dir,passage)
+	if dir == "up" or dir == "down":	return GoVertical(dir,passage,dobj)
 	if hasMethod(passage,"Traverse"):	return passage.Traverse(P,W,G,dir)
 	if dest != None:					return G.changeRoom(W[dest],P,W)
 	print(f"There is no exit leading to a {dobj} here")
@@ -791,9 +807,11 @@ def Go(dobj,iobj,prep):
 		print("Command not understood")
 		return False
 	dir,dest,passage = None,None,None
+
 	if dobj == None and iobj == None and prep == None:
 		dobj,iobj,prep = parseWithoutVerb("Where will you go?",preps)
 	if dobj in cancels:	return False
+	if dobj == None: dobj = iobj
 
 	# if any terms are abbreviations for a direction, expand them
 	dobj,iobj,prep = map(expandDir,[dobj,iobj,prep])
