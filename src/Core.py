@@ -387,6 +387,31 @@ def assignParents(W):
 		assignParentsRecur(room)
 
 
+# takes a dict of room names and room objects,
+# removes any room connection values which don't exist in the world
+# this is in case the world file which was read as a JSON had invalid names...
+# to prevent errors if the world file was written incorrectly
+def ensureWorldIntegrity(W):
+	namesToDelete = []
+	for room in W.values():
+		for direction in room.exits:
+			connection = room.exits[direction]
+			if connection not in W:
+				namesToDelete.append(connection)
+
+		for passage in room.getPassages():
+			connectionsToDelete = []
+			for connection in passage.connections:
+				roomname = passage.connections[connection]
+				if roomname not in W:
+					connectionsToDelete.append(passage.connections[connection])
+
+			for connection in connectionsToDelete:
+				del passage.connections[connection]
+	# this is done in a separate loop to prevent errors caused by...
+	# deleting elements from dict while iterating over the dict
+	for name in namesToDelete:
+		del W[name]
 
 
 ############################

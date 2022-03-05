@@ -33,7 +33,8 @@ gameIntro()
 
 # mainMenu instantiates global objects Player, World, Game
 P, W, G = mainMenu()
-
+assignParents(W)
+ensureWorldIntegrity(W)
 
 
 

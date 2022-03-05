@@ -302,7 +302,6 @@ def newGame():
 # automatically starts a new game with a premade character for easy testing
 def testGame():
 	W = readJSON("World.json")
-	assignParents(W)
 
 	traits = [4 for _ in range(10)]
 	inv = [Compass("compass","a plain steel compass with a red arrow",2,10)]
