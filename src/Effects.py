@@ -6,9 +6,11 @@ from Core import *
 
 
 
+
 #######################
 ##  EFFECT FUNCTIONS ##
 #######################
+
 
 def applyAreaEffect(effect,root,condfunc=lambda x:x):
 	objects = filter(condfunc,objTreeToSet(root))

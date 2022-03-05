@@ -21,9 +21,11 @@ from Data import *
 
 
 
+
 ####################
 ## CORE FUNCTIONS ##
 ####################
+
 
 # retrieves a class object (if it exists) with className from the modules list
 def strToClass(className,moduleNames):
@@ -35,6 +37,7 @@ def strToClass(className,moduleNames):
 			continue
 	return classObject
 
+
 # returns bool indicating whether an obj has a method with the given string name
 # used as a shortcut for more readable code than the traditional method
 def hasMethod(obj,methodName):
@@ -45,6 +48,7 @@ def hasMethod(obj,methodName):
 		return True
 	return False
 
+
 # prints 30 newlines
 def clearScreen():
 	if os.name == "nt":
@@ -53,6 +57,7 @@ def clearScreen():
 		os.system("clear")
 	# print("\n"*64)
 
+
 # clears pending keyboard input. strategy varies by operating system.
 def flushInput():
 	try:
@@ -60,6 +65,7 @@ def flushInput():
 			msvcrt.getch()
 	except NameError:
 		termios.tcflush(sys.stdin,termios.TCIOFLUSH)
+
 
 # checks for any keyboard input
 # TODO: add functionality for non-windows operating systems
@@ -71,11 +77,13 @@ def kbInput():
 		return msvcrt.kbhit()
 	# except NameError:
 
+
 # prints a timed ellipsis, used for dramatic transitions
 def ellipsis(n):
 	for i in range(n):
 		sleep(1)
 		print(".")
+
 
 # prints a list of strings, l, into n columns of width w characters
 # if an element is longer than one column, it takes up as many columns as needed
@@ -99,6 +107,7 @@ def columnPrint(l,n,w):
 		k += spaces
 	print()
 
+
 # grammar print; adds punctuation and determiners
 # n is the 'number' of an item, denoting its plurality
 def gprint(det,text,pos,n):
@@ -118,6 +127,7 @@ def gprint(det,text,pos,n):
 	text = text + " "
 	return text
 
+
 # capitalizes the first letter of all the words in a string
 def capWords(string):
 	listString = string.split(' ')
@@ -125,9 +135,11 @@ def capWords(string):
 	for word in listString: cappedString += word[0].upper() + word[1:] + ' '
 	return cappedString[0:-1]	# removes trailing space character
 
+
 def pluralize(term):
 	# TODO: do some checking for special words here
 	return term + "s"
+
 
 def singularize(term):
 	# TODO: do some checking for special words here
@@ -135,6 +147,7 @@ def singularize(term):
 		return term[:-1]
 	else:
 		return term
+
 
 # returns the ordinal string for a number n
 def ordinal(n):
@@ -145,6 +158,7 @@ def ordinal(n):
 	else:					suffix = "th"
 	return str(n) + suffix
 
+
 def ambiguateDirections(text):
 	text = text.replace("north","???")
 	text = text.replace("east","???")
@@ -152,11 +166,13 @@ def ambiguateDirections(text):
 	text = text.replace("west","???")
 	return text
 
+
 # returns an abbreviated direction into an expanded one
 # for example, converts 'nw' -> 'northwest' or 'u' -> 'up'
 def expandDir(term):
 	if term in directions:	return directions[term]
 	else:					return term
+
 
 # returns a list of element names for L, a list of objects with name attribute
 def namesList(L):
@@ -167,6 +183,7 @@ def namesList(L):
 		else:
 			names.append(elem.name)
 	return names
+
 
 # takes a list of strings and converts it to a list of pairs of the form;
 # [(str1, n1), (str2, n2), (str3, n3)] where n is the count of of each element
@@ -181,6 +198,7 @@ def bagItems(items):
 			bag.append([name,1])
 	return bag
 
+
 def bagObjects(objects):
 	bag = []
 	for obj in objects:
@@ -192,17 +210,6 @@ def bagObjects(objects):
 			bag.append([obj,1])
 	return bag
 
-# def listItems(items):
-# 	nameBag = bagItems(namesList(items))
-# 	l = len(nameBag)
-# 	string = ""
-# 	for i in range(l):
-# 		name = nameBag[i][0]
-# 		count = nameBag[i][1]
-# 		if i == l-1:	string += gprint("a",name,1,count)
-# 		elif i == l-2:	string += gprint("a",name,3,count) + "and "
-# 		else:			string += gprint("a",name,3,count)
-# 	return string
 
 # takes a list of objects. Defines names as a bagged list of object names
 # returns a string that grammatically lists all strings in names
@@ -226,6 +233,7 @@ def extractConditionInfo(roomCondition):
 	dur = int(condInfo[-1])
 	return [name,dur]
 
+
 # prints a question, gets a yes or no, returns True or False respectively
 def yesno(question):
 	while True:
@@ -233,6 +241,7 @@ def yesno(question):
 		if command in yesses:	return True
 		elif command in noes:	return False
 		print("Enter yes or no")
+
 
 # rolls n dice of range d, adds a modifier m, returns number
 def diceRoll(n,d,m):
@@ -242,14 +251,18 @@ def diceRoll(n,d,m):
 	x += m
 	return x
 
+
 # returns a number, n, with a lower bound of m
 def minm(m,n): return m if n < m else n
+
 
 # returns a number, n, with a lower bound of 0
 def min0(n): return 0 if n < 0 else n
 
+
 # returns a number, n, with a lower bound of 1
 def min1(n): return 1 if n < 1 else n
+
 
 # returns a number, n, with an upper bound of m
 def maxm(m,n): return m if n > m else n
@@ -292,6 +305,7 @@ def objSearch(term,root,d=0,getPath=False,getSource=False,reqSource=None):
 	elif getSource:	return target,source
 	else:			return target
 
+
 def objSearchRecur(term,node,path,d,reqSource):
 	target,source = None,None
 	# choose list of objects to search through depending on the node's type
@@ -325,6 +339,7 @@ def objSearchRecur(term,node,path,d,reqSource):
 	if target != None:	path.append(node)
 	return target,source,path
 
+
 # this function takes the same principle as objSearch, recursively traversing...
 # the tree of objects, except that it does not search for a specific object...
 # it returns a set of all the objects found in the tree
@@ -351,6 +366,7 @@ def objTreeToSet(root,d=0,getSources=False):
 		allObjects = allObjects | objTreeToSet(obj,d=d,getSources=getSources)
 	return allObjects
 
+
 # helper function for assignParents()
 # iterates through objects within the root and assigns root as their parent
 def assignParentsRecur(root):
@@ -363,6 +379,7 @@ def assignParentsRecur(root):
 		obj.parent = root
 		assignParentsRecur(obj)
 
+
 # iterates through each object in the object tree of each room and assigns...
 # its 'parent' attribute to the object it is contained in
 def assignParents(W):
@@ -371,9 +388,11 @@ def assignParents(W):
 
 
 
+
 ############################
 ## SUPERCLASS DEFINITIONS ##
 ############################
+
 
 # Empty is a class usually used as a placeholder for items. It serves to act as a dummy item which has mostly null values
 class Empty():
@@ -385,7 +404,6 @@ class Empty():
 		self.sleight = 0
 		self.sharpness = 0
 		self.type = "e"
-
 
 
 	### Dunder Methods ###
@@ -403,13 +421,13 @@ class Empty():
 			return False
 
 
-
 	### Getters ###
 
 	def Weight(self):	return 0
 
 	def improviseWeapon(self):
 		return Weapon("empty hand","",0,-1,1,0,0,0,False,"b")
+
 
 
 
@@ -447,7 +465,6 @@ class Game():
 		self.him = None
 
 
-
 	### Operation ###
 
 	# exits the previous room and enters the new room
@@ -460,6 +477,7 @@ class Game():
 		self.currentroom.enter(P,W,self)
 		return True
 
+
 	# passes time for each room, and each creature in each room
 	# important for decrementing the duration counter on all status conditions
 	def incrementTime(self,P,W):
@@ -471,11 +489,13 @@ class Game():
 			for creature in room.occupants:
 				creature.passTime(1)
 
+
 	def clearPronouns(self):
 		self.it = None
 		self.they = None
 		self.her = None
 		self.him = None
+
 
 	# sets pronoun attributes based on the type of object
 	def setPronouns(self,obj):
@@ -489,14 +509,17 @@ class Game():
 			elif obj.gender == "f":
 				self.her = obj
 
+
 	def reapOccupants(self,W):
 		for room in self.renderedRooms(W):
 			room.reapOccupants()
+
 
 	# sorts the occupants of each room based on their MVMT() stat
 	def sortOccupants(self,W):
 		for room in self.renderedRooms(W):
 			room.sortOccupants()
+
 
 	def destroyCreature(self,C,W):
 		pass
@@ -504,15 +527,6 @@ class Game():
 		# for room in self.renderedRooms(W):
 		# 	if C in room.occupants:
 		# 		room.removeCreature(C)
-
-	## perhaps unnecessary code
-	# def destroyItem(self,I,W):
-	# 	for room in self.renderedRooms(W):
-	# 		allObjects = objTreeToSet(room,d=3,getSources=True)
-	# 		for (object,source) in allObjects:
-	# 			if object is I:
-	# 				source.removeItem(object)
-
 
 
 	### Getters ###
@@ -529,6 +543,7 @@ class Game():
 			foundrooms.add(room)
 			self.roomFinder(n,room,pathlen+1,foundrooms,W)
 
+
 	# returns set of all rooms connected to currentroom with path < REND_DIST
 	def renderedRooms(self,W):
 		# constant render distance of rooms in world
@@ -539,11 +554,13 @@ class Game():
 		self.roomFinder(REND_DIST,self.currentroom,0,R,W)
 		return R
 
+
 	# gets set of all rendered rooms except the current room
 	def nearbyRooms(self,W):
 		R = self.renderedRooms(W)
 		R.remove(self.currentroom)
 		return R
+
 
 	# returns a list of objects in current room which fit a certain condition
 	# key is a function which identifies a condition about the obj
@@ -552,12 +569,14 @@ class Game():
 		if room == None: room = self.currentroom
 		return list(filter(key, objTreeToSet(room,d=d)))
 
+
 	# returns a list of objects in rendered rooms which fit a certain condition
 	def searchRooms(self,W,key=lambda x:x,d=3):
 		matchingObjects = []
 		for room in self.renderedRooms(W):
 			matchingObjects += self.searchRoom(room,key=key,d=d)
 		return matchingObjects
+
 
 	# returns a set of all objects in the rendered world
 	# does not include the player or anything in player inv
@@ -569,13 +588,13 @@ class Game():
 			allObjects |= objTreeToSet(room,d=3,getSources=getSources)
 		return allObjects
 
+
 	# True if there's an object in rendered rooms whose name matches objname
 	# not case sensitive
 	def inWorld(self,objname,W):
 		key = lambda obj: obj.name.lower() == objname
 		objects = self.searchRooms(W,key)
 		return len(objects) > 0
-
 
 
 	### User Output ###
@@ -585,8 +604,10 @@ class Game():
 		print()
 		self.currentroom.describe()
 
+
 	def describeRoom(self):
 		self.currentroom.describe()
+
 
 
 
@@ -619,6 +640,7 @@ class Room():
 	def __repr__(self):
 		return f"Room({self.name}, {self.desc}, {self.exits}...)"
 
+
 	def __str__(self):
 		return f"#{self.name}"
 
@@ -632,35 +654,43 @@ class Room():
 	def addConnection(self,dir,loc):
 		self.exits[dir] = loc
 
+
 	def addItem(self,I):
 		insort(self.contents,I)
 		I.parent = self
+
 
 	def removeItem(self,I):
 		if I in self.contents:
 			self.contents.remove(I)
 
+
 	def addCreature(self,C):
 		insort(self.occupants,C)
 		C.parent = self
+
 
 	def removeCreature(self,C):
 		if C in self.occupants:
 			self.occupants.remove(C)
 
+
 	# sort all Creatures occupying the room by their MVMT() value, descending
 	def sortOccupants(self):
 		self.occupants.sort(key=lambda x: x.MVMT(), reverse=True)
 
+
 	# remove all dead creatures from occupants list
 	def reapOccupants(self):
 		self.occupants = list(filter(lambda x: x.alive, self.occupants))
+
 
 	def addAreaCondition(G,areacond):
 		cond,dur = extractConditionInfo(areacond)
 		key = lambda x: hasMethod(x,"addCondition")
 		for creature in G.searchRoom(W,key):
 			creature.addCondition(cond,dur)
+
 
 	def removeAreaCondition(G,areacond):
 		cond,dur = extractConditionInfo(areacond)
@@ -671,6 +701,7 @@ class Room():
 		for creature in G.searchRoom(W,key):
 			creature.removeCondition(cond,-1)
 
+
 	# add a status condition to the room with a name and duration
 	def addCondition(self,G,name,dur,stackable=False):
 		# TODO: include stackability
@@ -678,6 +709,7 @@ class Room():
 		insort(self.status,pair)
 		if name.startswith("AREA"):
 			self.addAreaCondition(G,name)
+
 
 	# removes all conditions of the same name
 	# if reqDuration is given, only removes conditions with that duration
@@ -688,6 +720,7 @@ class Room():
 					self.status.remove([condname,duration])
 					if condname.startswith("AREA"):
 						self.removeAreaCondition(G,condname)
+
 
 	# decrements the duration for each status condition applied to the room by t
 	# removes status conditions whose duration is lowered past 0
@@ -703,6 +736,7 @@ class Room():
 			if condition[1] <= 0:
 				self.removeCondition(condition[0],0)
 
+
 	# describe the room, and apply any room effects to the creature entering
 	def enter(self,creature,W,G):
 		# if the player is entering the room, describe the room
@@ -712,6 +746,7 @@ class Room():
 			if cond.startswith("AREA"):
 				[name,dur] = extractConditionInfo(cond)
 				creature.addCondition(name,dur)
+
 
 	# remove any room effects from the creature exiting
 	def exit(self,creature,W,G):
@@ -737,6 +772,7 @@ class Room():
 				all[dir] = passage.connections[dir]
 		return all
 
+
 	# takes a string, term, and searches the room's contents
 	# if an item is found that matches term, return it, otherwise, return None
 	def inContents(self,term):
@@ -744,12 +780,15 @@ class Room():
 			if item.name == term:	return item
 		return None
 
+
 	def contentNames(self):
 		return [item.name for item in self.contents]
+
 
 	# returns a list of Passage objects within the room's contents
 	def getPassages(self):
 		return [item for item in self.contents if isinstance(item,Passage)]
+
 
 	# takes a string, term, and searches the room's occuptants
 	# if a creature matches the term , return it, otherwise, return False
@@ -758,8 +797,10 @@ class Room():
 			if creature.name == term:	return creature
 		return None
 
+
 	def occupantNames(self):
 		return [creature.name for creature in self.occupants]
+
 
 	# given a direction (like 'north' or 'down)...
 	# return the first Passage object with that direction in its connections
@@ -769,12 +810,14 @@ class Room():
 				return passage
 		return None
 
+
 	# if the given room object, dest, is in one of the rooms exits, then find the direction it is in from the room.
 	def getDirFromDest(self,dest):
 		if dest in self.allExits().values():
 			idx = list(self.allExits().values()).index(dest)
 			dir = list(self.allExits().keys())[idx]
 			return dir
+
 
 	# returns True if the room has a status condition with given name.
 	# if reqDuration is given, only returns True if duration matches reqDur
@@ -784,6 +827,7 @@ class Room():
 				if reqDuration == None or reqDuration == duration:
 					return True
 		return False
+
 
 	# wrapper for objSearch()
 	# recursively searches the room for an object whose name matches given term
@@ -805,15 +849,18 @@ class Room():
 		self.describeContents()
 		self.describeOccupants()
 
+
 	# prints all the contents of the room in sentence form
 	def describeContents(self):
 		if len(self.contents) != 0:
 			print("There is " + listObjects(self.contents))
 
+
 	# prints all the creatures in the room in sentence form
 	def describeOccupants(self):
 		if len(self.occupants) != 0:
 			print("There is " + listObjects(self.occupants))
+
 
 
 
@@ -835,17 +882,21 @@ class Item():
 	def __repr__(self):
 		return f"Item({self.name}, {self.desc}, {self.weight}, {self.durability})"
 
+
 	def __str__(self):
 		return f"${self.name}"
 
+
 	def __lt__(self,other):
 		return self.name.lower() < other.name.lower()
+
 
 	def __eq__(self,other) :
 		if isinstance(other, self.__class__):
 			return self.__dict__ == other.__dict__
 		else:
 			return False
+
 
 	def __hash__(self):
 		return hash(frozenset(self.__dict__)) * hash(id(self))
@@ -857,6 +908,7 @@ class Item():
 	def Obtain(self,P,W,G):
 		pass
 
+
 	def Break(self,P,G):
 		self.parent.removeItem(self)
 
@@ -866,6 +918,7 @@ class Item():
 
 	def Weight(self):
 		return self.weight
+
 
 	# Used to create a generic Weapon() if this item is used to attack something
 	def improviseWeapon(self):
@@ -879,6 +932,7 @@ class Item():
 	def describe(self):
 		print("It's " + self.stringName(False))
 		print(self.desc)
+
 
 	def stringName(self,n=-1,definite=True,cap=False):
 		strname = self.descname if hasattr(self,"descname") else self.name
@@ -894,6 +948,8 @@ class Item():
 			strname += "s"
 			strname = str(n) + " " + strname
 		return strname
+
+
 
 
 # The Creature class is the main class for anything in the game that can act
@@ -948,8 +1004,10 @@ class Creature():
 		traits = [self.STR, self.SPD, self.SKL, self.STM, self.CON, self.CHA, self.INT, self.WIS, self.FTH, self.LCK]
 		return f"Creature({self.name}, {self.desc}, {self.hp}, {self.mp}, {traits}, {self.money} ...)"
 
+
 	def __str__(self):
 		return f"!{self.name}"
+
 
 	def __eq__(self, other) :
 		if isinstance(other, self.__class__):
@@ -957,8 +1015,10 @@ class Creature():
 		else:
 			return False
 
+
 	def __hash__(self):
 		return hash(frozenset(self.__dict__)) * hash(id(self))
+
 
 	def __lt__(self,other):
 		return self.MVMT() < other.MVMT()
@@ -982,6 +1042,7 @@ class Creature():
 			except:	raise Exception("gear item not found in inventory")
 		return C
 
+
 	# returns a dict which contains all the necessary information to store...
 	# this object instance as a JSON object when saving the game
 	def convertToJSON(self):
@@ -1000,6 +1061,7 @@ class Creature():
 		# d = {"__class__":self.__class__.__name__} | d
 		d = {"__class__":self.__class__.__name__, **d}
 		return d
+
 
 	# returns an instance of this class given a dict from a JSON file
 	@classmethod
@@ -1025,9 +1087,11 @@ class Creature():
 		if(self.hp == 0):
 			self.death(P,G,W)
 
+
 	# adds money
 	def gainMoney(self,money):
 		self.money += money
+
 
 	# try to add an Item to Inventory
 	# it will fail if the inventory is too heavy
@@ -1039,6 +1103,7 @@ class Creature():
 		insort(self.inv,I)
 		I.parent = self
 		return True
+
 
 	# remove an Item from Inventory
 	# if it was equipped, unequip it
@@ -1052,6 +1117,7 @@ class Creature():
 			I.Drop(self)
 		if self.invWeight() < self.BRDN():
 			self.removeCondition("hindered",-3)
+
 
 	# takes an item from a source location
 	# first checking if it can be added to Inventory
@@ -1067,6 +1133,7 @@ class Creature():
 			self.checkHindered()
 			return True
 		return False
+
 
 	# only used by equip and unequip to reassign several attributes
 	# specifically, weapon, weapon2, shield, shield2
@@ -1103,6 +1170,7 @@ class Creature():
 		elif isinstance(self.gear["left"],Shield):
 			self.shield = self.gear["left"]
 
+
 	# finds the slot in which item resides, sets it to Empty()
 	# calls the item's Unequip() method if it has one
 	def unequip(self,I):
@@ -1115,6 +1183,7 @@ class Creature():
 		if hasMethod(I,"Unequip"):
 			I.Unequip(self)
 
+
 	# if the item is armor, equip it, otherwise return False
 	def equipArmor(self,I):
 		if isinstance(I,Helm):		self.gear["head"] = I
@@ -1123,6 +1192,7 @@ class Creature():
 		else:	return False
 		I.Equip(self)
 		return True
+
 
 	# unequips the lefthanded item, moves righthanded item to left,
 	# equips the new item in right hand
@@ -1137,12 +1207,14 @@ class Creature():
 		self.assignWeaponAndShield()
 		if hasMethod(I,"Equip"): I.Equip(self)
 
+
 	def addCondition(self,name,dur,stackable=False):
 		if self.hasCondition(name) and not stackable:
 			return False
 		pair = [name,dur]
 		insort(self.status,pair)
 		return True
+
 
 	# removes all condition of the same name
 	# if reqDuration is given, only removes conditions with that duration
@@ -1151,6 +1223,7 @@ class Creature():
 			if condname == name:
 				if reqDuration == None or reqDuration == duration:
 					self.status.remove([condname,duration])
+
 
 	def passTime(self,t):
 		for condition in self.status:
@@ -1164,10 +1237,12 @@ class Creature():
 			if condition[1] <= 0:
 				self.removeCondition(condition[0],0)
 
+
 	def checkHindered(self):
 		if self.invWeight() > self.BRDN():
 			if not self.hasCondition("hindered"):
 				self.addCondition("hindered",-3)
+
 
 	# called when a creature's hp hits 0
 	def death(self,P,G,W):
@@ -1180,11 +1255,13 @@ class Creature():
 		if G.whoseturn is P:
 			P.gainxp(10)
 
+
 	def Carry(self,carrier):
 		self.addCondition("carried",-3)
 		carrier.addCondition("carrying",-3,silent=True)
 		carrier.equipInHand(self)
 		return True
+
 
 	def Restrain(self,restrainer,item):
 		if item != None:
@@ -1195,6 +1272,7 @@ class Creature():
 		restrainer.addCondition("restraining",-3,silent=True)
 		self.addCondition("restrained",-3)
 		return True
+
 
 	def Hide(self,I):
 		if 4 * self.SLTH() > I.weight:
@@ -1239,15 +1317,18 @@ class Creature():
 		for item in self.inv: weight += item.Weight()
 		return weight
 
+
 	# returns a list of names of all items in player inventory
 	def invNames(self,lower = False):
 		if lower:
 			return [item.name.lower() for item in self.inv]
 		return [item.name for item in self.inv]
 
+
 	# just a function wrapper for functions that call contentNames on objects
 	def contentNames(self):
 		return self.invNames()
+
 
 	# searches through inventory for an item whose name matches 'term'
 	# if a match is found, return the item, otherwise return None
@@ -1256,8 +1337,10 @@ class Creature():
 			if item.name.lower() == term:	return item
 		return None
 
+
 	def weapons(self):
 		return [I for I in self.inv if isinstance(I,Weapon)]
+
 
 	# returns sum of the weight of all items in player gear
 	def gearWeight(self):
@@ -1267,6 +1350,7 @@ class Creature():
 				weight += self.gear[item].Weight()
 		return weight
 
+
 	# searches through gear for an item whose name matches 'term'
 	# if a match is found, return the item, otherwise return None
 	def inGear(self,term):
@@ -1274,6 +1358,7 @@ class Creature():
 			if self.gear[slot].name.lower() == term:
 				return self.gear[slot]
 		return None
+
 
 	# returns sum of all protection values of all items in gear
 	def armor(self):
@@ -1284,6 +1369,7 @@ class Creature():
 				prot += item.prot
 		return prot
 
+
 	def hasCondition(self,name,reqDuration=None):
 		for condname,duration in self.status:
 			if condname == name:
@@ -1291,17 +1377,21 @@ class Creature():
 					return True
 		return False
 
+
 	# returns the sum of the weight of all items being held
 	def handheldWeight(self):
 		return self.weapon.weight + self.weapon2.weight + self.shield.weight + self.shield2.weight
+
 
 	def isBloodied(self):
 		# returns true is creature has less than half health
 		pass
 
+
 	def alliesPresent(self):
 		# returns number of allies creature can see
 		pass
+
 
 	def enemiesPresent(self):
 		# returns number of enemies creature can see
@@ -1326,9 +1416,11 @@ class Creature():
 				strname = n + strname
 		return strname
 
+
 	def describe(self):
 		print("It's " + self.stringName(False))
 		print(self.desc)
+
 
 
 
@@ -1363,6 +1455,7 @@ class Player(Creature):
 		if(self.hp == 0):
 			self.death()
 
+
 	# heals player hp a given amount
 	def heal(self,heal):
 		if self.hp + heal > self.MXHP():
@@ -1370,6 +1463,7 @@ class Player(Creature):
 		self.hp += heal
 		print(f"You healed {heal} HP")
 		return heal
+
 
 	# player gets 3 QPs for each level gained, can dispense them into any trait
 	def levelUp(self,oldlv,newlv):
@@ -1388,10 +1482,12 @@ class Player(Creature):
 			QP -= 1
 		self.printTraits()
 
+
 	# adds money
 	def gainMoney(self,money):
 		print(f"\nYou gained Ᵽ{money}!")
 		self.money += money
+
 
 	def obtainItem(self,I,S,W,G,msg=None):
 		if self.addItem(I):
@@ -1404,6 +1500,7 @@ class Player(Creature):
 		print(f"You can't take the {I.name}, your Inventory is too full")
 		return False
 
+
 	# adds xp, checks for player level up
 	def gainxp(self,newxp):
 		oldlv = self.level()
@@ -1412,12 +1509,14 @@ class Player(Creature):
 		newlv = self.level()
 		if oldlv != newlv: self.levelUp(oldlv,newlv)
 
+
 	def addCondition(self,name,dur,stackable=False,silent=False):
 		# TODO: include stackability (conditions which can exist multiple times)
 		pair = [name,dur]
 		insort(self.status,pair)
 		if not silent:
 			print("You are " + name)
+
 
 	# removes all condition of the same name
 	# if reqDuration is given, only removes conditions with that duration
@@ -1429,11 +1528,13 @@ class Player(Creature):
 					if not self.hasCondition(condname):
 						print("You are no longer " + condname)
 
+
 	def checkHindered(self):
 		if self.invWeight() > self.BRDN():
 			if not self.hasCondition("hindered"):
 				print("Your Inventory grows heavy")
 				self.addCondition("hindered",-3)
+
 
 	# called when player hp hits 0
 	def death(self):
@@ -1442,6 +1543,7 @@ class Player(Creature):
 		# ask to continue from checkpoint (last save)
 		# or to load a different save
 		# or to quit game
+
 
 	def dualAttack(self,target,G,W):
 		hit = min1(maxm(99, self.ACCU() - target.EVSN()))
@@ -1458,6 +1560,7 @@ class Player(Creature):
 				return
 		else:
 			print("Aw it missed")
+
 
 	def attackCreature(self,target,G,W):
 		n = min1( self.ATSP() // min1(target.ATSP()))
@@ -1480,6 +1583,7 @@ class Player(Creature):
 			if self.weapon2 != Empty():	self.dualAttack(target,G,W)
 			if target.alive == False:	return
 
+
 	def attackItem(self,target,G,W):
 		attack = self.ATCK()
 		print(f"{attack} damage")
@@ -1500,16 +1604,19 @@ class Player(Creature):
 				count +=1
 		return count
 
+
 	# wrapper for objTreeToSet()
 	# returns player Inventory as a set of all items in the Item Tree
 	def invSet(self):
 		return objTreeToSet(self,d=2)
+
 
 	# weird formula right? returns a positive number rounded down to nearest int
 	# to see an approximate curve, graph y = 5*log10(x/10)
 	# note that a lower bound is set to level 1 when xp < 16
 	def level(self):
 		return 1 if self.xp < 16 else floor(5*log10(self.xp/10))
+
 
 	# wrapper for objSearch, sets the degree of the search 2 by default
 	# returns an item in player inv object tree whose name matches given term
@@ -1529,6 +1636,7 @@ class Player(Creature):
 			print(f"{trait}: {getattr(self,trait)}",end="")
 		print()
 
+
 	def printAbility(self,ability):
 		if ability == "ATCK":
 			print(f"ATCK: {self.STR} - {self.weapon.might*self.STR}")
@@ -1537,9 +1645,11 @@ class Player(Creature):
 		else:
 			print(f"{ability}: {getattr(self,ability)()}")
 
+
 	def printAbilities(self):
 		for ability in abilities:
 			self.printAbility(ability)
+
 
 	# each prints a different player stat
 	def printMoney(self): print(f"Ᵽ {self.money}")
@@ -1549,6 +1659,7 @@ class Player(Creature):
 	def printXP(self): print(f"XP: {self.xp}")
 	def printRP(self): print(f"RP: {self.rp}")
 
+
 	# prints player inventory
 	def printInv(self):
 		if len(self.inv) == 0:
@@ -1557,12 +1668,14 @@ class Player(Creature):
 			print("Weight:",self.invWeight())
 			columnPrint(self.invNames(),8,12)
 
+
 	# print each player gear slot and the items equipped in them
 	def printGear(self):
 		print()
 		for slot in self.gear:
 			print(slot + ":\t",end="")
 			print(self.gear[slot].name)
+
 
 	def printStatus(self):
 		if len(self.status) == 0:
@@ -1597,12 +1710,14 @@ class Player(Creature):
 		colWidth = len(max(conditions, key=len)) + 4
 		columnPrint(statusdisplay,2,colWidth)
 
+
 	# prints player level, money, hp, mp, rp, and status effects
 	def printStats(self):
 		stats = [self.name, f"Ᵽ {self.money}", f"LV: {self.level()}", f"RP: {self.rp}", f"HP: {self.hp}/{self.MXHP()}", f"MP: {self.mp}/{self.MXMP()}"]
 		columnPrint(stats,2,16)
 		if len(self.status) != 0:
 			self.printStatus()
+
 
 	# for every item in player inventory, if its a weapon, print it
 	def printWeapons(self):
@@ -1612,9 +1727,11 @@ class Player(Creature):
 
 
 
+
 ##########################
 ## SUBCLASS DEFINITIONS ##
 ##########################
+
 
 class Animal(Creature):
 	def act(self,P,G,room):
@@ -1622,23 +1739,30 @@ class Animal(Creature):
 		if not G.silent:	print(f"\n{self.name}'s turn!")
 		self.attack(P,G)
 
+
 	def attack(self,P,G):
 		if not G.silent:	print("attack?")
+
 
 	def climb():
 		pass
 
+
 	def go():
 		pass
+
 
 	def steal():
 		pass
 
+
 	def swim():
 		pass
 
+
 	def throw():
 		pass
+
 
 notes = '''
 self.alive = True
@@ -1707,6 +1831,7 @@ class Fixture(Item):
 
 
 
+
 class Passage(Fixture):
 	def __init__(self,name,desc,weight,durability,connections,descname):
 		self.name = name
@@ -1715,6 +1840,7 @@ class Passage(Fixture):
 		self.durability = durability
 		self.connections = connections
 		self.descname = descname
+
 
 
 
@@ -1734,6 +1860,7 @@ class Passage(Fixture):
 		newroom = W[self.connections[dir]]
 		G.changeRoom(newroom,P,W)
 		return True
+
 
 
 
@@ -1762,6 +1889,7 @@ class Pylars(Item):
 	def Obtain(self,creature,W,G):
 		creature.gainMoney(self.value)
 
+
 	### User Output ###
 	def stringName(self,n=-1,definite=True,cap=False,plural=False):
 		strname = self.descname if hasattr(self,"descname") else self.name
@@ -1774,6 +1902,8 @@ class Pylars(Item):
 		return strname
 
 
+
+
 class Weapon(Item):
 	def __init__(self,name,desc,weight,durability,might,sleight,sharpness,range,twohanded,type):
 		Item.__init__(self,name,desc,weight,durability)
@@ -1784,9 +1914,11 @@ class Weapon(Item):
 		self.twohanded = bool(twohanded)
 		self.type = type
 
+
 	def print(self):
 		print(f"{self.name} {self.might} {self.sleight}")
 		print(f"{self.sharpness} { self.twohanded} {self.range}")
+
 
 
 
@@ -1797,16 +1929,20 @@ class Shield(Item):
 
 
 
+
 class Armor(Item):
 	def __init__(self,name,desc,weight,durability,prot):
 		Item.__init__(self,name,desc,weight,durability)
 		self.prot = prot
 
+
 	def Equip(self,P):
 		pass
 
+
 	def Unequip(self,P):
 		pass
+
 
 
 
@@ -1816,9 +1952,11 @@ class Helm(Armor):
 
 
 
+
 class Tunic(Armor):
 	def __init__(self,name,desc,weight,durability,prot):
 		Armor.__init__(self,name,desc,weight,durability,prot)
+
 
 
 
@@ -1828,9 +1966,11 @@ class Greaves(Armor):
 
 
 
+
 class Compass(Item):
 	def Orient(self):
 		print("Orienting you northward!")
+
 
 
 
@@ -1839,17 +1979,21 @@ class Monster(Creature):
 		# returns true if monster is armed
 		pass
 
+
 	def hasHealing():
 		# returns true is monster has healing potion or food
 		pass
+
 
 	def playerBloodied():
 		# returns true if monster believes player is bloodied
 		pass
 
+
 	def playerArmed():
 		# returns true if monster believes player is armed
 		pass
+
 
 
 

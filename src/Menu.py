@@ -15,9 +15,12 @@ from Items import *
 from Creatures import *
 
 
+
+
 ##########################
 ## WRITE DATA FUNCTIONS ##
 ##########################
+
 
 # just writes the game object to a file, probably named "game.txt"
 def writeGame(filename,G):
@@ -27,6 +30,7 @@ def writeGame(filename,G):
 	gfd.write(G.prevroom.name + "\n")
 	gfd.write(str(G.time) + "\n")
 	gfd.close()
+
 
 class worldEncoder(json.JSONEncoder):
 	def default(self,objToWrite):
@@ -49,15 +53,18 @@ class worldEncoder(json.JSONEncoder):
 		else:
 			return objToWrite
 
+
 def writeJSON(filename,W):
 	with open(filename,"w") as fd:
 		json.dump(W,fd,cls=worldEncoder,indent="\t")
 
 
 
+
 #########################
 ## READ DATA FUNCTIONS ##
 #########################
+
 
 def default(jsonDict):
 	# print("==== converting object of type: " + str(type(jsonDict)))
@@ -83,10 +90,12 @@ def default(jsonDict):
 	else:
 		return jsonDict
 
+
 def readJSON(filename):
 	with open(filename,"r") as fd:
 		W = json.load(fd,object_hook=default)
 	return W
+
 
 # reads the global game class file, probably named "game.txt"
 # takes the world dict as input, returns the Game object
@@ -102,9 +111,11 @@ def readGame(filename,W):
 
 
 
+
 ####################
 ## MENU FUNCTIONS ##
 ####################
+
 
 # saves data from player, world, and game objects to respective text files
 def saveGame(P,W,G):
@@ -148,6 +159,7 @@ def saveGame(P,W,G):
 	sleep(1)
 	print("Game saved")
 	sleep(1)
+
 
 # load a game from a save directory
 def loadGame(filename):
@@ -195,6 +207,7 @@ def loadGame(filename):
 	G.startUp(P,W)
 	return P, W, G
 
+
 # deletes all save files in 'save' directory (if the user is very, very sure)
 def deleteAll():
 	clearScreen()
@@ -215,6 +228,7 @@ def deleteAll():
 	print()
 	input()
 	return mainMenu()
+
 
 # deletes a save file whose name is given by the user
 def delete(filename):
@@ -259,6 +273,7 @@ def delete(filename):
 	input()
 	return mainMenu()
 
+
 # asks for player name and description, starts everything else at initial values
 def createCharacter():
 	name = input("What is your name?\n> ")
@@ -266,6 +281,7 @@ def createCharacter():
 	desc = input("Describe yourself\n> ")
 	while len(desc) == 0: desc = input("> ")
 	return Player(name,desc,1,1,inittraits,0,[],initgear,[],0,0,[])
+
 
 # starts a new game and returns player, world, and game objects
 def newGame():
@@ -281,6 +297,7 @@ def newGame():
 	clearScreen()
 	G.startUp(P,W)
 	return P, W, G
+
 
 # automatically starts a new game with a premade character for easy testing
 def testGame():
@@ -300,11 +317,13 @@ def testGame():
 	G.mode = 1
 	return P, W, G
 
+
 def gameInfo():
 	clearScreen()
 	print(gameinfo)
 	input()
 	return mainMenu()
+
 
 # main game menu, used to instantiate global variables P, W, and G in Parser.py
 # loops until a new game is made, a save is loaded, or the game is quit
@@ -333,9 +352,12 @@ def mainMenu():
 		else:			 						return mainMenu()
 
 
+
+
 ##########################
 ## GAME INTRO FUNCTIONS ##
 ##########################
+
 
 # returns true if bubble at row,col is under a "_" and under or beside a "wall"
 def bubbleTrapped(logoArray,row,col):
@@ -346,6 +368,7 @@ def bubbleTrapped(logoArray,row,col):
 		if logoArray[row][col-1] == walls or logoArray[row][col+1] in walls:
 			return True
 	return False
+
 
 # takes a specific char in the logoArray, alters it depending on its value
 # if char at row,col is a *, erase it
@@ -389,6 +412,7 @@ def moveBubble(logoArray,row,col):
 	# return the number of bubbles which were removed during this function
 	return poppedBubbles
 
+
 # for each character in the array, move bubble at row,col
 # when a bubble moves, it has a chance to pop itself or other bubbles
 # returns the number of bubbles which were popped after altering them all
@@ -399,6 +423,7 @@ def moveBubbles(logoArray):
 			poppedBubbles += moveBubble(logoArray,row,col)
 	# return the number of bubbles which were removed during this function
 	return poppedBubbles
+
 
 # for each bubble in the logo, has a chance to grow it from "." to "o" to "O"
 def growBubbles(logoArray):
@@ -416,6 +441,7 @@ def growBubbles(logoArray):
 			if willGrow and char == ".":
 				char = "o"
 			logoArray[row][col] = char
+
 
 # generate between 1,n new bubbles represented by "." at any "_" in 'rows'
 # rows is a list of indices of the logo rows upon which new bubbles will appear
@@ -441,11 +467,13 @@ def makeNewBubbles(logoArray,n,rows):
 		logoArray[row][col] = "."
 	return newBubbles
 
+
 # joins 2d array of characters into list of strings
 # then joins list of strings into one string with newlines, then prints it
 def printLogoArray(logoArray):
 	clearScreen()
 	print("\n".join(["".join(line) for line in logoArray]))
+
 
 # procedurally generated bubble animation, makes, grows, and moves bubbles
 # t is the time between frames
@@ -483,11 +511,13 @@ def dynamicBubbleAnimation(t,b,n):
 		currentBubbles -= poppedBubbles
 	return True
 
+
 # prints the static logo and flushes keyboard input at the end of the intro
 def endIntro():
 	clearScreen()
 	print(logo)
 	flushInput()
+
 
 # runs the intro logo animation
 # uses data from the bottom of Data.py

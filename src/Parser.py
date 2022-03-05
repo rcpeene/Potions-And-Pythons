@@ -12,9 +12,11 @@ from Menu import *
 
 
 
+
 ##################
 ## GAME STARTUP ##
 ##################
+
 
 # formatting the prompt window
 os.system("mode con:cols=128 lines=32")
@@ -34,9 +36,11 @@ P, W, G = mainMenu()
 
 
 
+
 #######################
 ## PARSING FUNCTIONS ##
 #######################
+
 
 # checks if a noun refers to a room, an object in the world or on the player...
 # or an action verb, an in-game definition or a miscellaneous expression
@@ -49,6 +53,7 @@ def isMeaningful(noun):
 	G.inWorld(noun,W):
 		return True
 	return False
+
 
 # recursively inspects the command, which is a list of words, starting at i
 # combines multiple words into single terms that appear to be a meaningful term
@@ -74,6 +79,7 @@ def nounify(command,i):
 		j += 1
 	return nounify(command,i+1)
 
+
 # if the term is a given pronoun, returns the name of the object which...
 # matches the pronoun in the Game class. Intended to return a "best guess"
 def replacePronoun(term):
@@ -84,6 +90,7 @@ def replacePronoun(term):
 	elif term in {"they","them"}:	obj = G.they
 	if obj == None:					return None
 	return obj.name
+
 
 # validates user input and processes into into a command form usable by parse(),
 # namely, it returns a list of words without capitals, symbols, or articles
@@ -104,8 +111,10 @@ def processCmd(prompt,storeRawCmd=False):
 	finalcommand = nounify(listcommand,0)
 	return finalcommand
 
+
 def getNoun(prompt):
 	return " ".join(processCmd(prompt))
+
 
 def parseWithoutVerb(prompt,preps):
 	dobj = None
@@ -128,6 +137,7 @@ def parseWithoutVerb(prompt,preps):
 
 	return dobj,iobj,prep
 
+
 # called in parse() when a command fails, it simply recurs parse(), and...
 # prints a helpful message if user has provided invalid input 3 or more times
 # n is the number of times parse() has recurred
@@ -136,6 +146,7 @@ def promptHelp(msg,n):
 	if n >= 2:	print("Enter 'help' for a list of commands")
 	if n > 32:	return False	# prevent stack overflow from repeated bad input
 	return parse(n+1)	# ask again
+
 
 # the primary input parsing function for the game
 # its purpose is to parse command grammar and call the related action function
@@ -187,9 +198,11 @@ def parse(n=0):
 
 
 
+
 ##########################################
 ## CHEATCODES AND DEV COMMAND FUNCTIONS ##
 ##########################################
+
 
 def Get(command):
 	objname = command[1].lower()
@@ -215,9 +228,11 @@ def Get(command):
 	except:
 		print("Attribute does not exist")
 
+
 def Learn(command):
 	try:	P.gainxp(int(command[1]))
 	except:	print("Value not number")
+
 
 def Mode(command):
 	try:
@@ -226,9 +241,11 @@ def Mode(command):
 	except:
 		print("Value not number")
 
+
 def Pypot(command):
 	try:	P.money = P.money + int(command[1])
 	except:	print("Value not number")
+
 
 def Set(command):
 	if command[1] in {"p","player"}:
@@ -239,10 +256,12 @@ def Set(command):
 	val = command[3]
 	setStat(obj,attrString,val)
 
+
 def Teleport(command):
 	location = command[1]
 	if location in W:	G.changeRoom(W[location],P,W)
 	else:				print("Location not in world")
+
 
 def Test(command):
 	for i in range(10):
@@ -255,9 +274,11 @@ def Test(command):
 		# clearScreen()
 	return True
 
+
 def Warp(command):
 	try:	G.time += int(command[1])
 	except:	print("Value not number")
+
 
 def Zap(command):
 	objname = " ".join(command[1:])
@@ -274,13 +295,16 @@ def Zap(command):
 
 
 
+
 #######################################
 ## SHORTACTION AND RELATED FUNCTIONS ##
 #######################################
 
+
 def Cry(): print("A single tear sheds from your eye")
 def Dance(): print("You bust down a boogie")
 def Examples(): print("\n"*64 + examples)
+
 
 def Help():
 	clearScreen()
@@ -294,15 +318,21 @@ def Help():
 	input()
 	clearScreen()
 
+
 def Info():
 	print("\n"*64 + gameinfo)
 	input()
 	clearScreen()
 
+
 def Laugh(): print("HAHAHAHAHA!")
+
+
 def Quit():
 	if yesno("Are you sure you want to quit? (Anything unsaved will be lost)"):
 		sys.exit()
+
+
 def Return(): return Go(None, G.prevroom.name, None) #go to previous room
 def Save(): saveGame(P,W,G)
 def Shout(): print("AHHHHHHHHHH")
@@ -312,9 +342,11 @@ def Yawn():	print("This is no time for slumber!")
 
 
 
+
 ##################################
 ## ACTION AND RELATED FUNCTIONS ##
 ##################################
+
 
 def Attack(dobj,iobj,prep):
 	if prep not in {"with","using",None}:
@@ -385,6 +417,7 @@ def Bite(dobj,iobj,prep):
 	# description to include "it has a bite taken out of it"
 	# perhaps if player swallows something inedible, take damage?
 
+
 def Break(dobj,iobj,prep):
 	# TODO: potentially just redirect this func to attack, idk
 	if prep not in {"with",None}:
@@ -407,6 +440,7 @@ def Break(dobj,iobj,prep):
 		return False
 	I.Break(P,G)
 	return True
+
 
 def Carry(dobj,iobj,prep):
 	# TODO: identify a way to link carrier to carried without remove carried creature from Room.creatures
@@ -435,6 +469,7 @@ def Carry(dobj,iobj,prep):
 	if Restrain(dobj,iobj,prep):
 		return I.Carry(P)
 
+
 def Cast(dobj,iobj,prep):
 	if prep not in {"at","on","onto","upon",}:
 		print("Command not understood")
@@ -457,8 +492,11 @@ def Cast(dobj,iobj,prep):
 def Catch(dobj,iobj,prep):
 	print("catching")
 
+
+# TODO:
 # def Climb(dobj,iobj,prep):
 # 	print("climbing")
+
 
 def Close(dobj,iobj,prep):
 	if prep != None:
@@ -489,8 +527,10 @@ def Close(dobj,iobj,prep):
 		print("You close the " + I.name)
 	return True
 
+
 def Craft(dobj,iobj,prep):
 	print("crafting")
+
 
 def Crawl(dobj,iobj,prep):
 	if prep in {"behind","below","beneath","under",None}:
@@ -499,8 +539,10 @@ def Crawl(dobj,iobj,prep):
 		Crouch(None,None,None)
 		return Go(dobj,iobj,prep)
 
+
 def Cross(dobj,iobj,prep):
 	print("crossing")
+
 
 def Crouch(dobj,iobj,prep):
 	if prep not in {"behind","below","beneath","inside","under",None}:
@@ -515,8 +557,10 @@ def Crouch(dobj,iobj,prep):
 	P.addCondition("crouched",-3)
 	return True
 
+
 def Cut(dobj,iobj,prep):
 	print("cuting")
+
 
 def Define(dobj,iobj,prep):
 	if iobj != None or prep != None:
@@ -535,6 +579,7 @@ def Define(dobj,iobj,prep):
 		return True
 	print(f"'{dobj}' is unknown")
 	return False
+
 
 def Describe(dobj,iobj,prep):
 	if iobj != None or prep != None:
@@ -557,11 +602,14 @@ def Describe(dobj,iobj,prep):
 	D.describe()
 	return True
 
+
 def Do(dobj,iobj,prep):
 	print("doing")
 
+
 def Dodge(dobj,iobj,prep):
 	print("dodgeing")
+
 
 def Doff(dobj,iobj,prep):
 	if prep != None:
@@ -581,6 +629,7 @@ def Doff(dobj,iobj,prep):
 	P.unequip(I)
 	print(f"You doff your {I.name}")
 	return True
+
 
 def Don(dobj,iobj,prep):
 	if prep != None:
@@ -609,6 +658,7 @@ def Don(dobj,iobj,prep):
 	print(f"You don your {I.name}")
 	return True
 
+
 def Drink(dobj,iobj,prep):
 	if prep != "with" and prep != None:
 		print("Command not understood")
@@ -629,6 +679,7 @@ def Drink(dobj,iobj,prep):
 		return False
 	I.Drink(P,G)
 	return True
+
 
 def Drop(dobj,iobj,prep):
 	if prep != None:
@@ -653,6 +704,7 @@ def Drop(dobj,iobj,prep):
 	G.currentroom.addItem(I)
 	return True
 
+
 def Dump(dobj,iobj,prep):
 	if prep not in {"in","into","inside","on","onto","upon",None}:
 		print("Command not understood")
@@ -671,6 +723,7 @@ def Dump(dobj,iobj,prep):
 		return Pour(dobj,iobj,prep)
 	else:
 		return Drop(dobj,iobj,prep)
+
 
 def Eat(dobj,iobj,prep):
 	if prep not in {"with",None}:
@@ -693,8 +746,10 @@ def Eat(dobj,iobj,prep):
 	I.Eat(P,G)
 	return True
 
+
 def Enter(dobj,iobj,prep):
 	print("entering")
+
 
 def Equip(dobj,iobj,prep):
 	if prep != None:
@@ -720,32 +775,42 @@ def Equip(dobj,iobj,prep):
 	print(f"You equip your {I.name}")
 	return True
 
+
 def Escape(dobj,iobj,prep):
 	print("escapeing")
+
 
 def Exit(dobj,iobj,prep):
 	print("exiting")
 
+
 def Feed(dobj,iobj,prep):
 	print("feeding")
+
 
 def Fill(dobj,iobj,prep):
 	print("filling")
 
+
 def Find(dobj,iobj,prep):
 	print("finding")
+
 
 def Fish(dobj,iobj,prep):
 	print("fishing")
 
+
 def Follow(dobj,iobj,prep):
 	print("following")
+
 
 def Fuck(dobj,iobj,prep):
 	print("I'm not sure I, the game developer, can allow that")
 
+
 def Give(dobj,iobj,prep):
 	print("giveing")
+
 
 # called when the user wants to go "up" or "down"
 def GoVertical(dir,passage=None,dobj=None):
@@ -766,6 +831,7 @@ def GoVertical(dir,passage=None,dobj=None):
 		return False
 	if hasMethod(passage,"Traverse"):
 		return passage.Traverse(P,W,G,dir)
+
 
 # not called directly from user input
 # called when the intended direction, destination, and/or passage is known
@@ -800,6 +866,7 @@ def ExecuteGo(dobj,dir,dest,passage):
 	print(f"There is no exit leading to a {dobj} here")
 	return False
 
+
 # parses user input to determine the intended direction, destination, and/or... # passage. Then calls ExecuteGo to actually carry out the action
 def Go(dobj,iobj,prep):
 	preps = {"down","through","to","toward","up","in","into","on","onto",None}
@@ -828,6 +895,7 @@ def Go(dobj,iobj,prep):
 
 	return ExecuteGo(dobj,dir,dest,passage)
 
+
 # add in the ability to try to 'grab' creatures?
 def Grab(dobj,iobj,prep):
 	if prep != None:
@@ -851,6 +919,7 @@ def Grab(dobj,iobj,prep):
 	else:
 		print(f"You cannot grab the {I.name}")
 		return False
+
 
 def Hide(dobj,iobj,prep):
 	if prep not in {"behind","below","beneath","inside","under",None}:
@@ -876,14 +945,18 @@ def Hide(dobj,iobj,prep):
 	P.addCondition("hiding",-3)
 	return True
 
+
 def Ignite(dobj,iobj,prep):
 	print("igniteing")
+
 
 def Insert(dobj,iobj,prep):
 	print("inserting")
 
+
 def Jump(dobj,iobj,prep):
 	print("jumping")
+
 
 def Kick(dobj,iobj,prep):
 	if dobj == None:
@@ -891,6 +964,7 @@ def Kick(dobj,iobj,prep):
 		if dobj in cancels:
 			return False
 	return Attack(dobj,"foot","with")
+
 
 def Kill(dobj,iobj,prep):
 	if prep not in {"with","using",None}:
@@ -904,14 +978,18 @@ def Kill(dobj,iobj,prep):
 		return False
 	return Attack(dobj,iobj,prep)
 
+
 def Lick(dobj,iobj,prep):
 	print("licking")
+
 
 def Light(dobj,iobj,prep):
 	print("lighting")
 
+
 def Listen(dobj,iobj,prep):
 	print("listening")
+
 
 def Lock(dobj,iobj,prep):
 	if prep != "with" and prep != None:
@@ -946,6 +1024,7 @@ def Lock(dobj,iobj,prep):
 
 	return I.Lock(K)
 
+
 def Look(dobj,iobj,prep):
 	if prep not in {"at","in","inside","into","on","through",None}:
 		print("Command not understood")
@@ -974,11 +1053,14 @@ def Look(dobj,iobj,prep):
 		L.Look()
 	return True
 
+
 def Mount(dobj,iobj,prep):
 	print("mounting")
 
+
 def Move(dobj,iobj,prep):
 	print("moveing")
+
 
 def Open(dobj,iobj,prep):
 	if prep != "with" and prep != None:
@@ -1005,14 +1087,18 @@ def Open(dobj,iobj,prep):
 	I.Open()
 	return True
 
+
 def Pet(dobj,iobj,prep):
 	print("peting")
+
 
 def Play(dobj,iobj,prep):
 	print("playing")
 
+
 def Point(dobj,iobj,prep):
 	print("pointing")
+
 
 def Pour(dobj,iobj,prep):
 	if prep not in {"in","into","inside","on","onto","upon",None}:
@@ -1048,14 +1134,18 @@ def Pour(dobj,iobj,prep):
 	I.Pour(P,G)
 	return True
 
+
 def Pray(dobj,iobj,prep):
 	print("praying")
+
 
 def Press(dobj,iobj,prep):
 	print("pressing")
 
+
 def Pull(dobj,iobj,prep):
 	print("pulling")
+
 
 def Punch(dobj,iobj,prep):
 	if dobj == None:
@@ -1064,8 +1154,10 @@ def Punch(dobj,iobj,prep):
 			return False
 	return Attack(dobj,"fist","with")
 
+
 def Push(dobj,iobj,prep):
 	print("pushing")
+
 
 def Put(dobj,iobj,prep):
 	if prep not in {"in","into","inside","on","onto","upon",None}:
@@ -1106,14 +1198,19 @@ def Put(dobj,iobj,prep):
 	R.addItem(I)
 	return True
 
+
 def Release(dobj,iobj,prep):
 	print("releaseing")
 
+
+# TODO:
 # def Remove(dobj,iobj,prep):
 # 	print("removeing")
 
+
 def Rest(dobj,iobj,prep):
 	print("resting")
+
 
 def Restrain(dobj,iobj,prep):
 	if prep != "with" and prep != None:
@@ -1149,41 +1246,54 @@ def Restrain(dobj,iobj,prep):
 	print(f"You restrain the {C.name}")
 	return True
 
+
 def Ring(dobj,iobj,prep):
 	print("ringing")
+
 
 def Rub(dobj,iobj,prep):
 	print("rubbing")
 
+
 def Search(dobj,iobj,prep):
 	print("searching")
+
 
 def Shoot(dobj,iobj,prep):
 	print("shooting")
 
+
 def Shove(dobj,iobj,prep):
 	print("shoveing")
+
 
 def Smell(dobj,iobj,prep):
 	print("smelling")
 
+
 def Steal(dobj,iobj,prep):
 	print(f"stealing {dobj} {prep} {iobj}")
+
 
 def Struggle(dobj,iobj,prep):
 	print("struggleing")
 
+
 def Swim(dobj,iobj,prep):
 	print("swiming")
+
 
 def Talk(dobj,iobj,prep):
 	print("talking")
 
+
 def Throw(dobj,iobj,prep):
 	print("throwing")
 
+
 def Tie(dobj,iobj,prep):
 	print("tieing")
+
 
 def Take(dobj,iobj,prep):
 	if prep not in {"from","in","inside","up",None}:
@@ -1227,11 +1337,14 @@ def Take(dobj,iobj,prep):
 	msg = f"You take {det} {I.name}{appendstring}"
 	return P.obtainItem(I,S,W,G,msg)
 
+
 def Touch(dobj,iobj,prep):
 	print("touching")
 
+
 def Trip(dobj,iobj,prep):
 	print("triping")
+
 
 def Unequip(dobj,iobj,prep):
 	if prep != None:
@@ -1251,6 +1364,7 @@ def Unequip(dobj,iobj,prep):
 	print(f"You unequip your {I.name}")
 	P.unequip(I)
 	return True
+
 
 def Unlock(dobj,iobj,prep):
 	if prep != "with" and prep != None:
@@ -1284,8 +1398,10 @@ def Unlock(dobj,iobj,prep):
 
 	return I.Unlock(K)
 
+
 def Untie(dobj,iobj,prep):
 	print("untieing")
+
 
 def Use(dobj,iobj,prep):
 	if dobj == None:
@@ -1306,17 +1422,21 @@ def Use(dobj,iobj,prep):
 	I.Use(P,W,G)
 	return True
 
+
 def Wait(dobj,iobj,prep):
 	print("waiting")
+
 
 def Wave(dobj,iobj,prep):
 	print("waveing")
 
 
 
+
 ##################################
 ## ACTION FUNCTION DICTIONARIES ##
 ##################################
+
 
 cheatcodes = {
 	"\\get":Get,

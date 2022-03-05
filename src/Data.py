@@ -10,6 +10,7 @@
 
 
 
+
 ####################
 ## USEFUL STRINGS ##
 ####################
@@ -29,6 +30,7 @@ vowels = "aeiouAEIOU"
 physicaldmg = "bps"
 elementaldmg = "acfltx"
 magicaldmg = "inrv"
+
 
 
 
@@ -91,6 +93,7 @@ statcommands = ("abilities","accu","atck","athl","atsp","brdn","cast","crit","cs
 # all valid verbs which are not a shortverb or a statcommand
 verbs = ("attack","bite","break","build","carry","cast","catch","climb","close","craft","crawl","create","cross","crouch","cut","dash","define","describe","do","dodge","doff","don","drink","drop","duck","dump","eat","enter","equip","escape","examine","exit","feed","feel","fight","fill","find","fish","follow","fuck","get","give","go","grab","grapple","head","hear","hide","hit","ignite","insert","jump","kick","kill","lay","leave","lick","light","listen","lock","look","make","mount","move","obtain","open","pet","pick","pick up","place","play","point","pour","pray","pull","punch","push","put","put down","put on","quaff","read","release","remove","rest","restrain","return","ride","ring","rub","run","search","set","shove","shut","slap","sleep","slice","smell","sneak","sniff","speak","steal","stomp","stow","strike","struggle","swim","take","take off","talk","taste","throw","tie","tinker","toss","touch","travel","trip","unequip","unlock","untie","use","view","wait","walk","wave","wear")
 # trade/buy/sell, brew/cook, dig, leap, blow/breath, clap, scratch, spit, dive, lift, observe, think, write, laydown/sitdown, fuck, shit on
+
 
 
 
@@ -336,6 +339,7 @@ definitions = {
 
 "xp":"Experience Points\nXP determines Level. Player can gain XP from fighting, socializing, exploring, tinkering, and more. Type 'xp' to view your XP"
 }
+
 
 
 

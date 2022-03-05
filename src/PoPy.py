@@ -4,6 +4,8 @@
 
 from Parser import *
 
+
+
 # note: some startup code is run in Parser.py before main code is run
 if __name__ == "__main__":
 	while True:
@@ -45,7 +47,7 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# retest "go" command scenarios 
+# retest "go" command scenarios
 # reevalute AREA/room condition set up for condition
 # add some preliminary spells and add effects file
 # consider enter, exit functions in room
