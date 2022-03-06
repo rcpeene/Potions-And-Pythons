@@ -29,11 +29,11 @@ os.system("title Potions ^& Pythons")
 
 # run intro logo animation
 gameIntro()
-# print("\n"*64 + logo)
-
-# mainMenu instantiates global objects Player, World, Game
+# instantiate global objects Player, World, Game
 P, W, G = mainMenu()
+# assign non-room objects parents, which specifies what they are contained in
 assignParents(W)
+# eliminate any room connections which don't exist in the world dict
 ensureWorldIntegrity(W)
 
 
