@@ -1,5 +1,5 @@
 echo make.sh
-echo This just compiles the project into an exe for Unix and deletes some residual files
+echo This just compiles the project into an exe for Linux/Mac and deletes some residual files
 
 rm ./PoPy
 cd ./src
@@ -10,4 +10,3 @@ rm -rf ./build
 rm -rf ./dist
 cd ../
 clear
-

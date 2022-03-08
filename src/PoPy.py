@@ -1,4 +1,4 @@
-# PoPy.py, Potions & Pythons by Ross Peene, 2021
+# PoPy.py, Potions & Pythons by Ross Peene, 2022
 # This file runs main() which loops, having the user and creatures take actions
 # This file is dependent on Parser.py
 
