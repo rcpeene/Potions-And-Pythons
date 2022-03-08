@@ -938,6 +938,10 @@ class Item():
 		self.parent.removeItem(self)
 
 
+	def takeDamage(self,dmg,P,G):
+		if dmg > self.durability:
+			return self.Break(P,G)
+
 
 	### Getters ###
 
@@ -1103,7 +1107,7 @@ class Creature():
 	### Operation ###
 
 	# takes incoming damage, accounts for damage vulnerability or resistance
-	def takedmg(self,dmg,type,P,G,W):
+	def takeDamage(self,dmg,type,P,G,W):
 		if(f"{type} vulnerability" in self.status):	dmg *= 2
 		if(f"{type} resistance" in self.status):	dmg //= 2
 		if(f"{type} immunity" in self.status):		dmg = 0
@@ -1471,7 +1475,7 @@ class Player(Creature):
 	### Operation ###
 
 	# takes incoming damage, accounts for damage vulnerability or resistance
-	def takedmg(self,dmg,type):
+	def takeDamage(self,dmg,type):
 		if(f"{type} vulnerability" in self.status):	dmg *= 2
 		if(f"{type} resistance" in self.status):	dmg /= 2
 		if(f"{type} immunity" in self.status):		dmg = 0
@@ -1564,6 +1568,7 @@ class Player(Creature):
 	# called when player hp hits 0
 	def death(self):
 		print("You have died!")
+		# TODO:
 		# check if there's any auto-resurrect features
 		# ask to continue from checkpoint (last save)
 		# or to load a different save
@@ -1580,7 +1585,7 @@ class Player(Creature):
 				print("Critical hit!")
 				attack *= 2
 			damage = min0( attack - target.DFNS())
-			target.takedmg(damage,self.weapon2.type,self,G,W)
+			target.takeDamage(damage,self.weapon2.type,self,G,W)
 			if target.alive == False:
 				return
 		else:
@@ -1601,7 +1606,7 @@ class Player(Creature):
 					print("Critical hit!")
 					attack *= 2
 				damage = min0( attack - target.DFNS())
-				target.takedmg(damage,self.weapon.type,self,G,W)
+				target.takeDamage(damage,self.weapon.type,self,G,W)
 				if target.alive == False:	return
 			else:
 				print("Aw it missed")

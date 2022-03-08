@@ -18,6 +18,19 @@ def applyAreaEffect(effect,root,condfunc=lambda x:x):
 		effect(object)
 
 
+def destroyObject(obj):
+	parent = obj.parent
+	if isinstance(obj,Creature):
+		parent.removeCreature(obj)
+	elif isinstance(obj,Item):
+		parent.removeItem()
+
+
+# Wrapper so this func can be passed as argument to other funcs
+def damage(obj,dmg):
+	obj.takeDamage(n)
+
+
 # effects may include:
 
 # spawning/destroying an item

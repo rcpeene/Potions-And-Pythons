@@ -396,7 +396,7 @@ class Wall(Passage):
 			if dir == "down":
 				G.changeRoom(W[self.connections["down"]])
 			if not (P.hasCondition("fly") or P.hasCondition("feather fall")):
-				P.takedmg(self.cr-P.ATHL(),"b")
+				P.takeDamage(self.cr-P.ATHL(),"b")
 			return True
 
 		print(f"You climb {dir} the {self.name}")
