@@ -1008,7 +1008,8 @@ misc world ideas
 -RICKROLL
 -the four horsemen of awesomeness (or happiness)
 -golden bug quest
-
+-pandora box "banishment box" wish unleashes all creatures the player has ever banished with the banish spell
+-limericks/poems/poem book?
 
 
 

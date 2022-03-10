@@ -13,7 +13,9 @@ import json
 
 from Items import *
 from Creatures import *
-
+from Effects import *
+import Data
+import Core
 
 
 
@@ -23,12 +25,12 @@ from Creatures import *
 
 
 # just writes the game object to a file, probably named "game.txt"
-def writeGame(filename,G):
+def writeGame(filename,Game):
 	gfd = open(filename,"w")
-	gfd.write(str(G.mode) + "\n")
-	gfd.write(G.currentroom.name + "\n")
-	gfd.write(G.prevroom.name + "\n")
-	gfd.write(str(G.time) + "\n")
+	gfd.write(str(Game.mode) + "\n")
+	gfd.write(Game.currentroom.name + "\n")
+	gfd.write(Game.prevroom.name + "\n")
+	gfd.write(str(Game.time) + "\n")
 	gfd.close()
 
 
@@ -41,7 +43,7 @@ class worldEncoder(json.JSONEncoder):
 			return {"__class__":"set","setdata":list(objToWrite)}
 		# elif type(objToWrite) == Room:
 		# 	return objToWrite.__dict__
-		elif hasMethod(objToWrite,"convertToJSON"):
+		elif Core.hasMethod(objToWrite,"convertToJSON"):
 			return objToWrite.convertToJSON()
 		elif type(objToWrite) not in JSONprimitives:
 			jsonDict = objToWrite.__dict__
@@ -54,9 +56,9 @@ class worldEncoder(json.JSONEncoder):
 			return objToWrite
 
 
-def writeJSON(filename,W):
+def writeJSON(filename,World):
 	with open(filename,"w") as fd:
-		json.dump(W,fd,cls=worldEncoder,indent="\t")
+		json.dump(World,fd,cls=worldEncoder,indent="\t")
 
 
 
@@ -74,7 +76,7 @@ def default(jsonDict):
 		if objClassname == "set":
 			return set(jsonDict["setdata"])
 
-		objClass = strToClass(objClassname, ["Creatures","Core","Items"])
+		objClass = Core.strToClass(objClassname, ["Creatures","Core","Items"])
 		objAttributes = list(jsonDict.values())
 		# print("========: " + d["name"] + " " + str(objAttributes))
 		if objClassname == "Room":
@@ -82,7 +84,7 @@ def default(jsonDict):
 		elif objClassname == "Empty":
 			return Empty()
 		elif objClass != None:
-			if hasMethod(objClass,"convertFromJSON"):
+			if Core.hasMethod(objClass,"convertFromJSON"):
 				return objClass.convertFromJSON(jsonDict)
 			return objClass(*objAttributes)
 		else:
@@ -93,13 +95,13 @@ def default(jsonDict):
 
 def readJSON(filename):
 	with open(filename,"r") as fd:
-		W = json.load(fd,object_hook=default)
-	return W
+		World = json.load(fd,object_hook=default)
+	return World
 
 
 # reads the global game class file, probably named "game.txt"
 # takes the world dict as input, returns the Game object
-def readGame(filename,W):
+def readGame(filename,World):
 	gfd = open(filename,"r")
 	gametext = gfd.readlines()			# split game file into a list of lines
 	mode = int(gametext[0][:-1])		# first line is gamemode int
@@ -107,7 +109,7 @@ def readGame(filename,W):
 	prevroom = gametext[2][:-1]			# third line is name of previous room
 	time = int(gametext[3][:-1])		# fourth line is time int
 	gfd.close()
-	return Game(mode,W[currentroom],W[prevroom],time)
+	return Game(mode,World[currentroom],World[prevroom],time)
 
 
 
@@ -118,7 +120,7 @@ def readGame(filename,W):
 
 
 # saves data from player, world, and game objects to respective text files
-def saveGame(P,W,G):
+def saveGame():
 	# create save directory if it doesn't exist
 	if not os.path.exists("saves"):
 		os.mkdir("saves")
@@ -138,12 +140,13 @@ def saveGame(P,W,G):
 	if os.path.exists(savename):
 		print("A save file with this name already exists")
 		#if dont overwrite, then just return
-		if not (yesno("Would you like to overwrite it?")):
+		if not (Core.yesno("Would you like to overwrite it?")):
 			os.chdir("..")
 			return
 	# if the save name is unused, make a new directory
 	else:
-		try:	os.mkdir(savename)
+		try:
+			os.mkdir(savename)
 		except:
 			print("Invalid save name")
 			os.chdir("..")
@@ -151,9 +154,9 @@ def saveGame(P,W,G):
 
 	# write world, player, and game files
 	os.chdir(savename)
-	writeJSON("world.json", W)
-	writeJSON("player.json", P)
-	writeGame("game.txt", G)
+	writeJSON("world.json", Core.World)
+	writeJSON("player.json", Core.Player)
+	writeGame("game.txt", Core.Game)
 	os.chdir("..")
 	os.chdir("..")
 	sleep(1)
@@ -163,7 +166,7 @@ def saveGame(P,W,G):
 
 # load a game from a save directory
 def loadGame(filename):
-	clearScreen()
+	Core.clearScreen()
 	if not (os.path.exists("saves")) or len(os.listdir("./saves")) == 0:
 		print("\nThere are no save files\n")
 		input()
@@ -188,9 +191,9 @@ def loadGame(filename):
 	os.chdir(savename)
 	# try to load the player, world, and game objects
 	# try:
-	P = readJSON("player.json")
-	W = readJSON("world.json")
-	G = readGame("game.txt",W)
+	Core.Player = readJSON("player.json")
+	Core.World = readJSON("world.json")
+	Core.Game = readGame("game.txt",Core.World)
 	# hopefully load doesn't fail, that would suck
 	# except:
 	# 	print("Could not load game, save data corrupted\n")
@@ -200,21 +203,20 @@ def loadGame(filename):
 
 	os.chdir("..")
 	os.chdir("..")
-	ellipsis(3)
-	flushInput()
-	clearScreen()
+	Core.ellipsis(3)
+	Core.flushInput()
+	Core.clearScreen()
 	# describe the current room
-	G.startUp(P,W)
-	return P, W, G
+	Core.Game.startUp()
 
 
 # deletes all save files in 'save' directory (if the user is very, very sure)
 def deleteAll():
-	clearScreen()
-	if not yesno("Are you sure you want to delete all save files?"):
+	Core.clearScreen()
+	if not Core.yesno("Are you sure you want to delete all save files?"):
 		os.chdir("..")
 		return mainMenu()
-	if not yesno("Are you very, very sure??"):
+	if not Core.yesno("Are you very, very sure??"):
 		os.chdir("..")
 		return mainMenu()
 	for savename in os.listdir():
@@ -227,12 +229,11 @@ def deleteAll():
 	print("\nAll save files deleted")
 	print()
 	input()
-	return mainMenu()
 
 
 # deletes a save file whose name is given by the user
 def delete(filename):
-	clearScreen()
+	Core.clearScreen()
 	if not os.path.exists("saves") or len(os.listdir("./saves")) == 0:
 		print("\nThere are no save files\n")
 		input()
@@ -257,7 +258,7 @@ def delete(filename):
 		input()
 		return mainMenu()
 	# ask for confirmation, if no, then return to menu
-	if not yesno("Are you sure you want to delete this save file?"):
+	if not Core.yesno("Are you sure you want to delete this save file?"):
 		os.chdir("..")
 		return mainMenu()
 
@@ -271,7 +272,6 @@ def delete(filename):
 	print("\nDeleted")
 	print()
 	input()
-	return mainMenu()
 
 
 # asks for player name and description, starts everything else at initial values
@@ -280,48 +280,44 @@ def createCharacter():
 	while len(name) == 0: name = input("> ")
 	desc = input("Describe yourself\n> ")
 	while len(desc) == 0: desc = input("> ")
-	return Player(name,desc,1,1,inittraits,0,[],initgear,[],0,0,[])
+	return Player(name,desc,1,1,Data.inittraits,0,[],Data.initgear,[],0,0,[])
 
 
 # starts a new game and returns player, world, and game objects
 def newGame():
 	# tries to load a clean new world from initial world file
-	W = readJSON("World.json")
+	Core.World = readJSON("World.json")
 	# initializes from the character creation screen
-	P = createCharacter()
+	Core.Player = createCharacter()
 	# initializes the game at the "cave" room
-	G = Game(0,W["cave"],W["cave"],0)
-	ellipsis(3)
+	Core.Game = Game(0,Core.World["cave"],Core.World["cave"],0)
+	Core.ellipsis(3)
 	# enter the starting room
 	sleep(0.5)
-	clearScreen()
-	G.startUp(P,W)
-	return P, W, G
+	Core.clearScreen()
+	Core.Game.startUp()
 
 
 # automatically starts a new game with a premade character for easy testing
 def testGame():
-	W = readJSON("World.json")
+	Core.World = readJSON("World.json")
 
-	traits = [4 for _ in range(10)]
 	inv = [Compass("compass","a plain steel compass with a red arrow",2,10)]
 	status = [["fireproof",-1], ["poisoned",5], ["cursed",-2], ["immortal",-1],
 	["sharpshooter",50], ["invisible",15], ["poisoned",-1]]
 
-	P = Player("Norman","a hero",24,24,traits,1000,inv,initgear,status,1585,100,[])
-	G = Game(0,W["cave"],W["tunnel"],0)
+	Core.Player = Player("Norman","a hero",24,24,[4 for _ in range(10)],1000,inv,Data.initgear,status,1585,100,[])
+	Core.Game = Game(0,Core.World["cave"],Core.World["tunnel"],0)
 
-	clearScreen()
-	G.startUp(P,W)
-	G.mode = 1
-	return P, W, G
+	Core.clearScreen()
+	Core.Game.startUp()
+	Core.Game.mode = 1
 
 
 def gameInfo():
-	clearScreen()
-	print(gameinfo)
+	Core.clearScreen()
+	print(Data.gameinfo)
 	input()
-	return mainMenu()
 
 
 # main game menu, used to instantiate global variables P, W, and G in Parser.py
@@ -330,25 +326,25 @@ def gameInfo():
 def mainMenu():
 	# handle case when running code from src directory instead of main directory
 	if "src" in os.getcwd(): os.chdir("..")
-	clearScreen()
-	print(logo)
-	print(menuinstructions)
 
 	while True:
+		Core.clearScreen()
+		print(Data.logo)
+		print(Data.menuinstructions)
 		g = input("> ").lower().split()
-		if len(g) == 0: 						return mainMenu()
-		elif g[0] == "info" and len(g) == 1:	return gameInfo()
+
+		if len(g) == 0: 						continue
+		elif g[0] == "info" and len(g) == 1:	gameInfo()
 		elif g[0] == "new" and len(g) == 1:		return newGame()
 
 		elif g[0] == "load" and len(g) == 1:	return loadGame(None)
 		elif g[0] == "load":					return loadGame(" ".join(g[1:]))
 
-		elif g[0] == "delete" and len(g) == 1:	return delete(None)
-		elif g[0] == "delete":					return delete(" ".join(g[1:]))
+		elif g[0] == "delete" and len(g) == 1:	delete(None)
+		elif g[0] == "delete":					delete(" ".join(g[1:]))
 
 		elif g[0] == "quit" and len(g) == 1:	sys.exit()
 		elif g[0] == "test" and len(g) == 1:	return testGame()
-		else:			 						return mainMenu()
 
 
 
@@ -380,7 +376,7 @@ def moveBubble(logoArray,row,col):
 	# if char is a popped bubble
 	if char == '*':
 		# replace char at current location with the static logo's character
-		logoArray[row][col] = logoLines[row][col]
+		logoArray[row][col] = Data.logoLines[row][col]
 		poppedBubbles += 1
 	# if char is a bubble
 	elif char in {".","o","O"}:
@@ -390,7 +386,7 @@ def moveBubble(logoArray,row,col):
 				logoArray[row][col] = "*"
 		else:
 			# erase char at current location
-			logoArray[row][col] = logoLines[row][col]
+			logoArray[row][col] = Data.logoLines[row][col]
 			# generate "drift"; it may move left or right as it also moves up
 			drift = randint(-1,1)
 			# if bubble is blocked above by a wall, it must drift accordingly
@@ -470,7 +466,7 @@ def makeNewBubbles(logoArray,n,rows):
 # joins 2d array of characters into list of strings
 # then joins list of strings into one string with newlines, then prints it
 def printLogoArray(logoArray):
-	clearScreen()
+	Core.clearScreen()
 	print("\n".join(["".join(line) for line in logoArray]))
 
 
@@ -480,7 +476,7 @@ def printLogoArray(logoArray):
 # n is the max number of bubbles produced per frame
 def dynamicBubbleAnimation(t,b,n):
 	# convert logo data into a 2d array so it can be easily operated on
-	logoArray = [[char for char in line] for line in logoLines]
+	logoArray = [[char for char in line] for line in Data.logoLines]
 	totalBubbles = 0
 	currentBubbles = 0
 	# get a list of row indices of every other row that contains a "_"
@@ -489,7 +485,7 @@ def dynamicBubbleAnimation(t,b,n):
 	# run animation until b bubbles have been produced
 	while totalBubbles < b:
 		# if user presses any key, skip animation
-		if kbInput():	return False
+		if Core.kbInput():	return False
 		growBubbles(logoArray)
 		newBubbles = makeNewBubbles(logoArray,n,flatrows)
 		sleep(t)
@@ -500,7 +496,7 @@ def dynamicBubbleAnimation(t,b,n):
 	# run animation until no bubbles remain
 	while currentBubbles > 0:
 		# if user presses any key, skip animation
-		if kbInput():	return False
+		if Core.kbInput():	return False
 		growBubbles(logoArray)
 		# add a small delay for the final three bubbles for pizazz
 		if currentBubbles < 3:	sleep(t)
@@ -513,20 +509,20 @@ def dynamicBubbleAnimation(t,b,n):
 
 # prints the static logo and flushes keyboard input at the end of the intro
 def endIntro():
-	clearScreen()
-	print(logo)
-	flushInput()
+	Core.clearScreen()
+	print(Data.logo)
+	Core.flushInput()
 
 
 # runs the intro logo animation
 # uses data from the bottom of Data.py
 def gameIntro():
-	tempLines = [line for line in logoLines]
-	clearScreen()
+	tempLines = [line for line in Data.logoLines]
+	Core.clearScreen()
 	# print logo crawling up
 	for line in tempLines:
 		# if user presses any key, skip animation
-		if kbInput():	return endIntro()
+		if Core.kbInput():	return endIntro()
 		print(line)
 		sleep(0.125)
 
@@ -535,16 +531,16 @@ def gameIntro():
 
 	# print PoPy text crawling up
 	sleep(0.375)
-	l = len(popyLines)
+	l = len(Data.popyLines)
 	for i in range(l-4):	#stops at the fourth line from the top
-		if kbInput():	return endIntro()
-		tempLines[l-i-1] = popyLines[l-i-1]
-		clearScreen()
+		if Core.kbInput():	return endIntro()
+		tempLines[l-i-1] = Data.popyLines[l-i-1]
+		Core.clearScreen()
 		for line in tempLines:
 			print(line)
 		sleep(0.125)
-		tempLines[l-i-1] = logoLines[l-i-1]
-	clearScreen()
-	print(logo+"\n"*7)
+		tempLines[l-i-1] = Data.logoLines[l-i-1]
+	Core.clearScreen()
+	print(Data.logo+"\n"*7)
 	sleep(0.625)
 	endIntro()

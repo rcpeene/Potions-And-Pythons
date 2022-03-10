@@ -2,7 +2,8 @@
 # This file contaisn all the functions which represent some "effect" in the game
 # This file is dependent on Menu.py and is a dependency of PoPy.py
 
-from Core import *
+import Core
+import Data
 
 
 
@@ -13,7 +14,7 @@ from Core import *
 
 
 def applyAreaEffect(effect,root,condfunc=lambda x:x):
-	objects = filter(condfunc,objTreeToSet(root))
+	objects = filter(condfunc,Core.objTreeToSet(root))
 	for object in objects:
 		effect(object)
 
@@ -23,12 +24,7 @@ def destroyObject(obj):
 	if isinstance(obj,Creature):
 		parent.removeCreature(obj)
 	elif isinstance(obj,Item):
-		parent.removeItem()
-
-
-# Wrapper so this func can be passed as argument to other funcs
-def damage(obj,dmg):
-	obj.takeDamage(n)
+		parent.removeItem(obj)
 
 
 # effects may include:

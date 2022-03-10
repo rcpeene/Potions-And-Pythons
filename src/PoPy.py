@@ -3,42 +3,57 @@
 # This file is dependent on Parser.py
 
 from Parser import *
+import Data
 
 
+# formatting the prompt window
+os.system("mode con:cols=128 lines=32")
+os.system("title Potions ^& Pythons")
 
-# note: some startup code is run in Parser.py before main code is run
-if __name__ == "__main__":
-	while True:
-		G.silent = False
-		G.activeroom = G.currentroom
-		G.whoseturn = P
+# import pygetwindow
+# win = pygetwindow.getWindowsWithTitle('Potions & Pythons')[0]
+# win.size = (128*8, 32*16) #128 x 32 tiles of 8 x 16 pixels
 
-		# take user input until player successfully performs an action
-		while not parse():	continue
+# run intro logo animation
+gameIntro()
+# instantiate global objects Player, World, Game
+mainMenu()
+# assign non-room objects parents, which specifies what they are contained in
+Core.assignParents()
+# eliminate any room connections which don't exist in the world dict
+Core.ensureWorldIntegrity()
 
-		# creatures in current room's turn
-		G.activeroom = G.currentroom
-		for creature in G.currentroom.occupants:
-			G.whoseturn = creature
-			creature.act(P,G,G.currentroom)
+while True:
+	Core.Game.silent = False
+	Core.Game.activeroom = Core.Game.currentroom
+	Core.Game.whoseturn = Core.Player
 
-		# creatures in nearby rooms' turn
-		G.silent = True
-		for room in G.nearbyRooms(W):
-			G.activeroom = room
-			for creature in room.occupants:
-				G.whoseturn = creature
-				creature.act(P,G,room)
+	# take user input until player successfully performs an action
+	while not parse():	continue
 
-		# cleanup before looping
-		G.activeroom = None
-		G.whoseturn = None
-		# pass the time for all rooms and creatures
-		G.incrementTime(P,W)
-		# remove dead Creatures from room occupants
-		G.reapOccupants(W)
-		# sort the occupants in each rendered room by their MVMT attribute
-		G.sortOccupants(W)
+	# creatures in current room's turn
+	Core.Game.activeroom = Core.Game.currentroom
+	for creature in Core.Game.currentroom.occupants:
+		Core.Game.whoseturn = creature
+		creature.act(Core.Game.currentroom)
+
+	# creatures in nearby rooms' turn
+	Core.Game.silent = True
+	for room in Core.Game.nearbyRooms():
+		Core.Game.activeroom = room
+		for creature in room.occupants:
+			Core.Game.whoseturn = creature
+			creature.act(room)
+
+	# cleanup before looping
+	Core.Game.activeroom = None
+	Core.Game.whoseturn = None
+	# pass the time for all rooms and creatures
+	Core.Game.incrementTime()
+	# remove dead Creatures from room occupants
+	Core.Game.reapOccupants()
+	# sort the occupants in each rendered room by their MVMT attribute
+	Core.Game.sortOccupants()
 
 
 
@@ -48,6 +63,7 @@ if __name__ == "__main__":
 # CURRENT TASKS
 
 # retest "go" command scenarios
+# reconfigure scoping of P,W,G objects
 # reevalute AREA/room condition set up for condition
 # add some preliminary spells and add effects file
 # consider enter, exit functions in room
@@ -155,7 +171,7 @@ if __name__ == "__main__":
 # 		return False
 # 	if dobj == None: dobj = iobj
 # 	if dobj == None: dobj = getNoun("What do you want to " + verb + "?")
-# 	if dobj in cancels:
+# 	if dobj in Data.cancels:
 # 		return False
 #
 # 	if searchInv:

@@ -17,7 +17,7 @@ try:
 except:
 	import termios, select
 
-from Data import *
+import Data
 
 
 
@@ -111,7 +111,7 @@ def columnPrint(l,n,w):
 # grammar print; adds punctuation and determiners
 # n is the 'number' of an item, denoting its plurality
 def gprint(det,text,pos,n):
-	if text[0] in vowels and det == "a":
+	if text[0] in Data.vowels and det == "a":
 		det = "an"
 	if n > 1:
 		det = str(n)
@@ -170,7 +170,7 @@ def ambiguateDirections(text):
 # returns an abbreviated direction into an expanded one
 # for example, converts 'nw' -> 'northwest' or 'u' -> 'up'
 def expandDir(term):
-	if term in directions:	return directions[term]
+	if term in Data.directions:	return Data.directions[term]
 	else:					return term
 
 
@@ -183,20 +183,6 @@ def namesList(L):
 		else:
 			names.append(elem.name)
 	return names
-
-
-# takes a list of strings and converts it to a list of pairs of the form;
-# [(str1, n1), (str2, n2), (str3, n3)] where n is the count of of each element
-def bagItems(items):
-	bag = []
-	for name in items:
-		for entry in bag:
-			if entry[0] == name:
-				entry[1] +=1
-				break
-		else:
-			bag.append([name,1])
-	return bag
 
 
 def bagObjects(objects):
@@ -238,8 +224,8 @@ def extractConditionInfo(roomCondition):
 def yesno(question):
 	while True:
 		command = input(question + '\n> ').lower()
-		if command in yesses:	return True
-		elif command in noes:	return False
+		if command in Data.yesses:	return True
+		elif command in Data.noes:	return False
 		print("Enter yes or no")
 
 
@@ -369,6 +355,7 @@ def objTreeToSet(root,d=0,getSources=False):
 
 # helper function for assignParents()
 # iterates through objects within the root and assigns root as their parent
+# recurs for each object
 def assignParentsRecur(root):
 	if isinstance(root,Room):	searchThrough = root.contents + root.occupants
 	elif hasattr(root,"contents"):	searchThrough = root.contents
@@ -382,8 +369,8 @@ def assignParentsRecur(root):
 
 # iterates through each object in the object tree of each room and assigns...
 # its 'parent' attribute to the object it is contained in
-def assignParents(W):
-	for room in W.values():
+def assignParents():
+	for room in World.values():
 		assignParentsRecur(room)
 
 
@@ -391,27 +378,27 @@ def assignParents(W):
 # removes any room connection values which don't exist in the world
 # this is in case the world file which was read as a JSON had invalid names...
 # to prevent errors if the world file was written incorrectly
-def ensureWorldIntegrity(W):
+def ensureWorldIntegrity():
 	namesToDelete = []
-	for room in W.values():
+	for room in World.values():
 		for direction in room.exits:
 			connection = room.exits[direction]
-			if connection not in W:
+			if connection not in World:
 				namesToDelete.append(connection)
 
 		for passage in room.getPassages():
 			connectionsToDelete = []
 			for connection in passage.connections:
 				roomname = passage.connections[connection]
-				if roomname not in W:
-					connectionsToDelete.append(passage.connections[connection])
+				if roomname not in World:
+					connectionsToDelete.append(connection)
 
 			for connection in connectionsToDelete:
 				del passage.connections[connection]
 	# this is done in a separate loop to prevent errors caused by...
 	# deleting elements from dict while iterating over the dict
 	for name in namesToDelete:
-		del W[name]
+		del World[name]
 
 
 ############################
@@ -493,22 +480,22 @@ class Game():
 	### Operation ###
 
 	# exits the previous room and enters the new room
-	def changeRoom(self,newroom,P,W):
+	def changeRoom(self,newroom):
 		self.clearPronouns()
-		self.prevroom.exit(P,W,self)
+		self.prevroom.exit(player)
 		self.prevroom = self.currentroom
 		self.currentroom = newroom
-		P.parent = newroom
-		self.currentroom.enter(P,W,self)
+		player.parent = newroom
+		self.currentroom.enter(player)
 		return True
 
 
 	# passes time for each room, and each creature in each room
 	# important for decrementing the duration counter on all status conditions
-	def incrementTime(self,P,W):
+	def incrementTime(self):
 		self.time += 1
-		P.passTime(1)
-		for room in self.renderedRooms(W):
+		Player.passTime(1)
+		for room in self.renderedRooms():
 			self.silent = True if room is not self.currentroom else False
 			room.passTime(1)
 			for creature in room.occupants:
@@ -535,21 +522,21 @@ class Game():
 				self.her = obj
 
 
-	def reapOccupants(self,W):
-		for room in self.renderedRooms(W):
+	def reapOccupants(self):
+		for room in self.renderedRooms():
 			room.reapOccupants()
 
 
 	# sorts the occupants of each room based on their MVMT() stat
-	def sortOccupants(self,W):
-		for room in self.renderedRooms(W):
+	def sortOccupants(self):
+		for room in self.renderedRooms():
 			room.sortOccupants()
 
 
-	def destroyCreature(self,C,W):
+	def destroyCreature(self,C):
 		pass
 		### change creature to be a dead creature or something
-		# for room in self.renderedRooms(W):
+		# for room in self.renderedRooms(World):
 		# 	if C in room.occupants:
 		# 		room.removeCreature(C)
 
@@ -560,29 +547,29 @@ class Game():
 	# used by renderedRooms()
 	# n is the path length at which the search stops
 	# Sroom is the "source" room, or the current node in the search
-	def roomFinder(self,n,Sroom,pathlen,foundrooms,W):
+	def roomFinder(self,n,Sroom,pathlen,foundrooms):
 		if pathlen >= n:
 			return
-		adjacentRooms = [W[name] for name in Sroom.allExits().values()]
+		adjacentRooms = [World[name] for name in Sroom.allExits().values()]
 		for room in adjacentRooms:
 			foundrooms.add(room)
-			self.roomFinder(n,room,pathlen+1,foundrooms,W)
+			self.roomFinder(n,room,pathlen+1,foundrooms)
 
 
 	# returns set of all rooms connected to currentroom with path < REND_DIST
-	def renderedRooms(self,W):
+	def renderedRooms(self):
 		# constant render distance of rooms in world
 		REND_DIST = 3
 		# the set of found rooms initially includes only the current room
 		R = {self.currentroom}
 		# add all rooms within a distance of REND_DIST to R
-		self.roomFinder(REND_DIST,self.currentroom,0,R,W)
+		self.roomFinder(REND_DIST,self.currentroom,0,R)
 		return R
 
 
 	# gets set of all rendered rooms except the current room
-	def nearbyRooms(self,W):
-		R = self.renderedRooms(W)
+	def nearbyRooms(self):
+		R = self.renderedRooms()
 		R.remove(self.currentroom)
 		return R
 
@@ -596,9 +583,9 @@ class Game():
 
 
 	# returns a list of objects in rendered rooms which fit a certain condition
-	def searchRooms(self,W,key=lambda x:x,d=3):
+	def searchRooms(self,key=lambda x:x,d=3):
 		matchingObjects = []
-		for room in self.renderedRooms(W):
+		for room in self.renderedRooms():
 			matchingObjects += self.searchRoom(room,key=key,d=d)
 		return matchingObjects
 
@@ -607,25 +594,25 @@ class Game():
 	# does not include the player or anything in player inv
 	# if getSources: returns a set of pairs of the form (source, obj)...
 	# where source is the parent object which 'contains' obj
-	def getAllObjects(self,W,getSources=False):
+	def getAllObjects(self,getSources=False):
 		allObjects = set()
-		for room in self.renderedRooms(W):
+		for room in self.renderedRooms():
 			allObjects |= objTreeToSet(room,d=3,getSources=getSources)
 		return allObjects
 
 
 	# True if there's an object in rendered rooms whose name matches objname
 	# not case sensitive
-	def inWorld(self,objname,W):
+	def inWorld(self,objname):
 		key = lambda obj: obj.name.lower() == objname
-		objects = self.searchRooms(W,key)
+		objects = self.searchRooms(key)
 		return len(objects) > 0
 
 
 	### User Output ###
 
-	def startUp(self,P,W):
-		P.printStats()
+	def startUp(self):
+		Player.printStats()
 		print()
 		self.currentroom.describe()
 
@@ -710,41 +697,41 @@ class Room():
 		self.occupants = list(filter(lambda x: x.alive, self.occupants))
 
 
-	def addAreaCondition(G,areacond):
+	def addAreaCondition(areacond):
 		cond,dur = extractConditionInfo(areacond)
 		key = lambda x: hasMethod(x,"addCondition")
-		for creature in G.searchRoom(W,key):
+		for creature in Game.searchRoom(key):
 			creature.addCondition(cond,dur)
 
 
-	def removeAreaCondition(G,areacond):
+	def removeAreaCondition(areacond):
 		cond,dur = extractConditionInfo(areacond)
 		# depending on how you want room conditions to work, perhaps remove this
 		if dur != -1:
 			return
 		key = lambda x: hasMethod(x,"removeCondition")
-		for creature in G.searchRoom(W,key):
+		for creature in Game.searchRoom(key):
 			creature.removeCondition(cond,-1)
 
 
 	# add a status condition to the room with a name and duration
-	def addCondition(self,G,name,dur,stackable=False):
+	def addCondition(self,name,dur,stackable=False):
 		# TODO: include stackability
 		pair = [name,dur]
 		insort(self.status,pair)
 		if name.startswith("AREA"):
-			self.addAreaCondition(G,name)
+			self.addAreaCondition(name)
 
 
 	# removes all conditions of the same name
 	# if reqDuration is given, only removes conditions with that duration
-	def removeCondition(self,G,name,reqDuration=None):
+	def removeCondition(self,name,reqDuration=None):
 		for condname,duration in self.status:
 			if condname == name:
 				if reqDuration == None or reqDuration == duration:
 					self.status.remove([condname,duration])
 					if condname.startswith("AREA"):
-						self.removeAreaCondition(G,condname)
+						self.removeAreaCondition(condname)
 
 
 	# decrements the duration for each status condition applied to the room by t
@@ -763,7 +750,7 @@ class Room():
 
 
 	# describe the room, and apply any room effects to the creature entering
-	def enter(self,creature,W,G):
+	def enter(self,creature):
 		# if the player is entering the room, describe the room
 		if type(creature) == Player:
 			self.describe()
@@ -774,7 +761,7 @@ class Room():
 
 
 	# remove any room effects from the creature exiting
-	def exit(self,creature,W,G):
+	def exit(self,creature):
 		condsToRemove = [pair for pair in creature.status if pair[1] == -1]
 		for cond,dur in condsToRemove:
 			creature.removeCondition(cond,-1)
@@ -867,7 +854,7 @@ class Room():
 	# prints room name, description, all its contents and creatures
 	def describe(self):
 		print("\n" + capWords(self.name))
-		# if P.countCompasses() == 0:
+		# if Player.countCompasses() == 0:
 		# 	print(ambiguateDirections(self.desc))
 		# else:
 		print(self.desc)
@@ -930,17 +917,17 @@ class Item():
 
 	### Operation ###
 
-	def Obtain(self,P,W,G):
+	def Obtain(self,creature):
 		pass
 
 
-	def Break(self,P,G):
+	def Break(self):
 		self.parent.removeItem(self)
 
 
-	def takeDamage(self,dmg,P,G):
+	def takeDamage(self,dmg):
 		if dmg > self.durability:
-			return self.Break(P,G)
+			return self.Break()
 
 
 	### Getters ###
@@ -967,7 +954,7 @@ class Item():
 		strname = self.descname if hasattr(self,"descname") else self.name
 		if definite:
 			strname = "the " + strname
-		elif strname[0] in vowels and n == 1:
+		elif strname[0] in Data.vowels and n == 1:
 			strname = "an " + strname
 		elif n == 1:
 			strname = "a " + strname
@@ -1081,7 +1068,7 @@ class Creature():
 		dictkeys = list(d.keys())
 		# these attributes do not get stored between saves (except gear)
 		for key in dictkeys:
-			if key in traits or key in {"gear","weapon","weapon2","shield","shield2","alive","alert","seesPlayer","sawPlayer"}:
+			if key in Data.traits or key in {"gear","weapon","weapon2","shield","shield2","alive","alert","seesPlayer","sawPlayer"}:
 				del d[key]
 		d["gear"] = compressedGear
 		# convert traits to a form more easily writable in a JSON object
@@ -1107,14 +1094,14 @@ class Creature():
 	### Operation ###
 
 	# takes incoming damage, accounts for damage vulnerability or resistance
-	def takeDamage(self,dmg,type,P,G,W):
+	def takeDamage(self,dmg,type):
 		if(f"{type} vulnerability" in self.status):	dmg *= 2
 		if(f"{type} resistance" in self.status):	dmg //= 2
 		if(f"{type} immunity" in self.status):		dmg = 0
-		print(f"Took {dmg} {dmgtypes[type]} damage")
+		print(f"Took {dmg} {Data.dmgtypes[type]} damage")
 		self.hp = min0( self.hp-dmg)	#player hp lowered to a minimum of 0
 		if(self.hp == 0):
-			self.death(P,G,W)
+			self.death()
 
 
 	# adds money
@@ -1153,12 +1140,12 @@ class Creature():
 	# if it is added, remove it from source location
 	# if it has an Obtain() method, call that
 	# finally, check if the new inventory weight has hindered the creature
-	def obtainItem(self,I,S,W,G,msg=None):
+	def obtainItem(self,I,S,msg=None):
 		if self.addItem(I):
 			S.removeItem(I)
 			if msg != None:
 				print(msg)
-			I.Obtain(self,W,G)
+			I.Obtain(self)
 			self.checkHindered()
 			return True
 		return False
@@ -1274,15 +1261,15 @@ class Creature():
 
 
 	# called when a creature's hp hits 0
-	def death(self,P,G,W):
+	def death(self):
 		self.alive = False
 		print("agh its... ded?")
 		# TODO: make this just drop some random number of money not just LOOT
-		n = diceRoll(3,P.LOOT(),-2)
-		G.activeroom.addItem(Pylars(n))
-		if not G.silent: print(f"Dropped Ᵽ {n}")
-		if G.whoseturn is P:
-			P.gainxp(10)
+		n = diceRoll(3,Player.LOOT(),-2)
+		Game.activeroom.addItem(Pylars(n))
+		if not Game.silent: print(f"Dropped Ᵽ {n}")
+		if Game.whoseturn is Player:
+			Player.gainxp(10)
 
 
 	def Carry(self,carrier):
@@ -1433,7 +1420,7 @@ class Creature():
 	def stringName(self,n=-1,definite=True,cap=False,plural=False):
 		if definite and not plural:
 			strname = "the " + self.name
-		elif self.name[0] in vowels and not plural:
+		elif self.name[0] in Data.vowels and not plural:
 			strname = "an " + self.name
 		elif not plural:
 			strname = "a " + self.name
@@ -1479,7 +1466,7 @@ class Player(Creature):
 		if(f"{type} vulnerability" in self.status):	dmg *= 2
 		if(f"{type} resistance" in self.status):	dmg /= 2
 		if(f"{type} immunity" in self.status):		dmg = 0
-		print(f"You took {dmg} {dmgtypes[type]} damage")
+		print(f"You took {dmg} {Data.dmgtypes[type]} damage")
 		self.hp = min0( self.hp-dmg)	#player hp lowered to a minimum of 0
 		if(self.hp == 0):
 			self.death()
@@ -1518,12 +1505,12 @@ class Player(Creature):
 		self.money += money
 
 
-	def obtainItem(self,I,S,W,G,msg=None):
+	def obtainItem(self,I,S,msg=None):
 		if self.addItem(I):
 			S.removeItem(I)
 			if msg != None:
 				print(msg)
-			I.Obtain(self,W,G)
+			I.Obtain(self)
 			self.checkHindered()
 			return True
 		print(f"You can't take the {I.name}, your Inventory is too full")
@@ -1575,7 +1562,7 @@ class Player(Creature):
 		# or to quit game
 
 
-	def dualAttack(self,target,G,W):
+	def dualAttack(self,target):
 		hit = min1(maxm(99, self.ACCU() - target.EVSN()))
 		if diceRoll(1,100,0) <= hit:
 			print()
@@ -1585,14 +1572,14 @@ class Player(Creature):
 				print("Critical hit!")
 				attack *= 2
 			damage = min0( attack - target.DFNS())
-			target.takeDamage(damage,self.weapon2.type,self,G,W)
+			target.takeDamage(damage,self.weapon2.type,self)
 			if target.alive == False:
 				return
 		else:
 			print("Aw it missed")
 
 
-	def attackCreature(self,target,G,W):
+	def attackCreature(self,target):
 		n = min1( self.ATSP() // min1(target.ATSP()))
 		print(f"{n} attacks:")
 		for i in range(n):
@@ -1606,19 +1593,19 @@ class Player(Creature):
 					print("Critical hit!")
 					attack *= 2
 				damage = min0( attack - target.DFNS())
-				target.takeDamage(damage,self.weapon.type,self,G,W)
+				target.takeDamage(damage,self.weapon.type,self)
 				if target.alive == False:	return
 			else:
 				print("Aw it missed")
-			if self.weapon2 != Empty():	self.dualAttack(target,G,W)
+			if self.weapon2 != Empty():	self.dualAttack(target)
 			if target.alive == False:	return
 
 
-	def attackItem(self,target,G,W):
+	def attackItem(self,target):
 		attack = self.ATCK()
 		print(f"{attack} damage")
 		if target.durability != -1 and attack > target.durability:
-			target.Break(self,P,G)
+			target.Break(self)
 		else:
 			print("Nothing happens")
 			return
@@ -1660,7 +1647,7 @@ class Player(Creature):
 
 	# prints all 10 player traits
 	def printTraits(self):
-		for trait in traits:
+		for trait in Data.traits:
 			if trait in {"STR","CHA"}:	print()
 			else:						print("\t\t",end="")
 			print(f"{trait}: {getattr(self,trait)}",end="")
@@ -1677,7 +1664,7 @@ class Player(Creature):
 
 
 	def printAbilities(self):
-		for ability in abilities:
+		for ability in Data.abilities:
 			self.printAbility(ability)
 
 
@@ -1764,14 +1751,14 @@ class Player(Creature):
 
 
 class Animal(Creature):
-	def act(self,P,G,room):
+	def act(self,room):
 		if not self.alive:	return
-		if not G.silent:	print(f"\n{self.name}'s turn!")
-		self.attack(P,G)
+		if not Game.silent:	print(f"\n{self.name}'s turn!")
+		self.attack()
 
 
-	def attack(self,P,G):
-		if not G.silent:	print("attack?")
+	def attack(self):
+		if not Game.silent:	print("attack?")
 
 
 	def climb():
@@ -1876,7 +1863,7 @@ class Passage(Fixture):
 
 	### Operation ###
 
-	def Traverse(self,P,W,G,dir=None):
+	def Traverse(self,dir=None):
 		if dir == None:
 			if len(self.connections) == 1:
 				dir = list(self.connections.keys())[0]
@@ -1887,8 +1874,8 @@ class Passage(Fixture):
 			print(f"The {self.name} does not go '{dir}'")
 			return False
 		print(f"You go {dir} the {self.name}")
-		newroom = W[self.connections[dir]]
-		G.changeRoom(newroom,P,W)
+		newroom = World[self.connections[dir]]
+		Game.changeRoom(newroom)
 		return True
 
 
@@ -1916,7 +1903,7 @@ class Pylars(Item):
 
 	### Operation ###
 
-	def Obtain(self,creature,W,G):
+	def Obtain(self,creature):
 		creature.gainMoney(self.value)
 
 
@@ -1966,11 +1953,11 @@ class Armor(Item):
 		self.prot = prot
 
 
-	def Equip(self,P):
+	def Equip(self):
 		pass
 
 
-	def Unequip(self,P):
+	def Unequip(self):
 		pass
 
 
@@ -2028,5 +2015,11 @@ class Monster(Creature):
 
 
 class Person(Creature):
-	def act(self,P,G,room):
+	def act(self,room):
 		pass
+
+
+
+player = Player("","",0,0,[0,0,0,0,0,0,0,0,0,0],0,[],{},[],0,0,[])
+game = Game(-1,-1,-1,-1)
+world = {}

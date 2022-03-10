@@ -2,6 +2,8 @@
 # This file contains the item classes used in the game
 # This file is dependent on Core.py and is a dependency of Menu.py
 
+import Core
+import Data
 from Core import *
 
 
@@ -15,7 +17,7 @@ from Core import *
 class Bottle(Item):
 	# breaks the bottle, removes it from player inventory, and randomly...
 	# generates a number of shards between 1,5 into the room.
-	def Break(self,P,G):
+	def Break(self):
 		print(f"The {self.name} breaks. Shards of glass scatter everywhere")
 		self.parent.removeItem(self)
 		for i in range(randint(3,6)):	#randomly generates n shards between 3,6
@@ -97,9 +99,9 @@ class Box(Item):
 
 class Bread(Item):
 	# heals 20 hp to the player, removes bread from inventory
-	def Eat(self,P,G):
+	def Eat(self):
 		print("You consume the bread")
-		h = P.heal(20)
+		h = Core.Player.heal(20)
 		self.parent.removeItem(self)
 		if h == 0:
 			print("Yummy")
@@ -113,12 +115,13 @@ class Controller(Item):
 
 
 	# triggers some effect using the effect string to call related function
-	def Trigger(self,P,W,G):
+	def Trigger(self):
 		eval(self.effect)
 
 
 	# using the controller triggers the effect
-	def Use(self,P,W,G):	self.Trigger(P,W,G)
+	def Use(self):
+		self.Trigger()
 
 
 
@@ -133,7 +136,7 @@ class Door(Fixture):
 
 
 	# sets open bool to true, triggers the effect
-	def Open(self,Currentroom,W):
+	def Open(self,Currentroom):
 		if self.open:
 			print(f"The {self.name} is already open")
 		else:
@@ -144,7 +147,7 @@ class Door(Fixture):
 		indir = self.connections[2]
 		inloc = self.connections[3]
 		Currentroom.addConection(outdir,outloc)
-		Otherroom = W[outloc]
+		Otherroom = Core.World[outloc]
 		Otherroom.addConnection(indir,inloc)
 
 
@@ -152,13 +155,13 @@ class Door(Fixture):
 
 class Foot(Item):
 	def improviseWeapon(self):
-		return Weapon(self.name,self.desc,self.weight,self.durability,minm(1,self.weight//4),0,0,0,False,"b")
+		return Weapon(self.name,self.desc,self.weight,self.durability,Core.minm(1,self.weight//4),0,0,0,False,"b")
 
 
 
 class Hand(Item):
 	def improviseWeapon(self):
-		return Weapon(self.name,self.desc,self.weight,self.durability,minm(1,self.weight//4),2,0,0,False,"b")
+		return Weapon(self.name,self.desc,self.weight,self.durability,Core.minm(1,self.weight//4),2,0,0,False,"b")
 
 
 
@@ -221,7 +224,7 @@ class Lockbox(Box):
 		if key.id in self.keyids:
 			self.locked = True
 			print(f"You lock the {self.name}")
-			if hasMethod(key,"UnlockWith"):
+			if Core.hasMethod(key,"UnlockWith"):
 				key.UnlockWith(self)
 			return True
 		print(f"You can't lock the {self.name} with the {key.name}")
@@ -235,7 +238,7 @@ class Lockbox(Box):
 		if key.id in self.keyids:
 			self.locked = False
 			print(f"You unlock the {self.name}")
-			if hasMethod(key,"LockWith"):
+			if Core.hasMethod(key,"LockWith"):
 				key.LockWith(self)
 			return True
 		print(f"The {key.name} won't work!")
@@ -246,25 +249,25 @@ class Lockbox(Box):
 
 class Mouth(Item):
 	def improviseWeapon(self):
-		return Weapon(self.name,self.desc,self.weight,self.durability,minm(1,self.weight//4),0,0,4,False,"p")
+		return Weapon(self.name,self.desc,self.weight,self.durability,Core.minm(1,self.weight//4),0,0,4,False,"p")
 
 
 
 
 class Potion(Bottle):
 	# heals the player hp 1000, replaces potion with an empty bottle
-	def Drink(self,P,G):
+	def Drink(self):
 		print("You drink the potion")
-		P.heal(1000)
+		Core.Player.heal(1000)
 		self.parent.removeItem(self)
-		P.addItem(Bottle("bottle","an empty glass bottle",3,3))
+		Core.Player.addItem(Bottle("bottle","an empty glass bottle",3,3))
 
 
-	def Pour(self,P,G,obj=None):
+	def Pour(self,obj=None):
 		if obj != None:
 			obj.Drench(self)
 		self.parent.removeItem(self)
-		P.addItem(Bottle("bottle","an empty glass bottle",3,3))
+		Core.Player.addItem(Bottle("bottle","an empty glass bottle",3,3))
 
 
 
@@ -297,18 +300,19 @@ class Switch(Fixture):
 
 
 	# triggers some effect using the effect name to find related function
-	def Trigger(self,P,W,G):
+	def Trigger(self):
 		eval(self.effect)
 
 
 	# using the switch triggers the effect
-	def Use(self,P,W,G):	self.Trigger(P,W,G)
+	def Use(self):
+		self.Trigger()
 
 
 
 
 class Sword(Weapon):
-	def Cut(self,P):
+	def Cut(self):
 		print("[you cut something?]")
 
 
@@ -332,7 +336,7 @@ class Table(Fixture):
 	def removeItem(self,I):
 		self.contents.remove(I)
 		if len(self.contents) == 1:
-			items = gprint("a",self.contents[0].name,4)
+			items = Core.gprint("a",self.contents[0].name,4)
 			self.descname = f"{self.name} with {items} on it"
 		elif len(self.contents) == 0:
 			self.descname = f"empty {self.name}"
@@ -380,7 +384,7 @@ class Wall(Passage):
 		self.cr = cr
 
 
-	def Traverse(self,P,W,G,dir=None):
+	def Traverse(self,dir=None):
 		if dir == None:
 			if len(self.connections) == 1:
 				dir = self.connections[0]
@@ -391,16 +395,16 @@ class Wall(Passage):
 			print(f"The {self.name} does not go '{dir}'")
 			return False
 
-		if P.ATHL() < self.cr:
+		if Core.Player.ATHL() < self.cr:
 			print(f"You fall down the {self.name}!")
 			if dir == "down":
-				G.changeRoom(W[self.connections["down"]])
-			if not (P.hasCondition("fly") or P.hasCondition("feather fall")):
-				P.takeDamage(self.cr-P.ATHL(),"b")
+				Core.Game.changeRoom(W[self.connections["down"]])
+			if not (Core.Player.hasCondition("fly") or Core.Player.hasCondition("feather fall")):
+				Core.Player.takeDamage(self.cr-Core.Player.ATHL,"b")
 			return True
 
 		print(f"You climb {dir} the {self.name}")
-		G.changeRoom(W[self.connections[dir]],P,W)
+		Core.Game.changeRoom(Core.World[self.connections[dir]])
 		return True
 
 

@@ -1,10 +1,10 @@
 echo make.sh
-echo This just compiles the project into an exe for Linux/Mac and deletes some residual files
+echo This just compiles the project into an executable for Linux/Mac and deletes some residual files from that process
 
 rm ./PoPy
 cd ./src
 pyinstaller popy.py --onefile --icon=..\potion.ico
-mv dist/popy ../PoPy
+mv dist/popy ../popy.exe
 rm popy.spec
 rm -rf ./build
 rm -rf ./dist
