@@ -379,8 +379,8 @@ class Table(Fixture):
 
 
 class Wall(Passage):
-	def __init__(self,name,desc,weight,durability,connections,descname,cr):
-		Passage.__init__(self,name,desc,weight,durability,connections,descname)
+	def __init__(self,name,desc,weight,durability,connections,descname,passprep,cr):
+		Passage.__init__(self,name,desc,weight,durability,connections,descname,passprep)
 		self.cr = cr
 
 

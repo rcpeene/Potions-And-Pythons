@@ -817,49 +817,35 @@ def GoVertical(dir,passage=None,dobj=None):
 		return passage.Traverse(dir)
 
 
-# not called directly from user input
-# called when the intended direction, destination, and/or passage is known
-# redirects to one of three functions to perform the room change operation
-def ExecuteGo(dobj,dir,dest,passage):
-	print("ExecuteGo",dobj,dir,dest,passage)
-	# if the input contains a dir, validate the dir...
-	# and assign either the destination room name or passage name
-	if dir != None:
-		if dir in Core.game.currentroom.exits:
-			dest = Core.game.currentroom.exits[dir]
-		elif dir in Core.game.currentroom.allExits():
-			passage = Core.game.currentroom.getPassageFromDir(dir)
-		else:
-			print(f"There is no exit leading {dir} here")
-			return False
-
-	# further assign passage and dest depending on if they are valid terms
-	if passage == None and dobj != None:
-		passage = Core.game.currentroom.search(dobj)
-	if passage == None and dobj in Core.game.currentroom.exits.values():
-	 	dest = dobj
-	elif dobj in Core.game.currentroom.allExits().values():
-		dir = Core.game.currentroom.getDirFromDest(dobj)
-		passage = Core.game.currentroom.getPassageFromDir(dir)
-
-	# call one of three functions to actually change rooms
-	# depends if they go normally, traverse a passage, or go vertically
-	if dir == "up" or dir == "down":	return GoVertical(dir,passage,dobj)
-	if Core.hasMethod(passage,"Traverse"):	return passage.Traverse(dir)
-	if dest != None:					return Core.game.changeRoom(Core.world[dest])
-	print(f"There is no exit leading to a {dobj} here")
-	return False
-
-
-# parses user input to determine the intended direction, destination, and/or... # passage. Then calls ExecuteGo to actually carry out the action
-def Go(dobj,iobj,prep):
-	print("Go",dobj,iobj,prep)
-	preps = {"down","through","to","toward","up","in","into","on","onto",None}
-	if prep not in preps:
-		print("Command not understood")
-		return False
+# infers direction, destination, and passage (if they exist) from input terms
+def assignGoTerms(dobj,iobj,prep):
 	dir,dest,passage = None,None,None
 
+	# assign dir
+	if dobj in Data.directions.values():
+		dir = dobj
+	elif iobj in Data.directions.values():
+		dir = iobj
+	elif prep in Data.directions.values():
+		dir = prep
+
+	# assign dest
+	if dobj in Core.game.currentroom.allExits().values():
+		dest = dobj
+	if iobj in Core.game.currentroom.allExits().values():
+		dest = iobj
+
+	# assign passage
+	if dobj != None:
+		passage = Core.game.currentroom.search(dobj)
+	elif iobj != None:
+		passage = Core.game.currentroom.search(iobj)
+
+	return dir,dest,passage
+
+
+# parses user input to determine the intended direction, destination, and/or... # passage. Then calls either traverse method or changeroom accordingly
+def Go(dobj,iobj,prep):
 	if dobj == None and iobj == None and prep == None:
 		dobj,iobj,prep = parseWithoutVerb("Where will you go?",preps)
 	if dobj in Data.cancels:	return False
@@ -867,18 +853,45 @@ def Go(dobj,iobj,prep):
 
 	# if any terms are abbreviations for a direction, expand them
 	dobj,iobj,prep = map(Core.expandDir,[dobj,iobj,prep])
+	preps = {"down","through","to","toward","up","in","into","on","onto",None}
 	if prep not in preps:
 		print("Command not understood")
 		return False
 
-	# if any terms are a direction, set dir
-	if dobj in Data.directions.values():		dir,dobj = dobj,None
-	elif iobj in Data.directions.values():	dir = iobj
-	elif prep in Data.directions.values():	dir = prep
-	if dobj == None:	dobj = iobj
-	if dobj == "back":	dobj = Core.game.prevroom.name
+	dir,dest,passage = assignGoTerms(dobj,iobj,prep)
+	if dir != None and dir not in Core.game.currentroom.allExits():
+		print(f"There is no exit leading {dir} here")
+		return False
+	if (dir,dest,passage) == (None,None,None):
+		print(f"There is no exit leading to a {dobj} here")
+		return False
+	if (dest,passage) == (None,None):
+		dest = Core.game.currentroom.allExits()[dir]
+	dir = Core.game.currentroom.getDirFromDest(dest)
+	if passage == None:
+		passage = Core.game.currentroom.getPassageFromDir(dir)
+	# if passage and dest are given but passage doesnt take to dest:
+	if passage != None and dest != None:
+		if dest not in passage.connections.values():
+			print("")
+			return False
 
-	return ExecuteGo(dobj,dir,dest,passage)
+	# call one of three functions to actually change rooms
+	# depends if they go normally, traverse a passage, or go vertically
+	if dir == "up" or dir == "down":
+		return GoVertical(dir,passage,dobj)
+	# if just passage is given
+	if passage != None:
+		if Core.hasMethod(passage,"Traverse"):
+			return passage.Traverse(dir)
+		else:
+			print(f"The {passage.name} cannot be traversed")
+			return False
+	# if just dest given
+	if dest != None:
+		return Core.game.changeRoom(Core.world[dest])
+	print(f"There is no exit leading to a {dobj} here")
+	return False
 
 
 # add in the ability to try to 'grab' creatures?

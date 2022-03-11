@@ -104,9 +104,10 @@
 				"durability": -1,
 				"connections": {
 					"up": "pit",
-					"down": "pond"
+					"down": "pond
 				},
-				"descname": "stairwell that goes up and down"
+				"descname": "stairwell that goes up and down",
+				"passprep": ""
 			},
 			{
 				"__class__": "Passage",
@@ -118,7 +119,8 @@
 					"east": "boulder",
 					"west": "big tree"
 				},
-				"descname": "hallway that goes east and west"
+				"descname": "hallway that goes east and west",
+				"passprep": "through"
 			},
 			{
 				"__class__": "Compass",
@@ -275,6 +277,7 @@
 					"up": "glen"
 				},
 				"descname": "cliff leading up",
+				"passprep": "",
 				"cr": 30
 			},
 			{

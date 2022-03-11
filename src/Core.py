@@ -1852,14 +1852,14 @@ class Fixture(Item):
 
 
 class Passage(Fixture):
-	def __init__(self,name,desc,weight,durability,connections,descname):
+	def __init__(self,name,desc,weight,durability,connections,descname,passprep):
 		self.name = name
 		self.desc = desc
 		self.weight = weight
 		self.durability = durability
 		self.connections = connections
 		self.descname = descname
-
+		self.passprep = passprep
 
 
 
@@ -1875,7 +1875,11 @@ class Passage(Fixture):
 		if dir not in self.connections:
 			print(f"The {self.name} does not go '{dir}'")
 			return False
-		print(f"You go {dir} the {self.name}")
+		if self.passprep != "":
+			print(f"You go {dir} {self.passprep} the {self.name}")
+		else:
+			print(f"You go {dir} the {self.name}")
+
 		newroom = world[self.connections[dir]]
 		game.changeRoom(newroom)
 		return True
