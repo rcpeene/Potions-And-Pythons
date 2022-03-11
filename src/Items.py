@@ -391,6 +391,8 @@ class Wall(Passage):
 			else:
 				msg = f"Which direction will you go on the {self.name}?\n> "
 				dir = input(msg)
+		if dir in Data.cancels:
+			return False
 		if dir not in self.connections:
 			print(f"The {self.name} does not go '{dir}'")
 			return False

@@ -857,6 +857,7 @@ def Go(dobj,iobj,prep):
 		print("Command not understood")
 		return False
 
+	# get dir, dest, and passage and validate them
 	dir,dest,passage = assignGoTerms(dobj,iobj,prep)
 	if dir != None and dir not in Core.game.currentroom.allExits():
 		print(f"There is no exit leading {dir} here")
@@ -869,11 +870,6 @@ def Go(dobj,iobj,prep):
 	dir = Core.game.currentroom.getDirFromDest(dest)
 	if passage == None:
 		passage = Core.game.currentroom.getPassageFromDir(dir)
-	# if passage and dest are given but passage doesnt take to dest:
-	if passage != None and dest != None:
-		if dest not in passage.connections.values():
-			print(f"The {passage.name} does not go to the {dest.name}")
-			return False
 
 	# call one of three functions to actually change rooms
 	# depends if they go normally, traverse a passage, or go vertically
