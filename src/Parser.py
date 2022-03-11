@@ -202,11 +202,15 @@ def Get(command):
 	if obj == None:
 		print("Object not found")
 		return
-	try:
-		attrString = command[2]
-		print(getattr(obj,attrString))
-	except:
-		print("Attribute does not exist")
+	if len(command) >= 3:
+		try:
+			attrString = command[2]
+			print(getattr(obj,attrString))
+			return
+		except:
+			print("Attribute does not exist")
+			return
+	print(obj)
 
 
 def Learn(command):
@@ -1433,37 +1437,37 @@ cheatcodes = {
 
 # contains corresponding functions for all items in Data.shortverbs and Data.statcommands
 shortactions = {
-"abilities":Core.player.printAbilities,
+"abilities":Core.Player.printAbilities,
 "back":Return,
 "clear":Core.clearScreen,
 "cry":Cry,
 "dance":Dance,
 "examples":Examples,
-"gear":Core.player.printGear,
+"gear":Core.Player.printGear,
 "help":Help,
-"hp":Core.player.printHP,
+"hp":Core.Player.printHP,
 "info": Info,
 "information": Info,
-"inventory":Core.player.printInv,
-"inv":Core.player.printInv,
+"inventory":Core.Player.printInv,
+"inv":Core.Player.printInv,
 "laugh":Laugh,
-"level":Core.player.printLV,
-"lv":Core.player.printLV,
-"money":Core.player.printMoney,
-"mp":Core.player.printMP,
+"level":Core.Player.printLV,
+"lv":Core.Player.printLV,
+"money":Core.Player.printMoney,
+"mp":Core.Player.printMP,
 "quit":Quit,
 "return":Return,
-"rp":Core.player.printRP,
+"rp":Core.Player.printRP,
 "save":Save,
 "scream":Shout,
 "shout":Shout,
 "sing":Sing,
-"stats":Core.player.printStats,
-"status":Core.player.printStatus,
+"stats":Core.Player.printStats,
+"status":Core.Player.printStatus,
 "time":Time,
-"traits":Core.player.printTraits,
-"weapons":Core.player.printWeapons,
-"xp":Core.player.printXP,
+"traits":Core.Player.printTraits,
+"weapons":Core.Player.printWeapons,
+"xp":Core.Player.printXP,
 "yell":Shout,
 "yawn":Yawn
 }

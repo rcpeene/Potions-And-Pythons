@@ -1648,6 +1648,7 @@ class Player(Creature):
 
 	# prints all 10 player traits
 	def printTraits(self):
+		print("printing player!: ",self.name)
 		for trait in Data.traits:
 			if trait in {"STR","CHA"}:	print()
 			else:						print("\t\t",end="")
