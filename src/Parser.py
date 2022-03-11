@@ -798,7 +798,6 @@ def Give(dobj,iobj,prep):
 
 # called when the user wants to go "up" or "down"
 def GoVertical(dir,passage=None,dobj=None):
-	print("GoVertical",dir,passage,dobj)
 	if Core.player.hasCondition("fly"):
 		newroom = Core.game.currentroom.exits[dir]
 		print(f"You fly {dir}!")
@@ -873,7 +872,7 @@ def Go(dobj,iobj,prep):
 	# if passage and dest are given but passage doesnt take to dest:
 	if passage != None and dest != None:
 		if dest not in passage.connections.values():
-			print("")
+			print(f"The {passage.name} does not go to the {dest.name}")
 			return False
 
 	# call one of three functions to actually change rooms

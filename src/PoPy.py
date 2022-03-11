@@ -62,7 +62,6 @@ while True:
 
 # CURRENT TASKS
 
-# retest "go" command scenarios
 # fix Room.allExits to fit specifications
 # reevalute AREA/room condition set up for condition
 # add some preliminary spells and add effects file

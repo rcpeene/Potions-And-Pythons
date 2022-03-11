@@ -387,7 +387,7 @@ class Wall(Passage):
 	def Traverse(self,dir=None):
 		if dir == None:
 			if len(self.connections) == 1:
-				dir = self.connections[0]
+				dir = list(self.connections.keys())[0]
 			else:
 				msg = f"Which direction will you go on the {self.name}?\n> "
 				dir = input(msg)
@@ -400,7 +400,7 @@ class Wall(Passage):
 			if dir == "down":
 				Core.game.changeRoom(W[self.connections["down"]])
 			if not (Core.player.hasCondition("fly") or Core.player.hasCondition("feather fall")):
-				Core.player.takeDamage(self.cr-Core.player.ATHL,"b")
+				Core.player.takeDamage(self.cr-Core.player.ATHL(),"b")
 			return True
 
 		print(f"You climb {dir} the {self.name}")
