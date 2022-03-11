@@ -24,36 +24,36 @@ Core.assignParents()
 Core.ensureWorldIntegrity()
 
 while True:
-	Core.Game.silent = False
-	Core.Game.activeroom = Core.Game.currentroom
-	Core.Game.whoseturn = Core.Player
+	Core.game.silent = False
+	Core.game.activeroom = Core.game.currentroom
+	Core.game.whoseturn = Core.player
 
 	# take user input until player successfully performs an action
 	while not parse():	continue
 
 	# creatures in current room's turn
-	Core.Game.activeroom = Core.Game.currentroom
-	for creature in Core.Game.currentroom.occupants:
-		Core.Game.whoseturn = creature
-		creature.act(Core.Game.currentroom)
+	Core.game.activeroom = Core.game.currentroom
+	for creature in Core.game.currentroom.occupants:
+		Core.game.whoseturn = creature
+		creature.act(Core.game.currentroom)
 
 	# creatures in nearby rooms' turn
-	Core.Game.silent = True
-	for room in Core.Game.nearbyRooms():
-		Core.Game.activeroom = room
+	Core.game.silent = True
+	for room in Core.game.nearbyRooms():
+		Core.game.activeroom = room
 		for creature in room.occupants:
-			Core.Game.whoseturn = creature
+			Core.game.whoseturn = creature
 			creature.act(room)
 
 	# cleanup before looping
-	Core.Game.activeroom = None
-	Core.Game.whoseturn = None
+	Core.game.activeroom = None
+	Core.game.whoseturn = None
 	# pass the time for all rooms and creatures
-	Core.Game.incrementTime()
+	Core.game.incrementTime()
 	# remove dead Creatures from room occupants
-	Core.Game.reapOccupants()
+	Core.game.reapOccupants()
 	# sort the occupants in each rendered room by their MVMT attribute
-	Core.Game.sortOccupants()
+	Core.game.sortOccupants()
 
 
 
@@ -63,7 +63,7 @@ while True:
 # CURRENT TASKS
 
 # retest "go" command scenarios
-# reconfigure scoping of P,W,G objects
+# fix Room.allExits to fit specifications
 # reevalute AREA/room condition set up for condition
 # add some preliminary spells and add effects file
 # consider enter, exit functions in room

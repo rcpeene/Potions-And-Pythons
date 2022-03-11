@@ -1045,6 +1045,7 @@ CHARACTER NAMES:
 	Vixen
 	Gremlaw the Goblin
 	Aloy
+	The Frog Prince
 
 	one bbeg is the world serpent called Aeormungand (Leviathan?)
 	also an evil wizard ofc

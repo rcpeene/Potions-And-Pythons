@@ -154,9 +154,9 @@ def saveGame():
 
 	# write world, player, and game files
 	os.chdir(savename)
-	writeJSON("world.json", Core.World)
-	writeJSON("player.json", Core.Player)
-	writeGame("game.txt", Core.Game)
+	writeJSON("world.json", Core.world)
+	writeJSON("player.json", Core.player)
+	writeGame("game.txt", Core.game)
 	os.chdir("..")
 	os.chdir("..")
 	sleep(1)
@@ -191,9 +191,9 @@ def loadGame(filename):
 	os.chdir(savename)
 	# try to load the player, world, and game objects
 	# try:
-	Core.Player = readJSON("player.json")
-	Core.World = readJSON("world.json")
-	Core.Game = readGame("game.txt",Core.World)
+	Core.player = readJSON("player.json")
+	Core.world = readJSON("world.json")
+	Core.game = readGame("game.txt",Core.world)
 	# hopefully load doesn't fail, that would suck
 	# except:
 	# 	print("Could not load game, save data corrupted\n")
@@ -207,7 +207,7 @@ def loadGame(filename):
 	Core.flushInput()
 	Core.clearScreen()
 	# describe the current room
-	Core.Game.startUp()
+	Core.game.startUp()
 
 
 # deletes all save files in 'save' directory (if the user is very, very sure)
@@ -286,32 +286,32 @@ def createCharacter():
 # starts a new game and returns player, world, and game objects
 def newGame():
 	# tries to load a clean new world from initial world file
-	Core.World = readJSON("World.json")
+	Core.world = readJSON("World.json")
 	# initializes from the character creation screen
-	Core.Player = createCharacter()
+	Core.player = createCharacter()
 	# initializes the game at the "cave" room
-	Core.Game = Game(0,Core.World["cave"],Core.World["cave"],0)
+	Core.game = Game(0,Core.world["cave"],Core.world["cave"],0)
 	Core.ellipsis(3)
 	# enter the starting room
 	sleep(0.5)
 	Core.clearScreen()
-	Core.Game.startUp()
+	Core.game.startUp()
 
 
 # automatically starts a new game with a premade character for easy testing
 def testGame():
-	Core.World = readJSON("World.json")
+	Core.world = readJSON("World.json")
 
 	inv = [Compass("compass","a plain steel compass with a red arrow",2,10)]
 	status = [["fireproof",-1], ["poisoned",5], ["cursed",-2], ["immortal",-1],
 	["sharpshooter",50], ["invisible",15], ["poisoned",-1]]
 
-	Core.Player = Player("Norman","a hero",24,24,[4 for _ in range(10)],1000,inv,Data.initgear,status,1585,100,[])
-	Core.Game = Game(0,Core.World["cave"],Core.World["tunnel"],0)
+	Core.player = Player("Norman","a hero",24,24,[4 for _ in range(10)],1000,inv,Data.initgear,status,1585,100,[])
+	Core.game = Game(0,Core.world["cave"],Core.world["tunnel"],0)
 
 	Core.clearScreen()
-	Core.Game.startUp()
-	Core.Game.mode = 1
+	Core.game.startUp()
+	Core.game.mode = 1
 
 
 def gameInfo():

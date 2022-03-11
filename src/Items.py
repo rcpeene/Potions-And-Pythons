@@ -101,7 +101,7 @@ class Bread(Item):
 	# heals 20 hp to the player, removes bread from inventory
 	def Eat(self):
 		print("You consume the bread")
-		h = Core.Player.heal(20)
+		h = Core.player.heal(20)
 		self.parent.removeItem(self)
 		if h == 0:
 			print("Yummy")
@@ -147,7 +147,7 @@ class Door(Fixture):
 		indir = self.connections[2]
 		inloc = self.connections[3]
 		Currentroom.addConection(outdir,outloc)
-		Otherroom = Core.World[outloc]
+		Otherroom = Core.world[outloc]
 		Otherroom.addConnection(indir,inloc)
 
 
@@ -258,16 +258,16 @@ class Potion(Bottle):
 	# heals the player hp 1000, replaces potion with an empty bottle
 	def Drink(self):
 		print("You drink the potion")
-		Core.Player.heal(1000)
+		Core.player.heal(1000)
 		self.parent.removeItem(self)
-		Core.Player.addItem(Bottle("bottle","an empty glass bottle",3,3))
+		Core.player.addItem(Bottle("bottle","an empty glass bottle",3,3))
 
 
 	def Pour(self,obj=None):
 		if obj != None:
 			obj.Drench(self)
 		self.parent.removeItem(self)
-		Core.Player.addItem(Bottle("bottle","an empty glass bottle",3,3))
+		Core.player.addItem(Bottle("bottle","an empty glass bottle",3,3))
 
 
 
@@ -395,16 +395,16 @@ class Wall(Passage):
 			print(f"The {self.name} does not go '{dir}'")
 			return False
 
-		if Core.Player.ATHL() < self.cr:
+		if Core.player.ATHL() < self.cr:
 			print(f"You fall down the {self.name}!")
 			if dir == "down":
-				Core.Game.changeRoom(W[self.connections["down"]])
-			if not (Core.Player.hasCondition("fly") or Core.Player.hasCondition("feather fall")):
-				Core.Player.takeDamage(self.cr-Core.Player.ATHL,"b")
+				Core.game.changeRoom(W[self.connections["down"]])
+			if not (Core.player.hasCondition("fly") or Core.player.hasCondition("feather fall")):
+				Core.player.takeDamage(self.cr-Core.player.ATHL,"b")
 			return True
 
 		print(f"You climb {dir} the {self.name}")
-		Core.Game.changeRoom(Core.World[self.connections[dir]])
+		Core.game.changeRoom(Core.world[self.connections[dir]])
 		return True
 
 

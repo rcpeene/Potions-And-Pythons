@@ -370,7 +370,7 @@ def assignParentsRecur(root):
 # iterates through each object in the object tree of each room and assigns...
 # its 'parent' attribute to the object it is contained in
 def assignParents():
-	for room in World.values():
+	for room in world.values():
 		assignParentsRecur(room)
 
 
@@ -380,17 +380,17 @@ def assignParents():
 # to prevent errors if the world file was written incorrectly
 def ensureWorldIntegrity():
 	namesToDelete = []
-	for room in World.values():
+	for room in world.values():
 		for direction in room.exits:
 			connection = room.exits[direction]
-			if connection not in World:
+			if connection not in world:
 				namesToDelete.append(connection)
 
 		for passage in room.getPassages():
 			connectionsToDelete = []
 			for connection in passage.connections:
 				roomname = passage.connections[connection]
-				if roomname not in World:
+				if roomname not in world:
 					connectionsToDelete.append(connection)
 
 			for connection in connectionsToDelete:
@@ -398,7 +398,7 @@ def ensureWorldIntegrity():
 	# this is done in a separate loop to prevent errors caused by...
 	# deleting elements from dict while iterating over the dict
 	for name in namesToDelete:
-		del World[name]
+		del world[name]
 
 
 ############################
@@ -494,9 +494,9 @@ class Game():
 	# important for decrementing the duration counter on all status conditions
 	def incrementTime(self):
 		self.time += 1
-		Player.passTime(1)
+		player.passTime(1)
 		for room in self.renderedRooms():
-			self.silent = True if room is not self.currentroom else False
+			self.silent = room is not self.currentroom
 			room.passTime(1)
 			for creature in room.occupants:
 				creature.passTime(1)
@@ -536,7 +536,7 @@ class Game():
 	def destroyCreature(self,C):
 		pass
 		### change creature to be a dead creature or something
-		# for room in self.renderedRooms(World):
+		# for room in self.renderedRooms():
 		# 	if C in room.occupants:
 		# 		room.removeCreature(C)
 
@@ -550,7 +550,7 @@ class Game():
 	def roomFinder(self,n,Sroom,pathlen,foundrooms):
 		if pathlen >= n:
 			return
-		adjacentRooms = [World[name] for name in Sroom.allExits().values()]
+		adjacentRooms = [world[name] for name in Sroom.allExits().values()]
 		for room in adjacentRooms:
 			foundrooms.add(room)
 			self.roomFinder(n,room,pathlen+1,foundrooms)
@@ -612,7 +612,7 @@ class Game():
 	### User Output ###
 
 	def startUp(self):
-		Player.printStats()
+		player.printStats()
 		print()
 		self.currentroom.describe()
 
@@ -623,18 +623,18 @@ class Game():
 
 
 
-# The Room class is the fundamental unit of the game's World.
-# The World dict, W, consists of key:value pairs of the form,
+# The Room class is the fundamental unit of the game's world.
+# The world dict, consists of key:value pairs of the form,
 # room name:room object
 
 # Importantly, each room contains an exits dict, whose keys are directions...
 # such as 'north', 'up', or 'beyond', and whose values are the string names...
 # of the room that it leads to.
 
-# Thus, from any room, there are some directions which will yield a room name, # which can be plugged into the World dict to yield the neighboring room object
+# Thus, from any room, there are some directions which will yield a room name, # which can be plugged into the world dict to yield the neighboring room object
 
 # In this way, every Room object can be thought of like a node in a large...
-# directed graph, facilitated by the World dict, where the exits dict specifies
+# directed graph, facilitated by the world dict, where the exits dict specifies
 # the edges from a given node to its neighboring nodes.
 class Room():
 	def __init__(self,name,desc,exits,contents,occupants,status):
@@ -700,7 +700,7 @@ class Room():
 	def addAreaCondition(areacond):
 		cond,dur = extractConditionInfo(areacond)
 		key = lambda x: hasMethod(x,"addCondition")
-		for creature in Game.searchRoom(key):
+		for creature in game.searchRoom(key):
 			creature.addCondition(cond,dur)
 
 
@@ -710,7 +710,7 @@ class Room():
 		if dur != -1:
 			return
 		key = lambda x: hasMethod(x,"removeCondition")
-		for creature in Game.searchRoom(key):
+		for creature in game.searchRoom(key):
 			creature.removeCondition(cond,-1)
 
 
@@ -752,7 +752,7 @@ class Room():
 	# describe the room, and apply any room effects to the creature entering
 	def enter(self,creature):
 		# if the player is entering the room, describe the room
-		if type(creature) == Player:
+		if creature is player:
 			self.describe()
 		for cond,dur in self.status:
 			if cond.startswith("AREA"):
@@ -776,7 +776,7 @@ class Room():
 		all = {}
 		for dir in self.exits:
 			all[dir] = self.exits[dir]
-		# get a list of passages in the room (non-recursive search)
+		# get a list of passages in the room
 		passages = self.getPassages()
 		# for each passage, add its connections to all
 		for passage in passages:
@@ -854,7 +854,7 @@ class Room():
 	# prints room name, description, all its contents and creatures
 	def describe(self):
 		print("\n" + capWords(self.name))
-		# if Player.countCompasses() == 0:
+		# if player.countCompasses() == 0:
 		# 	print(ambiguateDirections(self.desc))
 		# else:
 		print(self.desc)
@@ -970,7 +970,7 @@ class Item():
 
 # The Creature class is the main class for anything in the game that can act
 # Anything in a Room that is not an Item will be a Creature
-# The Player is a Creature too
+# The player is a Creature too
 # Creatures have 10 base stats, called traits
 # They also have abilities; stats which are derived from traits through formulas
 class Creature():
@@ -1265,11 +1265,11 @@ class Creature():
 		self.alive = False
 		print("agh its... ded?")
 		# TODO: make this just drop some random number of money not just LOOT
-		n = diceRoll(3,Player.LOOT(),-2)
-		Game.activeroom.addItem(Pylars(n))
-		if not Game.silent: print(f"Dropped Ᵽ {n}")
-		if Game.whoseturn is Player:
-			Player.gainxp(10)
+		n = diceRoll(3,player.LOOT(),-2)
+		game.activeroom.addItem(Pylars(n))
+		if not game.silent: print(f"Dropped Ᵽ {n}")
+		if game.whoseturn is player:
+			player.gainxp(10)
 
 
 	def Carry(self,carrier):
@@ -1326,6 +1326,7 @@ class Creature():
 	def SLTH(self): return ( 2*self.SKL + self.INT - min0(self.invWeight() - self.BRDN()) ) * 2*int(self.hasCondition("hiding"))
 	def SPLS(self): return 2*self.INT
 	def TNKR(self): return 2*self.INT + self.SKL
+
 
 	# returns sum of the weight of all items in the inventory
 	def invWeight(self):
@@ -1753,12 +1754,12 @@ class Player(Creature):
 class Animal(Creature):
 	def act(self,room):
 		if not self.alive:	return
-		if not Game.silent:	print(f"\n{self.name}'s turn!")
+		if not game.silent:	print(f"\n{self.name}'s turn!")
 		self.attack()
 
 
 	def attack(self):
-		if not Game.silent:	print("attack?")
+		if not game.silent:	print("attack?")
 
 
 	def climb():
@@ -1874,8 +1875,8 @@ class Passage(Fixture):
 			print(f"The {self.name} does not go '{dir}'")
 			return False
 		print(f"You go {dir} the {self.name}")
-		newroom = World[self.connections[dir]]
-		Game.changeRoom(newroom)
+		newroom = world[self.connections[dir]]
+		game.changeRoom(newroom)
 		return True
 
 
