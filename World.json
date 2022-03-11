@@ -104,7 +104,7 @@
 				"durability": -1,
 				"connections": {
 					"up": "pit",
-					"down": "pond
+					"down": "pond"
 				},
 				"descname": "stairwell that goes up and down",
 				"passprep": ""
