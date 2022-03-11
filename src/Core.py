@@ -1648,7 +1648,6 @@ class Player(Creature):
 
 	# prints all 10 player traits
 	def printTraits(self):
-		print("printing player!: ",self.name)
 		for trait in Data.traits:
 			if trait in {"STR","CHA"}:	print()
 			else:						print("\t\t",end="")
@@ -1871,7 +1870,7 @@ class Passage(Fixture):
 				dir = list(self.connections.keys())[0]
 			else:
 				msg = f"Which direction will you go on the {self.name}?\n> "
-				dir = input(msg)
+				dir = input(msg).lower()
 		if dir in Data.cancels:
 			return False
 		if dir not in self.connections:

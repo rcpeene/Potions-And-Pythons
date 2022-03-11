@@ -390,7 +390,7 @@ class Wall(Passage):
 				dir = list(self.connections.keys())[0]
 			else:
 				msg = f"Which direction will you go on the {self.name}?\n> "
-				dir = input(msg)
+				dir = input(msg).lower()
 		if dir in Data.cancels:
 			return False
 		if dir not in self.connections:

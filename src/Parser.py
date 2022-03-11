@@ -298,7 +298,7 @@ def Help():
 	Core.columnPrint(Data.shortverbs,10,10)
 	print("\nVerb Commands (Does not include cheat codes and secret commands)")
 	Core.columnPrint(Data.verbs,10,10)
-	print("\nType 'info' for information on the game and how to play")
+	print("\nDuring the game, type 'info' for information on the game and how to play")
 	input()
 	Core.clearScreen()
 
@@ -796,6 +796,7 @@ def Give(dobj,iobj,prep):
 	print("giveing")
 
 
+# not called by Parse directly
 # called when the user wants to go "up" or "down"
 def GoVertical(dir,passage=None,dobj=None):
 	if Core.player.hasCondition("fly"):
@@ -845,6 +846,7 @@ def assignGoTerms(dobj,iobj,prep):
 
 # parses user input to determine the intended direction, destination, and/or... # passage. Then calls either traverse method or changeroom accordingly
 def Go(dobj,iobj,prep):
+	preps = {"down","through","to","toward","up","in","into","on","onto",None}
 	if dobj == None and iobj == None and prep == None:
 		dobj,iobj,prep = parseWithoutVerb("Where will you go?",preps)
 	if dobj in Data.cancels:	return False
@@ -852,7 +854,6 @@ def Go(dobj,iobj,prep):
 
 	# if any terms are abbreviations for a direction, expand them
 	dobj,iobj,prep = map(Core.expandDir,[dobj,iobj,prep])
-	preps = {"down","through","to","toward","up","in","into","on","onto",None}
 	if prep not in preps:
 		print("Command not understood")
 		return False
@@ -865,9 +866,10 @@ def Go(dobj,iobj,prep):
 	if (dir,dest,passage) == (None,None,None):
 		print(f"There is no exit leading to a {dobj} here")
 		return False
+	if dir == None:
+		dir = Core.game.currentroom.getDirFromDest(dest)
 	if (dest,passage) == (None,None):
 		dest = Core.game.currentroom.allExits()[dir]
-	dir = Core.game.currentroom.getDirFromDest(dest)
 	if passage == None:
 		passage = Core.game.currentroom.getPassageFromDir(dir)
 
