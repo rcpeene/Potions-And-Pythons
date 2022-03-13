@@ -7,7 +7,7 @@ import Data
 
 
 # formatting the prompt window
-os.system("mode con:cols=128 lines=32")
+os.system("mode con:cols=130 lines=32")
 os.system("title Potions ^& Pythons")
 
 # import pygetwindow
@@ -35,7 +35,7 @@ while True:
 	Core.game.activeroom = Core.game.currentroom
 	for creature in Core.game.currentroom.occupants:
 		Core.game.whoseturn = creature
-		creature.act(Core.game.currentroom)
+		creature.act()
 
 	# creatures in nearby rooms' turn
 	Core.game.silent = True
@@ -43,7 +43,7 @@ while True:
 		Core.game.activeroom = room
 		for creature in room.occupants:
 			Core.game.whoseturn = creature
-			creature.act(room)
+			creature.act()
 
 	# cleanup before looping
 	Core.game.activeroom = None
@@ -62,8 +62,6 @@ while True:
 
 # CURRENT TASKS
 
-# fix Room.allExits to fit specifications
-# reevalute AREA/room condition set up for condition
 # add some preliminary spells and add effects file
 # consider enter, exit functions in room
 # reevaluate effect functions, is there a way to reference a function by string?

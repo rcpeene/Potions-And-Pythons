@@ -438,7 +438,7 @@ class Empty():
 	def Weight(self):	return 0
 
 	def improviseWeapon(self):
-		return Weapon("empty hand","",0,-1,1,0,0,0,False,"b")
+		return Weapon("empty hand","",0,-1,[],1,0,0,0,False,"b")
 
 
 
@@ -716,7 +716,8 @@ class Room():
 
 	# add a status condition to the room with a name and duration
 	def addCondition(self,name,dur,stackable=False):
-		# TODO: include stackability
+		if self.hasCondition(name) and not stackable:
+			return False
 		pair = [name,dur]
 		insort(self.status,pair)
 		if name.startswith("AREA"):
@@ -770,7 +771,7 @@ class Room():
 
 	### Getters ###
 
-	# returns dict of exits, where keys are pairs of a direction and passage...
+	# returns dict of exits, where keys are directions and values are room names
 	# and values are room names
 	def allExits(self):
 		all = {}
@@ -880,11 +881,12 @@ class Room():
 # Anything in a Room that is not a Creature will be an Item
 # All items come with a name, description, weight, and durability
 class Item():
-	def __init__(self,name,desc,weight,durability):
+	def __init__(self,name,desc,weight,durability,status):
 		self.name = name
 		self.desc = desc
 		self.weight = weight
 		self.durability = durability
+		self.status = status
 		self.parent = None
 
 
@@ -930,6 +932,15 @@ class Item():
 			return self.Break()
 
 
+	def addCondition(self,name,dur,stackable=False):
+		if self.hasCondition(name) and not stackable:
+			return False
+		pair = [name,dur]
+		insort(self.status,pair)
+		return True
+
+
+
 	### Getters ###
 
 	def Weight(self):
@@ -939,7 +950,7 @@ class Item():
 	# Used to create a generic Weapon() if this item is used to attack something
 	def improviseWeapon(self):
 		#TODO: if item is too large/heavy, make it two-handed
-		return Weapon(self.name,self.desc,self.weight,self.durability,min1(self.weight//4),0,0,0,False,"b")
+		return Weapon(self.name,self.desc,self.weight,self.durability,[],min1(self.weight//4),0,0,0,False,"b")
 
 
 
@@ -1243,13 +1254,13 @@ class Creature():
 
 	def passTime(self,t):
 		for condition in self.status:
-			# if condition is a special condition, ignore it
+			# if condition is has a special duration, ignore it
 			if condition[1] < 0:
 				continue
 			# subtract remaining duration on condition
 			elif condition[1] > 0:
 				condition[1] -= t
-			# if, after subtraction, condition is non-positive, remove it
+			# if condition is non-positive after decrement, remove it
 			if condition[1] <= 0:
 				self.removeCondition(condition[0],0)
 
@@ -1528,7 +1539,8 @@ class Player(Creature):
 
 
 	def addCondition(self,name,dur,stackable=False,silent=False):
-		# TODO: include stackability (conditions which can exist multiple times)
+		if self.hasCondition(name) and not stackable:
+			return False
 		pair = [name,dur]
 		insort(self.status,pair)
 		if not silent:
@@ -1573,7 +1585,7 @@ class Player(Creature):
 				print("Critical hit!")
 				attack *= 2
 			damage = min0( attack - target.DFNS())
-			target.takeDamage(damage,self.weapon2.type,self)
+			target.takeDamage(damage,self.weapon2.type)
 			if target.alive == False:
 				return
 		else:
@@ -1581,7 +1593,7 @@ class Player(Creature):
 
 
 	def attackCreature(self,target):
-		n = min1( self.ATSP() // min1(target.ATSP()))
+		n = min1( self.ATSP() // min1(target.ATSP()) )
 		print(f"{n} attacks:")
 		for i in range(n):
 			print(f"\n{ordinal(i+1)} attack")
@@ -1594,7 +1606,7 @@ class Player(Creature):
 					print("Critical hit!")
 					attack *= 2
 				damage = min0( attack - target.DFNS())
-				target.takeDamage(damage,self.weapon.type,self)
+				target.takeDamage(damage,self.weapon.type)
 				if target.alive == False:	return
 			else:
 				print("Aw it missed")
@@ -1715,12 +1727,13 @@ class Player(Creature):
 				newdur = dur if dur > olddur and olddur > 0 else olddur
 				durations[idx] = newdur
 
+		nDigits = len(str(max(durations)))
 		# make list of strings to display conditions and their durations
 		statusdisplay = []
 		for i in range(len(conditions)):
 			statusdisplay.append(conditions[i])
 			if durations[i] < 0:
-				statusdisplay.append("--")
+				statusdisplay.append("-"*nDigits)
 			else:
 				statusdisplay.append(str(durations[i]))
 
@@ -1752,7 +1765,7 @@ class Player(Creature):
 
 
 class Animal(Creature):
-	def act(self,room):
+	def act(self):
 		if not self.alive:	return
 		if not game.silent:	print(f"\n{self.name}'s turn!")
 		self.attack()
@@ -1844,18 +1857,19 @@ Set status
 
 # almost identical to the item class, but fixtures may not be removed from their initial location. Fixtures also have a size attribute
 class Fixture(Item):
-	def __init__(self,name,desc,weight,durability):
-		Item.__init__(self,name,desc,weight,durability)
+	def __init__(self,name,desc,weight,durability,status):
+		Item.__init__(self,name,desc,weight,durability,status)
 
 
 
 
 class Passage(Fixture):
-	def __init__(self,name,desc,weight,durability,connections,descname,passprep):
+	def __init__(self,name,desc,weight,durability,status,connections,descname,passprep):
 		self.name = name
 		self.desc = desc
 		self.weight = weight
 		self.durability = durability
+		self.status = status
 		self.connections = connections
 		self.descname = descname
 		self.passprep = passprep
@@ -1890,11 +1904,12 @@ class Passage(Fixture):
 
 
 class Pylars(Item):
-	def __init__(self,value):
+	def __init__(self,value,status):
 		self.name = "Pylars"
 		self.desc = str(value) + " glistening coins made of an ancient metal"
 		self.weight = value
 		self.durability = -1
+		self.status = {}
 		self.descname = str(value) + " Pylars"
 		self.value = value
 
@@ -1930,8 +1945,8 @@ class Pylars(Item):
 
 
 class Weapon(Item):
-	def __init__(self,name,desc,weight,durability,might,sleight,sharpness,range,twohanded,type):
-		Item.__init__(self,name,desc,weight,durability)
+	def __init__(self,name,desc,weight,durability,status,might,sleight,sharpness,range,twohanded,type):
+		Item.__init__(self,name,desc,weight,durability,status)
 		self.might = might
 		self.sleight = sleight
 		self.sharpness = sharpness
@@ -1948,16 +1963,16 @@ class Weapon(Item):
 
 
 class Shield(Item):
-	def __init__(self,name,desc,weight,durability,prot):
-		Item.__init__(self,name,desc,durability,weight)
+	def __init__(self,name,desc,weight,durability,status,prot):
+		Item.__init__(self,name,desc,weight,durability,status)
 		self.prot = prot
 
 
 
 
 class Armor(Item):
-	def __init__(self,name,desc,weight,durability,prot):
-		Item.__init__(self,name,desc,weight,durability)
+	def __init__(self,name,desc,weight,durability,status,prot):
+		Item.__init__(self,name,desc,weight,durability,status)
 		self.prot = prot
 
 
@@ -1972,22 +1987,22 @@ class Armor(Item):
 
 
 class Helm(Armor):
-	def __init__(self,name,desc,weight,durability,prot):
-		Armor.__init__(self,name,desc,weight,prot)
+	def __init__(self,name,desc,weight,durability,status,prot):
+		Armor.__init__(self,name,desc,weight,status,prot)
 
 
 
 
 class Tunic(Armor):
-	def __init__(self,name,desc,weight,durability,prot):
-		Armor.__init__(self,name,desc,weight,durability,prot)
+	def __init__(self,name,desc,weight,durability,status,prot):
+		Armor.__init__(self,name,desc,weight,durability,status,prot)
 
 
 
 
 class Greaves(Armor):
-	def __init__(self,name,desc,weight,durability,prot):
-		Armor.__init__(self,name,desc,weight,durability,prot)
+	def __init__(self,name,desc,weight,durability,status,prot):
+		Armor.__init__(self,name,desc,weight,durability,status,prot)
 
 
 
@@ -2023,7 +2038,7 @@ class Monster(Creature):
 
 
 class Person(Creature):
-	def act(self,room):
+	def act(self):
 		pass
 
 

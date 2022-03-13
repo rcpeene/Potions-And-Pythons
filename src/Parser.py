@@ -289,6 +289,7 @@ def Cry(): print("A single tear sheds from your eye")
 def Dance(): print("You bust down a boogie")
 def Examples(): print("\n"*64 + Data.examples)
 
+def Hello(): print("Why hello there")
 
 def Help():
 	Core.clearScreen()
@@ -309,7 +310,7 @@ def Info():
 	Core.clearScreen()
 
 
-def Laugh(): print("HAHAHAHAHA!")
+def Laugh(): print('"HAHAHAHAHA!"')
 
 
 def Quit():
@@ -319,8 +320,8 @@ def Quit():
 
 def Return(): return Go(None, Core.game.prevroom.name, None) #go to previous room
 def Save(): saveGame()
-def Shout(): print("AHHHHHHHHHH")
-def Sing(): print("Falalalaaaa")
+def Shout(): print('"AHHHHHHHHHH"')
+def Sing(): print('"Falalalaaaa"')
 def Time(): print("Time:", Core.game.time)
 def Yawn():	print("This is no time for slumber!")
 
@@ -347,9 +348,9 @@ def Attack(dobj,iobj,prep):
 	if iobj != None:
 		weapon = Core.player.inGear(iobj)
 		if weapon == None:	weapon = Core.player.inInv(iobj)
-		if iobj in {"fist","hand"}:		weapon = Hand("your hand","",4,-1)
-		if iobj in {"foot","leg"}:		weapon = Foot("your foot","",8,-1)
-		if iobj in {"mouth","teeth"}:	weapon = Mouth("your mouth","",4,-1)
+		if iobj in {"fist","hand"}:		weapon = Hand("your hand","",4,-1,[])
+		if iobj in {"foot","leg"}:		weapon = Foot("your foot","",8,-1,[])
+		if iobj in {"mouth","teeth"}:	weapon = Mouth("your mouth","",4,-1,[])
 		if weapon == None:
 			print(f"There is no '{iobj}' in your inventory")
 			return False
@@ -879,11 +880,10 @@ def Go(dobj,iobj,prep):
 		return GoVertical(dir,passage,dobj)
 	# if just passage is given
 	if passage != None:
-		if Core.hasMethod(passage,"Traverse"):
-			return passage.Traverse(dir)
-		else:
+		if not Core.hasMethod(passage,"Traverse"):
 			print(f"The {passage.name} cannot be traversed")
 			return False
+		return passage.Traverse(dir)
 	# if just dest given
 	if dest != None:
 		return Core.game.changeRoom(Core.world[dest])
@@ -1030,7 +1030,7 @@ def Look(dobj,iobj,prep):
 		if dobj in Data.cancels:
 			return False
 
-	if dobj in {"room", "here"}:
+	if dobj in {"around", "here", "room"}:
 		Core.game.currentroom.describe()
 		return True
 	if dobj in {"me","myself",Core.player.name}:
@@ -1454,6 +1454,8 @@ shortactions = {
 "dance":Dance,
 "examples":Examples,
 "gear":Core.Player.printGear,
+"hi":Hello,
+"hello":Hello,
 "help":Help,
 "hp":Core.Player.printHP,
 "info": Info,

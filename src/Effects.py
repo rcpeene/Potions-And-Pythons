@@ -27,6 +27,8 @@ def destroyObject(obj):
 		parent.removeItem(obj)
 
 
+
+
 # effects may include:
 
 # spawning/destroying an item

@@ -14,6 +14,11 @@ from Core import *
 ############################
 
 
+class Axe(Weapon):
+	def Cut(self):
+		print("[you cut something?]")
+
+
 class Bottle(Item):
 	# breaks the bottle, removes it from player inventory, and randomly...
 	# generates a number of shards between 1,5 into the room.
@@ -28,8 +33,8 @@ class Bottle(Item):
 
 
 class Box(Item):
-	def __init__(self,name,desc,weight,durability,open,contents):
-		Item.__init__(self,name,desc,weight,durability)
+	def __init__(self,name,desc,weight,durability,status,open,contents):
+		Item.__init__(self,name,desc,weight,durability,status)
 		self.open = open
 		self.contents = contents
 
@@ -55,7 +60,7 @@ class Box(Item):
 		if len(self.contents) == 0:
 			print("It is empty")
 		else:
-			print("Inside there is " + listItems(self.contents))
+			print("Inside there is " + listObjects(self.contents))
 
 
 	# sets open bool to false
@@ -69,7 +74,7 @@ class Box(Item):
 			print("It is empty")
 		else:
 			self.open = True
-			print("Inside there is " + listItems(self.contents))
+			print("Inside there is " + listObjects(self.contents))
 
 
 	def addItem(self,I):
@@ -109,8 +114,8 @@ class Bread(Item):
 
 
 class Controller(Item):
-	def __init__(self,name,desc,weight,durability,effect):
-		Item.__init__(self,name,desc,weight,durability)
+	def __init__(self,name,desc,weight,durability,status,effect):
+		Item.__init__(self,name,desc,weight,durability,status)
 		self.effect = effect
 
 
@@ -127,8 +132,8 @@ class Controller(Item):
 
 
 class Door(Fixture):
-	def __init__(self,name,desc,weight,durability,open,connections):
-		Fixture.__init__(self,name,desc,weight,durability)
+	def __init__(self,name,desc,weight,durability,status,open,connections):
+		Fixture.__init__(self,name,desc,weight,durability,status)
 		self.open = open
 		# connection is a 4-tuple of the form:
 		# (outDirection, outLocation, inDirection, inLocation)
@@ -155,20 +160,20 @@ class Door(Fixture):
 
 class Foot(Item):
 	def improviseWeapon(self):
-		return Weapon(self.name,self.desc,self.weight,self.durability,Core.minm(1,self.weight//4),0,0,0,False,"b")
+		return Weapon(self.name,self.desc,self.weight,self.durability,[],Core.minm(1,self.weight//4),0,0,0,False,"b")
 
 
 
 class Hand(Item):
 	def improviseWeapon(self):
-		return Weapon(self.name,self.desc,self.weight,self.durability,Core.minm(1,self.weight//4),2,0,0,False,"b")
+		return Weapon(self.name,self.desc,self.weight,self.durability,[],Core.minm(1,self.weight//4),2,0,0,False,"b")
 
 
 
 
 class Key(Item):
-	def __init__(self,name,desc,weight,durability,id):
-		Item.__init__(self,name,desc,weight,durability)
+	def __init__(self,name,desc,weight,durability,status,id):
+		Item.__init__(self,name,desc,weight,durability,status)
 		self.id = id
 
 
@@ -182,8 +187,8 @@ class Key(Item):
 
 
 class Lockbox(Box):
-	def __init__(self,name,desc,weight,durability,open,contents,keyids,locked):
-		Box.__init__(self,name,desc,weight,durability,open,contents)
+	def __init__(self,name,desc,weight,durability,status,open,contents,keyids,locked):
+		Box.__init__(self,name,desc,weight,durability,status,open,contents)
 		self.keyids = keyids
 		self.locked = locked
 
@@ -204,7 +209,7 @@ class Lockbox(Box):
 		if len(self.contents) == 0:
 			print("It is empty")
 		else:
-			print("Inside there is " + listItems(self.contents))
+			print("Inside there is " + listObjects(self.contents))
 
 
 	def Look(self):
@@ -214,7 +219,7 @@ class Lockbox(Box):
 			print("It is empty")
 		else:
 			self.open = True
-			print("Inside there is " + listItems(self.contents))
+			print("Inside there is " + listObjects(self.contents))
 
 
 	def Lock(self,key):
@@ -249,7 +254,7 @@ class Lockbox(Box):
 
 class Mouth(Item):
 	def improviseWeapon(self):
-		return Weapon(self.name,self.desc,self.weight,self.durability,Core.minm(1,self.weight//4),0,0,4,False,"p")
+		return Weapon(self.name,self.desc,self.weight,self.durability,[],Core.minm(1,self.weight//4),0,0,4,False,"p")
 
 
 
@@ -281,8 +286,8 @@ class Shard(Item):
 
 
 class Sign(Item):
-	def __init__(self,name,desc,weight,durability,text):
-		Item.__init__(self,name,desc,durability,weight)
+	def __init__(self,name,desc,weight,durability,status,text):
+		Item.__init__(self,name,desc,durability,status,weight)
 		self.text = text
 
 
@@ -294,8 +299,8 @@ class Sign(Item):
 
 
 class Switch(Fixture):
-	def __init__(self,name,desc,weight,durability,effect):
-		Fixture.__init__(self,name,desc,weight,durability)
+	def __init__(self,name,desc,weight,durability,status,effect):
+		Fixture.__init__(self,name,desc,weight,status,durability)
 		self.effect = effect
 
 
@@ -319,8 +324,8 @@ class Sword(Weapon):
 
 
 class Table(Fixture):
-	def __init__(self,name,desc,weight,durability,contents,descname):
-		Fixture.__init__(self,name,desc,weight,durability)
+	def __init__(self,name,desc,weight,durability,status,contents,descname):
+		Fixture.__init__(self,name,desc,weight,durability,status)
 		self.contents = contents
 		self.descname = descname
 
@@ -372,15 +377,15 @@ class Table(Fixture):
 	def describe(self):
 		print(self.descname)
 		if len(self.contents) != 0:
-			print("On it is " + listItems(self.contents))
+			print("On it is " + listObjects(self.contents))
 		else:
 			print("There is nothing on it")
 
 
 
 class Wall(Passage):
-	def __init__(self,name,desc,weight,durability,connections,descname,passprep,cr):
-		Passage.__init__(self,name,desc,weight,durability,connections,descname,passprep)
+	def __init__(self,name,desc,weight,durability,status,connections,descname,passprep,cr):
+		Passage.__init__(self,name,desc,weight,durability,status,connections,descname,passprep)
 		self.cr = cr
 
 
@@ -408,15 +413,3 @@ class Wall(Passage):
 		print(f"You climb {dir} the {self.name}")
 		Core.game.changeRoom(Core.world[self.connections[dir]])
 		return True
-
-
-
-#########################
-## strToClass Function ##
-#########################
-
-# def strToClass(classname):
-# 	if classname in globals():
-# 		return globals()[classname]
-# 	else:
-# 		return None

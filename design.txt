@@ -89,7 +89,7 @@ NOTES ON THE CONVENTIONS AND FORMATTING USED IN THIS CODE PROJECT
 
 -strings which are concatenated with variables are formatted using f-string formatting, however the + operator is used when there are only two terms to concatenate. For example;
 	f"There is no '{obj.name}' here"
-	f"There is {listItems()} in this room"
+	f"There is {listObjects()} in this room"
 	"You take the " + item.name
 	"There is " + gprint("a",obj.name,3,1)
 
@@ -107,7 +107,7 @@ GAMEPLAY MECHANIC GOALS:
 -global events can occur which persistently alter something about the world
 -rooms are persistent globally
 -spells can occur and affect the game in many unique ways
--fun cheat codes?
+-fun cheat codes? (git, excelsior)
 
 
 
@@ -995,6 +995,7 @@ additional place ideas
 -A casino or various luck based gambling games in the world
 -An orb "ponder the orb?" maybe multiple orbs to ponder in the world like 7
 -sign that says "no philandering!"
+-town called "fleet-something"
 
 
 misc world ideas
@@ -1046,6 +1047,7 @@ CHARACTER NAMES:
 	Gremlaw the Goblin
 	Aloy
 	The Frog Prince
+	Eilonwy
 
 	one bbeg is the world serpent called Aeormungand (Leviathan?)
 	also an evil wizard ofc

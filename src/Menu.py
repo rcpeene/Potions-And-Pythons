@@ -69,9 +69,10 @@ def writeJSON(filename,World):
 
 
 def default(jsonDict):
-	# print("==== converting object of type: " + str(type(jsonDict)))
+	print("==== converting object of type: " + str(type(jsonDict)))
 	if "__class__" in jsonDict:
 		objClassname = jsonDict["__class__"]
+		print("=== class is " + objClassname)
 		del jsonDict["__class__"]
 		if objClassname == "set":
 			return set(jsonDict["setdata"])
@@ -302,7 +303,7 @@ def newGame():
 def testGame():
 	Core.world = readJSON("World.json")
 
-	inv = [Compass("compass","a plain steel compass with a red arrow",2,10)]
+	inv = [Compass("compass","a plain steel compass with a red arrow",2,10,[])]
 	status = [["fireproof",-1], ["poisoned",5], ["cursed",-2], ["immortal",-1],
 	["sharpshooter",50], ["invisible",15], ["poisoned",-1]]
 
