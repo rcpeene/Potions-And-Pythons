@@ -2015,6 +2015,25 @@ class Compass(Item):
 
 
 class Monster(Creature):
+	def act(self):
+		if not self.alive:	return
+		if not game.silent:	print(f"\n{self.name}'s turn!")
+		self.attack()
+
+
+	def attack(self):
+		# if creature is not in same room as player
+		if game.currentroom != game.activeroom:
+			return
+		# choose strongest weapon or use hand
+		if len(self.weapons()) == 0:
+			weapon = Hand("goblin hand","",4,-1,[])
+			weapon = weapon.improviseWeapon()
+		else:
+			weapon = max(self.weapons(),key=lambda x: x.might)
+
+
+
 	def isArmed():
 		# returns true if monster is armed
 		pass

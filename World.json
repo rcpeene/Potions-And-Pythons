@@ -306,7 +306,52 @@
 			"southwest": "boulder"
 		},
 		"contents": [],
-		"occupants": [],
+		"occupants": [
+			{
+				"__class__": "Monster",
+				"name": "Goblin",
+				"desc": "a small stinky green man with a big nose and pointy ears",
+				"hp": 10,
+				"mp": 0,
+				"money": 2,
+				"inv": [
+					{
+						"__class__": "Axe",
+						"name": "Axe",
+						"desc": "a dark iron axe",
+						"weight": 10,
+						"durability": 10,
+						"status": [],
+						"might": 4,
+						"sleight": 0,
+						"sharpness": 1,
+						"range": 0,
+						"twohanded": false,
+						"type": "s"
+					}
+				],
+				"status": [],
+				"gear": {
+					"head":-1,
+					"body":-1,
+					"left":-1,
+					"right":-1,
+					"legs":-1
+				},
+				"traits": [
+					2,
+					2,
+					2,
+					2,
+					2,
+					2,
+					2,
+					2,
+					2,
+					2
+				]
+			}
+		],
 		"status": []
 	},
 	"glen": {
