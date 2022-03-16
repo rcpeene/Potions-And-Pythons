@@ -2,22 +2,23 @@
 # This file runs main() which loops, having the user and creatures take actions
 # This file is dependent on Parser.py
 
-from Parser import *
-import Data
+import os
+
+import Core
+import Menu
+import Parser
+
+
 
 
 # formatting the prompt window
 os.system("mode con:cols=130 lines=32")
 os.system("title Potions ^& Pythons")
 
-# import pygetwindow
-# win = pygetwindow.getWindowsWithTitle('Potions & Pythons')[0]
-# win.size = (128*8, 32*16) #128 x 32 tiles of 8 x 16 pixels
-
 # run intro logo animation
-gameIntro()
+Menu.gameIntro()
 # instantiate global objects Player, World, Game
-mainMenu()
+Menu.mainMenu()
 # assign non-room objects parents, which specifies what they are contained in
 Core.assignParents()
 # eliminate any room connections which don't exist in the world dict
@@ -29,7 +30,7 @@ while True:
 	Core.game.whoseturn = Core.player
 
 	# take user input until player successfully performs an action
-	while not parse():	continue
+	while not Parser.parse():	continue
 
 	# creatures in current room's turn
 	Core.game.activeroom = Core.game.currentroom
@@ -62,6 +63,7 @@ while True:
 
 # CURRENT TASKS
 
+# add douse function
 # add some preliminary spells and add effects file
 # consider enter, exit functions in room
 # reevaluate effect functions, is there a way to reference a function by string?

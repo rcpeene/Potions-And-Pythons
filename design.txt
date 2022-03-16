@@ -1011,7 +1011,7 @@ misc world ideas
 -golden bug quest
 -pandora box "banishment box" wish unleashes all creatures the player has ever banished with the banish spell
 -limericks/poems/poem book?
-
+-the mist
 
 
 
@@ -1031,6 +1031,7 @@ CHARACTER NAMES:
 	villain king of beasts
 	Balthazar the Wizard
 	Tyro
+	Cogg
 	Sir Tom Knight (Sir Tom the Hero!)
 	Mr.Oliphant
 	Ike

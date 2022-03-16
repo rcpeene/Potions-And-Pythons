@@ -69,15 +69,15 @@ def writeJSON(filename,World):
 
 
 def default(jsonDict):
-	print("==== converting object of type: " + str(type(jsonDict)))
+	# print("==== converting object of type: " + str(type(jsonDict)))
 	if "__class__" in jsonDict:
 		objClassname = jsonDict["__class__"]
-		print("=== class is " + objClassname)
+		# print("=== class is " + objClassname)
 		del jsonDict["__class__"]
 		if objClassname == "set":
 			return set(jsonDict["setdata"])
 
-		objClass = Core.strToClass(objClassname, ["Creatures","Core","Items"])
+		objClass = Core.strToClass(objClassname,["Core","Creatures","Items"])
 		objAttributes = list(jsonDict.values())
 		# print("========: " + d["name"] + " " + str(objAttributes))
 		if objClassname == "Room":

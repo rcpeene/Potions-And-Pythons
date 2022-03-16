@@ -164,6 +164,16 @@ class Foot(Item):
 
 
 
+class Fountain(Fixture):
+	def Douse():
+		pass
+
+	def Drink(self):
+		print(f"You drink from the {self.name}")
+
+
+
+
 class Hand(Item):
 	def improviseWeapon(self):
 		return Weapon(self.name,self.desc,self.weight,self.durability,[],Core.minm(1,self.weight//4),2,0,0,False,"b")
@@ -262,7 +272,7 @@ class Mouth(Item):
 class Potion(Bottle):
 	# heals the player hp 1000, replaces potion with an empty bottle
 	def Drink(self):
-		print("You drink the potion")
+		print(f"You drink the {self.name}")
 		Core.player.heal(1000)
 		self.parent.removeItem(self)
 		Core.player.addItem(Bottle("bottle","an empty glass bottle",3,3))

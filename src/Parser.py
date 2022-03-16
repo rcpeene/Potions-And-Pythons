@@ -7,10 +7,9 @@
 # 2. Action functions	(action, shortaction, cheat functions called by parse())
 # 3. Action dicts		(dictionaries used to call action functions from)
 
-from Menu import *
 import Data
 import Core
-
+import Menu
 
 
 #######################
@@ -248,14 +247,7 @@ def Teleport(command):
 
 
 def Test(command):
-	for i in range(10):
-		print("hello" + str(i))
-		if Core.kbInput():
-			Core.clearScreen()
-			Core.flushInput()
-			return
-		sleep(1)
-		# Core.clearScreen()
+	print(P)
 	return True
 
 
@@ -287,7 +279,11 @@ def Zap(command):
 
 def Cry(): print("A single tear sheds from your eye")
 def Dance(): print("You bust down a boogie")
-def Examples(): print("\n"*64 + Data.examples)
+
+def Examples():
+	print("\n"*64 + Data.examples)
+	input()
+	Core.clearScreen()
 
 def Hello(): print("Why hello there")
 
@@ -305,7 +301,8 @@ def Help():
 
 
 def Info():
-	print("\n"*64 + Data.gameinfo)
+	Core.clearScreen()
+	print(Data.gameinfo)
 	input()
 	Core.clearScreen()
 
@@ -319,7 +316,7 @@ def Quit():
 
 
 def Return(): return Go(None, Core.game.prevroom.name, None) #go to previous room
-def Save(): saveGame()
+def Save(): Menu.saveGame()
 def Shout(): print('"AHHHHHHHHHH"')
 def Sing(): print('"Falalalaaaa"')
 def Time(): print("Time:", Core.game.time)

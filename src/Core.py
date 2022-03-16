@@ -1277,7 +1277,7 @@ class Creature():
 		print("agh its... ded?")
 		# TODO: make this just drop some random number of money not just LOOT
 		n = diceRoll(3,player.LOOT(),-2)
-		game.activeroom.addItem(Pylars(n))
+		game.activeroom.addItem(Pylars(n,[]))
 		if not game.silent: print(f"Dropped Ᵽ {n}")
 		if game.whoseturn is player:
 			player.gainxp(10)
@@ -1905,12 +1905,12 @@ class Passage(Fixture):
 
 class Pylars(Item):
 	def __init__(self,value,status):
-		self.name = "Pylars"
+		self.name = "Gold"
 		self.desc = str(value) + " glistening coins made of an ancient metal"
 		self.weight = value
 		self.durability = -1
 		self.status = {}
-		self.descname = str(value) + " Pylars"
+		self.descname = str(value) + " Gold"
 		self.value = value
 
 
@@ -1920,7 +1920,11 @@ class Pylars(Item):
 	# returns a dict which contains all the necessary information to store...
 	# this object instance as a JSON object when saving the game
 	def convertToJSON(self):
-		return {"__class__":self.__class__.__name__, "value": self.value}
+		return {
+		"__class__":self.__class__.__name__,
+		"value": self.value,
+		"status": []
+		}
 
 
 
@@ -1933,7 +1937,7 @@ class Pylars(Item):
 	### User Output ###
 	def stringName(self,n=-1,definite=True,cap=False,plural=False):
 		strname = self.descname if hasattr(self,"descname") else self.name
-		strname = "Pylar" if self.value == 1 else "Pylars"
+		strname = "Gold"
 		strname = str(self.value) + " " + strname
 		if definite:
 			strname = "the " + strname
