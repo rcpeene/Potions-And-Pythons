@@ -19,6 +19,8 @@ class Axe(Weapon):
 		print("[you cut something?]")
 
 
+
+
 class Bottle(Item):
 	# breaks the bottle, removes it from player inventory, and randomly...
 	# generates a number of shards between 1,5 into the room.
@@ -113,6 +115,7 @@ class Bread(Item):
 
 
 
+
 class Controller(Item):
 	def __init__(self,name,desc,weight,durability,status,effect):
 		Item.__init__(self,name,desc,weight,durability,status)
@@ -164,6 +167,7 @@ class Foot(Item):
 
 
 
+
 class Fountain(Fixture):
 	def Douse():
 		pass
@@ -193,6 +197,7 @@ class Key(Item):
 
 	def UnlockWith(self,box):
 		pass
+
 
 
 
@@ -390,6 +395,7 @@ class Table(Fixture):
 			print("On it is " + listObjects(self.contents))
 		else:
 			print("There is nothing on it")
+
 
 
 

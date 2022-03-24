@@ -265,7 +265,8 @@ def delete(filename):
 
 	# remove all files in this save directory, and remove that save directory
 	os.chdir(savename)
-	for filename in os.listdir(): os.remove(filename)
+	for filename in os.listdir():
+		os.remove(filename)
 	os.chdir("..")
 	os.rmdir(savename)
 	os.chdir("..")
@@ -334,18 +335,24 @@ def mainMenu():
 		print(Data.menuinstructions)
 		g = input("> ").lower().split()
 
-		if len(g) == 0: 						continue
-		elif g[0] == "info" and len(g) == 1:	gameInfo()
-		elif g[0] == "new" and len(g) == 1:		return newGame()
-
-		elif g[0] == "load" and len(g) == 1:	return loadGame(None)
-		elif g[0] == "load":					return loadGame(" ".join(g[1:]))
-
-		elif g[0] == "delete" and len(g) == 1:	delete(None)
-		elif g[0] == "delete":					delete(" ".join(g[1:]))
-
-		elif g[0] == "quit" and len(g) == 1:	sys.exit()
-		elif g[0] == "test" and len(g) == 1:	return testGame()
+		if len(g) == 0:
+			continue
+		elif g[0] == "info" and len(g) == 1:
+			gameInfo()
+		elif g[0] == "new" and len(g) == 1:
+			return newGame()
+		elif g[0] == "load" and len(g) == 1:
+			return loadGame(None)
+		elif g[0] == "load":
+			return loadGame(" ".join(g[1:]))
+		elif g[0] == "delete" and len(g) == 1:
+			delete(None)
+		elif g[0] == "delete":
+			delete(" ".join(g[1:]))
+		elif g[0] == "quit" and len(g) == 1:
+			sys.exit()
+		elif g[0] == "test" and len(g) == 1:
+			return testGame()
 
 
 
@@ -391,13 +398,13 @@ def moveBubble(logoArray,row,col):
 			# generate "drift"; it may move left or right as it also moves up
 			drift = randint(-1,1)
 			# if bubble is blocked above by a wall, it must drift accordingly
-			if logoArray[row-1][col] == "\\":		drift = -1
-			elif logoArray[row-1][col] == "/":		drift = 1
+			if logoArray[row-1][col] == "\\": drift = -1
+			elif logoArray[row-1][col] == "/": drift = 1
 			# determine new unoccupied location as bubble moves upward
 			newLoc = logoArray[row-1][col+drift]
 			while newLoc not in {" ","*","O","o","."}:
-				if logoArray[row-1][col] == "\\":	drift = -1
-				elif logoArray[row-1][col] == "/":	drift = 1
+				if logoArray[row-1][col] == "\\": drift = -1
+				elif logoArray[row-1][col] == "/": drift = 1
 				drift = randint(-1,1)
 				newLoc = logoArray[row-1][col+drift]
 			#if bubble collides with another bubble, remove one of them
@@ -528,7 +535,8 @@ def gameIntro():
 		sleep(0.125)
 
 	# if user skipped bubble animation, skip rest of intro too
-	if not dynamicBubbleAnimation(0.25,10,2):	return endIntro()
+	if not dynamicBubbleAnimation(0.25,10,2):
+		return endIntro()
 
 	# print PoPy text crawling up
 	sleep(0.375)

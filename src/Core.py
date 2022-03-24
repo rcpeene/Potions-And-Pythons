@@ -27,7 +27,8 @@ import Data
 ####################
 
 
-# retrieves a class object (if it exists) with className from the modules list
+# retrieves a class object with className from the modules list
+# returns None if no such object exists
 def strToClass(className,moduleNames):
 	classObject = None
 	for moduleName in moduleNames:
@@ -132,7 +133,8 @@ def gprint(det,text,pos,n):
 def capWords(string):
 	listString = string.split(' ')
 	cappedString = ''
-	for word in listString: cappedString += word[0].upper() + word[1:] + ' '
+	for word in listString:
+		cappedString += word[0].upper() + word[1:] + ' '
 	return cappedString[0:-1]	# removes trailing space character
 
 
@@ -152,10 +154,10 @@ def singularize(term):
 # returns the ordinal string for a number n
 def ordinal(n):
 	lastDigit = n % 10
-	if lastDigit == 1:		suffix = "st"
-	elif lastDigit == 2:	suffix = "nd"
-	elif lastDigit == 3:	suffix = "rd"
-	else:					suffix = "th"
+	if lastDigit == 1: suffix = "st"
+	elif lastDigit == 2: suffix = "nd"
+	elif lastDigit == 3: suffix = "rd"
+	else: suffix = "th"
 	return str(n) + suffix
 
 
@@ -170,8 +172,10 @@ def ambiguateDirections(text):
 # returns an abbreviated direction into an expanded one
 # for example, converts 'nw' -> 'northwest' or 'u' -> 'up'
 def expandDir(term):
-	if term in Data.directions:	return Data.directions[term]
-	else:					return term
+	if term in Data.directions:
+		return Data.directions[term]
+	else:
+		return term
 
 
 # returns a list of element names for L, a list of objects with name attribute
@@ -204,9 +208,12 @@ def listObjects(objects):
 	liststring = ""
 	l = len(objBag)
 	for i, (obj, count) in enumerate(objBag):
-		if i == l-1:	liststring += obj.stringName(count,False)
-		elif i == l-2:	liststring += obj.stringName(count,False) + " and "
-		else:			liststring += obj.stringName(count,False) + ", "
+		if i == l-1:
+			liststring += obj.stringName(count,False)
+		elif i == l-2:
+			liststring += obj.stringName(count,False) + " and "
+		else:
+			liststring += obj.stringName(count,False) + ", "
 	return liststring
 
 
@@ -224,8 +231,10 @@ def extractConditionInfo(roomCondition):
 def yesno(question):
 	while True:
 		command = input(question + '\n> ').lower()
-		if command in Data.yesses:	return True
-		elif command in Data.noes:	return False
+		if command in Data.yesses:
+			return True
+		elif command in Data.noes:
+			return False
 		print("Enter yes or no")
 
 
@@ -287,19 +296,22 @@ def maxm(m,n): return m if n > m else n
 # this function is a wrapper for objSearchRecur()
 def objSearch(term,root,d=0,getPath=False,getSource=False,reqSource=None):
 	target,source,path = objSearchRecur(term,root,[],d,reqSource)
-	if getPath:		return target,path
-	elif getSource:	return target,source
-	else:			return target
+	if getPath:
+		return target,path
+	elif getSource:
+		return target,source
+	else:
+		return target
 
 
 def objSearchRecur(term,node,path,d,reqSource):
 	target,source = None,None
 	# choose list of objects to search through depending on the node's type
-	if isinstance(node,Room):	searchThrough = node.contents + node.occupants
-	elif hasattr(node,"contents"):	searchThrough = node.contents
-	elif hasattr(node,"inv"):		searchThrough = node.inv
+	if isinstance(node,Room): searchThrough = node.contents + node.occupants
+	elif hasattr(node,"contents"): searchThrough = node.contents
+	elif hasattr(node,"inv"): searchThrough = node.inv
 	# if node is unsearchable: return
-	else:	return target,source,path
+	else: return target,source,path
 
 	# firstly, just search objects in the "top level" of the tree for a match
 	for obj in searchThrough:
@@ -315,9 +327,9 @@ def objSearchRecur(term,node,path,d,reqSource):
 		# if target object was already found, no need to search deeper
 		if target != None:	break
 		# depending on the degree, may skip closed, locked, or creature objects
-		if d == 0 and hasattr(obj,"open") and not obj.open:		continue
-		elif (d <= 1) and isinstance(obj,Creature):				continue
-		elif d <= 2 and hasattr(obj,"locked") and obj.locked:	continue
+		if d == 0 and hasattr(obj,"open") and not obj.open: continue
+		elif (d <= 1) and isinstance(obj,Creature): continue
+		elif d <= 2 and hasattr(obj,"locked") and obj.locked: continue
 		# recur the search on each object node, I
 		target,source,path = objSearchRecur(term,obj,path,d,reqSource)
 
@@ -334,20 +346,20 @@ def objSearchRecur(term,node,path,d,reqSource):
 def objTreeToSet(root,d=0,getSources=False):
 	allObjects = set()
 	# determine what to search through based on the root's type
-	if isinstance(root,Room):	searchThrough = root.contents + root.occupants
-	elif hasattr(root,"contents"):	searchThrough = root.contents
-	elif hasattr(root,"inv"):		searchThrough = root.inv
+	if isinstance(root,Room): searchThrough = root.contents + root.occupants
+	elif hasattr(root,"contents"): searchThrough = root.contents
+	elif hasattr(root,"inv"): searchThrough = root.inv
 	# if the item is not searchable, return empty set
-	else:	return set()
+	else: return set()
 
 	for obj in searchThrough:
 		# add the item to the set of all items
 		if getSources:	allObjects.add((obj,root))
 		else:			allObjects.add(obj)
 		# depending on the degree, skips closed, locked, or creature objects
-		if d == 0 and hasattr(obj,"open") and not obj.open:		continue
-		elif (d <= 1) and isinstance(obj,Creature):				continue
-		elif d <= 2 and hasattr(obj,"locked") and obj.locked:	continue
+		if d == 0 and hasattr(obj,"open") and not obj.open: continue
+		elif (d <= 1) and isinstance(obj,Creature): continue
+		elif d <= 2 and hasattr(obj,"locked") and obj.locked: continue
 		# unionize the set of all items with item obj's set
 		allObjects = allObjects | objTreeToSet(obj,d=d,getSources=getSources)
 	return allObjects
@@ -357,10 +369,10 @@ def objTreeToSet(root,d=0,getSources=False):
 # iterates through objects within the root and assigns root as their parent
 # recurs for each object
 def assignParentsRecur(root):
-	if isinstance(root,Room):	searchThrough = root.contents + root.occupants
-	elif hasattr(root,"contents"):	searchThrough = root.contents
-	elif hasattr(root,"inv"):		searchThrough = root.inv
-	else:	return
+	if isinstance(root,Room): searchThrough = root.contents + root.occupants
+	elif hasattr(root,"contents"): searchThrough = root.contents
+	elif hasattr(root,"inv"): searchThrough = root.inv
+	else: return
 
 	for obj in searchThrough:
 		obj.parent = root
@@ -578,7 +590,8 @@ class Game():
 	# key is a function which identifies a condition about the obj
 	# d is the 'degree' of the search. See objSearch() for details
 	def searchRoom(self,room=None,key=lambda x:x,d=3):
-		if room == None: room = self.currentroom
+		if room == None:
+			room = self.currentroom
 		return list(filter(key, objTreeToSet(room,d=d)))
 
 
@@ -1065,8 +1078,10 @@ class Creature():
 			if item == Empty():
 				C[key] = -1
 				continue
-			try:	C[key] = self.inv.index(item)
-			except:	raise Exception("gear item not found in inventory")
+			try:
+				C[key] = self.inv.index(item)
+			except:
+				raise Exception("gear item not found in inventory")
 		return C
 
 
@@ -1106,9 +1121,9 @@ class Creature():
 
 	# takes incoming damage, accounts for damage vulnerability or resistance
 	def takeDamage(self,dmg,type):
-		if(f"{type} vulnerability" in self.status):	dmg *= 2
-		if(f"{type} resistance" in self.status):	dmg //= 2
-		if(f"{type} immunity" in self.status):		dmg = 0
+		if(f"{type} vulnerability" in self.status): dmg *= 2
+		if(f"{type} resistance" in self.status): dmg //= 2
+		if(f"{type} immunity" in self.status): dmg = 0
 		print(f"Took {dmg} {Data.dmgtypes[type]} damage")
 		self.hp = min0( self.hp-dmg)	#player hp lowered to a minimum of 0
 		if(self.hp == 0):
@@ -1213,10 +1228,10 @@ class Creature():
 
 	# if the item is armor, equip it, otherwise return False
 	def equipArmor(self,I):
-		if isinstance(I,Helm):		self.gear["head"] = I
-		elif isinstance(I,Tunic):	self.gear["body"] = I
-		elif isinstance(I,Greaves):	self.gear["legs"] = I
-		else:	return False
+		if isinstance(I,Helm): self.gear["head"] = I
+		elif isinstance(I,Tunic): self.gear["body"] = I
+		elif isinstance(I,Greaves): self.gear["legs"] = I
+		else: return False
 		I.Equip(self)
 		return True
 
@@ -1278,7 +1293,8 @@ class Creature():
 		# TODO: make this just drop some random number of money not just LOOT
 		n = diceRoll(3,player.LOOT(),-2)
 		game.activeroom.addItem(Pylars(n,[]))
-		if not game.silent: print(f"Dropped Ᵽ {n}")
+		if not game.silent:
+			print(f"Dropped Ᵽ {n}")
 		if game.whoseturn is player:
 			player.gainxp(10)
 
@@ -1362,7 +1378,8 @@ class Creature():
 	# if a match is found, return the item, otherwise return None
 	def inInv(self,term):
 		for item in self.inv:
-			if item.name.lower() == term:	return item
+			if item.name.lower() == term:
+				return item
 		return None
 
 
@@ -1535,7 +1552,8 @@ class Player(Creature):
 		print(f"\nYou gained {newxp} xp\n{self.xp} + {newxp} = {self.xp+newxp}")
 		self.xp += newxp
 		newlv = self.level()
-		if oldlv != newlv: self.levelUp(oldlv,newlv)
+		if oldlv != newlv:
+			self.levelUp(oldlv,newlv)
 
 
 	def addCondition(self,name,dur,stackable=False,silent=False):
@@ -1607,11 +1625,14 @@ class Player(Creature):
 					attack *= 2
 				damage = min0( attack - target.DFNS())
 				target.takeDamage(damage,self.weapon.type)
-				if target.alive == False:	return
+				if target.alive == False:
+					return
 			else:
 				print("Aw it missed")
-			if self.weapon2 != Empty():	self.dualAttack(target)
-			if target.alive == False:	return
+			if self.weapon2 != Empty():
+				self.dualAttack(target)
+			if target.alive == False:
+				return
 
 
 	def attackItem(self,target):
@@ -1661,8 +1682,10 @@ class Player(Creature):
 	# prints all 10 player traits
 	def printTraits(self):
 		for trait in Data.traits:
-			if trait in {"STR","CHA"}:	print()
-			else:						print("\t\t",end="")
+			if trait in {"STR","CHA"}:
+				print()
+			else:
+				print("\t\t",end="")
 			print(f"{trait}: {getattr(self,trait)}",end="")
 		print()
 
@@ -1754,7 +1777,8 @@ class Player(Creature):
 	def printWeapons(self):
 		if len(self.weapons()) == 0:
 			print("You have no weapons")
-		else:	columnPrint(self.weapons(),12,12)
+		else:
+			columnPrint(self.weapons(),12,12)
 
 
 
@@ -1766,13 +1790,16 @@ class Player(Creature):
 
 class Animal(Creature):
 	def act(self):
-		if not self.alive:	return
-		if not game.silent:	print(f"\n{self.name}'s turn!")
+		if not self.alive:
+			return
+		if not game.silent:
+			print(f"\n{self.name}'s turn!")
 		self.attack()
 
 
 	def attack(self):
-		if not game.silent:	print("attack?")
+		if not game.silent:
+			print("attack?")
 
 
 	def climb():
@@ -2020,8 +2047,10 @@ class Compass(Item):
 
 class Monster(Creature):
 	def act(self):
-		if not self.alive:	return
-		if not game.silent:	print(f"\n{self.name}'s turn!")
+		if not self.alive:
+			return
+		if not game.silent:
+			print(f"\n{self.name}'s turn!")
 		self.attack()
 
 

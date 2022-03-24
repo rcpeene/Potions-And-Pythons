@@ -59,11 +59,16 @@ def nounify(command,i):
 # matches the pronoun in the Game class. Intended to return a "best guess"
 def replacePronoun(term):
 	obj = None
-	if term == "it":				obj = Core.game.it
-	elif term in {"she","her"}:		obj = Core.game.she
-	elif term in {"he","him"}:		obj = Core.game.he
-	elif term in {"they","them"}:	obj = Core.game.they
-	if obj == None:					return None
+	if term == "it":
+		obj = Core.game.it
+	elif term in {"she","her"}:
+		obj = Core.game.she
+	elif term in {"he","him"}:
+		obj = Core.game.he
+	elif term in {"they","them"}:
+		obj = Core.game.they
+	if obj == None:
+		return None
 	return obj.name
 
 
@@ -101,14 +106,19 @@ def parseWithoutVerb(prompt,preps):
 	# terms based on their position relative to the other terms present
 	for term in cmdInput:
 		# preposition is defined if the term is a known preposition
-		if term in Data.prepositions and prep == None:	prep = term
+		if term in Data.prepositions and prep == None:
+			prep = term
 		# direct object is defined if prep and dobj havent been found yet
-		elif prep == None and dobj == None:			dobj = term
+		elif prep == None and dobj == None:
+			dobj = term
 		# indirect object is defined if a prep or dobj has been found
-		else:										iobj = term
+		else:
+			iobj = term
 
-	if dobj in Data.pronouns:	dobj = replacePronoun(dobj)
-	if iobj in Data.pronouns:	iobj = replacePronoun(iobj)
+	if dobj in Data.pronouns:
+		dobj = replacePronoun(dobj)
+	if iobj in Data.pronouns:
+		iobj = replacePronoun(iobj)
 
 	return dobj,iobj,prep
 
@@ -117,9 +127,12 @@ def parseWithoutVerb(prompt,preps):
 # prints a helpful message if user has provided invalid input 3 or more times
 # n is the number of times parse() has recurred
 def promptHelp(msg,n):
-	if msg != "":	print(msg)
-	if n >= 2:	print("Enter 'help' for a list of commands")
-	if n > 32:	return False	# prevent stack overflow from repeated bad input
+	if msg != "":
+		print(msg)
+	if n >= 2:
+		print("Enter 'help' for a list of commands")
+	if n > 32:
+		return False	# prevent stack overflow from repeated bad input
 	return parse(n+1)	# ask again
 
 
@@ -158,21 +171,28 @@ def parse(n=0):
 	# terms based on their position relative to the other terms present
 	for term in command[1:]:
 		# preposition is defined if the term is a known preposition
-		if term in Data.prepositions and prep == None:	prep = term
+		if term in Data.prepositions and prep == None:
+			prep = term
 		# direct object is defined if prep and dobj havent been found yet
-		elif prep == None and dobj == None:			dobj = term
+		elif prep == None and dobj == None:
+			dobj = term
 		# indirect object is defined if a prep or dobj has been found
-		elif iobj == None:							iobj = term
+		elif iobj == None:
+			iobj = term
 
-	if dobj in Data.pronouns:	dobj = replacePronoun(dobj)
-	if iobj in Data.pronouns:	iobj = replacePronoun(iobj)
+	if dobj in Data.pronouns:
+		dobj = replacePronoun(dobj)
+	if iobj in Data.pronouns:
+		iobj = replacePronoun(iobj)
 
 	# this line calls the action function using the 'actions' dict
 	actionCompleted = actions[verb](dobj,iobj,prep)
 	# if action was instant, loop for another command
-	if verb in Data.instantactions:	return False
+	if verb in Data.instantactions:
+		return False
 	# if action was not completed for some reason, recur
-	if not actionCompleted:		return promptHelp("",n)
+	if not actionCompleted:
+		return promptHelp("",n)
 	return True
 
 
@@ -213,8 +233,10 @@ def Get(command):
 
 
 def Learn(command):
-	try:	Core.player.gainxp(int(command[1]))
-	except:	print("Value not number")
+	try:
+		Core.player.gainxp(int(command[1]))
+	except:
+		print("Value not number")
 
 
 def Mode(command):
@@ -226,8 +248,10 @@ def Mode(command):
 
 
 def Pypot(command):
-	try:	Core.player.money = Core.player.money + int(command[1])
-	except:	print("Value not number")
+	try:
+		Core.player.money = Core.player.money + int(command[1])
+	except:
+		print("Value not number")
 
 
 def Set(command):
@@ -242,8 +266,10 @@ def Set(command):
 
 def Teleport(command):
 	location = command[1]
-	if location in Core.world:	Core.game.changeRoom(Core.world[location])
-	else:				print("Location not in world")
+	if location in Core.world:
+		Core.game.changeRoom(Core.world[location])
+	else:
+		print("Location not in world")
 
 
 def Test(command):
@@ -252,8 +278,10 @@ def Test(command):
 
 
 def Warp(command):
-	try:	Core.game.time += int(command[1])
-	except:	print("Value not number")
+	try:
+		Core.game.time += int(command[1])
+	except:
+		print("Value not number")
 
 
 def Zap(command):

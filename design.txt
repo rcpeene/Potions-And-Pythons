@@ -986,6 +986,8 @@ several settlements exist in the world (aim for like at least 9)
 
 
 additional place ideas
+-colonnade
+-amphitheatre
 -the garden path "to mislead someone"
 -a very smelly tree
 -black lotus
@@ -1065,26 +1067,34 @@ argentavis (big bird)
 
 THIRTEEN GODS WITH TEMPLES:
 
-god of strength, fighting, war, lightning
-god of speed, messages, flight, the sky, clouds
-god of skill, ninjas, archery, hunting
-god of stamina, athletics, victory, harvest
-god of constitution, crafting, smithing, fire
-god of charisma,
-god of intelligence,
-god of wisdom,
-god of faith,
-god of luck, tricks, games, cards, money
-
-sun/love, moon/friendship, death, harvest, war/storms, song/dance/art, animals/hunting, language/magic/truth, crafting/smithing/fire, law, the sea, betrayal/murder, beer/alcohol, trees?, healing, patience, prophecy/fate/stars, peace, wealth/trade, mercy/grace/forgiveness,
+The god of intelligence, moon, friendship, magic, writing, truth, and law
+god of strength, storms, war, fighting, victory
+god of skill, rain, rivers, crafting, art, discipline
+god of luck, the sea, money, tricks, alcohol, humor
+god of speed, the sky, wind, messages, flight, loyalty
+god of death, winter, plagues
+goddess of charisma, sun, love, magic, music
+goddess of stamina, beasts, summer, freedom
+goddess of wisdom, stars, prophecy, fate, time
+goddess of faith, harvest, peace, protection, fertility
+goddess of constitution, plants, healing, patience, mercy
+goddess of fire, rebirth, dragons, chaos
+deity of the unknown, secrets, darkness
 
 https://www.ancient.eu/article/885/egyptian-gods---the-complete-list/
-sun/magic/love/song/music/art
-moon/magic/brotherhood/writing/math/truth
+https://en.vikidia.org/wiki/List_of_Norse_gods_and_goddesses
 
-"lord of truth"
-"queen mother"
-"the undead god"
+God Names:
+Arun
+Kiova
+Voldur
+Zet
+Saqu
+Rook
+Ulila
+Ulur
+Rogg
+
 
 each of the gods appear in the world in a unique form, such as:
 a cat
