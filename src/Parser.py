@@ -81,7 +81,8 @@ def processCmd(prompt,storeRawCmd=False):
 	while not any(i not in "\t " for i in rawcommand):
 		rawcommand = input("> ")
 	# for convenience, save raw command in game object
-	if storeRawCmd:	Core.game.lastRawCommand = rawcommand.split()
+	if storeRawCmd:
+		Core.game.lastRawCommand = rawcommand.split()
 
 	# lowercase-ify the sentence command, copy it excluding symbols
 	purecommand = "".join([i for i in rawcommand.lower() if i not in Data.symbols])

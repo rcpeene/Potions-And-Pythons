@@ -1051,6 +1051,8 @@ CHARACTER NAMES:
 	Aloy
 	The Frog Prince
 	Eilonwy
+	Beowin
+	Rook
 
 	one bbeg is the world serpent called Aeormungand (Leviathan?)
 	also an evil wizard ofc
@@ -1067,33 +1069,47 @@ argentavis (big bird)
 
 THIRTEEN GODS WITH TEMPLES:
 
-The god of intelligence, moon, friendship, magic, writing, truth, and law
-god of strength, storms, war, fighting, victory
-god of skill, rain, rivers, crafting, art, discipline
-god of luck, the sea, money, tricks, alcohol, humor
-god of speed, the sky, wind, messages, flight, loyalty
-god of death, winter, plagues
-goddess of charisma, sun, love, magic, music
-goddess of stamina, beasts, summer, freedom
-goddess of wisdom, stars, prophecy, fate, time
-goddess of faith, harvest, peace, protection, fertility
-goddess of constitution, plants, healing, patience, mercy
-goddess of fire, rebirth, dragons, chaos
-deity of the unknown, secrets, darkness
+Arunius - God of intelligence, moon, brotherhood, magic, writing, truth, and law
+The King of the Gods, gave writing to humans, appears as a bearded older man. Gives the blessing of sagacity.
+
+Brym - God of strength, storms, war, fighting, victory
+Fought and defeated Ixis the Dragoness, represented by lightning. Appears as a severe bald man in armor. Gives the blessing of brawniness.
+
+Istur - God of skill, rain, rivers, crafting, art, discipline
+Appears as a long-haired man in robes with tools or a brush. Gives the blessing of prowess.
+
+Saqul - God of luck, the sea, money, alcohol, humor
+Appears as a hairy man with a long beard. Gives the blessing of prosperity. Has a pet goose.
+
+Haeron - God of speed, the sky, wind, messages, flight, loyalty
+Is the loyal servant of Arunius. Appears as a man with wings or a cape and curly hair. Gives the blessing of swiftness.
+
+Rook - God of death, winter, plagues
+The ruler of the underworld. Oftentimes appears as a man with no eyes and skeletal hands. Represented by a murder of crows.
+
+Veia - Goddess of charisma, sun, love, magic, music
+The Queen of the Gods, gave music to humans. Appears as a golden older women with a bright crown. Gives the blessing of felicity.
+
+Caillenn - Goddess of stamina, beasts, summer, freedom
+A woman with antlers and a tail. She plays the flute. Sometimes appears as a huntress. Gives the blessing of liveliness. Symbolized by a squirrel.
+
+Astrathe - Goddess of wisdom, stars, prophecy, fate, time
+An older woman in long starry robes and a tall hat and a third eye. Gives the blessing of lucidity.
+
+Zet - Goddess of faith, harvest, peace, protection, fertility
+Symbolized by a blue rose. Usually appears as a woman in a white robe with a blue halo. Sometimes shown pregnant or with babies. Gives the blessing of fidelity.
+
+Belanna - Goddess of constitution, plants, healing, patience, mercy
+A woman with a flower garland and very long light hair. Sometimes shown covered in vines. Gives the blessing of toughness.
+
+Ixis - Goddess of fire, rebirth, dragons, chaos
+Rebelled and lost to Brym. Often appears as a large red Dragoness.
+
+Uramut - Deity of the unknown, secrets, darkness, plagues
+Symbolized by a yellow eye. Shown as a shadowy creature or a tentacle beast.
 
 https://www.ancient.eu/article/885/egyptian-gods---the-complete-list/
 https://en.vikidia.org/wiki/List_of_Norse_gods_and_goddesses
-
-God Names:
-Arun
-Kiova
-Voldur
-Zet
-Saqu
-Rook
-Ulila
-Ulur
-Rogg
 
 
 each of the gods appear in the world in a unique form, such as:

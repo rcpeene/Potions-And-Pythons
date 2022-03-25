@@ -752,7 +752,7 @@ class Room():
 	# removes status conditions whose duration is lowered past 0
 	def passTime(self,t):
 		for condition in self.status:
-			# if condition is a special condition, ignore it
+			# if condition is has a special duration, ignore it
 			if condition[1] < 0:
 				continue
 			# subtract remaining duration on condition
@@ -1275,7 +1275,7 @@ class Creature():
 			# subtract remaining duration on condition
 			elif condition[1] > 0:
 				condition[1] -= t
-			# if condition is non-positive after decrement, remove it
+			# if, after subtraction, condition is non-positive, remove it
 			if condition[1] <= 0:
 				self.removeCondition(condition[0],0)
 
@@ -1351,7 +1351,7 @@ class Creature():
 	def RESC(self): return 2*self.FTH + self.STM
 	def RITL(self): return 2*self.FTH + self.LCK
 	def SLTH(self): return ( 2*self.SKL + self.INT - min0(self.invWeight() - self.BRDN()) ) * 2*int(self.hasCondition("hiding"))
-	def SPLS(self): return 2*self.INT
+	def SPLS(self): return 3*self.INT
 	def TNKR(self): return 2*self.INT + self.SKL
 
 
@@ -1512,20 +1512,27 @@ class Player(Creature):
 
 	# player gets 3 QPs for each level gained, can dispense them into any trait
 	def levelUp(self,oldlv,newlv):
-		print(f"You leveled up to level {newlv}!\n")
+		input(f"You leveled up to level {newlv}!\n")
 		QP = 3*(newlv-oldlv)
 		while QP > 0:
+			clearScreen()
 			self.printTraits()
 			print(f"\nQuality Points:	{QP}")
 			trait = input("What trait will you improve?\n> ").upper()
-			i = 0
-			while trait not in traits:
-				trait = input("> ").upper()
+			if trait not in Data.traits:
+				continue
 			# increment corresponding player trait
 			traitval = getattr(self,trait)
+			if traitval >= 20:
+				input(f"Your {trait} cannot be raised any higher\n")
+				continue
 			setattr(self,trait.upper(),traitval+1)
 			QP -= 1
+		clearScreen()
 		self.printTraits()
+		print(f"\nQuality Points:	{QP}")
+		input("You are done leveling up\n")
+		clearScreen()
 
 
 	# adds money
@@ -1665,8 +1672,9 @@ class Player(Creature):
 	# weird formula right? returns a positive number rounded down to nearest int
 	# to see an approximate curve, graph y = 5*log10(x/10)
 	# note that a lower bound is set to level 1 when xp < 16
+	# also note that the level cannot be higher than 50
 	def level(self):
-		return 1 if self.xp < 16 else floor(5*log10(self.xp/10))
+		return 1 if self.xp < 16 else maxm( 50, floor( 5*log10(self.xp/10) ) )
 
 
 	# wrapper for objSearch, sets the degree of the search 2 by default

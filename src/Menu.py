@@ -227,8 +227,7 @@ def deleteAll():
 		os.rmdir(savename)
 	os.chdir("..")
 	sleep(1)
-	print("\nAll save files deleted")
-	print()
+	print("\nAll save files deleted\n")
 	input()
 
 
@@ -247,7 +246,8 @@ def delete(filename):
 		saves = os.listdir()
 		columnPrint(saves,10,10)
 		savename = input("\nWhich save file will you delete?\n> ")
-	else: savename = filename
+	else:
+		savename = filename
 
 	if savename == "all":
 		return deleteAll()
@@ -271,17 +271,18 @@ def delete(filename):
 	os.rmdir(savename)
 	os.chdir("..")
 	sleep(1)
-	print("\nDeleted")
-	print()
+	print("\nDeleted\n")
 	input()
 
 
 # asks for player name and description, starts everything else at initial values
 def createCharacter():
 	name = input("What is your name?\n> ")
-	while len(name) == 0: name = input("> ")
+	while len(name) == 0:
+		name = input("> ")
 	desc = input("Describe yourself\n> ")
-	while len(desc) == 0: desc = input("> ")
+	while len(desc) == 0:
+		desc = input("> ")
 	return Player(name,desc,1,1,Data.inittraits,0,[],Data.initgear,[],0,0,[])
 
 
