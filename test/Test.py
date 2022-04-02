@@ -7,17 +7,11 @@ import PoPy
 
 
 
-def test1():
-	sys.stdin = open("test1.txt")
-	os.chdir("..")
-	PoPy.main()
-	os.chdir("test")
-
 
 def testMenu():
 	sys.stdin = open("testMenu.txt")
-	if os.path.exists("../saves/menu test"):
-		os.rmdir("../saves/menu test")
+	if os.path.exists("../saves/testsave"):
+		os.rmdir("../saves/testsave")
 	os.chdir("..")
 	PoPy.main()
 	PoPy.main()
@@ -25,4 +19,4 @@ def testMenu():
 
 
 if __name__ == "__main__":
-	test1()
+	testMenu()
