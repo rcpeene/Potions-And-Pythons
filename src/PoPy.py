@@ -19,11 +19,14 @@ os.system("title Potions ^& Pythons")
 Menu.gameIntro()
 # instantiate global objects Player, World, Game
 Menu.mainMenu()
-# assign non-room objects parents, which specifies what they are contained in
+# assign parents to objects, which specifies what they are contained in
 Core.assignParents()
 # eliminate any room connections which don't exist in the world dict
 Core.ensureWorldIntegrity()
 
+# describe the current room
+Core.game.startUp()
+# core input loop
 while True:
 	Core.game.silent = False
 	Core.game.activeroom = Core.game.currentroom
@@ -63,6 +66,7 @@ while True:
 
 # CURRENT TASKS
 
+# flush input not working??
 # add douse function
 # add some preliminary spells and add effects file
 # consider enter, exit functions in room

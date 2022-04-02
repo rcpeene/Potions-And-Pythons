@@ -8,8 +8,7 @@
 # 3. Menu functions			(functions to load, save, delete, start new games)
 # 4. Game Intro functions	(functions to print game intro animation)
 
-import sys
-import json
+import sys, json
 
 from Items import *
 from Creatures import *
@@ -132,8 +131,12 @@ def saveGame():
 	columnPrint(saves,10,10)
 	# player names their save
 	savename = input("\nWhat name will you give this save file?\n> ").lower()
-	if savename == '':
+	if savename == "":
 		print("Save name cannot be empty")
+		os.chdir("..")
+		return
+	if savename == "all":
+		print("Save name cannot be 'all'")
 		os.chdir("..")
 		return
 
@@ -158,8 +161,7 @@ def saveGame():
 	writeJSON("world.json", Core.world)
 	writeJSON("player.json", Core.player)
 	writeGame("game.txt", Core.game)
-	os.chdir("..")
-	os.chdir("..")
+	os.chdir("../..")
 	sleep(1)
 	print("Game saved")
 	sleep(1)
@@ -171,7 +173,7 @@ def loadGame(filename):
 	if not (os.path.exists("saves")) or len(os.listdir("./saves")) == 0:
 		print("\nThere are no save files\n")
 		input()
-		return mainMenu()
+		return False
 	os.chdir("saves")
 
 	if filename == None:
@@ -183,12 +185,16 @@ def loadGame(filename):
 	else:
 		savename = filename
 
+	if savename == "":
+		os.chdir("..")
+		return False
+
 	# if user inputs a save name that doesn't exist
 	if not os.path.exists(savename):
 		print("\nThere is no save file named '" + savename + "'\n")
 		os.chdir("..")
 		input()
-		return mainMenu()
+		return False
 	os.chdir(savename)
 	# try to load the player, world, and game objects
 	# try:
@@ -200,15 +206,13 @@ def loadGame(filename):
 	# 	print("Could not load game, save data corrupted\n")
 	# 	os.chdir("..")
 	# 	os.chdir("..")
-	# 	return mainMenu()
+	# 	return False
 
-	os.chdir("..")
-	os.chdir("..")
+	os.chdir("../..")
 	Core.ellipsis(3)
 	Core.flushInput()
 	Core.clearScreen()
-	# describe the current room
-	Core.game.startUp()
+	return True
 
 
 # deletes all save files in 'save' directory (if the user is very, very sure)
@@ -249,6 +253,9 @@ def delete(filename):
 	else:
 		savename = filename
 
+	if savename == "":
+		os.chdir("..")
+		return mainMenu()
 	if savename == "all":
 		return deleteAll()
 
@@ -298,7 +305,6 @@ def newGame():
 	# enter the starting room
 	sleep(0.5)
 	Core.clearScreen()
-	Core.game.startUp()
 
 
 # automatically starts a new game with a premade character for easy testing
@@ -313,7 +319,6 @@ def testGame():
 	Core.game = Game(0,Core.world["cave"],Core.world["tunnel"],0)
 
 	Core.clearScreen()
-	Core.game.startUp()
 	Core.game.mode = 1
 
 
@@ -341,11 +346,14 @@ def mainMenu():
 		elif g[0] == "info" and len(g) == 1:
 			gameInfo()
 		elif g[0] == "new" and len(g) == 1:
-			return newGame()
+			newGame()
+			return
 		elif g[0] == "load" and len(g) == 1:
-			return loadGame(None)
+			if loadGame(None):
+				return
 		elif g[0] == "load":
-			return loadGame(" ".join(g[1:]))
+			if loadGame(" ".join(g[1:])):
+				return
 		elif g[0] == "delete" and len(g) == 1:
 			delete(None)
 		elif g[0] == "delete":
@@ -353,7 +361,8 @@ def mainMenu():
 		elif g[0] == "quit" and len(g) == 1:
 			sys.exit()
 		elif g[0] == "test" and len(g) == 1:
-			return testGame()
+			testGame()
+			return
 
 
 
