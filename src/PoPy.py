@@ -20,6 +20,8 @@ def main():
 	Menu.gameIntro()
 	# instantiate global objects Player, World, Game
 	Menu.mainMenu()
+	if Core.game.quit == True:
+		return
 	# assign parents to objects, which specifies what they are contained in
 	Core.assignParents()
 	# eliminate any room connections which don't exist in the world dict
@@ -27,7 +29,7 @@ def main():
 
 	# describe the current room
 	Core.game.startUp()
-	# core input loop
+	# main input loop
 	while True:
 		Core.game.silent = False
 		Core.game.activeroom = Core.game.currentroom
@@ -35,6 +37,7 @@ def main():
 
 		# take user input until player successfully performs an action
 		while not Parser.parse():	continue
+		if Core.game.quit: return
 
 		# creatures in current room's turn
 		Core.game.activeroom = Core.game.currentroom

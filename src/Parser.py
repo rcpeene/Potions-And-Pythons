@@ -343,7 +343,8 @@ def Laugh(): print('"HAHAHAHAHA!"')
 
 def Quit():
 	if Core.yesno("Are you sure you want to quit? (Anything unsaved will be lost)"):
-		sys.exit()
+		Core.game.quit = True
+		return True
 
 
 def Return(): return Go(None, Core.game.prevroom.name, None) #go to previous room

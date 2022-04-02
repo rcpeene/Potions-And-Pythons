@@ -359,7 +359,8 @@ def mainMenu():
 		elif g[0] == "delete":
 			delete(" ".join(g[1:]))
 		elif g[0] == "quit" and len(g) == 1:
-			sys.exit()
+			Core.game.quit = True
+			return
 		elif g[0] == "test" and len(g) == 1:
 			testGame()
 			return

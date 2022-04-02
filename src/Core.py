@@ -63,7 +63,9 @@ def clearScreen():
 def flushInput():
 	# # temporary patch for test suite
 	import __main__
-	if __main__.__file__ == "Test.py":
+	print(os.getcwd())
+	print(__main__.__file__)
+	if __main__.__file__ == "test/Test.py":
 		return
 
 	try:
@@ -475,6 +477,8 @@ class Game():
 		self.prevroom = prevroom
 		# the number of game loops that have elapsed since the game's start
 		self.time = time
+		# used to break out of the main input loop when the player wants to quit
+		self.quit = False
 		# used for determining whether or not to print certain things
 		# usually silent is True when events happen outside the current room
 		self.silent = False
