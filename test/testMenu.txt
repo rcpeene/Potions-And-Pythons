@@ -1,0 +1,26 @@
+
+info
+
+load
+
+delete
+
+
+new
+Menuman
+Menu Test!
+save
+testsave
+quit
+yes
+
+load
+testsave
+save testsave
+yes
+quit
+
+delete
+testsave
+yes
+quit

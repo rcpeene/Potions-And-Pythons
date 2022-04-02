@@ -11,55 +11,58 @@ import Parser
 
 
 
-# formatting the prompt window
-os.system("mode con:cols=130 lines=32")
-os.system("title Potions ^& Pythons")
+def main():
+	# formatting the prompt window
+	os.system("mode con:cols=130 lines=32")
+	os.system("title Potions ^& Pythons")
 
-# run intro logo animation
-Menu.gameIntro()
-# instantiate global objects Player, World, Game
-Menu.mainMenu()
-# assign parents to objects, which specifies what they are contained in
-Core.assignParents()
-# eliminate any room connections which don't exist in the world dict
-Core.ensureWorldIntegrity()
+	# run intro logo animation
+	Menu.gameIntro()
+	# instantiate global objects Player, World, Game
+	Menu.mainMenu()
+	# assign parents to objects, which specifies what they are contained in
+	Core.assignParents()
+	# eliminate any room connections which don't exist in the world dict
+	Core.ensureWorldIntegrity()
 
-# describe the current room
-Core.game.startUp()
-# core input loop
-while True:
-	Core.game.silent = False
-	Core.game.activeroom = Core.game.currentroom
-	Core.game.whoseturn = Core.player
+	# describe the current room
+	Core.game.startUp()
+	# core input loop
+	while True:
+		Core.game.silent = False
+		Core.game.activeroom = Core.game.currentroom
+		Core.game.whoseturn = Core.player
 
-	# take user input until player successfully performs an action
-	while not Parser.parse():	continue
+		# take user input until player successfully performs an action
+		while not Parser.parse():	continue
 
-	# creatures in current room's turn
-	Core.game.activeroom = Core.game.currentroom
-	for creature in Core.game.currentroom.occupants:
-		Core.game.whoseturn = creature
-		creature.act()
-
-	# creatures in nearby rooms' turn
-	Core.game.silent = True
-	for room in Core.game.nearbyRooms():
-		Core.game.activeroom = room
-		for creature in room.occupants:
+		# creatures in current room's turn
+		Core.game.activeroom = Core.game.currentroom
+		for creature in Core.game.currentroom.occupants:
 			Core.game.whoseturn = creature
 			creature.act()
 
-	# cleanup before looping
-	Core.game.activeroom = None
-	Core.game.whoseturn = None
-	# pass the time for all rooms and creatures
-	Core.game.incrementTime()
-	# remove dead Creatures from room occupants
-	Core.game.reapOccupants()
-	# sort the occupants in each rendered room by their MVMT attribute
-	Core.game.sortOccupants()
+		# creatures in nearby rooms' turn
+		Core.game.silent = True
+		for room in Core.game.nearbyRooms():
+			Core.game.activeroom = room
+			for creature in room.occupants:
+				Core.game.whoseturn = creature
+				creature.act()
+
+		# cleanup before looping
+		Core.game.activeroom = None
+		Core.game.whoseturn = None
+		# pass the time for all rooms and creatures
+		Core.game.incrementTime()
+		# remove dead Creatures from room occupants
+		Core.game.reapOccupants()
+		# sort the occupants in each rendered room by their MVMT attribute
+		Core.game.sortOccupants()
 
 
+if __name__ == "__main__":
+	main()
 
 
 ################################################################################
