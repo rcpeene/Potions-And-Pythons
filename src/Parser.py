@@ -291,9 +291,9 @@ def Zap(command):
 	zappedObjects = 0
 	for obj in allObjects:
 		if objname.lower() == obj.name.lower():
-			if isinstance(obj,Item):
+			if isinstance(obj,Core.Item):
 				obj.Break()
-			elif isinstance(obj,Creature):
+			elif isinstance(obj,Core.Creature):
 				obj.death()
 			zappedObjects += 1
 	print("Zapped objects: " + str(zappedObjects))
@@ -398,8 +398,8 @@ def Attack(dobj,iobj,prep):
 
 	Core.game.setPronouns(target)
 	print(f"\nYou attack the {target.name} with {Core.player.weapon.name}")
-	if isinstance(target,Creature):		Core.player.attackCreature(target)
-	elif isinstance(target,Item):		Core.player.attackItem(target)
+	if isinstance(target,Core.Creature):		Core.player.attackCreature(target)
+	elif isinstance(target,Core.Item):		Core.player.attackItem(target)
 	if iobj in {"fist","hand","foot","leg"}:
 		Core.player.weapon,Core.player.weapon2 = stowedweapons
 	return True
@@ -470,9 +470,9 @@ def Carry(dobj,iobj,prep):
 		return False
 	Core.game.setPronouns(I)
 
-	if isinstance(I,Item):
+	if isinstance(I,Core.Item):
 		return Take(dobj,iobj,prep)
-	if not isinstance(I,Creature):
+	if not isinstance(I,Core.Creature):
 		print(f"You can't carry the {dobj}")
 		return False
 
@@ -933,9 +933,9 @@ def Grab(dobj,iobj,prep):
 		return False
 
 	Core.game.setPronouns(I)
-	if isinstance(I,Item):
+	if isinstance(I,Core.Item):
 		return Take(dobj,iobj,prep)
-	elif isinstance(I,Creature):
+	elif isinstance(I,Core.Creature):
 		return Carry(dobj,iobj,prep)
 	else:
 		print(f"You cannot grab the {I.name}")
@@ -1247,7 +1247,7 @@ def Restrain(dobj,iobj,prep):
 		print(f"There is no '{dobj}' here")
 		return False
 	Core.game.setPronouns(C)
-	if not isinstance(C,Creature):
+	if not isinstance(C,Core.Creature):
 		print(f"You can't restrain the {C.name}")
 		return False
 
@@ -1337,15 +1337,15 @@ def Take(dobj,iobj,prep):
 		if prep in {None,"up"}:	print(f"There is no '{dobj}' here")
 		else:				print(f"There is no '{dobj}' in a '{iobj}' here")
 		return False
-	if not isinstance(I,Item):
-		if isinstance(I, Creature):
+	if not isinstance(I,Core.Item):
+		if isinstance(I,Core.Creature):
 			return Carry(dobj,iobj,prep)
 		print("You can't take the " + dobj)
 		return False
 	Core.game.setPronouns(I)
 
 	S = path[0]		#S is the 'source' object, the object containing I
-	if isinstance(S,Creature) and prep == "from":	return Steal(dobj,iobj,prep)
+	if isinstance(S,Core.Creature) and prep == "from":	return Steal(dobj,iobj,prep)
 	count = S.contentNames().count(I.name)
 	if S is Core.player:
 		print("You can't take from your own Inventory")
@@ -1461,14 +1461,14 @@ def Wave(dobj,iobj,prep):
 
 cheatcodes = {
 	"\\get":Get,
-	"\\zap":Zap,
 	"\\lrn":Learn,
 	"\\mod":Mode,
 	"\\pot":Pypot,
 	"\\set":Set,
 	"\\tst":Test,
 	"\\tpt":Teleport,
-	"\\wrp":Warp
+	"\\wrp":Warp,
+	"\\zap":Zap
 }
 
 # contains corresponding functions for all items in Data.shortverbs and Data.statcommands
