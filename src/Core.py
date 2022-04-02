@@ -61,6 +61,11 @@ def clearScreen():
 
 # clears pending keyboard input. strategy varies by operating system.
 def flushInput():
+	# # temporary patch for test suite
+	import __main__
+	if __main__.__file__ == "Test.py":
+		return
+
 	try:
 		while msvcrt.kbhit():
 			msvcrt.getch()
@@ -76,7 +81,6 @@ def kbInput():
 		return dr != []
 	except:
 		return msvcrt.kbhit()
-	# except NameError:
 
 
 # prints a timed ellipsis, used for dramatic transitions

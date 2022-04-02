@@ -7,6 +7,8 @@
 # 2. Action functions	(action, shortaction, cheat functions called by parse())
 # 3. Action dicts		(dictionaries used to call action functions from)
 
+import sys
+
 import Data
 import Core
 import Menu
