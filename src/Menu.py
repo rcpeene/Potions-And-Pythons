@@ -241,7 +241,7 @@ def delete(filename):
 	if not os.path.exists("saves") or len(os.listdir("./saves")) == 0:
 		print("\nThere are no save files\n")
 		input()
-		return mainMenu()
+		return
 	os.chdir("saves")
 
 	if filename == None:
@@ -255,7 +255,7 @@ def delete(filename):
 
 	if savename == "":
 		os.chdir("..")
-		return mainMenu()
+		return
 	if savename == "all":
 		return deleteAll()
 
@@ -268,7 +268,7 @@ def delete(filename):
 	# ask for confirmation, if no, then return to menu
 	if not Core.yesno("Are you sure you want to delete this save file?"):
 		os.chdir("..")
-		return mainMenu()
+		return
 
 	# remove all files in this save directory, and remove that save directory
 	os.chdir(savename)
