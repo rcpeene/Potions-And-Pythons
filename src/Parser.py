@@ -207,6 +207,9 @@ def parse(n=0):
 
 
 def Get(command):
+	if len(command) < 2:
+		print("No object given")
+		return
 	objname = command[1].lower()
 	if objname in {"p","player","my"}:
 		obj = Core.player
@@ -252,14 +255,27 @@ def Mode(command):
 
 def Pypot(command):
 	try:
-		Core.player.money = Core.player.money + int(command[1])
+		money = int(command[1])
+		Core.player.money = Core.player.money + money
+		if Core.player.money < 0:
+			Core.player.money = 0
+		print(f"You now have {Core.player.money} money")
 	except:
 		print("Value not number")
 
 
 def Set(command):
-	if command[1] in {"p","player"}:
+	if len(command) < 4:
+		print("Not enough arguments")
+		return
+	if command[1] in {"p","player","my"}:
 		obj = Core.player
+	elif objname in {"g","game"}:
+		obj = Core.game
+	elif objname in {"here","room"}:
+		obj = Core.game.currentroom
+	elif objname in {"w","world"}:
+		obj = Core.world
 	else:
 		obj = Core.objSearch(command[1],Core.game.currentroom,d=3)
 	attrString = command[2]

@@ -65,7 +65,7 @@ def flushInput():
 	import __main__
 	print(os.getcwd())
 	print(__main__.__file__)
-	if __main__.__file__ == "test/Test.py":
+	if __main__.__file__ == "Test.py":
 		return
 
 	try:

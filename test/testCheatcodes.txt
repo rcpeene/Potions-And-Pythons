@@ -1,0 +1,59 @@
+
+test
+\get
+\get blah
+\get p
+\get my xp
+\get here
+\get room occupants
+\get world
+
+\lrn
+\lrn blah
+\lrn 1
+\lrn 1000
+
+
+blah
+STR
+CHA
+INT
+
+\mod
+\mod blah
+\mod -1
+\mod 1
+
+\pot
+\pot blah
+\pot 1
+\pot -100
+
+\set
+\set p
+\set p blah
+\set my STR
+\set p STR blah
+\set p STR 20
+\set room blah
+\set room name testroom
+
+
+\tpt
+\tpt blah
+\tpt big tree
+\tpt cabin
+
+\tst
+\tst blah
+
+\wrp
+\wrp blah
+\wrp 20 blah
+\wrp 20
+
+\zap
+\zap here
+\zap player
+\zap sword
+\zap python
