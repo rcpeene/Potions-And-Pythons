@@ -37,7 +37,7 @@ def main():
 
 		# take user input until player successfully performs an action
 		while not Parser.parse():	continue
-		if Core.game.quit: return
+		if Core.game.quit:	return
 
 		# creatures in current room's turn
 		Core.game.activeroom = Core.game.currentroom
