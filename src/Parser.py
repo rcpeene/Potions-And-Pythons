@@ -268,7 +268,8 @@ def Set(command):
 	if len(command) < 4:
 		print("Not enough arguments")
 		return
-	if command[1] in {"p","player","my"}:
+	objname = command[1]
+	if objname in {"p","player","my"}:
 		obj = Core.player
 	elif objname in {"g","game"}:
 		obj = Core.game
@@ -280,10 +281,13 @@ def Set(command):
 		obj = Core.objSearch(command[1],Core.game.currentroom,d=3)
 	attrString = command[2]
 	val = command[3]
-	setStat(obj,attrString,val)
+	setattr(obj,attrString,val)
 
 
 def Teleport(command):
+	if len(command) < 2:
+		print("Not enough parameters")
+		return
 	location = command[1]
 	if location in Core.world:
 		Core.game.changeRoom(Core.world[location])
@@ -292,7 +296,7 @@ def Teleport(command):
 
 
 def Test(command):
-	print(P)
+	print(Core.player)
 	return True
 
 
@@ -328,7 +332,8 @@ def Cry(): print("A single tear sheds from your eye")
 def Dance(): print("You bust down a boogie")
 
 def Examples():
-	print("\n"*64 + Data.examples)
+	Core.clearScreen()
+	print(Data.examples)
 	input()
 	Core.clearScreen()
 
@@ -890,7 +895,7 @@ def assignGoTerms(dobj,iobj,prep):
 	return dir,dest,passage
 
 
-# parses user input to determine the intended direction, destination, and/or... # passage. Then calls either traverse method or changeroom accordingly
+# parses user input to determine the intended direction, destination, and/or... # passage. Then calls either traverse or changeroom accordingly
 def Go(dobj,iobj,prep):
 	preps = {"down","through","to","toward","up","in","into","on","onto",None}
 	if dobj == None and iobj == None and prep == None:
@@ -910,7 +915,7 @@ def Go(dobj,iobj,prep):
 		print(f"There is no exit leading {dir} here")
 		return False
 	if (dir,dest,passage) == (None,None,None):
-		print(f"There is no exit leading to a {dobj} here")
+		print(f"There is no exit leading to a '{dobj}' here")
 		return False
 	if dir == None:
 		dir = Core.game.currentroom.getDirFromDest(dest)
@@ -932,7 +937,7 @@ def Go(dobj,iobj,prep):
 	# if just dest given
 	if dest != None:
 		return Core.game.changeRoom(Core.world[dest])
-	print(f"There is no exit leading to a {dobj} here")
+	print(f"There is no exit leading to a '{dobj}' here")
 	return False
 
 
