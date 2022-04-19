@@ -1,0 +1,58 @@
+
+test
+abilities
+clear
+cry
+dance
+examples
+
+gear
+hello
+hi
+help
+
+hp
+info
+
+information
+
+inventory
+inv
+laugh
+level
+lv
+money
+mp
+rp
+scream
+shout
+sing
+stats
+status
+time
+traits
+weapons
+xp
+yell
+yawn
+look at python
+look
+the python
+sniff the python
+describe here
+describe a sword
+describe Amulet of Swords
+examine my compass
+hear python
+listen to python
+go n
+smell the bread
+lick the bread
+taste the bread
+go n
+look at the sign
+read at sign
+look in the chest
+
+quit
+yes

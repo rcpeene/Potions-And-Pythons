@@ -27,12 +27,13 @@ def testCheatcodes():
 
 # tests look, listen, and actions which don't alter the world state
 def testInfo():
-	pass
-
+	sys.stdin = open("test/testInfo.txt")
+	PoPy.main()
 
 # tests all forms of navigation
 def testNavigation():
-	pass
+	sys.stdin = open("test/testNavigation.txt")
+	PoPy.main()
 
 
 # tests open, close, take/grab, put, and drop actions
@@ -58,4 +59,7 @@ def testSpells():
 if __name__ == "__main__":
 	os.chdir("..")
 	testMenu()
+	testInfo()
 	testCheatcodes()
+	testNavigation()
+	print("\nAll test passed without error\n")

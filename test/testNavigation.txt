@@ -1,0 +1,21 @@
+
+test
+go up the hallway
+go up
+go blah
+go s
+go brook
+go to the glen
+head into tunnel
+walk south
+go hallway
+north
+go hallway
+east
+exit to the big tree
+\tpt cave
+go stairwell
+up
+
+quit
+yes

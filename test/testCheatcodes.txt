@@ -57,3 +57,6 @@ INT
 \zap player
 \zap sword
 \zap python
+
+quit
+yes
