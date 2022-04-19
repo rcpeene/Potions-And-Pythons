@@ -812,6 +812,8 @@ Step Reckoner
 (Magic?) Umbrella
 Shrunken heads
 Magic Teapot (or just a normal teapot idk)
+
+Estoc
 The Master Boomerang - (always comes back no matter what u do with it)
 Raygun (that deals E damage)
 Paragon Blade
@@ -859,7 +861,7 @@ Sigma tunic			EVSN
 
 Tau hammer			ATHL
 Upsilon glaive	ENDR
-Phi crown				RESC
+Phi helm				RESC
 Chi torch				INVS
 Psi boots				MVMT
 Omega shield		DFNS
@@ -874,7 +876,7 @@ cooked/constructed meals have effects that are greater than the sum of their par
 proteins/meats - vastly increase hp, synergize well in meals
 grains/starches - moderately increase hp, cheapest/most common
 fruits - minimally increase hp, each fruit adds a different status effect
-veggies - minimally increase hp, minimally increases mp, can remove bad status effects
+veggies - minimally increase hp and mp, can remove bad status effects
 dairy - minimally increase hp and mp, can remove bad status effects
 alcohol - same effects as fruit, but adds drunkeness
 water - raises hp and mp by 2
@@ -907,7 +909,7 @@ Durian - bonus to endurance or wpn durability?
 Elderberry
 Fig
 
-Ghostberry - ghost effects? gaseous form? cold resistance?
+Ghostberry - ghost effects? gaseous form? cold resistance (as snowberry)?
 Gojiberry - something awesome, remove all bad conditions?
 Goldenberry - double money gained?
 Gooseberry - bonus to luck?
@@ -926,10 +928,10 @@ Loquat
 Lychee
 
 Mango
-Mulberry
+Mulberry - immune to bleed?
 Muskmelon - immune to poison
 Olive
-Orange
+Orange - double regen of MP
 
 Passionfruit - bonus to social interaction (love stat)
 Peach
@@ -988,6 +990,7 @@ several settlements exist in the world (aim for like at least 9)
 additional place ideas
 -colonnade
 -amphitheatre
+-athenaeum
 -the garden path "to mislead someone"
 -a very smelly tree
 -black lotus
@@ -1011,7 +1014,7 @@ misc world ideas
 -RICKROLL
 -the four horsemen of awesomeness (or happiness)
 -golden bug quest
--pandora box "banishment box" wish unleashes all creatures the player has ever banished with the banish spell
+-pandora box "banishment box" which unleashes all creatures the player has ever banished with the banish spell
 -limericks/poems/poem book?
 -the mist
 
@@ -1055,7 +1058,12 @@ CHARACTER NAMES:
 	Rook
 
 	one bbeg is the world serpent called Aeormungand (Leviathan?)
+	another bbg (Behemoth)
 	also an evil wizard ofc
+	a fighter/warrior warlord
+	a mob boss criminal type
+
+
 
 CREATURE IDEAS:
 stoats
@@ -1096,10 +1104,10 @@ A woman with antlers and a tail. She plays the flute. Sometimes appears as a hun
 Astrathe - Goddess of wisdom, stars, prophecy, fate, time
 An older woman in long starry robes and a tall hat and a third eye. Gives the blessing of lucidity.
 
-Zet - Goddess of faith, harvest, peace, protection, fertility
+Zet - Goddess of faith, harvest, peace, protection, fertility, earth
 Symbolized by a blue rose. Usually appears as a woman in a white robe with a blue halo. Sometimes shown pregnant or with babies. Gives the blessing of fidelity.
 
-Belanna - Goddess of constitution, plants, healing, patience, mercy
+Selanna - Goddess of constitution, plants, healing, patience, mercy
 A woman with a flower garland and very long light hair. Sometimes shown covered in vines. Gives the blessing of toughness.
 
 Ixis - Goddess of fire, rebirth, dragons, chaos
@@ -1110,6 +1118,7 @@ Symbolized by a yellow eye. Shown as a shadowy creature or a tentacle beast.
 
 https://www.ancient.eu/article/885/egyptian-gods---the-complete-list/
 https://en.vikidia.org/wiki/List_of_Norse_gods_and_goddesses
+
 
 
 each of the gods appear in the world in a unique form, such as:
@@ -1132,6 +1141,45 @@ a wisp/fairy?
 a goose?
 a flower?
 
+
+
+GOLDEN BUG QUEST:
+50 golden bugs that can be found around the world
+Spider, Termite, Cocoon, Scorpion, Butterfly,
+Roach, Horsefly, Hornet, Ant, Mantis,
+Cricket, Dragonfly, Stinkbug, Earwig, Flea,
+Stickbug, Mosquito, Silkworm, Firefly, Silverfish,
+Locust, Cicada, Mayfly, Moth, Bumblebee,
+Aphid, Louse, Weevil, Lady Beetle, Tiger Beetle,
+Pillbug, Bedbug, Mealybug, Scarab Beetle, Tick,
+Snail, Earthworm, Slug, Seaslug, Glowworm,
+Centipede, Millipede, Leafhopper, Lovebug, Beholderfly,
+Goblinmite, Brainworm, Orc Beetle, Mimicbug, Waterbear
+
+
+
+SPELL NAME IDEAS:
+Amphibify, Anathema, Armistice, Asterism, Avulsion
+Bamboozle, Bang, Banquet, Beacon, Bellow, Bolster, Boogaloo, Boom, Busk
+Cacophony, Catharsis, Chutzpah, Clemency
+Deluge, Dessicate, Discord
+Effervesce, Eidolon, Ennervation, Enthrall, Expectorate, Expell
+Facade, Facsimile, Feast, Fib, Fizz, Flare, Frostbite
+Galvanize, Gambit, Glower, Goad, Gorgonize, Gravitas
+Halo, Haste, Harmony, Hex, Hypnosis
+Immolate, Invigorate, Invisibility, Iridescence
+Jamboree, Jargon, Judgement
+Lash, Lethargy, Levitate, Lignify, Limerence, Lure
+Maelstrom, Malaise, Manumit, Melancholy, Mirage, Moonshot
+Nyctophobia
+Parley, Paroxysm, Penumbra, Petrify, Phantasm, Pilfer, Ponder, Prescience, Putrefaction
+Refection, Rend, Repast, Revelry
+Sanctuary, Scry, Serein, Shivaree, Simulacrum, Smite, Spangle, Squib, Sunder, Synpase
+Telekinesis, Tempest, Tether, Torrent
+Usurp
+Vamoose, Vendetta, Volley
+Wallop, Weal, Woe
+Zeitgeist, Zephyr
 
 
 
