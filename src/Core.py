@@ -1231,7 +1231,7 @@ class Creature():
 		self.gear[slot] = Empty()
 		self.assignWeaponAndShield()
 		if hasMethod(I,"Unequip"):
-			I.Unequip(self)
+			I.Unequip()
 
 
 	# if the item is armor, equip it, otherwise return False
@@ -1240,7 +1240,7 @@ class Creature():
 		elif isinstance(I,Tunic): self.gear["body"] = I
 		elif isinstance(I,Greaves): self.gear["legs"] = I
 		else: return False
-		I.Equip(self)
+		I.Equip()
 		return True
 
 
@@ -2075,11 +2075,11 @@ class Monster(Creature):
 		if game.currentroom != game.activeroom:
 			return
 		# choose strongest weapon or use hand
-		if len(self.weapons()) == 0:
-			weapon = Hand("goblin hand","",4,-1,[])
-			weapon = weapon.improviseWeapon()
-		else:
-			weapon = max(self.weapons(),key=lambda x: x.might)
+		# if len(self.weapons()) == 0:
+		# 	weapon = Hand("goblin hand","",4,-1,[])
+		# 	weapon = weapon.improviseWeapon()
+		# else:
+		# 	weapon = max(self.weapons(),key=lambda x: x.might)
 
 
 

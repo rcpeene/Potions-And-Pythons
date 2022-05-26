@@ -280,14 +280,14 @@ class Potion(Bottle):
 		print(f"You drink the {self.name}")
 		Core.player.heal(1000)
 		self.parent.removeItem(self)
-		Core.player.addItem(Bottle("bottle","an empty glass bottle",3,3))
+		Core.player.addItem(Bottle("bottle","an empty glass bottle",3,3,{}))
 
 
 	def Pour(self,obj=None):
 		if obj != None:
 			obj.Drench(self)
 		self.parent.removeItem(self)
-		Core.player.addItem(Bottle("bottle","an empty glass bottle",3,3))
+		Core.player.addItem(Bottle("bottle","an empty glass bottle",3,3,{}))
 
 
 
