@@ -50,7 +50,6 @@ def hasMethod(obj,methodName):
 	return False
 
 
-# prints 30 newlines
 def clearScreen():
 	if os.name == "nt":
 		os.system("cls")
@@ -61,18 +60,14 @@ def clearScreen():
 
 # clears pending keyboard input. strategy varies by operating system.
 def flushInput():
-	# # temporary patch for test suite
-	import __main__
-	print(os.getcwd())
-	print(__main__.__file__)
-	if __main__.__file__ == "Test.py":
-		return
-
 	try:
 		while msvcrt.kbhit():
 			msvcrt.getch()
 	except NameError:
-		termios.tcflush(sys.stdin,termios.TCIOFLUSH)
+		try:
+			termios.tcflush(sys.stdin,termios.TCIOFLUSH)
+		except termios.error:
+			pass
 
 
 # checks for any keyboard input
