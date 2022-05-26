@@ -8,11 +8,13 @@
 # 3. Menu functions			(functions to load, save, delete, start new games)
 # 4. Game Intro functions	(functions to print game intro animation)
 
-import sys, json
+from time import sleep
+from random import randint, choice
+import os, sys, json
 
-from Items import *
-from Creatures import *
-from Effects import *
+import Items
+import Creatures
+import Effects
 import Data
 import Core
 
@@ -80,7 +82,7 @@ def default(jsonDict):
 		objAttributes = list(jsonDict.values())
 		# print("========: " + d["name"] + " " + str(objAttributes))
 		if objClassname == "Room":
-			return Room(*objAttributes)
+			return Core.Room(*objAttributes)
 		elif objClassname == "Empty":
 			return Empty()
 		elif objClass != None:
@@ -311,12 +313,12 @@ def newGame():
 def testGame():
 	Core.world = readJSON("World.json")
 
-	inv = [Compass("compass","a plain steel compass with a red arrow",2,10,[])]
+	inv = [Items.Compass("compass","a plain steel compass with a red arrow",2,10,[])]
 	status = [["fireproof",-1], ["poisoned",5], ["cursed",-2], ["immortal",-1],
 	["sharpshooter",50], ["invisible",15], ["poisoned",-1], ["flying",5]]
 
-	Core.player = Player("Norman","a hero",24,24,[4 for _ in range(10)],1000,inv,Data.initgear,status,1585,100,[])
-	Core.game = Game(0,Core.world["cave"],Core.world["tunnel"],0)
+	Core.player = Core.Player("Norman","a hero",24,24,[4 for _ in range(10)],1000,inv,Data.initgear,status,1585,100,[])
+	Core.game = Core.Game(0,Core.world["cave"],Core.world["tunnel"],0)
 
 	Core.clearScreen()
 	Core.game.mode = 1

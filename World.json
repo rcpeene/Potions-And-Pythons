@@ -390,7 +390,17 @@
 						"durability": 10,
 						"status": [],
 						"open": false,
-						"contents": [],
+						"contents": [
+							{
+								"__class__": "Key",
+								"name": "key",
+								"desc": "an ornate golden key",
+								"weight": 1,
+								"durability": 4,
+								"status": [],
+								"id": 1
+							}
+						],
 						"keyids": [
 							1
 						],
@@ -435,8 +445,8 @@
 				"contents": [
 					{
 						"__class__": "Potion",
-						"name": "blue potion",
-						"desc": "a blue bubbly brew in a glass bottle",
+						"name": "green potion",
+						"desc": "a green bubbly brew in a glass bottle",
 						"weight": 6,
 						"durability": 3,
 						"status": []

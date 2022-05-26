@@ -12,6 +12,9 @@ import sys
 import Data
 import Core
 import Menu
+import Items
+import Creatures
+import Effects
 
 
 #######################
@@ -422,8 +425,10 @@ def Attack(dobj,iobj,prep):
 
 	Core.game.setPronouns(target)
 	print(f"\nYou attack the {target.name} with {Core.player.weapon.name}")
-	if isinstance(target,Core.Creature):		Core.player.attackCreature(target)
-	elif isinstance(target,Core.Item):		Core.player.attackItem(target)
+	if isinstance(target,Core.Creature):
+		Core.player.attackCreature(target)
+	elif isinstance(target,Core.Item):
+		Core.player.attackItem(target)
 	if iobj in {"fist","hand","foot","leg"}:
 		Core.player.weapon,Core.player.weapon2 = stowedweapons
 	return True
@@ -502,7 +507,7 @@ def Carry(dobj,iobj,prep):
 
 	print(f"You try to pick up the {dobj}")
 	if Restrain(dobj,iobj,prep):
-		return I.Carry()
+		return Core.player.Carry(I)
 
 
 def Cast(dobj,iobj,prep):
@@ -656,7 +661,7 @@ def Doff(dobj,iobj,prep):
 			return False
 
 	I = Core.player.inGear(dobj)
-	if I == None or not isinstance(I,Armor):
+	if I == None or not isinstance(I,Core.Armor):
 		print(f"You aren't wearing a '{dobj}'")
 		return False
 
@@ -680,7 +685,7 @@ def Don(dobj,iobj,prep):
 		print(f"There is no available '{dobj}' in your inventory")
 		return False
 
-	if not isinstance(I,Armor):
+	if not isinstance(I,Core.Armor):
 		print(f"You cannot wear your {I.name}")
 		return False
 	if I in Core.player.gear.values():
@@ -717,7 +722,7 @@ def Drink(dobj,iobj,prep):
 
 
 def Drop(dobj,iobj,prep):
-	if prep != None:
+	if prep not in {"down",None}:
 		return Put(dobj,iobj,prep)
 	if dobj == None:
 		dobj = getNoun("What will you drop?")
@@ -730,7 +735,7 @@ def Drop(dobj,iobj,prep):
 		return False
 
 	Core.game.setPronouns(I)
-	if isinstance(I,Compass) and Core.player.countCompasses() == 1:
+	if isinstance(I,Core.Compass) and Core.player.countCompasses() == 1:
 		q = "Are you sure you want to lose your compass? You might get lost!"
 		if not Core.yesno(q):
 			return False
@@ -805,8 +810,10 @@ def Equip(dobj,iobj,prep):
 		print(f"Your {dobj} is already equipped")
 		return False
 	# if item is armor, equip it as armor, otherwise, equip it in hand
-	if isinstance(I,Armor):		Core.player.equipArmor(I)
-	else:						Core.player.equipInHand(I)
+	if isinstance(I,Core.Armor):
+		Core.player.equipArmor(I)
+	else:
+		Core.player.equipInHand(I)
 	print(f"You equip your {I.name}")
 	return True
 
@@ -983,7 +990,7 @@ def Hide(dobj,iobj,prep):
 		return False
 
 	Core.game.setPronouns(I)
-	if not isinstance(I,Fixture) or I.weight < 50:
+	if not isinstance(I,Core.Fixture) or I.weight < 50:
 		print("You can't hide behind " + I.name)
 		return False
 
@@ -1063,7 +1070,7 @@ def Lock(dobj,iobj,prep):
 	if K == None:
 		print(f"There is no '{iobj}' in your inventory")
 		return False
-	if not isinstance(K,Key):
+	if not isinstance(K,Items.Key):
 		print(f"You can't lock with the {K.name}")
 		return False
 
@@ -1205,7 +1212,7 @@ def Push(dobj,iobj,prep):
 
 
 def Put(dobj,iobj,prep):
-	if prep not in {"in","into","inside","on","onto","upon",None}:
+	if prep not in {"in","into","inside","on","onto","upon","down",None}:
 		print("Command not understood")
 		return False
 	if dobj == None:
@@ -1213,30 +1220,36 @@ def Put(dobj,iobj,prep):
 		if dobj in Data.cancels:
 			return False
 	if iobj == None:
-		iobj = getNoun(f"What will you put your {dobj} in?")
+		if prep == "down":
+			iobj = "here"
+		else:
+			iobj = getNoun(f"What will you put your {dobj} in?")
 
 	I,S = Core.player.search(dobj,getSource=True)
 	if I == None:
 		print(f"There is no '{dobj}' in your inventory")
 		return False
-	if isinstance(I,Compass) and Core.player.countCompasses() == 1:
+	if isinstance(I,Core.Compass) and Core.player.countCompasses() == 1:
 		q = "Are you sure you want to lose your compass? You might get lost!"
 		if not Core.yesno(q):
 			return False
 	Core.game.setPronouns(I)
 
 	R = Core.player.search(iobj)
-	if iobj == "here":	R = Core.game.currentroom
+	if iobj in {"ground","floor","here"}:
+		R = Core.game.currentroom
+	if R == Core.game.currentroom:
+		return Drop(dobj,iobj,prep)
 	if R == None:
 		R = Core.game.currentroom.search(iobj)
 	if R == None:
 		print(f"There is no '{iobj}' here")
 		return False
-	if not isinstance(R,Table) and not isinstance(R,Box):
+	if not isinstance(R,Items.Table) and not isinstance(R,Items.Box):
 		print(f"You can't put the {I.name} {prep} the {R.name}")
 		return False
 
-	outprep = "on" if isinstance(R,Table) else "in"
+	outprep = "on" if isinstance(R,Items.Table) else "in"
 	if iobj == "here":	print(f"You put your {I.name} here")
 	else:				print(f"You put your {I.name} {outprep} the {R.name}")
 	S.removeItem(I)
@@ -1349,7 +1362,7 @@ def Take(dobj,iobj,prep):
 		if dobj in Data.cancels:
 			return False
 	if dobj in {"all","everything","it all"}:
-		C = [item.name.lower() for item in Core.game.currentroom.contents if not isinstance(item,Fixture)]
+		C = [item.name.lower() for item in Core.game.currentroom.contents if not isinstance(item,Core.Fixture)]
 		taken = False
 		for name in C:
 			taken = Take(name,iobj,prep) or taken
@@ -1437,7 +1450,7 @@ def Unlock(dobj,iobj,prep):
 	if K == None:
 		print(f"There is no '{iobj}' in your inventory")
 		return False
-	if not isinstance(K,Key):
+	if not isinstance(K,Items.Key):
 		print(f"You can't unlock with the {K.name}")
 		return False
 
@@ -1614,7 +1627,7 @@ actions = {
 "punch":Punch,
 "push":Push,
 "put":Put,
-"put down":Put,
+"put down":Drop,
 "put on":Don,
 "quaff":Drink,
 "read":Look,

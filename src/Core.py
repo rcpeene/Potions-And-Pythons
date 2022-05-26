@@ -876,10 +876,10 @@ class Room():
 	# prints room name, description, all its contents and creatures
 	def describe(self):
 		print("\n" + capWords(self.name))
-		# if player.countCompasses() == 0:
-		# 	print(ambiguateDirections(self.desc))
-		# else:
-		print(self.desc)
+		if player.countCompasses() == 0:
+			print(ambiguateDirections(self.desc))
+		else:
+			print(self.desc)
 		self.describeContents()
 		self.describeOccupants()
 
@@ -1307,10 +1307,10 @@ class Creature():
 			player.gainxp(10)
 
 
-	def Carry(self,carrier):
-		self.addCondition("carried",-3)
-		carrier.addCondition("carrying",-3,silent=True)
-		carrier.equipInHand(self)
+	def Carry(self,creature):
+		self.addCondition("carrying",-3,silent=True)
+		self.equipInHand(self)
+		creature.addCondition("carried",-3)
 		return True
 
 

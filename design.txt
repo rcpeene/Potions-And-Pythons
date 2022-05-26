@@ -553,7 +553,7 @@ huzzah
 excelsior
 godmode
 oogabooga
-open sesame
+opensesame
 faex
 deus vult
 pepe
@@ -990,6 +990,7 @@ several settlements exist in the world (aim for like at least 9)
 additional place ideas
 -colonnade
 -amphitheatre
+-panopticon
 -athenaeum
 -the garden path "to mislead someone"
 -a very smelly tree
