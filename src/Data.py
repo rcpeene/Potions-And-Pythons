@@ -68,9 +68,6 @@ dmgtypes = {"a":"acid","b":"bludgeoning","c":"cold","e":"essential","f":"fire","
 # gear dict used to initialize the player object
 initgear = {"head":-1, "body":-1, "left":-1, "right":-1, "legs":-1}
 
-# trait list used to initialize the player object
-inittraits = [1,1,1,1,1,1,1,1,1,1]
-
 # action verbs which should not take any in-game time to execute
 instantactions = {"describe","define","gear","help","hp","info","information","inventory","inv","level","lv","money","mp","quit","room","rp","save","status","time","traits","xp"}
 
