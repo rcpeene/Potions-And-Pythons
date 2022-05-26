@@ -73,6 +73,8 @@ if __name__ == "__main__":
 # CURRENT TASKS
 
 # add exec cheatcode
+# add "insert the key into the lock"
+# restructure map and revise tests
 # alter how take is done (maybe)
 # add checkConditions method when updating skills
 # remove game.activeroom? maybe?
