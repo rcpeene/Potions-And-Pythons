@@ -313,7 +313,7 @@ def newGame():
 def testGame():
 	Core.world = readJSON("World.json")
 
-	inv = [Items.Compass("compass","a plain steel compass with a red arrow",2,10,[])]
+	inv = [Core.Compass("compass","a plain steel compass with a red arrow",2,10,[])]
 	status = [["fireproof",-1], ["poisoned",5], ["cursed",-2], ["immortal",-1],
 	["sharpshooter",50], ["invisible",15], ["poisoned",-1], ["flying",5]]
 

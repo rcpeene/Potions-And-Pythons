@@ -2,9 +2,11 @@
 # This file contains the item classes used in the game
 # This file is dependent on Core.py and is a dependency of Menu.py
 
+
+from bisect import insort
+
 import Core
 import Data
-from Core import *
 
 
 
@@ -14,14 +16,14 @@ from Core import *
 ############################
 
 
-class Axe(Weapon):
+class Axe(Core.Weapon):
 	def Cut(self):
 		print("[you cut something?]")
 
 
 
 
-class Bottle(Item):
+class Bottle(Core.Item):
 	# breaks the bottle, removes it from player inventory, and randomly...
 	# generates a number of shards between 1,5 into the room.
 	def Break(self):
@@ -34,9 +36,9 @@ class Bottle(Item):
 
 
 
-class Box(Item):
+class Box(Core.Item):
 	def __init__(self,name,desc,weight,durability,status,open,contents):
-		Item.__init__(self,name,desc,weight,durability,status)
+		Core.Item.__init__(self,name,desc,weight,durability,status)
 		self.open = open
 		self.contents = contents
 
@@ -62,7 +64,7 @@ class Box(Item):
 		if len(self.contents) == 0:
 			print("It is empty")
 		else:
-			print("Inside there is " + listObjects(self.contents))
+			print("Inside there is " + Core.listObjects(self.contents))
 
 
 	# sets open bool to false
@@ -76,7 +78,7 @@ class Box(Item):
 			print("It is empty")
 		else:
 			self.open = True
-			print("Inside there is " + listObjects(self.contents))
+			print("Inside there is " + Core.listObjects(self.contents))
 
 
 	def addItem(self,I):
@@ -104,7 +106,7 @@ class Box(Item):
 
 
 
-class Bread(Item):
+class Bread(Core.Item):
 	# heals 20 hp to the player, removes bread from inventory
 	def Eat(self):
 		print("You consume the bread")
@@ -116,9 +118,9 @@ class Bread(Item):
 
 
 
-class Controller(Item):
+class Controller(Core.Item):
 	def __init__(self,name,desc,weight,durability,status,effect):
-		Item.__init__(self,name,desc,weight,durability,status)
+		Core.Item.__init__(self,name,desc,weight,durability,status)
 		self.effect = effect
 
 
@@ -134,9 +136,9 @@ class Controller(Item):
 
 
 
-class Door(Fixture):
+class Door(Core.Fixture):
 	def __init__(self,name,desc,weight,durability,status,open,connections):
-		Fixture.__init__(self,name,desc,weight,durability,status)
+		Core.Fixture.__init__(self,name,desc,weight,durability,status)
 		self.open = open
 		# connection is a 4-tuple of the form:
 		# (outDirection, outLocation, inDirection, inLocation)
@@ -161,14 +163,14 @@ class Door(Fixture):
 
 
 
-class Foot(Item):
+class Foot(Core.Item):
 	def improviseWeapon(self):
 		return Weapon(self.name,self.desc,self.weight,self.durability,[],Core.minm(1,self.weight//4),0,0,0,False,"b")
 
 
 
 
-class Fountain(Fixture):
+class Fountain(Core.Fixture):
 	def Douse():
 		pass
 
@@ -178,16 +180,16 @@ class Fountain(Fixture):
 
 
 
-class Hand(Item):
+class Hand(Core.Item):
 	def improviseWeapon(self):
 		return Weapon(self.name,self.desc,self.weight,self.durability,[],Core.minm(1,self.weight//4),2,0,0,False,"b")
 
 
 
 
-class Key(Item):
+class Key(Core.Item):
 	def __init__(self,name,desc,weight,durability,status,id):
-		Item.__init__(self,name,desc,weight,durability,status)
+		Core.Item.__init__(self,name,desc,weight,durability,status)
 		self.id = id
 
 
@@ -267,7 +269,7 @@ class Lockbox(Box):
 
 
 
-class Mouth(Item):
+class Mouth(Core.Item):
 	def improviseWeapon(self):
 		return Weapon(self.name,self.desc,self.weight,self.durability,[],Core.minm(1,self.weight//4),0,0,4,False,"p")
 
@@ -292,7 +294,7 @@ class Potion(Bottle):
 
 
 
-class Shard(Item):
+class Shard(Core.Item):
 	#???
 	def Cut(self,P):
 		print("[you cut something?]")
@@ -300,9 +302,9 @@ class Shard(Item):
 
 
 
-class Sign(Item):
+class Sign(Core.Item):
 	def __init__(self,name,desc,weight,durability,status,text):
-		Item.__init__(self,name,desc,durability,status,weight)
+		Core.Item.__init__(self,name,desc,durability,status,weight)
 		self.text = text
 
 
@@ -313,9 +315,9 @@ class Sign(Item):
 
 
 
-class Switch(Fixture):
+class Switch(Core.Fixture):
 	def __init__(self,name,desc,weight,durability,status,effect):
-		Fixture.__init__(self,name,desc,weight,status,durability)
+		Core.Fixture.__init__(self,name,desc,weight,status,durability)
 		self.effect = effect
 
 
@@ -331,16 +333,16 @@ class Switch(Fixture):
 
 
 
-class Sword(Weapon):
+class Sword(Core.Weapon):
 	def Cut(self):
 		print("[you cut something?]")
 
 
 
 
-class Table(Fixture):
+class Table(Core.Fixture):
 	def __init__(self,name,desc,weight,durability,status,contents,descname):
-		Fixture.__init__(self,name,desc,weight,durability,status)
+		Core.Fixture.__init__(self,name,desc,weight,durability,status)
 		self.contents = contents
 		self.descname = descname
 
@@ -399,9 +401,9 @@ class Table(Fixture):
 
 
 
-class Wall(Passage):
+class Wall(Core.Passage):
 	def __init__(self,name,desc,weight,durability,status,connections,descname,passprep,cr):
-		Passage.__init__(self,name,desc,weight,durability,status,connections,descname,passprep)
+		Core.Passage.__init__(self,name,desc,weight,durability,status,connections,descname,passprep)
 		self.cr = cr
 
 

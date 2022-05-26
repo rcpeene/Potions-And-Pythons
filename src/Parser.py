@@ -220,6 +220,7 @@ def Exe(command):
 		print("Code was unable to be executed:")
 		print(e)
 
+
 def Get(command):
 	if len(command) < 2:
 		print("No object given")

@@ -39,7 +39,6 @@ def testNavigation():
 	sys.stdin = open("test/testNavigation.txt")
 	PoPy.main()
 
-
 # tests open, close, take/grab, put, and drop actions
 def testInventory():
 	sys.stdin = open("test/testInventory.txt")
