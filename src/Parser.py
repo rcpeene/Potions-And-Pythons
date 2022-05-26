@@ -209,6 +209,17 @@ def parse(n=0):
 ##########################################
 
 
+def Exe(command):
+	if len(command) < 2:
+		print("No code given")
+		return
+	code = " ".join(command[1:])
+	try:
+		exec(code)
+	except Exception as e:
+		print("Code was unable to be executed:")
+		print(e)
+
 def Get(command):
 	if len(command) < 2:
 		print("No object given")
@@ -1497,6 +1508,7 @@ def Wave(dobj,iobj,prep):
 
 
 cheatcodes = {
+	"\\exe":Exe,
 	"\\get":Get,
 	"\\lrn":Learn,
 	"\\mod":Mode,

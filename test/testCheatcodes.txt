@@ -1,5 +1,9 @@
 
 test
+\exe Core.player.addItem(Items.Bottle("bottle","an empty glass bottle",3,3,{}))
+\exe Core.player.addCondition("flying",3)
+\exe this should not execute
+
 \get
 \get blah
 \get p
