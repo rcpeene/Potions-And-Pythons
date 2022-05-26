@@ -111,7 +111,7 @@ def readGame(filename,World):
 	prevroom = gametext[2][:-1]			# third line is name of previous room
 	time = int(gametext[3][:-1])		# fourth line is time int
 	gfd.close()
-	return Game(mode,World[currentroom],World[prevroom],time)
+	return Core.Game(mode,World[currentroom],World[prevroom],time)
 
 
 
@@ -130,7 +130,7 @@ def saveGame():
 
 	# split existing save names into a list and display them
 	saves = os.listdir()
-	columnPrint(saves,10,10)
+	Core.columnPrint(saves,10,10)
 	# player names their save
 	savename = input("\nWhat name will you give this save file?\n> ").lower()
 	if savename == "":
@@ -182,7 +182,7 @@ def loadGame(filename):
 		# split save names into a list and display them
 		print("Save files: ")
 		saves = os.listdir()
-		columnPrint(saves,10,10)
+		Core.columnPrint(saves,10,10)
 		savename = input("\nWhich save file will you load?\n> ")
 	else:
 		savename = filename
@@ -250,7 +250,7 @@ def delete(filename):
 		# split save names into a list and display them
 		print("Save files: ")
 		saves = os.listdir()
-		columnPrint(saves,10,10)
+		Core.columnPrint(saves,10,10)
 		savename = input("\nWhich save file will you delete?\n> ")
 	else:
 		savename = filename
