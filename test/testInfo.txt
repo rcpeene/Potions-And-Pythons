@@ -1,5 +1,9 @@
 
 test
+define xp
+define goblin
+define
+Norman
 abilities
 clear
 cry

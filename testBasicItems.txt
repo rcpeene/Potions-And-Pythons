@@ -1,0 +1,33 @@
+
+test
+
+go n
+take breadroll
+eat the breadroll
+take sword
+take the red potion
+drink the red potion
+go n
+go n
+take the blue potion
+pour out the blue potion
+take blue potion
+pour blue potion
+take green potion
+go s
+take tunic
+go s
+dump green potion on python
+take all
+don tunic
+put on tunic
+take off tunic
+put on tunic
+doff tunic
+\tpt field
+take axe
+\tpt tunnel
+equip sword
+equip axe
+equip axe
+dump sword

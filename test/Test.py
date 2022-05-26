@@ -43,13 +43,28 @@ def testInventory():
 
 # tests use, eat, equip, lock, pour and related actions
 def testBasicItems():
-	pass
-
+	sys.stdin = open("test/testInventory.txt")
+	PoPy.main()
 
 # tests attacking and breaking
 def testCombat():
 	pass
 
+# tests crawling, hiding, stealthing, mounting, laying
+def testMobility():
+	pass
+
+# tests pushing, pulling, catch, throw, tie, fish, pressing, lighting
+def testMiscUsage():
+	pass
+
+# tests praying, waving, pointing, touching, rubbing, play, pet, rest
+def testGesturing():
+	pass
+
+# crafting, cooking,
+def testCraft():
+	pass
 
 # tests basic spell usage
 def testSpells():
@@ -63,4 +78,7 @@ if __name__ == "__main__":
 	testCheatcodes()
 	testNavigation()
 	testInventory()
+	testBasicItems()
+	testCombat()
+	testSpells()
 	print("\nAll test passed without error\n")
