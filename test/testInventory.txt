@@ -1,0 +1,41 @@
+
+test
+take swords
+take a sword
+grab sword
+put down sword
+put sword down
+grab the python
+drop python
+take
+blah
+take
+the amulet of swords
+i will take the potion
+i will take the red potion
+take compass
+go n
+take all
+go n
+open chest
+close the chest
+take the capsule
+take the golden key from the capsule
+open the capsule
+look chest
+put capsule in chest
+take small chest from the table
+take small chest from the chest
+open small chest
+put blue potion in the chest
+put down blue potion in the chest
+take blue potion
+put blue potion in the chest
+put compass in chest
+no
+drop compass
+yes
+go n
+grab the amulet of poisoned
+quit
+yes

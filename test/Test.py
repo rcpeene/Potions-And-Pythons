@@ -62,4 +62,5 @@ if __name__ == "__main__":
 	testInfo()
 	testCheatcodes()
 	testNavigation()
+	testInventory()
 	print("\nAll test passed without error\n")

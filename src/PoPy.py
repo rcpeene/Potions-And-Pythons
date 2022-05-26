@@ -72,6 +72,9 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
+# alter how take is done (maybe)
+# add checkConditions method when updating skills
+# remove game.activeroom? maybe?
 # flush input not working??
 # add douse function
 # add some preliminary spells and add effects file
@@ -170,25 +173,3 @@ if __name__ == "__main__":
 #		axe
 #		polearm
 #		club
-
-
-
-
-# interpret(verb,dobj,iobj,prep,preps,dobjSearch,iobjSearch,d1=0)
-# 	if prep not in preps:
-# 		print("not understood")
-# 		return False
-# 	if dobj == None: dobj = iobj
-# 	if dobj == None: dobj = getNoun("What do you want to " + verb + "?")
-# 	if dobj in Data.cancels:
-# 		return False
-#
-# 	if searchInv:
-#
-#
-#
-#
-# func(dobj,iobj,prep):
-# 	preps = {toward, none}
-# 	I,R,prep = interpretSearch(dobj,iobj,prep,preps,dobjSearch,iobjSearch)
-#
