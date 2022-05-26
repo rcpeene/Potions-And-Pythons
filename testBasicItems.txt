@@ -9,6 +9,7 @@ take the red potion
 drink the red potion
 go n
 go n
+take
 take the blue potion
 pour out the blue potion
 take blue potion
@@ -31,3 +32,11 @@ equip sword
 equip axe
 equip axe
 dump sword
+\tpt pond
+take iron key
+\tpt glen
+take capsule
+open capsule
+unlock capsule
+my sword
+unlock capsule with iron key

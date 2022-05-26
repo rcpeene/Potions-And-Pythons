@@ -393,12 +393,12 @@
 						"contents": [
 							{
 								"__class__": "Key",
-								"name": "key",
+								"name": "`golden key",
 								"desc": "an ornate golden key",
 								"weight": 1,
 								"durability": 4,
 								"status": [],
-								"id": 1
+								"id": 2
 							}
 						],
 						"keyids": [

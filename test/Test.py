@@ -46,23 +46,23 @@ def testBasicItems():
 	sys.stdin = open("test/testInventory.txt")
 	PoPy.main()
 
-# tests attacking and breaking
+# tests attacking and breaking, cut
 def testCombat():
 	pass
 
-# tests crawling, hiding, stealthing, mounting, laying
+# tests crawl, hide, stealth, mount, laying, flying, jump, climb, swim
 def testMobility():
 	pass
 
-# tests pushing, pulling, catch, throw, tie, fish, pressing, lighting
-def testMiscUsage():
+# tests push, pull, catch, throw, tie, fish, press, ignite
+def testMiscItems():
 	pass
 
-# tests praying, waving, pointing, touching, rubbing, play, pet, rest
+# tests pray, wave, point, touch, rub, play, pet, rest
 def testGesturing():
 	pass
 
-# crafting, cooking,
+# craft, cook,
 def testCraft():
 	pass
 
