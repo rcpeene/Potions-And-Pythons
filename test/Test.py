@@ -38,8 +38,8 @@ def testNavigation():
 
 # tests open, close, take/grab, put, and drop actions
 def testInventory():
-	pass
-
+	sys.stdin = open("test/testInventory.txt")
+	PoPy.main()
 
 # tests use, eat, equip, lock, pour and related actions
 def testBasicItems():
@@ -62,4 +62,5 @@ if __name__ == "__main__":
 	testInfo()
 	testCheatcodes()
 	testNavigation()
+	testInventory()
 	print("\nAll test passed without error\n")
