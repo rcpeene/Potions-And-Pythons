@@ -36,8 +36,8 @@ def main():
 		Core.game.whoseturn = Core.player
 
 		# take user input until player successfully performs an action
-		while not Parser.parse():	continue
-		if Core.game.quit:	return
+		while not Parser.parse(): continue
+		if Core.game.quit: return
 
 		# creatures in current room's turn
 		Core.game.activeroom = Core.game.currentroom
@@ -72,12 +72,15 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
+# alter way objects are searched for now that objects have "parent" attribute
+# add "in" dunder method for Room, Item, Creature
+# remove game.activeroom? maybe?
+# restructure map and revise tests, add attack tests
 # add "insert the key into the lock"
-# restructure map and revise tests
 # alter how take is done (maybe)
 # add checkConditions method when updating skills
-# remove game.activeroom? maybe?
-# flush input not working??
+
+# flush input not working?? (should be fixed, but make sure)
 # add douse function
 # add some preliminary spells and add effects file
 # consider enter, exit functions in room

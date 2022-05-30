@@ -353,13 +353,19 @@ class Table(Core.Fixture):
 	def addItem(self,I):
 		insort(self.contents,I)
 		I.parent = self
+		if len(self.contents) == 1:
+			item = Core.gprint("a",self.contents[0].name,4)
+			self.descname = f"{self.name} with {item} on it"
+		elif len(self.contents) > 1:
+			self.descname = f"{self.name} with items on it"
+
 
 
 	def removeItem(self,I):
 		self.contents.remove(I)
 		if len(self.contents) == 1:
-			items = Core.gprint("a",self.contents[0].name,4)
-			self.descname = f"{self.name} with {items} on it"
+			item = Core.gprint("a",self.contents[0].name,4)
+			self.descname = f"{self.name} with {item} on it"
 		elif len(self.contents) == 0:
 			self.descname = f"empty {self.name}"
 

@@ -301,7 +301,7 @@ def Set(command):
 
 def Teleport(command):
 	if len(command) < 2:
-		print("Not enough parameters")
+		print("Not enough arguments")
 		return
 	location = command[1]
 	if location in Core.world:
@@ -1654,6 +1654,7 @@ actions = {
 "run":Go,
 "search":Search,
 "set":Put,
+"set down:":Drop,
 "shoot":Shoot,
 "shove":Shove,
 "shut":Close,
