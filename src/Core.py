@@ -135,7 +135,8 @@ def capWords(string):
 	listString = string.split(' ')
 	cappedString = ''
 	for word in listString:
-		cappedString += word[0].upper() + word[1:] + ' '
+		if len(word) > 0:
+			cappedString += word[0].upper() + word[1:] + ' '
 	return cappedString[0:-1]	# removes trailing space character
 
 
@@ -206,6 +207,9 @@ def bagObjects(objects):
 # returns a string that grammatically lists all strings in names
 def listObjects(objects):
 	objBag = bagObjects(objects)
+	# don't list fixtures which are not 'mentioned'
+	filterKey = lambda obj: isinstance(obj,Core.Fixture) and not obj.mentioned
+	objBag = list(filter(filterkey,objBag))
 	liststring = ""
 	l = len(objBag)
 	for i, (obj, count) in enumerate(objBag):
@@ -475,7 +479,7 @@ class Game():
 		# used to break out of the main input loop when the player wants to quit
 		self.quit = False
 		# used for determining whether or not to print certain things
-		# usually silent is True when events happen outside the current room
+		# usually, silent is True when events happen outside the current room
 		self.silent = False
 		# the creature who is currently acting
 		self.whoseturn = None
@@ -653,8 +657,9 @@ class Game():
 # directed graph, facilitated by the world dict, where the exits dict specifies
 # the edges from a given node to its neighboring nodes.
 class Room():
-	def __init__(self,name,desc,exits,contents,occupants,status):
+	def __init__(self,name,domain,desc,exits,contents,occupants,status):
 		self.name = name
+		self.domain = domain
 		self.desc = desc
 		self.exits = exits
 		self.contents = contents
@@ -788,7 +793,6 @@ class Room():
 	### Getters ###
 
 	# returns dict of exits, where keys are directions and values are room names
-	# and values are room names
 	def allExits(self):
 		all = {}
 		for dir in self.exits:
@@ -870,11 +874,12 @@ class Room():
 
 	# prints room name, description, all its contents and creatures
 	def describe(self):
-		print("\n" + capWords(self.name))
+		print("\n\n" + capWords(self.domain))
+		print(capWords(self.name))
 		if player.countCompasses() == 0:
-			print(ambiguateDirections(self.desc))
+			print("\n" + ambiguateDirections(self.desc))
 		else:
-			print(self.desc)
+			print("\n" + self.desc)
 		self.describeContents()
 		self.describeOccupants()
 
@@ -1895,8 +1900,10 @@ Set status
 
 # almost identical to the item class, but fixtures may not be removed from their initial location. Fixtures also have a size attribute
 class Fixture(Item):
-	def __init__(self,name,desc,weight,durability,status):
+	def __init__(self,name,desc,weight,durability,status,size,mentioned):
 		Item.__init__(self,name,desc,weight,durability,status)
+		self.size = size
+		self.mentioned = mentioned
 
 
 
