@@ -72,7 +72,7 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# add room "domain"
+# consider giving passages convertFromJSON methods for conciseness in world file
 # test making room names capital
 # restructure map and revise tests, add attack tests
 # add "insert the key into the lock"

@@ -1,4 +1,14 @@
 {
+	"above the woods": {
+		"__class__": "Room",
+		"name": "above the woods",
+		"domain": "woodlands",
+		"desc": "High above the forest, there is one tree that stands much taller than the others. To the east is a light-colored cliff.",
+		"exits": {},
+		"contents": [],
+		"occupants": [],
+		"status": []
+	},
 	"big tree": {
 		"__class__": "Room",
 		"name": "big tree",
@@ -48,12 +58,24 @@
 		"name": "cabin basement",
 		"domain": "cabin",
 		"desc": "A damp, decrepit basement with a stone floor, covered in mud and moss from untold years of neglect. There is a creaky wooden stairway leading to above ground.",
-		"exits": {
-			"up": "cabin hallway",
-			"stairway": "cabin hallway",
-			"stairs": "cabin hallway"
-		},
-		"contents": [],
+		"exits": {},
+		"contents": [
+			{
+				"__class__": "Passage",
+				"name": "stairwell",
+				"desc": "creaky wooden stairwell which leads up",
+				"weight": -1,
+				"durability": -1,
+				"status": [],
+				"mention": true,
+				"connections": {
+					"up": "cabin hallway",
+					"out": "cabin hallway"
+				},
+				"descname": "stairwell that goes up",
+				"passprep": ""
+			}
+		],
 		"occupants": [],
 		"status": []
 	},
@@ -61,17 +83,31 @@
 		"__class__": "Room",
 		"name": "cabin hallway",
 		"domain": "cabin",
-		"desc": "The entrance to a dusty old cabin. Plants sprout through cracks in the floor and vines creep up the walls which were once painted white. The north and south walls of this hallway each have a doorway, and there is a stairway at the end, which leads both up and down.",
+		"desc": "The entrance to a dusty old cabin. Plants sprout through cracks in the floor and vines creep up the walls which were once painted white. The north and south walls of this hallway each have a doorway, and there is a creaky stairway at the end, which leads both up and down.",
 		"exits": {
 			"north": "cabin kitchen",
 			"east": "cliffside",
 			"south": "cabin privy",
-			"up": "cabin quarters",
-			"down": "cabin basement",
 			"out": "cliffside",
 			"doorway": "cabin kitchen"
 		},
-		"contents": [],
+		"contents": [
+			{
+				"__class__": "Passage",
+				"name": "stairwell",
+				"desc": "wooden stairs which leads up on the right, crosses the hallway, and leads down on the left",
+				"weight": -1,
+				"durability": -1,
+				"status": [],
+				"mention": false,
+				"connections": {
+					"up": "cabin quarters",
+					"down": "cabin basement"
+				},
+				"descname": "creaky stairwell which leads both up and down",
+				"passprep": ""
+			}
+		],
 		"occupants": [],
 		"status": []
 	},
@@ -108,11 +144,24 @@
 		"name": "cabin quarters",
 		"domain": "cabin",
 		"desc": "A small room with walls with torn floral wallpaper and a leaky ceiling.",
-		"exits": {
-			"down": "cabin hallway",
-			"out": "cabin hallway"
-		},
-		"contents": [],
+		"exits": {},
+		"contents": [
+			{
+				"__class__": "Passage",
+				"name": "stairwell",
+				"desc": "an old creaky wooden staircase",
+				"weight": -1,
+				"durability": -1,
+				"status": [],
+				"mention": true,
+				"connections": {
+					"down": "cabin hallway",
+					"out": "cabin hallway"
+				},
+				"descname": "creaky stairwell which leads down",
+				"passprep": ""
+			}
+		],
 		"occupants": [],
 		"status": []
 	},
@@ -132,13 +181,23 @@
 		"__class__": "Room",
 		"name": "cliffside",
 		"domain": "woodlands",
-		"desc": "A small log cabin resides here. Moss and vines cover what may have once been a reddish colored home. Rays of light peak through the canopy, landing on the dusty roof. There is also a wooden shed no taller than a person. In the north and south, there are more woods. A stream flows eastward. The west side of this cabin is guarded by a tall cliff.",
+		"desc": "A small log cabin resides here. Moss and vines cover what may have once been a reddish colored home. Rays of light peak through the canopy, landing on the dusty roof. There is also a wooden shed no taller than a person. In the north and south, there are more woods. A stream flows eastward. The west side of this cabin is guarded by a tall pale cliff.",
 		"exits": {
 			"north": "mound",
 			"east": "brook",
 			"south": "big stump",
 			"in": "cabin hallway"
 		},
+		"contents": [],
+		"occupants": [],
+		"status": []
+	},
+	"clifftop": {
+		"__class__": "Room",
+		"name": "clifftop",
+		"domain": "woodlands",
+		"desc": "Atop the edge of a rocky white cliff facing east. In the distance you can see plains stretching to the horizon past the forest below. At the base of this cliff is a brook flowing beside a cabin.",
+		"exits": {},
 		"contents": [],
 		"occupants": [],
 		"status": []
@@ -164,7 +223,8 @@
 			"north": "brook",
 			"east": "pit",
 			"south": "tunnel",
-			"west": "big stump"
+			"west": "big stump",
+			"up": "above the woods"
 		},
 		"contents": [],
 		"occupants": [],
