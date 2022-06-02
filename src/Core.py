@@ -207,9 +207,6 @@ def bagObjects(objects):
 # returns a string that grammatically lists all strings in names
 def listObjects(objects):
 	objBag = bagObjects(objects)
-	# don't list fixtures which are not 'mentioned'
-	filterKey = lambda obj: isinstance(obj,Fixture) and not obj.mention
-	objBag = list(filter(filterkey,objBag))
 	liststring = ""
 	l = len(objBag)
 	for i, (obj, count) in enumerate(objBag):
@@ -869,6 +866,13 @@ class Room():
 		getSource=getSource,getPath=getPath,reqSource=reqSource)
 
 
+	def listableContents(self):
+		# don't list fixtures which are not 'mentioned'
+		filterkey = lambda x: not (isinstance(x,Fixture) and not x.mention)
+		objects = list(filter(filterkey,self.contents))
+		return objects
+
+
 
 	### User Output ###
 
@@ -886,8 +890,8 @@ class Room():
 
 	# prints all the contents of the room in sentence form
 	def describeContents(self):
-		if len(self.contents) != 0:
-			print("There is " + listObjects(self.contents))
+		if len(self.listableContents()) != 0:
+			print("There is " + listObjects(self.listableContents()))
 
 
 	# prints all the creatures in the room in sentence form
