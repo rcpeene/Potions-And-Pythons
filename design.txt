@@ -1103,7 +1103,7 @@ The ruler of the underworld. Oftentimes appears as a man with no eyes and skelet
 Veia - Goddess of charisma, sun, love, magic, music
 The Queen of the Gods, gave music to humans. Appears as a golden older women with a bright crown. Gives the blessing of felicity.
 
-Caillenn - Goddess of stamina, beasts, summer, freedom
+Caillef - Goddess of stamina, beasts, summer, freedom
 A woman with antlers and a tail. She plays the flute. Sometimes appears as a huntress. Gives the blessing of liveliness. Symbolized by a squirrel.
 
 Astrathe - Goddess of wisdom, stars, prophecy, fate, time
@@ -1116,7 +1116,7 @@ Selanna - Goddess of constitution, plants, healing, patience, mercy
 A woman with a flower garland and very long light hair. Sometimes shown covered in vines. Gives the blessing of toughness.
 
 Ixis - Goddess of fire, rebirth, dragons, chaos
-Rebelled and lost to Brym. Often appears as a large red Dragoness.
+Rebelled and lost to Brym. Often appears as a large red Dragoness. Gives a random buff from {flying, fireproof, blazing, total heal}
 
 Uramut - Deity of the unknown, secrets, darkness, plagues
 Symbolized by a yellow eye. Shown as a shadowy creature or a tentacle beast.
