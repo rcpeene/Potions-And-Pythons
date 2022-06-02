@@ -7,3 +7,4 @@ build/
 *.spec
 *.exe
 PoPy
+templates.json
