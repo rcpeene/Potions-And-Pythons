@@ -79,6 +79,8 @@ def default(jsonDict):
 			return set(jsonDict["setdata"])
 
 		objClass = Core.strToClass(objClassname,["Core","Creatures","Items"])
+		if objClass == None:
+			raise Exception("Could not find class for world key:",objClassname)
 		objAttributes = list(jsonDict.values())
 		# print("========: " + d["name"] + " " + str(objAttributes))
 		if objClassname == "Room":
