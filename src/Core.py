@@ -1590,7 +1590,7 @@ class Player(Creature):
 				if reqDuration == None or reqDuration == duration:
 					self.status.remove([condname,duration])
 					if not self.hasCondition(condname):
-						print("You are no longer " + condname)
+						print("\nYou are no longer " + condname)
 
 
 	def checkHindered(self):
