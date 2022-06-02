@@ -835,7 +835,9 @@ def Escape(dobj,iobj,prep):
 
 
 def Exit(dobj,iobj,prep):
-	print("exiting")
+	if dobj == None and "out" in Game.currentroom.exits:
+		return Go("out",iobj,prep)
+	return Go(dobj,iobj,prep)
 
 
 def Feed(dobj,iobj,prep):
@@ -896,7 +898,7 @@ def assignGoTerms(dobj,iobj,prep):
 		dir = dobj
 	elif iobj in Data.directions.values():
 		dir = iobj
-	elif prep in Data.directions.values():
+	else:
 		dir = prep
 
 	# assign dest
@@ -931,7 +933,7 @@ def Go(dobj,iobj,prep):
 	# get dir, dest, and passage and validate them
 	dir,dest,passage = assignGoTerms(dobj,iobj,prep)
 	if dir != None and dir not in Core.game.currentroom.allExits():
-		print(f"There is no exit leading {dir} here")
+		print(f"There is no exit leading '{dir}' here")
 		return False
 	if (dir,dest,passage) == (None,None,None):
 		print(f"There is no exit leading to a '{dobj}' here")
