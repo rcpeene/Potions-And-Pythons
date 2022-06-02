@@ -38,7 +38,7 @@ magicaldmg = "inrv"
 ## USEFUL SETS ##
 #################
 
-articles = {"a","an","her","his","i","its","my","out","that","the","their","this","will"}
+articles = {"a","an","her","his","i","its","my","that","the","their","this","will"}
 
 cancels = {"cancel","done","end","nevermind","no","undo"}
 
@@ -50,7 +50,7 @@ noes = {"absolutely not","certainly not","definitely not","n","na","nah","nahh",
 # this is because "up" and "down" are also in the "directions" dict
 # they are not necessary entries here, but make interpreting more consistent...
 # for use in the Go() action functions
-prepositions = {"above","across","at","behind","below","beneath","by","d","down","for","from","in","inside","into","near","off","on","onto","over","through","to","toward","under","u","up","upon","using","with"}
+prepositions = {"above","across","at","behind","below","beneath","by","d","down","for","from","in","inside","into","near","off","on","onto","out","over","through","to","toward","under","u","up","upon","using","with"}
 
 pronouns = {"she","he","they","her","him","them","it"}
 

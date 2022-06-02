@@ -918,7 +918,8 @@ def assignGoTerms(dobj,iobj,prep):
 
 # parses user input to determine the intended direction, destination, and/or... # passage. Then calls either traverse or changeroom accordingly
 def Go(dobj,iobj,prep):
-	preps = {"down","through","to","toward","up","in","into","on","onto",None}
+	print(dobj,iobj,prep)
+	preps = {"down","through","to","toward","up","in","into","on","onto","out",None}
 	if dobj == None and iobj == None and prep == None:
 		dobj,iobj,prep = parseWithoutVerb("Where will you go?",preps)
 	if dobj in Data.cancels:	return False

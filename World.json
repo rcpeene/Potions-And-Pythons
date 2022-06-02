@@ -136,7 +136,8 @@
 		"exits": {
 			"north": "mound",
 			"east": "brook",
-			"south": "big stump"
+			"south": "big stump",
+			"in": "cabin hallway"
 		},
 		"contents": [],
 		"occupants": [],
