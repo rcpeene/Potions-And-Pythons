@@ -137,8 +137,8 @@ class Controller(Core.Item):
 
 
 class Door(Core.Fixture):
-	def __init__(self,name,desc,weight,durability,status,open,connections):
-		Core.Fixture.__init__(self,name,desc,weight,durability,status)
+	def __init__(self,name,desc,weight,durability,status,mention,open,connections):
+		Core.Fixture.__init__(self,name,desc,weight,durability,status,mention)
 		self.open = open
 		# connection is a 4-tuple of the form:
 		# (outDirection, outLocation, inDirection, inLocation)
@@ -316,8 +316,8 @@ class Sign(Core.Item):
 
 
 class Switch(Core.Fixture):
-	def __init__(self,name,desc,weight,durability,status,effect):
-		Core.Fixture.__init__(self,name,desc,weight,status,durability)
+	def __init__(self,name,desc,weight,durability,status,mention,effect):
+		Core.Fixture.__init__(self,name,desc,weight,durability,status,mention)
 		self.effect = effect
 
 
@@ -341,8 +341,8 @@ class Sword(Core.Weapon):
 
 
 class Table(Core.Fixture):
-	def __init__(self,name,desc,weight,durability,status,contents,descname):
-		Core.Fixture.__init__(self,name,desc,weight,durability,status)
+	def __init__(self,name,desc,weight,durability,status,mention,contents,descname):
+		Core.Fixture.__init__(self,name,desc,weight,durability,status,mention)
 		self.contents = contents
 		self.descname = descname
 

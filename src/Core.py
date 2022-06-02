@@ -208,7 +208,7 @@ def bagObjects(objects):
 def listObjects(objects):
 	objBag = bagObjects(objects)
 	# don't list fixtures which are not 'mentioned'
-	filterKey = lambda obj: isinstance(obj,Core.Fixture) and not obj.mentioned
+	filterKey = lambda obj: isinstance(obj,Fixture) and not obj.mention
 	objBag = list(filter(filterkey,objBag))
 	liststring = ""
 	l = len(objBag)
@@ -1900,23 +1900,18 @@ Set status
 
 '''
 
-# almost identical to the item class, but fixtures may not be removed from their initial location. Fixtures also have a size attribute
+# almost identical to the item class, but fixtures may not be removed from their initial location.
 class Fixture(Item):
-	def __init__(self,name,desc,weight,durability,status,size,mentioned):
+	def __init__(self,name,desc,weight,durability,status,mention):
 		Item.__init__(self,name,desc,weight,durability,status)
-		self.size = size
-		self.mentioned = mentioned
+		self.mention = mention
 
 
 
 
 class Passage(Fixture):
-	def __init__(self,name,desc,weight,durability,status,connections,descname,passprep):
-		self.name = name
-		self.desc = desc
-		self.weight = weight
-		self.durability = durability
-		self.status = status
+	def __init__(self,name,desc,weight,durability,status,mention,connections,descname,passprep):
+		Fixture.__init__(self,name,desc,weight,durability,status,mention)
 		self.connections = connections
 		self.descname = descname
 		self.passprep = passprep
