@@ -878,8 +878,8 @@ class Room():
 
 	# prints room name, description, all its contents and creatures
 	def describe(self):
-		print("\n\n" + capWords(self.domain))
-		print(capWords(self.name))
+		print("\n\n" + self.domain)
+		print(self.name)
 		if player.countCompasses() == 0:
 			print("\n" + ambiguateDirections(self.desc))
 		else:
