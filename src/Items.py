@@ -37,34 +37,34 @@ class Bottle(Core.Item):
 
 
 class Box(Core.Item):
-	def __init__(self,name,desc,weight,durability,status,open,contents):
+	def __init__(self,name,desc,weight,durability,status,open,items):
 		Core.Item.__init__(self,name,desc,weight,durability,status)
 		self.open = open
-		self.contents = contents
+		self.items = items
 
 
 
 	### Operation ###
 
-	# the weight of a box is equal to its own weight + weights of its contents
+	# the weight of a box is equal to its own weight + weights of its items
 	def Weight(self):
 		w = self.weight
-		for i in self.contents:
+		for i in self.items:
 			w += i.Weight()
 		return w
 
 
-	# sets open bool to true, prints its contents
+	# sets open bool to true, prints its items
 	def Open(self):
 		if self.open:
 			print(f"The {self.name} is already open")
 		else:
 			print(f"You open the {self.name}")
 			self.open = True
-		if len(self.contents) == 0:
+		if len(self.items) == 0:
 			print("It is empty")
 		else:
-			print("Inside there is " + Core.listObjects(self.contents))
+			print("Inside there is " + Core.listObjects(self.items))
 
 
 	# sets open bool to false
@@ -74,35 +74,35 @@ class Box(Core.Item):
 
 
 	def Look(self):
-		if len(self.contents) == 0:
+		if len(self.items) == 0:
 			print("It is empty")
 		else:
 			self.open = True
-			print("Inside there is " + Core.listObjects(self.contents))
+			print("Inside there is " + Core.listObjects(self.items))
 
 
 	def addItem(self,I):
-		insort(self.contents,I)
+		insort(self.items,I)
 		I.parent = self
 
 
 	def removeItem(self,I):
-		self.contents.remove(I)
+		self.items.remove(I)
 
 
 
 	### Getters ###
 
-	# takes a string, term, and searches the box's contents
+	# takes a string, term, and searches the box's items
 	# if an item is found that matches term, return it, otherwise, return None
-	def inContents(self,term):
-		for item in self.contents:
+	def inItems(self,term):
+		for item in self.items:
 			if item.name == term:	return item
 		return None
 
 
-	def contentNames(self):
-		return [item.name for item in self.contents]
+	def itemNames(self):
+		return [item.name for item in self.items]
 
 
 
@@ -209,8 +209,8 @@ class Key(Core.Item):
 
 
 class Lockbox(Box):
-	def __init__(self,name,desc,weight,durability,status,open,contents,keyids,locked):
-		Box.__init__(self,name,desc,weight,durability,status,open,contents)
+	def __init__(self,name,desc,weight,durability,status,open,items,keyids,locked):
+		Box.__init__(self,name,desc,weight,durability,status,open,items)
 		self.keyids = keyids
 		self.locked = locked
 
@@ -218,7 +218,7 @@ class Lockbox(Box):
 
 	### Operation ###
 
-	# sets open bool to true, prints its contents
+	# sets open bool to true, prints its items
 	def Open(self):
 		if self.open:
 			print(f"The {self.name} is already open")
@@ -228,20 +228,20 @@ class Lockbox(Box):
 		else:
 			print(f"You open the {self.name}")
 			self.open = True
-		if len(self.contents) == 0:
+		if len(self.items) == 0:
 			print("It is empty")
 		else:
-			print("Inside there is " + listObjects(self.contents))
+			print("Inside there is " + listObjects(self.items))
 
 
 	def Look(self):
 		if self.locked == True:
 			print("It is locked")
-		elif len(self.contents) == 0:
+		elif len(self.items) == 0:
 			print("It is empty")
 		else:
 			self.open = True
-			print("Inside there is " + listObjects(self.contents))
+			print("Inside there is " + listObjects(self.items))
 
 
 	def Lock(self,key):
@@ -346,9 +346,9 @@ class Sword(Core.Weapon):
 
 
 class Table(Core.Fixture):
-	def __init__(self,name,desc,weight,durability,status,mention,contents,descname):
+	def __init__(self,name,desc,weight,durability,status,mention,items,descname):
 		Core.Fixture.__init__(self,name,desc,weight,durability,status,mention)
-		self.contents = contents
+		self.items = items
 		self.descname = descname
 
 
@@ -356,22 +356,22 @@ class Table(Core.Fixture):
 	### Operation ###
 
 	def addItem(self,I):
-		insort(self.contents,I)
+		insort(self.items,I)
 		I.parent = self
-		if len(self.contents) == 1:
-			item = Core.gprint("a",self.contents[0].name,4)
+		if len(self.items) == 1:
+			item = Core.gprint("a",self.items[0].name,4)
 			self.descname = f"{self.name} with {item} on it"
-		elif len(self.contents) > 1:
+		elif len(self.items) > 1:
 			self.descname = f"{self.name} with items on it"
 
 
 
 	def removeItem(self,I):
-		self.contents.remove(I)
-		if len(self.contents) == 1:
-			item = Core.gprint("a",self.contents[0].name,4)
+		self.items.remove(I)
+		if len(self.items) == 1:
+			item = Core.gprint("a",self.items[0].name,4)
 			self.descname = f"{self.name} with {item} on it"
-		elif len(self.contents) == 0:
+		elif len(self.items) == 0:
 			self.descname = f"empty {self.name}"
 
 
@@ -379,23 +379,23 @@ class Table(Core.Fixture):
 
 	### Getters ###
 
-	# the weight of a box is equal to its own weight + weights of its contents
+	# the weight of a box is equal to its own weight + weights of its items
 	def Weight(self):
 		w = self.weight
-		for i in self.contents:	w += i.Weight()
+		for i in self.items:	w += i.Weight()
 		return w
 
 
-	# takes a string, term, and searches the box's contents
+	# takes a string, term, and searches the box's items
 	# if an item is found that matches term, return it, otherwise, return None
-	def inContents(self,term):
-		for item in self.contents:
+	def inItems(self,term):
+		for item in self.items:
 			if item.name == term:	return item
 		return None
 
 
-	def contentNames(self):
-		return [item.name for item in self.contents]
+	def itemNames(self):
+		return [item.name for item in self.items]
 
 
 
@@ -404,8 +404,8 @@ class Table(Core.Fixture):
 
 	def describe(self):
 		print(self.descname)
-		if len(self.contents) != 0:
-			print("On it is " + listObjects(self.contents))
+		if len(self.items) != 0:
+			print("On it is " + listObjects(self.items))
 		else:
 			print("There is nothing on it")
 

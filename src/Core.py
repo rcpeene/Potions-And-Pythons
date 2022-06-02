@@ -309,8 +309,8 @@ def objSearch(term,root,d=0,getPath=False,getSource=False,reqSource=None):
 def objSearchRecur(term,node,path,d,reqSource):
 	target,source = None,None
 	# choose list of objects to search through depending on the node's type
-	if isinstance(node,Room): searchThrough = node.contents + node.occupants
-	elif hasattr(node,"contents"): searchThrough = node.contents
+	if isinstance(node,Room): searchThrough = node.items + node.occupants
+	elif hasattr(node,"items"): searchThrough = node.items
 	elif hasattr(node,"inv"): searchThrough = node.inv
 	# if node is unsearchable: return
 	else: return target,source,path
@@ -348,8 +348,8 @@ def objSearchRecur(term,node,path,d,reqSource):
 def objTreeToSet(root,d=0,getSources=False):
 	allObjects = set()
 	# determine what to search through based on the root's type
-	if isinstance(root,Room): searchThrough = root.contents + root.occupants
-	elif hasattr(root,"contents"): searchThrough = root.contents
+	if isinstance(root,Room): searchThrough = root.items + root.occupants
+	elif hasattr(root,"items"): searchThrough = root.items
 	elif hasattr(root,"inv"): searchThrough = root.inv
 	# if the item is not searchable, return empty set
 	else: return set()
@@ -371,8 +371,8 @@ def objTreeToSet(root,d=0,getSources=False):
 # iterates through objects within the root and assigns root as their parent
 # recurs for each object
 def assignParentsRecur(root):
-	if isinstance(root,Room): searchThrough = root.contents + root.occupants
-	elif hasattr(root,"contents"): searchThrough = root.contents
+	if isinstance(root,Room): searchThrough = root.items + root.occupants
+	elif hasattr(root,"items"): searchThrough = root.items
 	elif hasattr(root,"inv"): searchThrough = root.inv
 	else: return
 
@@ -654,12 +654,13 @@ class Game():
 # directed graph, facilitated by the world dict, where the exits dict specifies
 # the edges from a given node to its neighboring nodes.
 class Room():
-	def __init__(self,name,domain,desc,exits,contents,occupants,status):
+	def __init__(self,name,domain,desc,exits,fixtures,items,occupants,status):
 		self.name = name
 		self.domain = domain
 		self.desc = desc
 		self.exits = exits
-		self.contents = contents
+		self.fixtures = fixtures
+		self.items = items
 		self.occupants = occupants
 		self.status = status
 
@@ -686,13 +687,13 @@ class Room():
 
 
 	def addItem(self,I):
-		insort(self.contents,I)
+		insort(self.items,I)
 		I.parent = self
 
 
 	def removeItem(self,I):
-		if I in self.contents:
-			self.contents.remove(I)
+		if I in self.items:
+			self.items.remove(I)
 
 
 	def addCreature(self,C):
@@ -803,21 +804,21 @@ class Room():
 		return all
 
 
-	# takes a string, term, and searches the room's contents
+	# takes a string, term, and searches the room's items
 	# if an item is found that matches term, return it, otherwise, return None
-	def inContents(self,term):
-		for item in self.contents:
+	def inItems(self,term):
+		for item in self.items:
 			if item.name == term:	return item
 		return None
 
 
-	def contentNames(self):
-		return [item.name for item in self.contents]
+	def itemNames(self):
+		return [item.name for item in self.items]
 
 
-	# returns a list of Passage objects within the room's contents
+	# returns a list of Passage objects within the room's items
 	def getPassages(self):
-		return [item for item in self.contents if isinstance(item,Passage)]
+		return [item for item in self.items if isinstance(item,Passage)]
 
 
 	# takes a string, term, and searches the room's occuptants
@@ -830,6 +831,10 @@ class Room():
 
 	def occupantNames(self):
 		return [creature.name for creature in self.occupants]
+
+
+	def allObjects(self):
+		return self.fixtures + self.items + self.occupants
 
 
 	# given a direction (like 'north' or 'down)...
@@ -866,17 +871,17 @@ class Room():
 		getSource=getSource,getPath=getPath,reqSource=reqSource)
 
 
-	def listableContents(self):
+	def listableItems(self):
 		# don't list fixtures which are not 'mentioned'
 		filterkey = lambda x: not (isinstance(x,Fixture) and not x.mention)
-		objects = list(filter(filterkey,self.contents))
+		objects = list(filter(filterkey,self.items))
 		return objects
 
 
 
 	### User Output ###
 
-	# prints room name, description, all its contents and creatures
+	# prints room name, description, all its items and creatures
 	def describe(self):
 		print("\n\n" + self.domain)
 		print(self.name)
@@ -884,14 +889,14 @@ class Room():
 			print("\n" + ambiguateDirections(self.desc))
 		else:
 			print("\n" + self.desc)
-		self.describeContents()
+		self.describeItems()
 		self.describeOccupants()
 
 
-	# prints all the contents of the room in sentence form
-	def describeContents(self):
-		if len(self.listableContents()) != 0:
-			print("There is " + listObjects(self.listableContents()))
+	# prints all the items of the room in sentence form
+	def describeItems(self):
+		if len(self.listableItems()) != 0:
+			print("There is " + listObjects(self.listableItems()))
 
 
 	# prints all the creatures in the room in sentence form
@@ -1382,8 +1387,8 @@ class Creature():
 		return [item.name for item in self.inv]
 
 
-	# just a function wrapper for functions that call contentNames on objects
-	def contentNames(self):
+	# just a function wrapper for functions that call itemNames on objects
+	def itemNames(self):
 		return self.invNames()
 
 

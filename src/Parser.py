@@ -1380,7 +1380,7 @@ def Take(dobj,iobj,prep):
 		if dobj in Data.cancels:
 			return False
 	if dobj in {"all","everything","it all"}:
-		C = [item.name.lower() for item in Core.game.currentroom.contents if not isinstance(item,Core.Fixture)]
+		C = [name.lower() for name in Core.game.currentroom.itemNames()]
 		taken = False
 		for name in C:
 			taken = Take(name,iobj,prep) or taken
