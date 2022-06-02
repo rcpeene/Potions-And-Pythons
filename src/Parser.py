@@ -800,7 +800,10 @@ def Eat(dobj,iobj,prep):
 
 
 def Enter(dobj,iobj,prep):
-	print("entering")
+	if dobj == None and "in" in Core.game.currentroom.exits:
+		return Go("in",iobj,prep)
+	elif iobj == None:
+		return Go(dobj,"in",prep)
 
 
 def Equip(dobj,iobj,prep):
@@ -835,9 +838,10 @@ def Escape(dobj,iobj,prep):
 
 
 def Exit(dobj,iobj,prep):
-	if dobj == None and "out" in Game.currentroom.exits:
+	if dobj == None and "out" in Core.game.currentroom.exits:
 		return Go("out",iobj,prep)
-	return Go(dobj,iobj,prep)
+	elif iobj == None:
+		return Go(dobj,"out",prep)
 
 
 def Feed(dobj,iobj,prep):
@@ -918,7 +922,6 @@ def assignGoTerms(dobj,iobj,prep):
 
 # parses user input to determine the intended direction, destination, and/or... # passage. Then calls either traverse or changeroom accordingly
 def Go(dobj,iobj,prep):
-	print(dobj,iobj,prep)
 	preps = {"down","through","to","toward","up","in","into","on","onto","out",None}
 	if dobj == None and iobj == None and prep == None:
 		dobj,iobj,prep = parseWithoutVerb("Where will you go?",preps)
@@ -1591,7 +1594,7 @@ actions = {
 "dump":Dump,
 "eat":Eat,
 "empty":Dump,
-"enter":Go,
+"enter":Enter,
 "equip":Equip,
 "escape":Escape,
 "examine":Look,
