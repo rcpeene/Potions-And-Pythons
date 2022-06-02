@@ -978,23 +978,24 @@ class Item():
 	### User Output ###
 
 	def describe(self):
-		print("It's " + self.stringName(False))
+		print("It's " + self.stringName(n=1,definite=False))
 		print(self.desc)
 
 
-	def stringName(self,n=-1,definite=True,cap=False):
+	def stringName(self,n=-1,definite=True,cap=False,plural=False):
 		strname = self.descname if hasattr(self,"descname") else self.name
-		if definite:
+		if definite and not plural:
 			strname = "the " + strname
-		elif strname[0] in Data.vowels and n == 1:
+		elif strname[0] in Data.vowels and not plural:
 			strname = "an " + strname
-		elif n == 1:
+		elif not plural:
 			strname = "a " + strname
 		if cap:
 			strname = capWords(strname)
-		if n > 1:
+		if plural:
 			strname += "s"
-			strname = str(n) + " " + strname
+			if n > 1:
+				strname = n + strname
 		return strname
 
 
@@ -1455,12 +1456,13 @@ class Creature():
 	### User Output ###
 
 	def stringName(self,n=-1,definite=True,cap=False,plural=False):
+		strname = self.descname if hasattr(self,"descname") else self.name
 		if definite and not plural:
-			strname = "the " + self.name
-		elif self.name[0] in Data.vowels and not plural:
-			strname = "an " + self.name
+			strname = "the " + strname
+		elif strname[0] in Data.vowels and not plural:
+			strname = "an " + strname
 		elif not plural:
-			strname = "a " + self.name
+			strname = "a " + strname
 		if cap:
 			strname = capWords(strname)
 		if plural:
@@ -1471,7 +1473,7 @@ class Creature():
 
 
 	def describe(self):
-		print("It's " + self.stringName(False))
+		print("It's " + self.stringName(n=1,definite=False))
 		print(self.desc)
 
 
