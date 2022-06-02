@@ -106,17 +106,6 @@ class Box(Core.Item):
 
 
 
-class Bread(Core.Item):
-	# heals 20 hp to the player, removes bread from inventory
-	def Eat(self):
-		print("You consume the bread")
-		h = Core.player.heal(20)
-		self.parent.removeItem(self)
-		if h == 0:
-			print("Yummy")
-
-
-
 
 class Controller(Core.Item):
 	def __init__(self,name,desc,weight,durability,status,effect):
@@ -159,6 +148,22 @@ class Door(Core.Fixture):
 		Currentroom.addConection(outdir,outloc)
 		Otherroom = Core.world[outloc]
 		Otherroom.addConnection(indir,inloc)
+
+
+
+
+class Food(Core.Item):
+	def __init__(self,name,desc,weight,durability,status,heal):
+		Core.Item.__init__(self,name,desc,weight,durability,status)
+		self.heal = heal
+
+	# heals 20 hp to the player, removes food from inventory
+	def Eat(self):
+		print("You consume the " + self.name)
+		h = Core.player.heal(heal)
+		self.parent.removeItem(self)
+		if h == 0:
+			print("Yummy")
 
 
 
