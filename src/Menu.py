@@ -90,7 +90,10 @@ def default(jsonDict):
 		elif objClass != None:
 			if Core.hasMethod(objClass,"convertFromJSON"):
 				return objClass.convertFromJSON(jsonDict)
-			return objClass(*objAttributes)
+			try:
+				return objClass(*objAttributes)
+			except TypeError:
+				raise TypeError("Failed to instantiate object from JSON with attributes: ",objAttributes)
 		else:
 			raise Exception("ERROR in decoding JSON object class type: " + objClassname)
 	else:
