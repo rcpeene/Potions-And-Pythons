@@ -1967,7 +1967,7 @@ class Pylars(Item):
 	# this object instance as a JSON object when saving the game
 	def convertToJSON(self):
 		return {
-		"__class__":self.__class__.__name__,
+		"__class__": self.__class__.__name__,
 		"value": self.value,
 		"status": []
 		}

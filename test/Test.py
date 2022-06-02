@@ -34,7 +34,7 @@ def testInfo():
 	sys.stdin = open("test/testInfo.txt")
 	PoPy.main()
 
-# tests all forms of navigation
+# tests go, govertical, go through passages multi/single directionally, open/closing doors,
 def testNavigation():
 	sys.stdin = open("test/testNavigation.txt")
 	PoPy.main()
