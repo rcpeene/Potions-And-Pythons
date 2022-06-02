@@ -72,9 +72,8 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# alter way objects are searched for now that objects have "parent" attribute
-# add "in" dunder method for Room, Item, Creature
-# remove game.activeroom? maybe?
+# add room "domain"
+# test making room names capital
 # restructure map and revise tests, add attack tests
 # add "insert the key into the lock"
 # alter how take is done (maybe)
@@ -87,6 +86,7 @@ if __name__ == "__main__":
 # reevaluate effect functions, is there a way to reference a function by string?
 # how will amulet effects work??
 
+# remove game.activeroom? maybe?
 # add carry/put down (HOW IS THIS GONNA WORK? does it equip the creature? while they are restraining is the player unable to do anything else?)
 # try "pick him up"
 # add Steal
