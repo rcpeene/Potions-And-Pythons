@@ -808,7 +808,7 @@ class Room():
 	# if an item is found that matches term, return it, otherwise, return None
 	def inItems(self,term):
 		for item in self.items:
-			if item.name == term:	return item
+			if item.name.lower() == term: return item
 		return None
 
 
@@ -825,7 +825,7 @@ class Room():
 	# if a creature matches the term , return it, otherwise, return False
 	def inCreatures(self,term):
 		for creature in self.creatures:
-			if creature.name == term:	return creature
+			if creature.name.lower() == term: return creature
 		return None
 
 
@@ -835,6 +835,12 @@ class Room():
 
 	def contents(self):
 		return self.fixtures + self.items + self.creatures
+
+
+	def inContents(self,term):
+		for obj in self.contents():
+			if obj.name.lower() == term: return obj
+		return None
 
 
 	# given a direction (like 'north' or 'down)...
