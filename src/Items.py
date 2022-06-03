@@ -187,7 +187,7 @@ class Fountain(Core.Fixture):
 
 class Hand(Core.Item):
 	def improviseWeapon(self):
-		return Weapon(self.name,self.desc,self.weight,self.durability,[],Core.minm(1,self.weight//4),2,0,0,False,"b")
+		return Core.Weapon(self.name,self.desc,self.weight,self.durability,[],Core.minm(1,self.weight//4),2,0,0,False,"b")
 
 
 

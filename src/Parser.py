@@ -235,7 +235,7 @@ def Get(command):
 	elif objname in {"w","world"}:
 		obj = Core.world
 	else:
-		obj = Core.objSearch(objname,Core.game.currentroom,d=3)
+		obj = Core.game.currentroom.search(objname,d=3)
 	if obj == None:
 		try: obj = Core.world[objname]
 		except:	pass
@@ -293,7 +293,7 @@ def Set(command):
 	elif objname in {"w","world"}:
 		obj = Core.world
 	else:
-		obj = Core.objSearch(command[1],Core.game.currentroom,d=3)
+		obj = Core.game.currentroom.search(command[1],d=3)
 	attrString = command[2]
 	val = command[3]
 	setattr(obj,attrString,val)
@@ -413,17 +413,17 @@ def Attack(dobj,iobj,prep):
 	if iobj != None:
 		weapon = Core.player.inGear(iobj)
 		if weapon == None:	weapon = Core.player.inInv(iobj)
-		if iobj in {"fist","hand"}:		weapon = Hand("your hand","",4,-1,[])
-		if iobj in {"foot","leg"}:		weapon = Foot("your foot","",8,-1,[])
-		if iobj in {"mouth","teeth"}:	weapon = Mouth("your mouth","",4,-1,[])
+		if iobj in {"fist","hand"}: weapon = Items.Hand("your hand","",4,-1,[])
+		if iobj in {"foot","leg"}: weapon = Items.Foot("your foot","",8,-1,[])
+		if iobj in {"mouth","teeth"}:
+			weapon = Core.Mouth("your mouth","",4,-1,[])
 		if weapon == None:
 			print(f"There is no '{iobj}' in your inventory")
 			return False
 
 	if dobj == None:	dobj = getNoun("What will you attack?")
 	if dobj in Data.cancels:	return False
-	target = Core.game.currentroom.inCreatures(dobj)
-	if target == None:	target = Core.game.currentroom.inItems(dobj)
+	target = Core.game.currentroom.search(dobj,d=2)
 	if dobj in {"myself","me"}: target = Core.player
 	if target == None:
 		print(f"There is no '{dobj}' here")
@@ -431,7 +431,7 @@ def Attack(dobj,iobj,prep):
 
 	if iobj in {"fist","hand","foot","leg","mouth","teeth"}:
 		stowedweapons = Core.player.weapon,Core.player.weapon2
-		Core.player.weapon,Core.player.weapon2 = weapon.improviseWeapon(),Empty()
+		Core.player.weapon,Core.player.weapon2 = weapon.improviseWeapon(),Core.Empty()
 	elif weapon not in Core.player.gear.values():
 		Core.player.equipInHand(weapon)
 
@@ -1386,8 +1386,9 @@ def Take(dobj,iobj,prep):
 			taken = Take(name,iobj,prep) or taken
 		return taken
 
-	I,path = Core.objSearch(dobj,Core.game.currentroom,d=2,getPath=True,reqSource=iobj)
-	if I == None:	I,path = Core.objSearch(dobj,Core.player,d=2,getPath=True,reqSource=iobj)
+	I,path = Core.game.currentroom.search(dobj,d=2,getPath=True,reqSource=iobj)
+	if I == None:
+		I,path = Core.player.search(dobj,d=2,getPath=True,reqSource=iobj)
 	if I == None:
 		if prep in {None,"up"}:	print(f"There is no '{dobj}' here")
 		else:				print(f"There is no '{dobj}' in a '{iobj}' here")
