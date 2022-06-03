@@ -383,7 +383,8 @@ def Quit():
 		return True
 
 
-def Return(): return Go(None, Core.game.prevroom.name, None) #go to previous room
+#go to previous room
+def Return(): return Go(None, Core.game.prevroom.name.lower(), None)
 def Save(): Menu.saveGame()
 def Shout(): print('"AHHHHHHHHHH"')
 def Sing(): print('"Falalalaaaa"')
@@ -567,7 +568,7 @@ def Close(dobj,iobj,prep):
 
 	Core.game.setPronouns(I)
 	if not hasattr(I,"open"):
-		print("You can't close the " + I.name)
+		print(f"The {I.name} doesn't close")
 		return False
 	if not I.open:
 		print(f"The {I.name} is already closed")
@@ -626,6 +627,8 @@ def Define(dobj,iobj,prep):
 	if dobj in Data.definitions:
 		print("\n"+Data.definitions[dobj])
 		return True
+	elif Core.game.inWorld(dobj):
+		return Look(dobj,iobj,prep)
 	elif dobj == Core.player.name.lower():
 		print(f"\n{Core.player.name}\nThat is you!")
 		return True
@@ -694,7 +697,7 @@ def Don(dobj,iobj,prep):
 
 	I = Core.player.inInv(dobj)
 	if I == None:
-		print(f"There is no available '{dobj}' in your inventory")
+		print(f"There is no '{dobj}' in your inventory")
 		return False
 
 	if not isinstance(I,Core.Armor):
@@ -800,10 +803,10 @@ def Eat(dobj,iobj,prep):
 
 
 def Enter(dobj,iobj,prep):
+	print(dobj,iobj,prep)
 	if dobj == None and "in" in Core.game.currentroom.exits:
 		return Go("in",iobj,prep)
-	elif iobj == None:
-		return Go(dobj,"in",prep)
+	return Go(dobj,iobj,prep)
 
 
 def Equip(dobj,iobj,prep):
@@ -817,7 +820,7 @@ def Equip(dobj,iobj,prep):
 
 	I = Core.player.inInv(dobj)
 	if I == None:
-		print(f"There is no available '{dobj}' in your inventory")
+		print(f"There is no '{dobj}' in your inventory")
 		return False
 
 	Core.game.setPronouns(I)
@@ -840,8 +843,7 @@ def Escape(dobj,iobj,prep):
 def Exit(dobj,iobj,prep):
 	if dobj == None and "out" in Core.game.currentroom.exits:
 		return Go("out",iobj,prep)
-	elif iobj == None:
-		return Go(dobj,"out",prep)
+	return Go(dobj,iobj,prep)
 
 
 def Feed(dobj,iobj,prep):
@@ -926,6 +928,7 @@ def Go(dobj,iobj,prep):
 	if dobj == None and iobj == None and prep == None:
 		dobj,iobj,prep = parseWithoutVerb("Where will you go?",preps)
 	if dobj in Data.cancels:	return False
+	if dobj == "back": dobj = Core.game.prevroom.name.lower()
 	if dobj == None: dobj = iobj
 
 	# if any terms are abbreviations for a direction, expand them
@@ -1149,7 +1152,7 @@ def Open(dobj,iobj,prep):
 
 	Core.game.setPronouns(I)
 	if not Core.hasMethod(I,"Open"):
-		print("You can't open the " + I.name)
+		print(f"The {I.name} doesn't open")
 		return False
 	if hasattr(I,"locked") and I.locked:
 		print(f"The {I.name} is locked")
@@ -1237,16 +1240,16 @@ def Put(dobj,iobj,prep):
 		dobj = getNoun("What will you put?")
 		if dobj in Data.cancels:
 			return False
+	I,S = Core.player.search(dobj,getSource=True)
+	if I == None:
+		print(f"There is no '{dobj}' in your inventory")
+		return False
 	if iobj == None:
 		if prep == "down":
 			iobj = "here"
 		else:
 			iobj = getNoun(f"What will you put your {dobj} in?")
 
-	I,S = Core.player.search(dobj,getSource=True)
-	if I == None:
-		print(f"There is no '{dobj}' in your inventory")
-		return False
 	if isinstance(I,Core.Compass) and Core.player.countCompasses() == 1:
 		q = "Are you sure you want to lose your compass? You might get lost!"
 		if not Core.yesno(q):
@@ -1393,7 +1396,7 @@ def Take(dobj,iobj,prep):
 		if prep in {None,"up"}:	print(f"There is no '{dobj}' here")
 		else:				print(f"There is no '{dobj}' in a '{iobj}' here")
 		return False
-	if not isinstance(I,Core.Item):
+	if not isinstance(I,Core.Item) or isinstance(I,Core.Fixture):
 		if isinstance(I,Core.Creature):
 			return Carry(dobj,iobj,prep)
 		print("You can't take the " + dobj)
@@ -1457,8 +1460,8 @@ def Unlock(dobj,iobj,prep):
 		print(f"There is no '{dobj}' here")
 		return False
 	Core.game.setPronouns(I)
-	if not Core.hasMethod(I,"Lock"):
-		print(f"The {I.name} doesn't lock")
+	if not Core.hasMethod(I,"Unlock"):
+		print(f"The {I.name} doesn't unlock")
 		return False
 
 	if iobj == None:
@@ -1661,7 +1664,7 @@ actions = {
 "run":Go,
 "search":Search,
 "set":Put,
-"set down:":Drop,
+"set down":Drop,
 "shoot":Shoot,
 "shove":Shove,
 "shut":Close,

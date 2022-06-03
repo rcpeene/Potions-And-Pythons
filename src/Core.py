@@ -348,7 +348,7 @@ def objSearchRecur(term,node,path,d,reqSource):
 def objTreeToSet(root,d=0,getSources=False):
 	allObjects = set()
 	# determine what to search through based on the root's type
-	if isinstance(root,Room): searchThrough = root.items + root.creatures
+	if isinstance(root,Room): searchThrough = root.contents()
 	elif hasattr(root,"items"): searchThrough = root.items
 	elif hasattr(root,"inv"): searchThrough = root.inv
 	# if the item is not searchable, return empty set
