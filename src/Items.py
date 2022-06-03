@@ -170,7 +170,7 @@ class Food(Core.Item):
 
 class Foot(Core.Item):
 	def improviseWeapon(self):
-		return Weapon(self.name,self.desc,self.weight,self.durability,[],Core.minm(1,self.weight//4),0,0,0,False,"b")
+		return Core.Weapon(self.name,self.desc,self.weight,self.durability,[],Core.minm(1,self.weight//4),0,0,0,False,"b")
 
 
 
@@ -276,7 +276,7 @@ class Lockbox(Box):
 
 class Mouth(Core.Item):
 	def improviseWeapon(self):
-		return Weapon(self.name,self.desc,self.weight,self.durability,[],Core.minm(1,self.weight//4),0,0,4,False,"p")
+		return Core.Weapon(self.name,self.desc,self.weight,self.durability,[],Core.minm(1,self.weight//4),0,0,4,False,"p")
 
 
 

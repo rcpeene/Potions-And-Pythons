@@ -371,7 +371,7 @@ def objTreeToSet(root,d=0,getSources=False):
 # iterates through objects within the root and assigns root as their parent
 # recurs for each object
 def assignParentsRecur(root):
-	if isinstance(root,Room): searchThrough = root.items + root.creatures
+	if isinstance(root,Room): searchThrough = root.contents()
 	elif hasattr(root,"items"): searchThrough = root.items
 	elif hasattr(root,"inv"): searchThrough = root.inv
 	else: return
@@ -714,6 +714,16 @@ class Room():
 	# remove all dead creatures from creatures list
 	def reapCreatures(self):
 		self.creatures = list(filter(lambda x: x.alive, self.creatures))
+
+
+	def addFixture(self,F):
+		insort(self.fixtures,F)
+		F.parent = self
+
+
+	def removeFixture(self,F):
+		if F in self.fixtures:
+			self.fixtures.remove(F)
 
 
 	def addAreaCondition(areacond):
@@ -1921,6 +1931,12 @@ class Fixture(Item):
 		Item.__init__(self,name,desc,weight,durability,status)
 		self.mention = mention
 
+
+
+	### Operation ###
+
+	def Break(self):
+		self.parent.removeFixture(self)
 
 
 
