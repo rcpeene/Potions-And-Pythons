@@ -818,7 +818,7 @@ class Room():
 
 	# returns a list of Passage objects within the room's items
 	def getPassages(self):
-		return [item for item in self.items if isinstance(item,Passage)]
+		return [item for item in self.contents() if isinstance(item,Passage)]
 
 
 	# takes a string, term, and searches the room's occuptants
