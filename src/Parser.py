@@ -422,8 +422,8 @@ def Attack(dobj,iobj,prep):
 
 	if dobj == None:	dobj = getNoun("What will you attack?")
 	if dobj in Data.cancels:	return False
-	target = Core.game.currentroom.inOccupants(dobj)
-	if target == None:	target = Core.game.currentroom.inContents(dobj)
+	target = Core.game.currentroom.inCreatures(dobj)
+	if target == None:	target = Core.game.currentroom.inItems(dobj)
 	if dobj in {"myself","me"}: target = Core.player
 	if target == None:
 		print(f"There is no '{dobj}' here")
@@ -1401,7 +1401,7 @@ def Take(dobj,iobj,prep):
 
 	S = path[0]		#S is the 'source' object, the object containing I
 	if isinstance(S,Core.Creature) and prep == "from":	return Steal(dobj,iobj,prep)
-	count = S.contentNames().count(I.name)
+	count = S.itemNames().count(I.name)
 	if S is Core.player:
 		print("You can't take from your own Inventory")
 		return False

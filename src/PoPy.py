@@ -41,7 +41,7 @@ def main():
 
 		# creatures in current room's turn
 		Core.game.activeroom = Core.game.currentroom
-		for creature in Core.game.currentroom.occupants:
+		for creature in Core.game.currentroom.creatures:
 			Core.game.whoseturn = creature
 			creature.act()
 
@@ -49,7 +49,7 @@ def main():
 		Core.game.silent = True
 		for room in Core.game.nearbyRooms():
 			Core.game.activeroom = room
-			for creature in room.occupants:
+			for creature in room.creatures:
 				Core.game.whoseturn = creature
 				creature.act()
 
@@ -58,10 +58,10 @@ def main():
 		Core.game.whoseturn = None
 		# pass the time for all rooms and creatures
 		Core.game.incrementTime()
-		# remove dead Creatures from room occupants
-		Core.game.reapOccupants()
-		# sort the occupants in each rendered room by their MVMT attribute
-		Core.game.sortOccupants()
+		# remove dead creatures from room creatures
+		Core.game.reapCreatures()
+		# sort the creatures in each rendered room by their MVMT attribute
+		Core.game.sortCreatures()
 
 
 if __name__ == "__main__":

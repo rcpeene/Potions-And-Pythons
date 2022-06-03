@@ -309,7 +309,7 @@ def objSearch(term,root,d=0,getPath=False,getSource=False,reqSource=None):
 def objSearchRecur(term,node,path,d,reqSource):
 	target,source = None,None
 	# choose list of objects to search through depending on the node's type
-	if isinstance(node,Room): searchThrough = node.items + node.occupants
+	if isinstance(node,Room): searchThrough = node.contents()
 	elif hasattr(node,"items"): searchThrough = node.items
 	elif hasattr(node,"inv"): searchThrough = node.inv
 	# if node is unsearchable: return
@@ -348,7 +348,7 @@ def objSearchRecur(term,node,path,d,reqSource):
 def objTreeToSet(root,d=0,getSources=False):
 	allObjects = set()
 	# determine what to search through based on the root's type
-	if isinstance(root,Room): searchThrough = root.items + root.occupants
+	if isinstance(root,Room): searchThrough = root.items + root.creatures
 	elif hasattr(root,"items"): searchThrough = root.items
 	elif hasattr(root,"inv"): searchThrough = root.inv
 	# if the item is not searchable, return empty set
@@ -371,7 +371,7 @@ def objTreeToSet(root,d=0,getSources=False):
 # iterates through objects within the root and assigns root as their parent
 # recurs for each object
 def assignParentsRecur(root):
-	if isinstance(root,Room): searchThrough = root.items + root.occupants
+	if isinstance(root,Room): searchThrough = root.items + root.creatures
 	elif hasattr(root,"items"): searchThrough = root.items
 	elif hasattr(root,"inv"): searchThrough = root.inv
 	else: return
@@ -514,7 +514,7 @@ class Game():
 		for room in self.renderedRooms():
 			self.silent = room is not self.currentroom
 			room.passTime(1)
-			for creature in room.occupants:
+			for creature in room.creatures:
 				creature.passTime(1)
 
 
@@ -538,22 +538,22 @@ class Game():
 				self.her = obj
 
 
-	def reapOccupants(self):
+	def reapCreatures(self):
 		for room in self.renderedRooms():
-			room.reapOccupants()
+			room.reapCreatures()
 
 
-	# sorts the occupants of each room based on their MVMT() stat
-	def sortOccupants(self):
+	# sorts the creatures of each room based on their MVMT() stat
+	def sortCreatures(self):
 		for room in self.renderedRooms():
-			room.sortOccupants()
+			room.sortCreatures()
 
 
 	def destroyCreature(self,C):
 		pass
 		### change creature to be a dead creature or something
 		# for room in self.renderedRooms():
-		# 	if C in room.occupants:
+		# 	if C in room.creatures:
 		# 		room.removeCreature(C)
 
 
@@ -654,14 +654,14 @@ class Game():
 # directed graph, facilitated by the world dict, where the exits dict specifies
 # the edges from a given node to its neighboring nodes.
 class Room():
-	def __init__(self,name,domain,desc,exits,fixtures,items,occupants,status):
+	def __init__(self,name,domain,desc,exits,fixtures,items,creatures,status):
 		self.name = name
 		self.domain = domain
 		self.desc = desc
 		self.exits = exits
 		self.fixtures = fixtures
 		self.items = items
-		self.occupants = occupants
+		self.creatures = creatures
 		self.status = status
 
 
@@ -697,23 +697,23 @@ class Room():
 
 
 	def addCreature(self,C):
-		insort(self.occupants,C)
+		insort(self.creatures,C)
 		C.parent = self
 
 
 	def removeCreature(self,C):
-		if C in self.occupants:
-			self.occupants.remove(C)
+		if C in self.creatures:
+			self.creatures.remove(C)
 
 
 	# sort all Creatures occupying the room by their MVMT() value, descending
-	def sortOccupants(self):
-		self.occupants.sort(key=lambda x: x.MVMT(), reverse=True)
+	def sortCreatures(self):
+		self.creatures.sort(key=lambda x: x.MVMT(), reverse=True)
 
 
-	# remove all dead creatures from occupants list
-	def reapOccupants(self):
-		self.occupants = list(filter(lambda x: x.alive, self.occupants))
+	# remove all dead creatures from creatures list
+	def reapCreatures(self):
+		self.creatures = list(filter(lambda x: x.alive, self.creatures))
 
 
 	def addAreaCondition(areacond):
@@ -823,18 +823,18 @@ class Room():
 
 	# takes a string, term, and searches the room's occuptants
 	# if a creature matches the term , return it, otherwise, return False
-	def inOccupants(self,term):
-		for creature in self.occupants:
+	def inCreatures(self,term):
+		for creature in self.creatures:
 			if creature.name == term:	return creature
 		return None
 
 
-	def occupantNames(self):
-		return [creature.name for creature in self.occupants]
+	def creatureNames(self):
+		return [creature.name for creature in self.creatures]
 
 
-	def allObjects(self):
-		return self.fixtures + self.items + self.occupants
+	def contents(self):
+		return self.fixtures + self.items + self.creatures
 
 
 	# given a direction (like 'north' or 'down)...
@@ -890,7 +890,7 @@ class Room():
 		else:
 			print("\n" + self.desc)
 		self.describeItems()
-		self.describeOccupants()
+		self.describeCreatures()
 
 
 	# prints all the items of the room in sentence form
@@ -900,9 +900,9 @@ class Room():
 
 
 	# prints all the creatures in the room in sentence form
-	def describeOccupants(self):
-		if len(self.occupants) != 0:
-			print("There is " + listObjects(self.occupants))
+	def describeCreatures(self):
+		if len(self.creatures) != 0:
+			print("There is " + listObjects(self.creatures))
 
 
 
