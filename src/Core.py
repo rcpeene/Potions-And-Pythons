@@ -970,6 +970,10 @@ class Item():
 
 
 	def Break(self):
+		if self.durability == -1:
+			if not game.silent:
+				print(f"{self.name} cannot be broken")
+			return False
 		self.parent.removeItem(self)
 
 
@@ -1936,6 +1940,10 @@ class Fixture(Item):
 	### Operation ###
 
 	def Break(self):
+		if self.durability == -1:
+			if not game.silent:
+				print(f"{self.name} cannot be broken")
+			return False
 		self.parent.removeFixture(self)
 
 
