@@ -26,11 +26,11 @@ import Core
 
 
 # just writes the game object to a file, probably named "game.txt"
-def writeGame(filename,Game):
+def writeGame(filename,Game,World):
 	gfd = open(filename,"w")
 	gfd.write(str(Game.mode) + "\n")
-	gfd.write(Game.currentroom.name + "\n")
-	gfd.write(Game.prevroom.name + "\n")
+	gfd.write(Core.getRoomKey(Game.currentroom,World) + "\n")
+	gfd.write(Core.getRoomKey(Game.prevroom,World) + "\n")
 	gfd.write(str(Game.time) + "\n")
 	gfd.close()
 
@@ -167,7 +167,7 @@ def saveGame():
 	os.chdir(savename)
 	writeJSON("world.json", Core.world)
 	writeJSON("player.json", Core.player)
-	writeGame("game.txt", Core.game)
+	writeGame("game.txt", Core.game, Core.world)
 	os.chdir("../..")
 	sleep(1)
 	print("Game saved")

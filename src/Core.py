@@ -50,6 +50,13 @@ def hasMethod(obj,methodName):
 	return False
 
 
+def getRoomKey(room,world):
+	for key,value in world.items():
+		print(key,value)
+		if value == room:
+			return key
+
+
 def clearScreen():
 	if os.name == "nt":
 		os.system("cls")
@@ -436,13 +443,16 @@ class Empty():
 		self.type = "e"
 
 
+
 	### Dunder Methods ###
 
 	def __repr__(self):
 		return f"<empty>"
 
+
 	def __str__(self):
 		return "{}".format(self.name)
+
 
 	def __eq__(self, other):
 		if isinstance(other, self.__class__):
@@ -451,9 +461,11 @@ class Empty():
 			return False
 
 
+
 	### Getters ###
 
 	def Weight(self):	return 0
+
 
 	def improviseWeapon(self):
 		return Weapon("empty hand","",0,-1,[],1,0,0,0,False,"b")
@@ -495,6 +507,7 @@ class Game():
 		self.they = None
 		self.her = None
 		self.him = None
+
 
 
 	### Operation ###
@@ -1938,6 +1951,7 @@ class Fixture(Item):
 	def __init__(self,name,desc,weight,durability,status,mention):
 		Item.__init__(self,name,desc,weight,durability,status)
 		self.mention = mention
+		self.parent = None
 
 
 
