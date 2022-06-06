@@ -46,6 +46,10 @@ yesses = {"absolutely","affirmative","aye","certainly","definitely","indeed","ja
 
 noes = {"absolutely not","certainly not","definitely not","n","na","nah","nahh","nahhh","nay","negative","negatory","nein","no","noo","nooo","noooo","nope"}
 
+hellos = {"ahoy","ahoy there","greetings","good tidings","hail","hail thee","hello","hello there","hi","hi there","howdy","peace to you","salutations","salute thee","omens aghast","well met","why, hello there"}
+
+goodbyes = {"adieu","bye","bye bye","bye then","prosper and live long","may luck","omens beware","fare thee well","farewell","gods be with ye","goodbye","goodbye then","peace be with you","so long"}
+
 # note that "u" and "d" are included here as abbreviations of "up" and "down"
 # this is because "up" and "down" are also in the "directions" dict
 # they are not necessary entries here, but make interpreting more consistent...

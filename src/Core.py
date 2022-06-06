@@ -131,12 +131,16 @@ def gprint(det,text,pos,n):
 
 
 # capitalizes the first letter of all the words in a string
-def capWords(string):
+# if n is given, then only capitalize the first n words
+def capWords(string,n=-1):
 	listString = string.split(' ')
 	cappedString = ''
-	for word in listString:
+	for idx,word in enumerate(listString):
 		if len(word) > 0:
-			cappedString += word[0].upper() + word[1:] + ' '
+			if n != -1 and idx < n:
+				cappedString += word[0].upper() + word[1:] + ' '
+			else:
+				cappedString += word + ' '
 	return cappedString[0:-1]	# removes trailing space character
 
 
@@ -274,13 +278,13 @@ def maxm(m,n): return m if n > m else n
 # whose name matches the given term, (not case sensitive)
 # the object tree might look as follows:
 
- #           _____Room_____
- #         /    /     \     \
- #     cat  trunk   sword  wizard
- #    /     /   \         /   |   \
- # key   jar  candle  potion wand scroll
- #        |
- #     saffron
+#           _____Room_____
+#         /    /     \     \
+#     cat  trunk   sword  wizard
+#    /     /   \         /   |   \
+# key   jar  candle  potion wand scroll
+#        |
+#     saffron
 
 # if returnPath: returns a list; the path from the found node to the root node
 # elif returnSource: returns a tuple; the found node and its parent
@@ -912,7 +916,7 @@ class Room():
 	# prints all the items of the room in sentence form
 	def describeItems(self):
 		if len(self.listableItems()) != 0:
-			print("There is " + listObjects(self.listableItems()))
+			print("There is " + listObjects(self.listableItems()) + ".")
 
 
 	# prints all the creatures in the room in sentence form

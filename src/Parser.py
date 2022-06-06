@@ -8,6 +8,7 @@
 # 3. Action dicts		(dictionaries used to call action functions from)
 
 import sys
+from random import choice
 
 import Data
 import Core
@@ -160,6 +161,10 @@ def parse(n=0):
 	# handle cases with special verb commands
 	if verb in cheatcodes.keys():
 		return cheatcodes[verb](Core.game.lastRawCommand)
+	elif verb in Data.hellos:
+		return Hello()
+	elif verb in Data.goodbyes:
+		return Goodbye()
 	elif verb in Data.shortverbs or verb in Data.statcommands:
 		if len(command) != 1:
 			return promptHelp(f"The '{verb}' command can only be one word",n)
@@ -352,7 +357,11 @@ def Examples():
 	input()
 	Core.clearScreen()
 
-def Hello(): print("Why hello there")
+def Goodbye():
+	print(Core.capWords(choice(list(Data.goodbyes)),n=1))
+
+def Hello():
+	print(Core.capWords(choice(list(Data.hellos)),n=1))
 
 def Help():
 	Core.clearScreen()
@@ -803,7 +812,6 @@ def Eat(dobj,iobj,prep):
 
 
 def Enter(dobj,iobj,prep):
-	print(dobj,iobj,prep)
 	if dobj == None and "in" in Core.game.currentroom.exits:
 		return Go("in",iobj,prep)
 	return Go(dobj,iobj,prep)
