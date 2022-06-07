@@ -1202,6 +1202,39 @@ Wallop, Weal, Woe
 Zeitgeist, Zephyr
 
 
+okay rooms to include in new world for testing:
+- some kind of armor/weapon room
+- a python encounter
+- a goblin with some weapons/items on it
+- multiple items with same name in one room
+- a key/locked chest
+- breadroll
+- chest within a chest
+- table with things on it
+- wall that can be climbed or flown past
+- amulet that spawns something
+- amulet that adds condition
+- several potions of varying colors
+- sign to read
+- item with capital letter naming
+- bell to ring
+
+- a room with magic items/wand?
+- what about the pit?
+- fish in the pond
+- fountain to take water from
+- seed to plant and water
+- mound to dig up
+- something to light
+- dog to pet?
+- statue to pray at
+- something to tie/untie
+- something to write with?
+
+- NPCs to talk to
+- something to mount/ride
+- something to craft/cook
+
 
 DIALOGUE IDEAS:
 

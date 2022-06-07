@@ -357,11 +357,9 @@ def Examples():
 	input()
 	Core.clearScreen()
 
-def Goodbye():
-	print(Core.capWords(choice(list(Data.goodbyes)),n=1))
+def Goodbye(): print(Core.capWords(choice(list(Data.goodbyes)),n=1))
 
-def Hello():
-	print(Core.capWords(choice(list(Data.hellos)),n=1))
+def Hello(): print(Core.capWords(choice(list(Data.hellos)),n=1))
 
 def Help():
 	Core.clearScreen()
@@ -398,7 +396,7 @@ def Save(): Menu.saveGame()
 def Shout(): print('"AHHHHHHHHHH"')
 def Sing(): print('"Falalalaaaa"')
 def Time(): print("Time:", Core.game.time)
-def Yawn():	print("This is no time for slumber!")
+def Yawn(): print("This is no time for slumber!")
 
 
 
@@ -418,21 +416,25 @@ def Attack(dobj,iobj,prep):
 			iobj = "fist"
 		elif Core.player.gear["right"] == Empty() and Core.player.gear["left"] == Empty():
 			iobj = getNoun("What will you attack with?")
-			if iobj in Data.cancels:	return False
+			if iobj in Data.cancels: return False
+
 	weapon = Core.player.weapon
 	if iobj != None:
 		weapon = Core.player.inGear(iobj)
-		if weapon == None:	weapon = Core.player.inInv(iobj)
-		if iobj in {"fist","hand"}: weapon = Items.Hand("your hand","",4,-1,[])
-		if iobj in {"foot","leg"}: weapon = Items.Foot("your foot","",8,-1,[])
+		if weapon == None:
+			weapon = Core.player.inInv(iobj)
+		if iobj in {"fist","hand"}:
+			weapon = Items.Hand("your hand","",4,-1,[])
+		if iobj in {"foot","leg"}:
+			weapon = Items.Foot("your foot","",8,-1,[])
 		if iobj in {"mouth","teeth"}:
 			weapon = Items.Mouth("your mouth","",4,-1,[])
 		if weapon == None:
 			print(f"There is no '{iobj}' in your inventory")
 			return False
 
-	if dobj == None:	dobj = getNoun("What will you attack?")
-	if dobj in Data.cancels:	return False
+	if dobj == None: dobj = getNoun("What will you attack?")
+	if dobj in Data.cancels: return False
 	target = Core.game.currentroom.search(dobj,d=2)
 	if dobj in {"myself","me"}: target = Core.player
 	if target == None:
@@ -465,7 +467,7 @@ def Bite(dobj,iobj,prep):
 			return False
 
 	I = Core.game.currentroom.search(dobj)
-	if I == None:	I = Core.player.search(dobj)
+	if I == None: I = Core.player.search(dobj)
 	if I == None:
 		print(f"There is no '{dobj}' here")
 		return False
@@ -491,7 +493,7 @@ def Break(dobj,iobj,prep):
 			return False
 
 	I = Core.player.search(dobj)
-	if I == None:	I = Core.game.currentroom.search(dobj)
+	if I == None: I = Core.game.currentroom.search(dobj)
 	if I == None:
 		print(f"There is no '{dobj}' here")
 		return False
@@ -570,7 +572,7 @@ def Close(dobj,iobj,prep):
 			return False
 
 	I = Core.player.search(dobj)
-	if I == None:	I = Core.game.currentroom.search(dobj)
+	if I == None: I = Core.game.currentroom.search(dobj)
 	if I == None:
 		print(f"There is no '{dobj}' here")
 		return False
@@ -657,7 +659,7 @@ def Describe(dobj,iobj,prep):
 	D = Core.player.search(dobj)
 	if dobj == Core.game.currentroom.name or dobj in {"room","here"}:
 		D = Core.game.currentroom
-	if D == None:	D = Core.game.currentroom.search(dobj)
+	if D == None: D = Core.game.currentroom.search(dobj)
 	if D == None:
 		print(f"There is no '{dobj}' here")
 		return False
@@ -908,24 +910,17 @@ def assignGoTerms(dobj,iobj,prep):
 	dir,dest,passage = None,None,None
 
 	# assign dir
-	if dobj in Data.directions.values():
-		dir = dobj
-	elif iobj in Data.directions.values():
-		dir = iobj
-	else:
-		dir = prep
+	if dobj in Data.directions.values(): dir = dobj
+	elif iobj in Data.directions.values(): dir = iobj
+	else: dir = prep
 
 	# assign dest
-	if dobj in Core.game.currentroom.allExits().values():
-		dest = dobj
-	if iobj in Core.game.currentroom.allExits().values():
-		dest = iobj
+	if dobj in Core.game.currentroom.allExits().values(): dest = dobj
+	if iobj in Core.game.currentroom.allExits().values(): dest = iobj
 
 	# assign passage
-	if dobj != None:
-		passage = Core.game.currentroom.search(dobj)
-	elif iobj != None:
-		passage = Core.game.currentroom.search(iobj)
+	if dobj != None: passage = Core.game.currentroom.search(dobj)
+	elif iobj != None: passage = Core.game.currentroom.search(iobj)
 
 	return dir,dest,passage
 
@@ -933,7 +928,7 @@ def assignGoTerms(dobj,iobj,prep):
 # parses user input to determine the intended direction, destination, and/or... # passage. Then calls either traverse or changeroom accordingly
 def Go(dobj,iobj,prep):
 	preps = {"down","through","to","toward","up","in","into","on","onto","out",None}
-	if dobj == None and iobj == None and prep == None:
+	if (dobj,iobj,prep) == (None,None,None):
 		dobj,iobj,prep = parseWithoutVerb("Where will you go?",preps)
 	if dobj in Data.cancels:	return False
 	if dobj == "back": dobj = Core.game.prevroom.name.lower()
@@ -1007,7 +1002,7 @@ def Hide(dobj,iobj,prep):
 		print("Command not understood")
 		return False
 
-	if dobj == None:	dobj = iobj
+	if dobj == None: dobj = iobj
 	if dobj == None:
 		dobj = getNoun("What do you want to hide behind?")
 		if dobj in Data.cancels:
@@ -1201,7 +1196,7 @@ def Pour(dobj,iobj,prep):
 
 	R = None
 	if iobj != None:
-		if iobj == "here":	R = Core.game.currentroom
+		if iobj == "here": R = Core.game.currentroom
 		R = Core.player.search(iobj)
 		if R == None:
 			R = Core.game.currentroom.search(iobj)
@@ -1209,9 +1204,9 @@ def Pour(dobj,iobj,prep):
 			print(f"There is no '{iobj}' here")
 			return False
 
-	if prep == None:	prep = "on"
-	if R != None:		print(f"You pour your {I.name} {prep} the {R.name}")
-	else:				print(f"You pour out your {I.name}")
+	if prep == None: prep = "on"
+	if R != None: print(f"You pour your {I.name} {prep} the {R.name}")
+	else: print(f"You pour out your {I.name}")
 	I.Pour()
 	return True
 
@@ -1279,8 +1274,8 @@ def Put(dobj,iobj,prep):
 		return False
 
 	outprep = "on" if isinstance(R,Items.Table) else "in"
-	if iobj == "here":	print(f"You put your {I.name} here")
-	else:				print(f"You put your {I.name} {outprep} the {R.name}")
+	if iobj == "here": print(f"You put your {I.name} here")
+	else: print(f"You put your {I.name} {outprep} the {R.name}")
 	S.removeItem(I)
 	R.addItem(I)
 	return True
@@ -1401,8 +1396,8 @@ def Take(dobj,iobj,prep):
 	if I == None:
 		I,path = Core.player.search(dobj,d=2,getPath=True,reqSource=iobj)
 	if I == None:
-		if prep in {None,"up"}:	print(f"There is no '{dobj}' here")
-		else:				print(f"There is no '{dobj}' in a '{iobj}' here")
+		if prep in {None,"up"}: print(f"There is no '{dobj}' here")
+		else: print(f"There is no '{dobj}' in a '{iobj}' here")
 		return False
 	if not isinstance(I,Core.Item) or isinstance(I,Core.Fixture):
 		if isinstance(I,Core.Creature):
@@ -1411,18 +1406,20 @@ def Take(dobj,iobj,prep):
 		return False
 	Core.game.setPronouns(I)
 
-	S = path[0]		#S is the 'source' object, the object containing I
-	if isinstance(S,Core.Creature) and prep == "from":	return Steal(dobj,iobj,prep)
+	#S is the 'source' object, the object containing I
+	S = path[0]
+	if isinstance(S,Core.Creature) and prep == "from": return Steal(dobj,iobj,prep)
 	count = S.itemNames().count(I.name)
 	if S is Core.player:
 		print("You can't take from your own Inventory")
 		return False
 
-	if S is Core.game.currentroom:		appendstring = ""
-	elif Core.player in path:				appendstring = " from your " + S.name
-	else:						appendstring = " from the " + S.name
-	det = "the" if count == 1 else "a"
-	msg = f"You take {det} {I.name}{appendstring}"
+	if S is Core.game.currentroom: appendstring = ""
+	elif Core.player in path: appendstring = " from your " + S.name
+	else: appendstring = " from the " + S.name
+	strname = I.stringName(definite=(count==1))
+	msg = f"You take {strname}{appendstring}"
+
 	return Core.player.obtainItem(I,S,msg)
 
 

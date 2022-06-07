@@ -218,15 +218,16 @@ def bagObjects(objects):
 # returns a string that grammatically lists all strings in names
 def listObjects(objects):
 	objBag = bagObjects(objects)
+	print(objBag)
 	liststring = ""
 	l = len(objBag)
 	for i, (obj, count) in enumerate(objBag):
 		if i == l-1:
-			liststring += obj.stringName(count,False)
+			liststring += obj.stringName(n=count,definite=False)
 		elif i == l-2:
-			liststring += obj.stringName(count,False) + " and "
+			liststring += obj.stringName(n=count,definite=False) + " and "
 		else:
-			liststring += obj.stringName(count,False) + ", "
+			liststring += obj.stringName(n=count,definite=False) + ", "
 	return liststring
 
 
@@ -1036,14 +1037,16 @@ class Item():
 			strname = "the " + strname
 		elif strname[0] in Data.vowels and not plural:
 			strname = "an " + strname
-		elif not plural:
+		elif not plural and not n > 1:
 			strname = "a " + strname
+		elif definite and plural:
+			strname = "the " + strname + "s"
 		if cap:
 			strname = capWords(strname)
-		if plural:
+		if plural or n > 1:
 			strname += "s"
 			if n > 1:
-				strname = n + strname
+				strname = str(n) + " " + strname
 		return strname
 
 
@@ -1182,8 +1185,9 @@ class Creature():
 		if(f"{type} resistance" in self.status): dmg //= 2
 		if(f"{type} immunity" in self.status): dmg = 0
 		print(f"Took {dmg} {Data.dmgtypes[type]} damage")
-		self.hp = min0( self.hp-dmg)	#player hp lowered to a minimum of 0
-		if(self.hp == 0):
+		#player hp lowered to a minimum of 0
+		self.hp = min0( self.hp-dmg)
+		if self.hp == 0:
 			self.death()
 
 
@@ -1505,20 +1509,22 @@ class Creature():
 
 	def stringName(self,n=-1,definite=True,cap=False,plural=False):
 		strname = self.descname if hasattr(self,"descname") else self.name
-		if definite and not plural:
-			strname = "the " + strname
+		if len(strname) == 0:
+			return ""
 		if definite and not plural:
 			strname = "the " + strname
 		elif strname[0] in Data.vowels and not plural:
 			strname = "an " + strname
-		elif not plural:
+		elif not plural and not n > 1:
 			strname = "a " + strname
+		elif definite and plural:
+			strname = "the " + strname + "s"
 		if cap:
 			strname = capWords(strname)
-		if plural:
+		if plural or n > 1:
 			strname += "s"
 			if n > 1:
-				strname = n + strname
+				strname = str(n) + " " + strname
 		return strname
 
 
