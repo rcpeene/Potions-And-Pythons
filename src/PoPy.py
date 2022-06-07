@@ -73,7 +73,6 @@ if __name__ == "__main__":
 # CURRENT TASKS
 
 # remove game.activeroom? maybe?
-# add checkConditions method when updating skills
 # flush input not working?? (should be fixed, but make sure)
 
 # consider adding alternative names (this would change search funcs a lot)

@@ -70,6 +70,8 @@
 				"__class__": "Passage",
 				"name": "stairway",
 				"desc": "creaky wooden stairway which leads up",
+				"aliases": ["stairs","staircase","stairwell"],
+				"plural": "stairways",
 				"weight": -1,
 				"durability": -1,
 				"status": [],
@@ -82,7 +84,40 @@
 				"passprep": ""
 			}
 		],
-		"items": [],
+		"items": [
+			{
+				"__class__": "Sword",
+				"name": "iron sword",
+				"desc": "a medium-length iron sword that is slightly dulled",
+				"aliases": ["sword"],
+				"plural": "iron swords",
+				"weight": 12,
+				"durability": 12,
+				"status": [],
+				"might": 2,
+				"sleight": 2,
+				"sharpness": 2,
+				"range": 0,
+				"twohanded": false,
+				"type": "s"
+			},
+			{
+				"__class__": "Sword",
+				"name": "rusty sword",
+				"desc": "a medium-length iron sword with a slightly rusted edge",
+				"aliases": ["sword"],
+				"plural": "rusty swords",
+				"weight": 12,
+				"durability": 12,
+				"status": [],
+				"might": 2,
+				"sleight": 2,
+				"sharpness": 2,
+				"range": 0,
+				"twohanded": false,
+				"type": "s"
+			}
+		],
 		"creatures": [],
 		"status": []
 	},
@@ -103,6 +138,8 @@
 				"__class__": "Passage",
 				"name": "stairway",
 				"desc": "wooden stairs which leads up on the right, crosses the hallway, and leads down on the left",
+				"aliases": ["stairs","staircase","stiarwell"],
+				"plural": "stairways",
 				"weight": -1,
 				"durability": -1,
 				"status": [],
@@ -160,6 +197,8 @@
 				"__class__": "Passage",
 				"name": "stairway",
 				"desc": "an old creaky wooden staircase",
+				"aliases": ["stairs","staircase","stairway"],
+				"plural": "stairways",
 				"weight": -1,
 				"durability": -1,
 				"status": [],
@@ -185,7 +224,18 @@
 			"north": "tunnel"
 		},
 		"fixtures": [],
-		"items": [],
+		"items": [
+			{
+				"__class__": "Compass",
+				"name": "compass",
+				"desc": "a plain steel compass with a red arrow",
+				"aliases": [],
+				"plural": "compasses",
+				"weight": 2,
+				"durability": 10,
+				"status": []
+			}
+		],
 		"creatures": [],
 		"status": []
 	},
