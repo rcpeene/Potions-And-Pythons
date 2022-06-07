@@ -886,7 +886,7 @@ def Give(dobj,iobj,prep):
 # called when the user wants to go "up" or "down"
 def GoVertical(dir,passage=None,dobj=None):
 	if Core.player.hasCondition("flying"):
-		newroom = Core.game.currentroom.exits[dir]
+		newroom = Core.game.currentroom.allExits()[dir]
 		print(f"You fly {dir}!")
 		return Core.game.changeRoom(Core.world[newroom])
 
