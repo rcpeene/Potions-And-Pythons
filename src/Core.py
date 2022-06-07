@@ -1030,6 +1030,8 @@ class Item():
 
 	def stringName(self,n=-1,definite=True,cap=False,plural=False):
 		strname = self.descname if hasattr(self,"descname") else self.name
+		if len(strname) == 0:
+			return ""
 		if definite and not plural:
 			strname = "the " + strname
 		elif strname[0] in Data.vowels and not plural:
@@ -1505,6 +1507,8 @@ class Creature():
 		strname = self.descname if hasattr(self,"descname") else self.name
 		if definite and not plural:
 			strname = "the " + strname
+		if definite and not plural:
+			strname = "the " + strname
 		elif strname[0] in Data.vowels and not plural:
 			strname = "an " + strname
 		elif not plural:
@@ -1636,7 +1640,7 @@ class Player(Creature):
 				if reqDuration == None or reqDuration == duration:
 					self.status.remove([condname,duration])
 					if not self.hasCondition(condname):
-						print("\nYou are no longer " + condname)
+						print("\nYou are no longer " + condname, end='')
 
 
 	def checkHindered(self):
