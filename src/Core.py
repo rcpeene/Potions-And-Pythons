@@ -124,7 +124,8 @@ def gprint(det,text,pos,n):
 		det = "an"
 	if n > 1:
 		det = str(n)
-		text = pluralize(text) #pluralize the text, maybe find a more robust way
+		#pluralize the text, maybe find a more robust way
+		text = pluralize(text)
 	if "pylars" not in text.lower():
 		text = det + " " + text
 	if pos == 0:
@@ -339,7 +340,7 @@ def objSearchRecur(term,node,path,d,reqSource):
 	# then, recursively search each object's subtree
 	for obj in searchThrough:
 		# if target object was already found, no need to search deeper
-		if target != None:	break
+		if target != None: break
 		# depending on the degree, may skip closed, locked, or creature objects
 		if d == 0 and hasattr(obj,"open") and not obj.open: continue
 		elif (d <= 1) and isinstance(obj,Creature): continue
@@ -348,7 +349,7 @@ def objSearchRecur(term,node,path,d,reqSource):
 		target,source,path = objSearchRecur(term,obj,path,d,reqSource)
 
 	# if an object was found, append the search path before returning
-	if target != None:	path.append(node)
+	if target != None: path.append(node)
 	return target,source,path
 
 
@@ -368,8 +369,8 @@ def objTreeToSet(root,d=0,getSources=False):
 
 	for obj in searchThrough:
 		# add the item to the set of all items
-		if getSources:	allObjects.add((obj,root))
-		else:			allObjects.add(obj)
+		if getSources: allObjects.add((obj,root))
+		else: allObjects.add(obj)
 		# depending on the degree, skips closed, locked, or creature objects
 		if d == 0 and hasattr(obj,"open") and not obj.open: continue
 		elif (d <= 1) and isinstance(obj,Creature): continue
@@ -945,9 +946,11 @@ class Room():
 # Anything in a Room that is not a Creature will be an Item
 # All items come with a name, description, weight, and durability
 class Item():
-	def __init__(self,name,desc,weight,durability,status):
+	def __init__(self,name,desc,aliases,plural,weight,durability,status):
 		self.name = name
 		self.desc = desc
+		self.aliases = aliases
+		self.plural = plural
 		self.weight = weight
 		self.durability = durability
 		self.status = status
@@ -1424,7 +1427,7 @@ class Creature():
 
 
 	# returns a list of names of all items in player inventory
-	def invNames(self,lower = False):
+	def invNames(self,lower=False):
 		if lower:
 			return [item.name.lower() for item in self.inv]
 		return [item.name for item in self.inv]
@@ -1558,11 +1561,12 @@ class Player(Creature):
 
 	# takes incoming damage, accounts for damage vulnerability or resistance
 	def takeDamage(self,dmg,type):
-		if(f"{type} vulnerability" in self.status):	dmg *= 2
-		if(f"{type} resistance" in self.status):	dmg /= 2
-		if(f"{type} immunity" in self.status):		dmg = 0
+		if(f"{type} vulnerability" in self.status): dmg *= 2
+		if(f"{type} resistance" in self.status): dmg /= 2
+		if(f"{type} immunity" in self.status): dmg = 0
 		print(f"You took {dmg} {Data.dmgtypes[type]} damage")
-		self.hp = min0( self.hp-dmg)	#player hp lowered to a minimum of 0
+		#player hp lowered to a minimum of 0
+		self.hp = min0(self.hp-dmg)
 		if(self.hp == 0):
 			self.death()
 
@@ -1958,8 +1962,8 @@ Set status
 
 # almost identical to the item class, but fixtures may not be removed from their initial location.
 class Fixture(Item):
-	def __init__(self,name,desc,weight,durability,status,mention):
-		Item.__init__(self,name,desc,weight,durability,status)
+	def __init__(self,name,desc,aliases,plural,weight,durability,status,mention):
+		Item.__init__(self,name,desc,aliases,plural,weight,durability,status)
 		self.mention = mention
 		self.parent = None
 
@@ -2016,6 +2020,8 @@ class Pylars(Item):
 	def __init__(self,value,status):
 		self.name = "Gold"
 		self.desc = str(value) + " glistening coins made of an ancient metal"
+		self.aliases = ["pylar","coin"]
+		self.plural = "gold"
 		self.weight = value
 		self.durability = -1
 		self.status = {}
@@ -2030,9 +2036,9 @@ class Pylars(Item):
 	# this object instance as a JSON object when saving the game
 	def convertToJSON(self):
 		return {
-		"__class__": self.__class__.__name__,
-		"value": self.value,
-		"status": []
+			"__class__": self.__class__.__name__,
+			"value": self.value,
+			"status": []
 		}
 
 
@@ -2058,8 +2064,8 @@ class Pylars(Item):
 
 
 class Weapon(Item):
-	def __init__(self,name,desc,weight,durability,status,might,sleight,sharpness,range,twohanded,type):
-		Item.__init__(self,name,desc,weight,durability,status)
+	def __init__(self,name,desc,aliases,plural,weight,durability,status,might,sleight,sharpness,range,twohanded,type):
+		Item.__init__(self,name,desc,aliases,plural,weight,durability,status)
 		self.might = might
 		self.sleight = sleight
 		self.sharpness = sharpness
@@ -2076,16 +2082,16 @@ class Weapon(Item):
 
 
 class Shield(Item):
-	def __init__(self,name,desc,weight,durability,status,prot):
-		Item.__init__(self,name,desc,weight,durability,status)
+	def __init__(self,name,desc,aliases,plural,weight,durability,status,prot):
+		Item.__init__(self,name,desc,aliases,plural,weight,durability,status)
 		self.prot = prot
 
 
 
 
 class Armor(Item):
-	def __init__(self,name,desc,weight,durability,status,prot):
-		Item.__init__(self,name,desc,weight,durability,status)
+	def __init__(self,name,desc,aliases,plural,weight,durability,status,prot):
+		Item.__init__(self,name,desc,aliases,plural,weight,durability,status)
 		self.prot = prot
 
 
@@ -2177,6 +2183,6 @@ class Person(Creature):
 
 
 
-player = Player("","",0,0,[0,0,0,0,0,0,0,0,0,0],0,[],{},[],0,0,[])
+player = Player("","",0,0,[0]*10,0,[],{},[],0,0,[])
 game = Game(-1,-1,-1,-1)
 world = {}

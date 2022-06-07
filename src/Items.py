@@ -30,15 +30,15 @@ class Bottle(Core.Item):
 		print(f"The {self.name} breaks. Shards of glass scatter everywhere")
 		self.parent.removeItem(self)
 		for i in range(randint(3,6)):	#randomly generates n shards between 3,6
-			newShard = Shard("shard","a sharp shard of glass",1,-1)
+			newShard = Shard("shard","a sharp shard of glass",[],"shards",1,-1)
 			self.parent.addItem(newShard)
 
 
 
 
 class Box(Core.Item):
-	def __init__(self,name,desc,weight,durability,status,open,items):
-		Core.Item.__init__(self,name,desc,weight,durability,status)
+	def __init__(self,name,desc,aliases,plural,weight,durability,status,open,items):
+		Core.Item.__init__(self,name,desc,aliases,plural,weight,durability,status)
 		self.open = open
 		self.items = items
 
@@ -108,8 +108,8 @@ class Box(Core.Item):
 
 
 class Controller(Core.Item):
-	def __init__(self,name,desc,weight,durability,status,effect):
-		Core.Item.__init__(self,name,desc,weight,durability,status)
+	def __init__(self,name,desc,aliases,plural,weight,durability,status,effect):
+		Core.Item.__init__(self,name,desc,aliases,plural,weight,durability,status)
 		self.effect = effect
 
 
@@ -126,8 +126,8 @@ class Controller(Core.Item):
 
 
 class Door(Core.Fixture):
-	def __init__(self,name,desc,weight,durability,status,mention,open,connections):
-		Core.Fixture.__init__(self,name,desc,weight,durability,status,mention)
+	def __init__(self,name,desc,aliases,plural,weight,durability,status,mention,open,connections):
+		Core.Fixture.__init__(self,name,desc,aliases,plural,weight,durability,status,mention)
 		self.open = open
 		# connection is a 4-tuple of the form:
 		# (outDirection, outLocation, inDirection, inLocation)
@@ -153,8 +153,8 @@ class Door(Core.Fixture):
 
 
 class Food(Core.Item):
-	def __init__(self,name,desc,weight,durability,status,heal):
-		Core.Item.__init__(self,name,desc,weight,durability,status)
+	def __init__(self,name,desc,aliases,plural,weight,durability,status,heal):
+		Core.Item.__init__(self,name,desc,aliases,plural,weight,durability,status)
 		self.heal = heal
 
 	# heals 'heal' hp to the player, removes food from inventory
@@ -170,7 +170,7 @@ class Food(Core.Item):
 
 class Foot(Core.Item):
 	def improviseWeapon(self):
-		return Core.Weapon(self.name,self.desc,self.weight,self.durability,[],Core.minm(1,self.weight//4),0,0,0,False,"b")
+		return Core.Weapon(self.name,self.desc,self.aliases,self.plural,self.weight,self.durability,[],Core.minm(1,self.weight//4),0,0,0,False,"b")
 
 
 
@@ -187,14 +187,14 @@ class Fountain(Core.Fixture):
 
 class Hand(Core.Item):
 	def improviseWeapon(self):
-		return Core.Weapon(self.name,self.desc,self.weight,self.durability,[],Core.minm(1,self.weight//4),2,0,0,False,"b")
+		return Core.Weapon(self.name,self.desc,self.aliases,self.plural,self.weight,self.durability,[],Core.minm(1,self.weight//4),2,0,0,False,"b")
 
 
 
 
 class Key(Core.Item):
-	def __init__(self,name,desc,weight,durability,status,id):
-		Core.Item.__init__(self,name,desc,weight,durability,status)
+	def __init__(self,name,desc,aliases,plural,weight,durability,status,id):
+		Core.Item.__init__(self,name,desc,aliases,plural,weight,durability,status)
 		self.id = id
 
 
@@ -209,8 +209,8 @@ class Key(Core.Item):
 
 
 class Lockbox(Box):
-	def __init__(self,name,desc,weight,durability,status,open,items,keyids,locked):
-		Box.__init__(self,name,desc,weight,durability,status,open,items)
+	def __init__(self,name,desc,aliases,plural,weight,durability,status,open,items,keyids,locked):
+		Box.__init__(self,name,desc,aliases,plural,weight,durability,status,open,items)
 		self.keyids = keyids
 		self.locked = locked
 
@@ -276,7 +276,7 @@ class Lockbox(Box):
 
 class Mouth(Core.Item):
 	def improviseWeapon(self):
-		return Core.Weapon(self.name,self.desc,self.weight,self.durability,[],Core.minm(1,self.weight//4),0,0,4,False,"p")
+		return Core.Weapon(self.name,self.desc,self.aliases,self.plural,self.weight,self.durability,[],Core.minm(1,self.weight//4),0,0,4,False,"p")
 
 
 
@@ -308,8 +308,8 @@ class Shard(Core.Item):
 
 
 class Sign(Core.Item):
-	def __init__(self,name,desc,weight,durability,status,text):
-		Core.Item.__init__(self,name,desc,durability,status,weight)
+	def __init__(self,name,desc,aliases,plural,weight,durability,status,text):
+		Core.Item.__init__(self,name,desc,aliases,plural,durability,status,weight)
 		self.text = text
 
 
@@ -321,8 +321,8 @@ class Sign(Core.Item):
 
 
 class Switch(Core.Fixture):
-	def __init__(self,name,desc,weight,durability,status,mention,effect):
-		Core.Fixture.__init__(self,name,desc,weight,durability,status,mention)
+	def __init__(self,name,desc,aliases,plural,weight,durability,status,mention,effect):
+		Core.Fixture.__init__(self,name,desc,aliases,plural,weight,durability,status,mention)
 		self.effect = effect
 
 
@@ -346,8 +346,8 @@ class Sword(Core.Weapon):
 
 
 class Table(Core.Fixture):
-	def __init__(self,name,desc,weight,durability,status,mention,items,descname):
-		Core.Fixture.__init__(self,name,desc,weight,durability,status,mention)
+	def __init__(self,name,desc,aliases,plural,weight,durability,status,mention,items,descname):
+		Core.Fixture.__init__(self,name,desc,aliases,plural,weight,durability,status,mention)
 		self.items = items
 		self.descname = descname
 
@@ -413,8 +413,8 @@ class Table(Core.Fixture):
 
 
 class Wall(Core.Passage):
-	def __init__(self,name,desc,weight,durability,status,connections,descname,passprep,cr):
-		Core.Passage.__init__(self,name,desc,weight,durability,status,connections,descname,passprep)
+	def __init__(self,name,desc,aliases,plural,weight,durability,status,connections,descname,passprep,cr):
+		Core.Passage.__init__(self,name,desc,aliases,plural,weight,durability,status,connections,descname,passprep)
 		self.cr = cr
 
 

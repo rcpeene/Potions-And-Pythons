@@ -424,11 +424,11 @@ def Attack(dobj,iobj,prep):
 		if weapon == None:
 			weapon = Core.player.inInv(iobj)
 		if iobj in {"fist","hand"}:
-			weapon = Items.Hand("your hand","",4,-1,[])
+			weapon = Items.Hand("your hand","",[],"",4,-1,[])
 		if iobj in {"foot","leg"}:
-			weapon = Items.Foot("your foot","",8,-1,[])
+			weapon = Items.Foot("your foot","",[],"",8,-1,[])
 		if iobj in {"mouth","teeth"}:
-			weapon = Items.Mouth("your mouth","",4,-1,[])
+			weapon = Items.Mouth("your mouth","",[],"",4,-1,[])
 		if weapon == None:
 			print(f"There is no '{iobj}' in your inventory")
 			return False
