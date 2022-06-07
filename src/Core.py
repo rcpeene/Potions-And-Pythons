@@ -219,7 +219,6 @@ def bagObjects(objects):
 # returns a string that grammatically lists all strings in names
 def listObjects(objects):
 	objBag = bagObjects(objects)
-	print(objBag)
 	liststring = ""
 	l = len(objBag)
 	for i, (obj, count) in enumerate(objBag):
@@ -1603,6 +1602,7 @@ class Player(Creature):
 		print(f"\nQuality Points:	{QP}")
 		input("You are done leveling up\n")
 		clearScreen()
+		self.checkHindered()
 
 
 	# adds money
@@ -1650,7 +1650,7 @@ class Player(Creature):
 				if reqDuration == None or reqDuration == duration:
 					self.status.remove([condname,duration])
 					if not self.hasCondition(condname):
-						print("\nYou are no longer " + condname, end='')
+						print("You are no longer " + condname)
 
 
 	def checkHindered(self):
@@ -1658,6 +1658,10 @@ class Player(Creature):
 			if not self.hasCondition("hindered"):
 				print("Your Inventory grows heavy")
 				self.addCondition("hindered",-3)
+		if self.invWeight() <= self.BRDN():
+			if self.hasCondition("hindered"):
+				print("Your Inventory feels lighter")
+				self.removeCondition("hindered",-3)
 
 
 	# called when player hp hits 0
@@ -1981,8 +1985,8 @@ class Fixture(Item):
 
 
 class Passage(Fixture):
-	def __init__(self,name,desc,weight,durability,status,mention,connections,descname,passprep):
-		Fixture.__init__(self,name,desc,weight,durability,status,mention)
+	def __init__(self,name,desc,aliases,plural,weight,durability,status,mention,connections,descname,passprep):
+		Fixture.__init__(self,name,desc,aliases,plural,weight,durability,status,mention)
 		self.connections = connections
 		self.descname = descname
 		self.passprep = passprep
