@@ -72,59 +72,57 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# restructure map and revise tests, add attack tests
-# add "insert the key into the lock"
-# alter how take is done (maybe)
+# remove game.activeroom? maybe?
 # add checkConditions method when updating skills
+# flush input not working?? (should be fixed, but make sure)
+
+# consider adding alternative names (this would change search funcs a lot)
+# add object generalization (so you can say 'take potion' on the 'red potion')
+	# add object name disambiguation? (code asks "which sword will you use?"
+	# adjust how taking and listing items works (eg allow for saying "take swords")
+	# alter how take is done (maybe)
+
+# restructure map and revise tests, add attack tests
+	# add magic beans or food to pour stuff on
+	# "drink from the fountain"
+	# make a list of all possible uses and inputs for each action and systematically test them. Revise the world to accomodate them
+
 # figure out cast command cuz its also a short verb
 
-# flush input not working?? (should be fixed, but make sure)
-# add douse function
 # add some preliminary spells and add effects file
-# consider enter, exit functions in room
-# reevaluate effect functions, is there a way to reference a function by string?
-# how will amulet effects work??
+	# reevaluate effect functions, is there a way to reference a function by string?
+	# how will amulet effects work??
 
-# remove game.activeroom? maybe?
-# add carry/put down (HOW IS THIS GONNA WORK? does it equip the creature? while they are restraining is the player unable to do anything else?)
-# try "pick him up"
-# add Steal
-# determine what can be hid behind
+# FLESH OUT MORE VERBS (and add items to go with them)
+# add "insert the key into the lock"
+	# implement escape
+	# add a wait command (cant wait with enemies nearby, cuz they could just kill you)
+	# add in armor and shields and protection and test them
+	# add range and ranged weapons???
+	# add new weapons
+	# more switches, levers, buttons
+	# add douse function
+	# add carry/put down (HOW IS THIS GONNA WORK? does it equip the creature? while they are restraining is the player unable to do anything else?)
+	# try "pick him up"
+	# add Steal
+	# determine what can be hid behind
 
 # add resilient error handling, for file I/O, maybe in action loop
-# add a wait command (cant wait with enemies nearby, cuz they could just kill you)
+
 # examine output grammar/statements for lower level actions (in case non-player creatures do actions, we dont want it to print the same msgs), alter print to use G.print which depends on silent
 
-# adjust how taking and listing items works (eg allow for saying "take swords")
-# consider adding alternative names (this would change search funcs a lot)
-
 # there is a bug in equip where two of the same item can be equipped twice???
-# implement escape and exit actions
-# add magic beans or food to pour stuff on
 
-# "drink from the fountain"
-# make a list of all possible uses and inputs for each action and systematically test them. Revise the world to accomodate them
+# behavior
+	# design persons and person behavior all of the RP system?
+	# figure out animal behavior
+	# add monsters/monster behavior
+	# creatures attacking?
+	# add creatures with many limbs (or can equip more than 2 weapons/shields)
+	# figure out combat? attack items?
 
-# figure out animal behavior
-# creatures attacking?
-# add monsters/monster behavior
-# add creatures with many limbs (or can equip more than 2 weapons/shields)
-# figure out combat? attack items?
-
-# add in armor and shields and protection and test them
-# add range and ranged weapons???
-# add new weapons
-# more switches, levers, buttons
-# ensure output is grammatically correct with creature names. (for npcs, instead of printing "THE I.name" you must print just name)
-
-# add object name disambiguation? (code asks "which sword will you use?"
-# add object plural type? 'there is some bread' vs 'there is a bread'
-# add object generalization (so you can say 'take potion' on the 'red potion')
 # add possession? (so you can say 'break goblin's sword', 'take his food')... these could be easily restructured as "break sword from goblin", "take food from him"
 
-# design persons and person behavior all of the RP system?
-# FLESH OUT MORE VERBS (and add items to go with them)
-# go into the cabin?
 
 ################################################################################
 

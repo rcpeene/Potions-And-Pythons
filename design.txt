@@ -332,14 +332,29 @@ LCK - ACCU, EVSN, CRIT, LOOT, KNWL
 
 ITEM WEIGHT REFERENCES:
 1 wt = 1/4 lb ==> 1 lb = 4 wt
-key: 				1 (1/4 lb)
-shard: 			1 (1/4 lb)
-bottle: 		2 (1/2 lb)
-potion: 		4 (1 lb)
-shortsword: 8 (2 lbs)
-longsword: 	20 (5 lbs)
-giantsword: 40 (10 lbs)
-person: 		600 (150 lbs)
+iron key:     1 (1/4 lb)
+glass shard:  1 (1/4 lb)
+glass bottle: 2 (1/2 lb)
+potion:       4 (1 lb)
+shortsword:   8 (2 lbs)
+longsword:    20 (5 lbs)
+giantsword:   40 (10 lbs)
+person:       600 (150 lbs)
+
+
+ITEM DURABILITY REFERENCES:
+(assuming no magical reinforcement)
+breadroll:    2
+glass bottle: 3
+iron key:     5
+golden key:   6
+wooden sign:  8
+wooden table: 9
+wooden chest: 10
+bronze bell:  12
+stone statue: 14
+soft sword:   15
+hard sword:   18
 
 
 WEAPON STATS:
