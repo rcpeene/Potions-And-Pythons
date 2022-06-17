@@ -28,8 +28,10 @@ def chooseObject(name,objects):
 	while True:
 		for n,object in enumerate(objects):
 			entry = object.name
-			if isinstance(object.parent,Core.Player):
-				entry += f"	(inv)"
+			if isinstance(object,Core.Creature):
+				entry += f"	({object.hp} hp)"
+			elif isinstance(object.parent,Core.Player):
+				entry += "	(inv)"
 			elif not isinstance(object.parent,Core.Room):
 				entry += f"	({object.parent.name})"
 			print(f"{n+1}. {entry}")
@@ -50,7 +52,7 @@ def chooseObject(name,objects):
 	return None
 
 
-def findObjFromTerm(term,searchPlayer,searchRoom,roomD=1,playerD=2,reqParent=None):
+def findObjFromTerm(term,searchPlayer,searchRoom,roomD=1,playerD=2,reqParent=None,silent=False):
 	matches = []
 	if searchPlayer:
 		matches += Core.player.inInv(term)
@@ -58,12 +60,13 @@ def findObjFromTerm(term,searchPlayer,searchRoom,roomD=1,playerD=2,reqParent=Non
 		matches += Core.game.currentroom.search(term,d=roomD,reqParent=reqParent)
 
 	if len(matches) == 0:
-		if searchRoom and searchPlayer:
-			print(f"There is no '{term}'")
-		elif searchPlayer:
-			print(f"There is no '{term}' in your Inventory")
-		elif searchRoom:
-			print(f"There is no '{term}' here")
+		if not silent:
+			if searchRoom and searchPlayer:
+				print(f"There is no '{term}'")
+			elif searchPlayer:
+				print(f"There is no '{term}' in your Inventory")
+			elif searchRoom:
+				print(f"There is no '{term}' here")
 		return None
 	elif len(matches) == 1:
 		return matches[0]
@@ -559,7 +562,7 @@ def CarryCreature(creature):
 
 	print(f"You try to pick up the {creature.name}")
 	if creature.Restrain(Core.player):
-		Core.player.Carry(I)
+		Core.player.Carry(creature)
 		print(f"You successfully carry the {creature.name}!")
 		return True
 	else:
@@ -929,8 +932,8 @@ def assignGoTerms(dobj,iobj,prep):
 	if iobj in Core.game.currentroom.allExits().values(): dest = iobj
 
 	# assign passage
-	if dobj != None: passage = findObjFromTerm(dobj,False,True)
-	elif iobj != None: passage = findObjFromTerm(iobj,False,True)
+	if dobj != None: passage = findObjFromTerm(dobj,False,True,silent=True)
+	elif iobj != None: passage = findObjFromTerm(iobj,False,True,silent=True)
 
 	return dir,dest,passage
 
@@ -1222,7 +1225,7 @@ def Put(dobj,iobj,prep):
 		if not Core.yesno(q):
 			return False
 
-	if not isinstance(R,Items.Table) and not isinstance(R,Items.Box):
+	if not Core.hasMethod(I,"addItem"):
 		print(f"You can't put the {I.name} {prep} the {R.name}")
 		return False
 

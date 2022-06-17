@@ -1342,7 +1342,7 @@ class Creature():
 
 	def Carry(self,creature):
 		self.addCondition("carrying",-3,silent=True)
-		self.equipInHand(self)
+		self.equipInHand(creature)
 		creature.addCondition("carried",-3)
 		return True
 
@@ -1553,7 +1553,7 @@ class Player(Creature):
 		if(f"{type} resistance" in self.status): dmg /= 2
 		if(f"{type} immunity" in self.status): dmg = 0
 		print(f"You took {dmg} {Data.dmgtypes[type]} damage")
-		#player hp lowered to a minimum of 0
+		# player hp lowered to a minimum of 0
 		self.hp = min0(self.hp-dmg)
 		if(self.hp == 0):
 			self.death()
@@ -1841,7 +1841,7 @@ class Player(Creature):
 				statusdisplay.append(str(durations[i]))
 
 		# dynamically determine display column width based on longest name
-		colWidth = len(max(conditions, key=len)) + 4
+		colWidth = len(max(conditions, key=len)) + 2
 		columnPrint(statusdisplay,2,colWidth)
 
 
@@ -1995,7 +1995,7 @@ class Passage(Fixture):
 
 	def Traverse(self,dir=None):
 		if dir == None:
-			if len(self.connections) == 1:
+			if len(set(self.connections.values())) == 1:
 				dir = list(self.connections.keys())[0]
 			else:
 				msg = f"Which direction will you go on the {self.name}?\n> "
