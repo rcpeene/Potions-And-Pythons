@@ -160,7 +160,7 @@ class Food(Core.Item):
 	# heals 'heal' hp to the player, removes food from inventory
 	def Eat(self):
 		print("You consume the " + self.name)
-		h = Core.player.heal(heal)
+		h = Core.player.heal(self.heal)
 		self.parent.removeItem(self)
 		if h == 0:
 			print("Yummy")

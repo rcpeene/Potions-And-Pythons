@@ -23,6 +23,54 @@ import Effects
 #######################
 
 
+def chooseObject(name,objects):
+	print()
+	while True:
+		for n,object in enumerate(objects):
+			entry = object.name
+			if isinstance(object.parent,Core.Player):
+				entry += f"	(inv)"
+			elif not isinstance(object.parent,Core.Room):
+				entry += f"	({object.parent.name})"
+			print(f"{n+1}. {entry}")
+
+		print(f"Which {name}?")
+		choice = input("\n> ").lower()
+		if choice == "": continue
+		if choice in Data.cancels: return None
+		break
+
+	try:
+		return objects[int(choice)-1]
+	except:
+		for obj in objects:
+			if choice == obj.name.lower():
+				return obj
+	print("That is not one of the options")
+	return None
+
+
+def findObjFromTerm(term,searchPlayer,searchRoom,roomD=1,playerD=2,reqParent=None):
+	matches = []
+	if searchPlayer:
+		matches += Core.player.inInv(term)
+	if searchRoom:
+		matches += Core.game.currentroom.search(term,d=roomD,reqParent=reqParent)
+
+	if len(matches) == 0:
+		if searchRoom and searchPlayer:
+			print(f"There is no '{term}'")
+		elif searchPlayer:
+			print(f"There is no '{term}' in your Inventory")
+		elif searchRoom:
+			print(f"There is no '{term}' here")
+		return None
+	elif len(matches) == 1:
+		return matches[0]
+	else:
+		return chooseObject(term,matches)
+
+
 # checks if a noun refers to a room, an object in the world or on the player...
 # or an action verb, an in-game definition or a miscellaneous expression
 def isMeaningful(noun):
@@ -216,53 +264,47 @@ def parse(n=0):
 
 def Exe(command):
 	if len(command) < 2:
-		print("No code given")
+		print("Error: No code given")
 		return
 	code = " ".join(command[1:])
 	try:
 		exec(code)
 	except Exception as e:
-		print("Code was unable to be executed:")
+		print("Error: Code was unable to be executed:")
 		print(e)
 
 
 def Get(command):
 	if len(command) < 2:
-		print("No object given")
+		print("Error: No object name given")
+		return
+	if len(command) < 3:
+		print("Error: No attribute name given")
 		return
 	objname = command[1].lower()
-	if objname in {"p","player","my"}:
-		obj = Core.player
-	elif objname in {"g","game"}:
-		obj = Core.game
-	elif objname in {"here","room"}:
-		obj = Core.game.currentroom
-	elif objname in {"w","world"}:
-		obj = Core.world
-	else:
-		obj = Core.game.currentroom.search(objname,d=3)
+	attrname = ( " ".join(command[2:]) ).lower()
+
+	if objname in {"p","player","my"}: obj = Core.player
+	elif objname in {"g","game"}: obj = Core.game
+	elif objname in {"here","room"}: obj = Core.game.currentroom
+	elif objname in {"w","world"}: obj = Core.world
+	elif objname in Core.world: obj = Core.world[objname]
+	else: obj = findObjFromTerm(objname,True,True,playerD=3,roomD=3)
 	if obj == None:
-		try: obj = Core.world[objname]
-		except:	pass
-	if obj == None:
-		print("Object not found")
+		print("Error: Object not found")
 		return
-	if len(command) >= 3:
-		try:
-			attrString = command[2]
-			print(getattr(obj,attrString))
-			return
-		except:
-			print("Attribute does not exist")
-			return
-	print(obj)
+
+	try:
+		print(getattr(obj,attrname))
+	except:
+		print("Error: Attribute does not exist")
 
 
 def Learn(command):
 	try:
 		Core.player.gainxp(int(command[1]))
 	except:
-		print("Value not number")
+		print("Error: Value not number")
 
 
 def Mode(command):
@@ -270,7 +312,7 @@ def Mode(command):
 		Core.game.mode = int(command[1])
 		print("Mode set to " + str(Core.game.mode))
 	except:
-		print("Value not number")
+		print("Error: Value not number")
 
 
 def Pypot(command):
@@ -281,26 +323,32 @@ def Pypot(command):
 			Core.player.money = 0
 		print(f"You now have {Core.player.money} money")
 	except:
-		print("Value not number")
+		print("Error: Value not number")
 
 
 def Set(command):
-	if len(command) < 4:
-		print("Not enough arguments")
+	if len(command) < 2:
+		print("Error: No object name given")
 		return
-	objname = command[1]
-	if objname in {"p","player","my"}:
-		obj = Core.player
-	elif objname in {"g","game"}:
-		obj = Core.game
-	elif objname in {"here","room"}:
-		obj = Core.game.currentroom
-	elif objname in {"w","world"}:
-		obj = Core.world
-	else:
-		obj = Core.game.currentroom.search(command[1],d=3)
-	attrString = command[2]
-	val = command[3]
+	if len(command) < 3:
+		print("Error: No attribute name given")
+		return
+	if len(command) < 4:
+		print("Error: No value given")
+		return
+
+	objname = command[1].lower()
+	attrname = command[2]
+	value = " ".join(command[3:])
+	try: value = int(value)
+	except: pass
+
+	if objname in {"p","player","my"}: obj = Core.player
+	elif objname in {"g","game"}: obj = Core.game
+	elif objname in {"here","room"}: obj = Core.game.currentroom
+	elif objname in {"w","world"}: obj = Core.world
+	else: obj = findObjFromTerm(command[1],True,True,playerD=3,roomD=3)
+
 	setattr(obj,attrString,val)
 
 
@@ -308,7 +356,7 @@ def Teleport(command):
 	if len(command) < 2:
 		print("Not enough arguments")
 		return
-	location = command[1]
+	location = " ".join(command[1:])
 	if location in Core.world:
 		Core.game.changeRoom(Core.world[location])
 	else:
@@ -406,7 +454,7 @@ def Yawn(): print("This is no time for slumber!")
 ##################################
 
 
-def Attack(dobj,iobj,prep):
+def Attack(dobj,iobj,prep,target=None,weapon=None):
 	if prep not in {"with","using",None}:
 		print("Command not understood")
 		return False
@@ -418,8 +466,9 @@ def Attack(dobj,iobj,prep):
 			iobj = getNoun("What will you attack with?")
 			if iobj in Data.cancels: return False
 
-	weapon = Core.player.weapon
-	if iobj != None:
+	if weapon == None:
+		weapon = Core.player.weapon
+	if iobj != None and weapon == Core.Empty():
 		weapon = Core.player.inGear(iobj)
 		if weapon == None:
 			weapon = Core.player.inInv(iobj)
@@ -430,30 +479,31 @@ def Attack(dobj,iobj,prep):
 		if iobj in {"mouth","teeth"}:
 			weapon = Items.Mouth("your mouth","",[],"",4,-1,[])
 		if weapon == None:
-			print(f"There is no '{iobj}' in your inventory")
+			print(f"There is no '{iobj}' in your Inventory")
 			return False
 
-	if dobj == None: dobj = getNoun("What will you attack?")
-	if dobj in Data.cancels: return False
-	target = Core.game.currentroom.search(dobj,d=2)
-	if dobj in {"myself","me"}: target = Core.player
 	if target == None:
-		print(f"There is no '{dobj}' here")
-		return False
+		if dobj == None: dobj = getNoun("What will you attack?")
+		if dobj in Data.cancels: return False
+		if dobj in {"myself","me"}: target = Core.player
+		else: target = findObjFromTerm(dobj,False,True)
+		if target == None: return False
+	Core.game.setPronouns(target)
 
-	if iobj in {"fist","hand","foot","leg","mouth","teeth"}:
+	stowed = False
+	if isinstance(weapon,(Items.Hand,Items.Foot,Items.Mouth)):
 		stowedweapons = Core.player.weapon,Core.player.weapon2
 		Core.player.weapon,Core.player.weapon2 = weapon.improviseWeapon(),Core.Empty()
+		stowed = True
 	elif weapon not in Core.player.gear.values():
 		Core.player.equipInHand(weapon)
 
-	Core.game.setPronouns(target)
 	print(f"\nYou attack the {target.name} with {Core.player.weapon.name}")
 	if isinstance(target,Core.Creature):
 		Core.player.attackCreature(target)
 	elif isinstance(target,Core.Item):
 		Core.player.attackItem(target)
-	if iobj in {"fist","hand","foot","leg"}:
+	if stowed:
 		Core.player.weapon,Core.player.weapon2 = stowedweapons
 	return True
 
@@ -463,18 +513,15 @@ def Bite(dobj,iobj,prep):
 		print("Command not understood")
 	if dobj == None:
 		dobj = getNoun("What do you want to bite?")
-		if dobj in Data.cancels:
-			return False
+		if dobj in Data.cancels: return False
 
-	I = Core.game.currentroom.search(dobj)
-	if I == None: I = Core.player.search(dobj)
-	if I == None:
-		print(f"There is no '{dobj}' here")
-		return False
+	I = findObjFromTerm(dobj,True,True)
+	if I == None: return False
 	if Core.hasMethod(I,"Eat"):
-		return Eat(dobj,iobj,prep)
+		I.Eat()
+		return True
 	else:
-		return Attack(dobj,"mouth",prep)
+		return Attack(dobj,"mouth",prep,target=I)
 
 	# TODO: if u add the ability to "bite" items, maybe actually damage them...
 	# if their durability is low enough or smth. Maybe append the item's...
@@ -489,16 +536,12 @@ def Break(dobj,iobj,prep):
 		return False
 	if dobj == None:
 		dobj = getNoun("What do you want to break?")
-		if dobj in Data.cancels:
-			return False
+		if dobj in Data.cancels: return False
 
-	I = Core.player.search(dobj)
-	if I == None: I = Core.game.currentroom.search(dobj)
-	if I == None:
-		print(f"There is no '{dobj}' here")
-		return False
-
+	I = findObjFromTerm(dobj,True,True)
+	if I == None: return False
 	Core.game.setPronouns(I)
+
 	if not Core.hasMethod(I,"Break"):
 		print("You can't break the " + I.name)
 		return False
@@ -506,32 +549,22 @@ def Break(dobj,iobj,prep):
 	return True
 
 
-def Carry(dobj,iobj,prep):
+# this is not intended to be called directly from Parse
+# but rather from the Take action function
+def CarryCreature(creature):
 	# TODO: identify a way to link carrier to carried without remove carried creature from Room.creatures
-	if prep != None:
-		print("Command not understood")
-		return False
-	if dobj == None:
-		dobj = getNoun("What do you want to carry?")
-		if dobj in Data.cancels:
-			return False
-
-	I = Core.game.currentroom.search(dobj)
-	if I == None: I = Core.player.search(dobj)
-	if I == None:
-		print(f"There is no '{dobj}' here")
-		return False
-	Core.game.setPronouns(I)
-
-	if isinstance(I,Core.Item):
-		return Take(dobj,iobj,prep)
-	if not isinstance(I,Core.Creature):
-		print(f"You can't carry the {dobj}")
+	if not isinstance(creature,Core.Creature):
+		print(f"You can't carry the {creature.name}")
 		return False
 
-	print(f"You try to pick up the {dobj}")
-	if Restrain(dobj,iobj,prep):
-		return Core.player.Carry(I)
+	print(f"You try to pick up the {creature.name}")
+	if creature.Restrain(Core.player):
+		Core.player.Carry(I)
+		print(f"You successfully carry the {creature.name}!")
+		return True
+	else:
+		print(f"You fail to restrain the {creature.name}!")
+		return True
 
 
 def Cast(dobj,iobj,prep):
@@ -540,8 +573,7 @@ def Cast(dobj,iobj,prep):
 		return False
 	if dobj == None:
 		dobj = getNoun("What spell will you cast?")
-		if dobj in Data.cancels:
-			return False
+		if dobj in Data.cancels: return False
 	if dobj not in Core.player.spells:
 		print("You don't know a spell called " + dobj)
 		return False
@@ -550,7 +582,7 @@ def Cast(dobj,iobj,prep):
 		print("That spell doesn't exist")
 		return False
 
-	return spells[dobj](iobj)
+	return Effects.spells[dobj](iobj)
 
 
 def Catch(dobj,iobj,prep):
@@ -568,16 +600,12 @@ def Close(dobj,iobj,prep):
 		return False
 	if dobj == None:
 		dobj = getNoun("What will you close?")
-		if dobj in Data.cancels:
-			return False
+		if dobj in Data.cancels: return False
 
-	I = Core.player.search(dobj)
-	if I == None: I = Core.game.currentroom.search(dobj)
-	if I == None:
-		print(f"There is no '{dobj}' here")
-		return False
-
+	I = findObjFromTerm(dobj,True,True)
+	if I == None: return False
 	Core.game.setPronouns(I)
+
 	if not hasattr(I,"open"):
 		print(f"The {I.name} doesn't close")
 		return False
@@ -632,8 +660,7 @@ def Define(dobj,iobj,prep):
 		return False
 	if dobj == None:
 		dobj = getNoun("What term would you like defined?")
-		if dobj in Data.cancels:
-			return False
+		if dobj in Data.cancels: return False
 
 	if dobj in Data.definitions:
 		print("\n"+Data.definitions[dobj])
@@ -651,20 +678,17 @@ def Describe(dobj,iobj,prep):
 	if iobj != None or prep != None:
 		print("Can only describe one thing at once")
 		return False
-	if dobj == None:	#if no dobj, ask
+	if dobj == None:
 		dobj = getNoun("What do you want to be described?")
-		if dobj in Data.cancels:
-			return False
+		if dobj in Data.cancels: return False
 
-	D = Core.player.search(dobj)
 	if dobj == Core.game.currentroom.name or dobj in {"room","here"}:
 		D = Core.game.currentroom
-	if D == None: D = Core.game.currentroom.search(dobj)
-	if D == None:
-		print(f"There is no '{dobj}' here")
-		return False
-
+	else:
+		D = findObjFromTerm(dobj,True,True)
+	if D == None: return False
 	Core.game.setPronouns(D)
+
 	D.describe()
 	return True
 
@@ -683,15 +707,14 @@ def Doff(dobj,iobj,prep):
 		return False
 	if dobj == None:
 		dobj = getNoun("What do you want to doff?")
-		if dobj in Data.cancels:
-			return False
+		if dobj in Data.cancels: return False
 
 	I = Core.player.inGear(dobj)
 	if I == None or not isinstance(I,Core.Armor):
 		print(f"You aren't wearing a '{dobj}'")
 		return False
-
 	Core.game.setPronouns(I)
+
 	Core.player.unequip(I)
 	print(f"You doff your {I.name}")
 	return True
@@ -703,8 +726,7 @@ def Don(dobj,iobj,prep):
 		return False
 	if dobj == None:
 		dobj = getNoun("What do you want to don?")
-		if dobj in Data.cancels:
-			return False
+		if dobj in Data.cancels: return False
 
 	I = Core.player.inInv(dobj)
 	if I == None:
@@ -717,8 +739,8 @@ def Don(dobj,iobj,prep):
 	if I in Core.player.gear.values():
 		print(f"You are already wearing your {I.name}")
 		return False
-
 	Core.game.setPronouns(I)
+
 	if not Core.player.equipArmor(I):
 		return False
 	print(f"You don your {I.name}")
@@ -731,15 +753,12 @@ def Drink(dobj,iobj,prep):
 		return False
 	if dobj == None:
 		dobj = getNoun("What do you want to drink?")
-		if dobj in Data.cancels:
-			return False
+		if dobj in Data.cancels: return False
 
-	I,S = Core.player.search(dobj,getSource=True)
-	if I == None:
-		print(f"There is no '{dobj}' in your inventory")
-		return False
-
+	I = findObjFromTerm(dobj,True,True)
+	if I == None: return False
 	Core.game.setPronouns(I)
+
 	if not Core.hasMethod(I,"Drink"):
 		print("You can't drink the " + I.name)
 		return False
@@ -747,26 +766,24 @@ def Drink(dobj,iobj,prep):
 	return True
 
 
-def Drop(dobj,iobj,prep):
+def Drop(dobj,iobj,prep,I=None,R=None):
 	if prep not in {"down",None}:
 		return Put(dobj,iobj,prep)
-	if dobj == None:
+	if dobj == None and I == None:
 		dobj = getNoun("What will you drop?")
-		if dobj in Data.cancels:
-			return False
+		if dobj in Data.cancels: return False
 
-	I,S = Core.player.search(dobj,getSource=True)
-	if I == None:
-		print(f"There is no '{dobj}' in your inventory")
-		return False
-
+	if I == None: I = findObjFromTerm(dobj,True,False)
+	if I == None: return False
 	Core.game.setPronouns(I)
+
 	if isinstance(I,Core.Compass) and Core.player.countCompasses() == 1:
 		q = "Are you sure you want to lose your compass? You might get lost!"
 		if not Core.yesno(q):
 			return False
+
 	print("You drop your " + I.name)
-	S.removeItem(I)
+	I.parent.removeItem(I)
 	Core.game.currentroom.addItem(I)
 	return True
 
@@ -777,18 +794,16 @@ def Dump(dobj,iobj,prep):
 		return False
 	if dobj == None:
 		dobj = getNoun("What will you dump?")
-		if dobj in Data.cancels:
-			return False
+		if dobj in Data.cancels: return False
 
-	I,S = Core.player.search(dobj,getSource=True)
-	if I == None:
-		print(f"There is no '{dobj}' in your inventory")
-		return False
+	I = findObjFromTerm(dobj,True,False)
+	if I == None: return False
 	Core.game.setPronouns(I)
+
 	if Core.hasMethod(I,"Pour"):
-		return Pour(dobj,iobj,prep)
+		return Pour(dobj,iobj,prep,I=I)
 	else:
-		return Drop(dobj,iobj,prep)
+		return Drop(dobj,iobj,prep,I=I)
 
 
 def Eat(dobj,iobj,prep):
@@ -797,15 +812,12 @@ def Eat(dobj,iobj,prep):
 		return False
 	if dobj == None:
 		dobj = getNoun("What do you want to eat?")
-		if dobj in Data.cancels:
-			return False
+		if dobj in Data.cancels: return False
 
-	I,S = Core.player.search(dobj,getSource=True)
-	if I == None:
-		print(f"There is no '{dobj}' in your inventory")
-		return False
-
+	I = findObjFromTerm(dobj,True,True)
+	if I == None: return False
 	Core.game.setPronouns(I)
+
 	if not Core.hasMethod(I,"Eat"):
 		print("You can't eat the " + I.name)
 		return False
@@ -828,12 +840,10 @@ def Equip(dobj,iobj,prep):
 		if dobj in Data.cancels:
 			return False
 
-	I = Core.player.inInv(dobj)
-	if I == None:
-		print(f"There is no '{dobj}' in your inventory")
-		return False
-
+	I = findObjFromTerm(dobj,True,False)
+	if I == None: return False
 	Core.game.setPronouns(I)
+
 	if Core.player.inGear(dobj) and Core.player.invNames(lower=True).count(dobj) == 1:
 		print(f"Your {dobj} is already equipped")
 		return False
@@ -897,7 +907,7 @@ def GoVertical(dir,passage=None,dobj=None):
 		return False
 	if passage == None:
 		passagename = getNoun(f"What will you go {dir}?")
-		passage = Core.game.currentroom.search(passagename)
+		passage = findObjFromTerm(passagename,False,True)
 	if passage == None:
 		print(f"There is no '{passagename}' to go {dir} here")
 		return False
@@ -919,8 +929,8 @@ def assignGoTerms(dobj,iobj,prep):
 	if iobj in Core.game.currentroom.allExits().values(): dest = iobj
 
 	# assign passage
-	if dobj != None: passage = Core.game.currentroom.search(dobj)
-	elif iobj != None: passage = Core.game.currentroom.search(iobj)
+	if dobj != None: passage = findObjFromTerm(dobj,False,True)
+	elif iobj != None: passage = findObjFromTerm(iobj,False,True)
 
 	return dir,dest,passage
 
@@ -930,7 +940,7 @@ def Go(dobj,iobj,prep):
 	preps = {"down","through","to","toward","up","in","into","on","onto","out",None}
 	if (dobj,iobj,prep) == (None,None,None):
 		dobj,iobj,prep = parseWithoutVerb("Where will you go?",preps)
-	if dobj in Data.cancels:	return False
+	if dobj in Data.cancels: return False
 	if dobj == "back": dobj = Core.game.prevroom.name.lower()
 	if dobj == None: dobj = iobj
 
@@ -972,31 +982,6 @@ def Go(dobj,iobj,prep):
 	return False
 
 
-# add in the ability to try to 'grab' creatures?
-def Grab(dobj,iobj,prep):
-	if prep != None:
-		print("Command not understood")
-		return False
-	if dobj == None:
-		dobj = getNoun("What will you grab?")
-		if dobj in Data.cancels:
-			return False
-
-	I = Core.game.currentroom.search(dobj)
-	if I == None:
-		print(f"There is no '{dobj}' to grab here")
-		return False
-
-	Core.game.setPronouns(I)
-	if isinstance(I,Core.Item):
-		return Take(dobj,iobj,prep)
-	elif isinstance(I,Core.Creature):
-		return Carry(dobj,iobj,prep)
-	else:
-		print(f"You cannot grab the {I.name}")
-		return False
-
-
 def Hide(dobj,iobj,prep):
 	if prep not in {"behind","below","beneath","inside","under",None}:
 		print("Command not understood")
@@ -1005,15 +990,12 @@ def Hide(dobj,iobj,prep):
 	if dobj == None: dobj = iobj
 	if dobj == None:
 		dobj = getNoun("What do you want to hide behind?")
-		if dobj in Data.cancels:
-			return False
+		if dobj in Data.cancels: return False
 
-	I = Core.game.currentroom.search(dobj)
-	if I == None:
-		print(f"There is no '{dobj}' here")
-		return False
-
+	I = findObjFromTerm(dobj,False,True)
+	if I == None: return False
 	Core.game.setPronouns(I)
+
 	if not isinstance(I,Core.Fixture) or I.weight < 50:
 		print("You can't hide behind " + I.name)
 		return False
@@ -1037,8 +1019,7 @@ def Jump(dobj,iobj,prep):
 def Kick(dobj,iobj,prep):
 	if dobj == None:
 		dobj = getNoun("What will you kick?")
-		if dobj in Data.cancels:
-			return False
+		if dobj in Data.cancels: return False
 	return Attack(dobj,"foot","with")
 
 
@@ -1074,30 +1055,25 @@ def Lock(dobj,iobj,prep):
 
 	if dobj == None:
 		dobj = getNoun("What will you lock?")
-		if dobj in Data.cancels:
-			return False
-	I = Core.game.currentroom.search(dobj)
-	if I == None: I = Core.player.search(dobj)
-	if I == None:
-		print(f"There is no '{dobj}' here")
-		return False
+		if dobj in Data.cancels: return False
+
+	I = findObjFromTerm(dobj,True,True)
+	if I == None: return False
 	Core.game.setPronouns(I)
+
 	if not Core.hasMethod(I,"Lock"):
 		print(f"The {I.name} doesn't lock")
 		return False
 
 	if iobj == None:
 		iobj = getNoun("What will you lock with?")
-		if iobj in Data.cancels:
-			return False
-	K = Core.player.search(iobj)
-	if K == None:
-		print(f"There is no '{iobj}' in your inventory")
-		return False
+		if iobj in Data.cancels: return False
+	K = findObjFromTerm(dobj,True,False)
+	if K == None: return False
+
 	if not isinstance(K,Items.Key):
 		print(f"You can't lock with the {K.name}")
 		return False
-
 	return I.Lock(K)
 
 
@@ -1105,25 +1081,22 @@ def Look(dobj,iobj,prep):
 	if prep not in {"at","in","inside","into","on","through",None}:
 		print("Command not understood")
 		return False
-	if dobj == None:	dobj = iobj
+	if dobj == None: dobj = iobj
 	if dobj == None:
 		dobj = getNoun("What will you look at?")
-		if dobj in Data.cancels:
-			return False
+		if dobj in Data.cancels: return False
 
-	if dobj in {"around", "here", "room"}:
+	if dobj in {"around","here","room"} or dobj == Game.currentroom.name.lower():
 		Core.game.currentroom.describe()
 		return True
 	if dobj in {"me","myself",Core.player.name}:
 		print("You are " + Core.player.desc)
 		return True
-	L = Core.game.currentroom.search(dobj)
-	if L == None: L = Core.player.search(dobj)
-	if L == None:
-		print(f"There is no '{dobj}' here")
-		return False
 
+	L = findObjFromTerm(dobj,True,True)
+	if L == None: return False
 	Core.game.setPronouns(L)
+
 	L.describe()
 	if Core.hasMethod(L,"Look"):
 		L.Look()
@@ -1144,16 +1117,12 @@ def Open(dobj,iobj,prep):
 		return False
 	if dobj == None:
 		dobj = getNoun("What will you open?")
-		if dobj in Data.cancels:
-			return False
+		if dobj in Data.cancels: return False
 
-	I = Core.player.search(dobj)
-	if I == None: I = Core.game.currentroom.search(dobj)
-	if I == None:
-		print(f"There is no '{dobj}' here")
-		return False
-
+	I = findObjFromTerm(dobj,True,True)
+	if I == None: return False
 	Core.game.setPronouns(I)
+
 	if not Core.hasMethod(I,"Open"):
 		print(f"The {I.name} doesn't open")
 		return False
@@ -1182,32 +1151,25 @@ def Pour(dobj,iobj,prep):
 		return False
 	if dobj == None:
 		dobj = getNoun("What will you pour?")
-		if dobj in Data.cancels:
-			return False
+		if dobj in Data.cancels: return False
 
-	I,S = Core.player.search(dobj,getSource=True)
-	if I == None:
-		print(f"There is no '{dobj}' in your inventory")
-		return False
+	I = findObjFromTerm(dobj,True,False)
+	if I == None: return False
 	Core.game.setPronouns(I)
+
 	if not Core.hasMethod(I,"Pour"):
 		print(f"You can't pour the {I.name}")
 		return False
 
 	R = None
-	if iobj != None:
-		if iobj == "here": R = Core.game.currentroom
-		R = Core.player.search(iobj)
-		if R == None:
-			R = Core.game.currentroom.search(iobj)
-		if R == None:
-			print(f"There is no '{iobj}' here")
-			return False
+	if iobj != None and iobj not in {"floor","ground","here"}:
+		R = findObjFromTerm(iobj,True,True)
+		if R == None: return False
 
 	if prep == None: prep = "on"
 	if R != None: print(f"You pour your {I.name} {prep} the {R.name}")
 	else: print(f"You pour out your {I.name}")
-	I.Pour()
+	I.Pour(R)
 	return True
 
 
@@ -1226,8 +1188,7 @@ def Pull(dobj,iobj,prep):
 def Punch(dobj,iobj,prep):
 	if dobj == None:
 		dobj = getNoun("What will you punch?")
-		if dobj in Data.cancels:
-			return False
+		if dobj in Data.cancels: return False
 	return Attack(dobj,"fist","with")
 
 
@@ -1241,34 +1202,26 @@ def Put(dobj,iobj,prep):
 		return False
 	if dobj == None:
 		dobj = getNoun("What will you put?")
-		if dobj in Data.cancels:
-			return False
-	I,S = Core.player.search(dobj,getSource=True)
-	if I == None:
-		print(f"There is no '{dobj}' in your inventory")
-		return False
+		if dobj in Data.cancels: return False
+
+	I = findObjFromTerm(dobj,True,False)
+	if I == None: return False
+	Core.game.setPronouns(I)
+
 	if iobj == None:
-		if prep == "down":
-			iobj = "here"
-		else:
-			iobj = getNoun(f"What will you put your {dobj} in?")
+		iobj = getNoun(f"What will you put your {dobj} in?")
+		if iobj in Data.cancels: return False
+
+	if iobj in {"floor","ground","here"}:
+		return Drop(dobj,iobj,prep,I=I)
+	R = findObjFromTerm(iobj,True,True)
+	if R == None: return False
 
 	if isinstance(I,Core.Compass) and Core.player.countCompasses() == 1:
 		q = "Are you sure you want to lose your compass? You might get lost!"
 		if not Core.yesno(q):
 			return False
-	Core.game.setPronouns(I)
 
-	R = Core.player.search(iobj)
-	if iobj in {"ground","floor","here"}:
-		R = Core.game.currentroom
-	if R == Core.game.currentroom:
-		return Drop(dobj,iobj,prep)
-	if R == None:
-		R = Core.game.currentroom.search(iobj)
-	if R == None:
-		print(f"There is no '{iobj}' here")
-		return False
 	if not isinstance(R,Items.Table) and not isinstance(R,Items.Box):
 		print(f"You can't put the {I.name} {prep} the {R.name}")
 		return False
@@ -1276,7 +1229,7 @@ def Put(dobj,iobj,prep):
 	outprep = "on" if isinstance(R,Items.Table) else "in"
 	if iobj == "here": print(f"You put your {I.name} here")
 	else: print(f"You put your {I.name} {outprep} the {R.name}")
-	S.removeItem(I)
+	I.parent.removeItem(I)
 	R.addItem(I)
 	return True
 
@@ -1301,23 +1254,20 @@ def Restrain(dobj,iobj,prep):
 
 	if dobj == None:
 		dobj = getNoun("What will you restrain?")
-		if dobj in Data.cancels:
-			return False
-	C = Core.game.currentroom.search(dobj)
-	if C == None:
-		print(f"There is no '{dobj}' here")
-		return False
+		if dobj in Data.cancels: return False
+
+	C = findObjFromTerm(dobj,False,True)
+	if C == None: return False
 	Core.game.setPronouns(C)
+
 	if not isinstance(C,Core.Creature):
 		print(f"You can't restrain the {C.name}")
 		return False
 
 	I = None
 	if iobj != None:
-		I = Core.player.search(iobj)
-		if I == None:
-			print(f"There is no '{iobj}' in your inventory")
-			return False
+		I = findObjFromTerm(dobj,True,False)
+		if I == None: return False
 		if not Core.hasMethod(I,"RestrainWith"):
 			print(f"You can't restrain with the {I.name}")
 			return False
@@ -1353,7 +1303,7 @@ def Smell(dobj,iobj,prep):
 	print("smelling")
 
 
-def Steal(dobj,iobj,prep):
+def Steal(dobj,iobj,prep,I=None):
 	print(f"stealing {dobj} {prep} {iobj}")
 
 
@@ -1383,44 +1333,44 @@ def Take(dobj,iobj,prep):
 		return False
 	if dobj == None:
 		dobj = getNoun("What will you take?")
-		if dobj in Data.cancels:
-			return False
+		if dobj in Data.cancels: return False
+
 	if dobj in {"all","everything","it all"}:
-		C = [name.lower() for name in Core.game.currentroom.itemNames()]
+		names = [name.lower() for name in Core.game.currentroom.itemNames()]
 		taken = False
-		for name in C:
+		for name in names:
 			taken = Take(name,iobj,prep) or taken
 		return taken
 
-	I,path = Core.game.currentroom.search(dobj,d=2,getPath=True,reqSource=iobj)
-	if I == None:
-		I,path = Core.player.search(dobj,d=2,getPath=True,reqSource=iobj)
-	if I == None:
+	matches = Core.game.currentroom.search(dobj,d=2,reqParent=iobj)
+	if len(matches) == 0:
 		if prep in {None,"up"}: print(f"There is no '{dobj}' here")
 		else: print(f"There is no '{dobj}' in a '{iobj}' here")
 		return False
-	if not isinstance(I,Core.Item) or isinstance(I,Core.Fixture):
-		if isinstance(I,Core.Creature):
-			return Carry(dobj,iobj,prep)
+	elif len(matches) == 1: obj = matches[0]
+	else: obj = chooseObject(dobj,matches)
+	Core.game.setPronouns(obj)
+
+	if isinstance(obj,Core.Creature): return CarryCreature(obj)
+	if not isinstance(obj,Core.Item) or isinstance(obj,Core.Fixture):
 		print("You can't take the " + dobj)
 		return False
-	Core.game.setPronouns(I)
 
-	#S is the 'source' object, the object containing I
-	S = path[0]
-	if isinstance(S,Core.Creature) and prep == "from": return Steal(dobj,iobj,prep)
-	count = S.itemNames().count(I.name)
-	if S is Core.player:
+	parent = obj.parent
+	if isinstance(parent,Core.Creature) and prep == "from":
+		return Steal(dobj,iobj,prep,I=obj)
+	count = parent.itemNames().count(obj.name)
+	if parent is Core.player:
 		print("You can't take from your own Inventory")
 		return False
 
-	if S is Core.game.currentroom: appendstring = ""
-	elif Core.player in path: appendstring = " from your " + S.name
-	else: appendstring = " from the " + S.name
-	strname = I.stringName(definite=(count==1))
-	msg = f"You take {strname}{appendstring}"
+	if parent is Core.game.currentroom: suffix = ""
+	elif Core.player in obj.ancestors(): suffix = " from your " + parent.name
+	else: suffix = " from the " + parent.name
+	strname = obj.stringName(definite=(count==1))
+	msg = f"You take {strname}{suffix}"
 
-	return Core.player.obtainItem(I,S,msg)
+	return Core.player.obtainItem(obj,msg)
 
 
 def Touch(dobj,iobj,prep):
@@ -1437,15 +1387,14 @@ def Unequip(dobj,iobj,prep):
 		return False
 	if dobj == None:
 		dobj = getNoun("What would you like to unequip?")
-		if dobj in Data.cancels:
-			return False
+		if dobj in Data.cancels: return False
 
 	I = Core.player.inGear(dobj)
 	if I == None:
 		print(f"You do not have a '{dobj}' equipped")
 		return False
-
 	Core.game.setPronouns(I)
+
 	print(f"You unequip your {I.name}")
 	Core.player.unequip(I)
 	return True
@@ -1457,13 +1406,10 @@ def Unlock(dobj,iobj,prep):
 		return False
 	if dobj == None:
 		dobj = getNoun("What will you unlock?")
-		if dobj in Data.cancels:
-			return False
-	I = Core.game.currentroom.search(dobj)
-	if I == None: I = Core.player.search(dobj)
-	if I == None:
-		print(f"There is no '{dobj}' here")
-		return False
+		if dobj in Data.cancels: return False
+
+	I = findObjFromTerm(dobj,True,True)
+	if I == None: return False
 	Core.game.setPronouns(I)
 	if not Core.hasMethod(I,"Unlock"):
 		print(f"The {I.name} doesn't unlock")
@@ -1471,16 +1417,14 @@ def Unlock(dobj,iobj,prep):
 
 	if iobj == None:
 		iobj = getNoun("What will you unlock with?")
-		if iobj in Data.cancels:
-			return False
-	K = Core.player.search(iobj)
-	if K == None:
-		print(f"There is no '{iobj}' in your inventory")
-		return False
+		if iobj in Data.cancels: return False
+
+	K = findObjFromTerm(dobj,True,False)
+	if K == None: return False
+
 	if not isinstance(K,Items.Key):
 		print(f"You can't unlock with the {K.name}")
 		return False
-
 	return I.Unlock(K)
 
 
@@ -1491,16 +1435,12 @@ def Untie(dobj,iobj,prep):
 def Use(dobj,iobj,prep):
 	if dobj == None:
 		dobj = getNoun("What will you use?")
-		if dobj in Data.cancels:
-			return False
+		if dobj in Data.cancels: return False
 
-	I = Core.player.search(dobj)
-	if I == None:	I = Core.game.currentroom.search(dobj)
-	if I == None:
-		print(f"There is no '{dobj}' to use here")
-		return False
-
+	I = findObjFromTerm(dobj,True,True)
+	if I == None: return False
 	Core.game.setPronouns(I)
+
 	if not Core.hasMethod(I,"Use"):
 		print(f"You can't use the {I.name}")
 		return False
@@ -1580,7 +1520,7 @@ actions = {
 "bite":Bite,
 "break":Break,
 "build":Craft,
-"carry":Carry,
+"carry":Take,
 "cast":Cast,
 "catch":Catch,
 "climb":Go,
@@ -1619,8 +1559,8 @@ actions = {
 "get":Take,
 "give":Give,
 "go":Go,
-"grab":Grab,
-"grapple":Grab,
+"grab":Take,
+"grapple":Take,
 "head":Go,
 "hear":Listen,
 "hide":Hide,

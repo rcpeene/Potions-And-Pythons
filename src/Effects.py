@@ -13,8 +13,8 @@ import Data
 #######################
 
 
-def applyAreaEffect(effect,root,condfunc=lambda x:x):
-	objects = filter(condfunc,Core.objTreeToSet(root))
+def applyAreaEffect(effect,root,condfunc=lambda x:True):
+	objects = objSearch(root,key=condfunc,d=3)
 	for object in objects:
 		effect(object)
 

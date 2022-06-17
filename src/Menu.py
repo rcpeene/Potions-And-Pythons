@@ -297,7 +297,7 @@ def createCharacter():
 	desc = input("Describe yourself\n> ")
 	while len(desc) == 0:
 		desc = input("> ")
-	return Core.Player(name,desc,1,1,[1]*10,0,[],Data.initgear,[],0,0,[])
+	return Core.Player(name,desc,[1]*10,[],1,1,0,[],Data.initgear,0,0,[])
 
 
 # starts a new game and returns player, world, and game objects
@@ -322,7 +322,7 @@ def testGame():
 	status = [["fireproof",-1], ["poisoned",5], ["cursed",-2], ["immortal",-1],
 	["sharpshooter",50], ["invisible",15], ["poisoned",-1], ["flying",5]]
 
-	Core.player = Core.Player("Norman","a hero",24,24,[4]*10,1000,inv,Data.initgear,status,1585,100,[])
+	Core.player = Core.Player("Norman","a hero",[4]*10,status,24,24,1000,inv,Data.initgear,1585,100,[])
 	Core.game = Core.Game(0,Core.world["cave"],Core.world["tunnel"],0)
 
 	Core.clearScreen()

@@ -52,7 +52,6 @@ def hasMethod(obj,methodName):
 
 def getRoomKey(room,world):
 	for key,value in world.items():
-		print(key,value)
 		if value == room:
 			return key
 
@@ -244,7 +243,7 @@ def extractConditionInfo(roomCondition):
 # prints a question, gets a yes or no, returns True or False respectively
 def yesno(question):
 	while True:
-		command = input(question + '\n> ').lower()
+		command = input(question + "\n> ").lower()
 		if command in Data.yesses:
 			return True
 		elif command in Data.noes:
@@ -294,11 +293,6 @@ def maxm(m,n): return m if n > m else n
 #        |
 #     saffron
 
-# if returnPath: returns a list; the path from the found node to the root node
-# elif returnSource: returns a tuple; the found node and its parent
-# if reqSource != None: then the search only succeeds if it finds an object...
-# which belongs to a parent object whose name matches reqSource
-
 # d is the 'degree' of the search; how thorough it is'
 # if d is 3: searches through all objects from the root
 # elif d is 2: searches through all objects which are not locked
@@ -308,75 +302,29 @@ def maxm(m,n): return m if n > m else n
 # creature inventories; i.e. objects which are "visible" to the player
 
 # this function is a wrapper for objSearchRecur()
-def objSearch(term,root,d=0,getPath=False,getSource=False,reqSource=None):
-	target,source,path = objSearchRecur(term,root,[],d,reqSource)
-	if getPath:
-		return target,path
-	elif getSource:
-		return target,source
-	else:
-		return target
+def objSearch(root,key=lambda obj:True,d=0):
+	matches = objSearchRecur(root,[],key,d)
+	return matches
 
 
-def objSearchRecur(term,node,path,d,reqSource):
-	target,source = None,None
+def objSearchRecur(node,matches,key,d):
 	# choose list of objects to search through depending on the node's type
 	if isinstance(node,Room): searchThrough = node.contents()
 	elif hasattr(node,"items"): searchThrough = node.items
 	elif hasattr(node,"inv"): searchThrough = node.inv
 	# if node is unsearchable: return
-	else: return target,source,path
+	else: return matches
 
-	# firstly, just search objects in the "top level" of the tree for a match
 	for obj in searchThrough:
-		# don't search the current node if it is not the required source
-		if reqSource != None and reqSource != node.name:
-			break
-		if obj.name.lower() == term:
-			source,target = node,obj
-			break
-
-	# then, recursively search each object's subtree
-	for obj in searchThrough:
-		# if target object was already found, no need to search deeper
-		if target != None: break
+		# check if obj is a match
+		if key(obj): matches.append(obj)
 		# depending on the degree, may skip closed, locked, or creature objects
 		if d == 0 and hasattr(obj,"open") and not obj.open: continue
 		elif (d <= 1) and isinstance(obj,Creature): continue
 		elif d <= 2 and hasattr(obj,"locked") and obj.locked: continue
-		# recur the search on each object node, I
-		target,source,path = objSearchRecur(term,obj,path,d,reqSource)
-
-	# if an object was found, append the search path before returning
-	if target != None: path.append(node)
-	return target,source,path
-
-
-# this function takes the same principle as objSearch, recursively traversing...
-# the tree of objects, except that it does not search for a specific object...
-# it returns a set of all the objects found in the tree
-# d, the degree of the traversal, works the same as in objSearch() above
-# if getSources, the set will consist of tuples of object,source pairs
-def objTreeToSet(root,d=0,getSources=False):
-	allObjects = set()
-	# determine what to search through based on the root's type
-	if isinstance(root,Room): searchThrough = root.contents()
-	elif hasattr(root,"items"): searchThrough = root.items
-	elif hasattr(root,"inv"): searchThrough = root.inv
-	# if the item is not searchable, return empty set
-	else: return set()
-
-	for obj in searchThrough:
-		# add the item to the set of all items
-		if getSources: allObjects.add((obj,root))
-		else: allObjects.add(obj)
-		# depending on the degree, skips closed, locked, or creature objects
-		if d == 0 and hasattr(obj,"open") and not obj.open: continue
-		elif (d <= 1) and isinstance(obj,Creature): continue
-		elif d <= 2 and hasattr(obj,"locked") and obj.locked: continue
-		# unionize the set of all items with item obj's set
-		allObjects = allObjects | objTreeToSet(obj,d=d,getSources=getSources)
-	return allObjects
+		# recur the search on each object's subtree
+		matches = objSearchRecur(obj,matches,key,d)
+	return matches
 
 
 # helper function for assignParents()
@@ -398,6 +346,7 @@ def assignParentsRecur(root):
 def assignParents():
 	for room in world.values():
 		assignParentsRecur(room)
+	assignParentsRecur(player)
 
 
 # takes a dict of room names and room objects,
@@ -469,7 +418,7 @@ class Empty():
 
 
 	def improviseWeapon(self):
-		return Weapon("empty hand","",0,-1,[],1,0,0,0,False,"b")
+		return Weapon("empty hand","",[],"",0,-1,[],1,0,0,0,False,"b")
 
 
 
@@ -611,14 +560,14 @@ class Game():
 	# returns a list of objects in current room which fit a certain condition
 	# key is a function which identifies a condition about the obj
 	# d is the 'degree' of the search. See objSearch() for details
-	def searchRoom(self,room=None,key=lambda x:x,d=3):
+	def searchRoom(self,room=None,key=lambda x:True,d=3):
 		if room == None:
 			room = self.currentroom
-		return list(filter(key, objTreeToSet(room,d=d)))
+		return objSearch(room,key=key,d=d)
 
 
 	# returns a list of objects in rendered rooms which fit a certain condition
-	def searchRooms(self,key=lambda x:x,d=3):
+	def searchRooms(self,key=lambda x:True,d=3):
 		matchingObjects = []
 		for room in self.renderedRooms():
 			matchingObjects += self.searchRoom(room,key=key,d=d)
@@ -627,19 +576,17 @@ class Game():
 
 	# returns a set of all objects in the rendered world
 	# does not include the player or anything in player inv
-	# if getSources: returns a set of pairs of the form (source, obj)...
-	# where source is the parent object which 'contains' obj
-	def getAllObjects(self,getSources=False):
-		allObjects = set()
+	def getAllObjects(self):
+		allObjects = []
 		for room in self.renderedRooms():
-			allObjects |= objTreeToSet(room,d=3,getSources=getSources)
+			allObjects += objSearch(room,key=lambda x:True,d=3)
 		return allObjects
 
 
 	# True if there's an object in rendered rooms whose name matches objname
 	# not case sensitive
 	def inWorld(self,objname):
-		key = lambda obj: obj.name.lower() == objname
+		key = lambda obj: objname == obj.name.lower() or objname in obj.aliases
 		objects = self.searchRooms(key)
 		return len(objects) > 0
 
@@ -682,6 +629,8 @@ class Room():
 		self.creatures = creatures
 		self.status = status
 
+		# this should remain unused, but may be accessed when using item.parent
+		self.aliases = []
 
 
 	### Dunder Methods ###
@@ -835,9 +784,12 @@ class Room():
 	# takes a string, term, and searches the room's items
 	# if an item is found that matches term, return it, otherwise, return None
 	def inItems(self,term):
+		term = term.lower()
+		matches = []
 		for item in self.items:
-			if item.name.lower() == term: return item
-		return None
+			if term == item.name.lower() or term in item.aliases:
+				matches.append(item)
+		return matches
 
 
 	def itemNames(self):
@@ -852,9 +804,12 @@ class Room():
 	# takes a string, term, and searches the room's occuptants
 	# if a creature matches the term , return it, otherwise, return False
 	def inCreatures(self,term):
+		term = term.lower()
+		matches = []
 		for creature in self.creatures:
-			if creature.name.lower() == term: return creature
-		return None
+			if term == creature.name.lower() or term in creature.aliases:
+				matches.append(creatures)
+		return matches
 
 
 	def creatureNames(self):
@@ -866,9 +821,12 @@ class Room():
 
 
 	def inContents(self,term):
-		for obj in self.contents():
-			if obj.name.lower() == term: return obj
-		return None
+		term = term.lower()
+		matches = []
+		for item in self.contents():
+			if term == item.name.lower() or term in item.aliases:
+				matches.append(item)
+		return matches
 
 
 	# given a direction (like 'north' or 'down)...
@@ -900,15 +858,23 @@ class Room():
 
 	# wrapper for objSearch()
 	# recursively searches the room for an object whose name matches given term
-	def search(self,term,d=0,getSource=False,getPath=False,reqSource=None):
-		return objSearch(term,self,d=d,
-		getSource=getSource,getPath=getPath,reqSource=reqSource)
+	def search(self,term,d=0,reqParent=None):
+		term = term.lower()
+		key = lambda obj: term == obj.name.lower() or term in obj.aliases
+		matches = objSearch(self,key=key,d=d)
+
+		if reqParent != None:
+			reqParent = reqParent.lower()
+			condition = lambda obj: reqParent == obj.parent.name.lower() or reqParent in obj.parent.aliases
+			matches = list(filter(condition,matches))
+
+		return matches
 
 
 	def listableItems(self):
 		# don't list fixtures which are not 'mentioned'
-		filterkey = lambda x: not (isinstance(x,Fixture) and not x.mention)
-		objects = list(filter(filterkey,self.items))
+		condition = lambda x: not (isinstance(x,Fixture) and not x.mention)
+		objects = list(filter(condition,self.items))
 		return objects
 
 
@@ -929,14 +895,15 @@ class Room():
 
 	# prints all the items of the room in sentence form
 	def describeItems(self):
-		if len(self.listableItems()) != 0:
+		items = self.listableItems()
+		if len(items) != 0:
 			print("There is " + listObjects(self.listableItems()) + ".")
 
 
 	# prints all the creatures in the room in sentence form
 	def describeCreatures(self):
 		if len(self.creatures) != 0:
-			print("There is " + listObjects(self.creatures))
+			print("There is " + listObjects(self.creatures) + ".")
 
 
 
@@ -1017,10 +984,20 @@ class Item():
 		return self.weight
 
 
+	def ancestors(self):
+		ancs = []
+		ancestor = self.parent
+		ancs.append(ancestor)
+		while not isinstance(ancestor,Room):
+			ancestor = ancestor.parent
+			ancs.append(ancestor)
+		return ancs
+
+
 	# Used to create a generic Weapon() if this item is used to attack something
 	def improviseWeapon(self):
 		#TODO: if item is too large/heavy, make it two-handed
-		return Weapon(self.name,self.desc,self.weight,self.durability,[],min1(self.weight//4),0,0,0,False,"b")
+		return Weapon(self.name,self.desc,self.aliases,self.plural,self.weight,self.durability,[],min1(self.weight//4),0,0,0,False,"b")
 
 
 
@@ -1060,12 +1037,11 @@ class Item():
 # Creatures have 10 base stats, called traits
 # They also have abilities; stats which are derived from traits through formulas
 class Creature():
-	def __init__(self,name,desc,hp,mp,traits,money,inv,gear,status):
+	def __init__(self,name,desc,aliases,plural,traits,status,hp,mp,money,inv,gear):
 		self.name = name
 		self.desc = desc
-		self.hp = hp
-		self.mp = mp
-		self.parent = None
+		self.aliases = aliases
+		self.plural = plural
 
 		self.STR = traits[0]
 		self.SPD = traits[1]
@@ -1078,14 +1054,19 @@ class Creature():
 		self.FTH = traits[8]
 		self.LCK = traits[9]
 
-		self.money = money
-		self.inv = inv
-		# convert gear from its stored form in files to its runtime form
-		self.gear = {key: inv[gear[key]] if gear[key] != -1 else Empty() for key in gear}
-
 		self.status = status
 		# sort status effects by duration; change '1' to '0' to sort by name
 		self.status.sort(key=lambda x: x[1])
+
+		self.hp = hp
+		self.mp = mp
+		self.money = money
+		self.inv = inv
+
+		# convert gear from its stored form in files to its runtime form
+		self.gear = {key: inv[gear[key]] if gear[key] != -1 else Empty() for key in gear}
+
+		self.parent = None
 
 		self.weapon = Empty()
 		self.weapon2 = Empty()
@@ -1170,12 +1151,7 @@ class Creature():
 	# returns an instance of this class given a dict from a JSON file
 	@classmethod
 	def convertFromJSON(cls,d):
-		# thisobj = cls(0,0,0,0,[0 for i in range(10)],0,0,{},[])
-		# for key in d:
-		# 	val = dict[key]
-		# 	setattr(thisobj,key,val)
-		thisobj = cls(d["name"],d["desc"],d["hp"],d["mp"],d["traits"],d["money"],d["inv"],d["gear"],d["status"])
-		return thisobj
+		return cls(d["name"],d["desc"],d["aliases"],d["plural"],d["traits"],d["status"],d["hp"],d["mp"],d["money"],d["inv"],d["gear"])
 
 
 
@@ -1229,9 +1205,11 @@ class Creature():
 	# if it is added, remove it from source location
 	# if it has an Obtain() method, call that
 	# finally, check if the new inventory weight has hindered the creature
-	def obtainItem(self,I,S,msg=None):
+	def obtainItem(self,I,msg=None):
+		source = I.parent
 		if self.addItem(I):
-			S.removeItem(I)
+			if source != None:
+				source.removeItem(I)
 			if msg != None:
 				print(msg)
 			I.Obtain(self)
@@ -1369,7 +1347,7 @@ class Creature():
 		return True
 
 
-	def Restrain(self,restrainer,item):
+	def Restrain(self,restrainer,item=None):
 		if item != None:
 			#TODO: add restraining with items? like rope??
 			pass
@@ -1418,6 +1396,16 @@ class Creature():
 	def TNKR(self): return 2*self.INT + self.SKL
 
 
+	def ancestors(self):
+		ancs = []
+		ancestor = self.parent
+		ancs.append(ancestor)
+		while not isinstance(ancestor,Room):
+			ancestor = ancestor.parent
+			ancs.append(ancestor)
+		return ancs
+
+
 	# returns sum of the weight of all items in the inventory
 	def invWeight(self):
 		weight = 0
@@ -1440,10 +1428,12 @@ class Creature():
 	# searches through inventory for an item whose name matches 'term'
 	# if a match is found, return the item, otherwise return None
 	def inInv(self,term):
+		term = term.lower()
+		matches = []
 		for item in self.inv:
-			if item.name.lower() == term:
-				return item
-		return None
+			if term == item.name.lower() or term in item.aliases:
+				matches.append(item)
+		return matches
 
 
 	def weapons(self):
@@ -1539,8 +1529,8 @@ class Creature():
 
 # the class representing the player, contains all player stats
 class Player(Creature):
-	def __init__(self,name,desc,hp,mp,traits,money,inv,gear,status,xp,rp,spells):
-		Creature.__init__(self,name,desc,hp,mp,traits,money,inv,gear,status)
+	def __init__(self,name,desc,traits,status,hp,mp,money,inv,gear,xp,rp,spells):
+		Creature.__init__(self,name,desc,"","",traits,status,hp,mp,money,inv,gear)
 		self.xp = xp
 		self.rp = rp
 		self.spells = spells
@@ -1551,8 +1541,7 @@ class Player(Creature):
 
 	@classmethod
 	def convertFromJSON(cls,d):
-		thisobj = cls(d["name"],d["desc"],d["hp"],d["mp"],d["traits"],d["money"],d["inv"],d["gear"],d["status"],d["xp"],d["rp"],d["spells"])
-		return thisobj
+		return cls(d["name"],d["desc"],d["traits"],d["status"],d["hp"],d["mp"],d["money"],d["inv"],d["gear"],d["xp"],d["rp"],d["spells"])
 
 
 
@@ -1611,9 +1600,11 @@ class Player(Creature):
 		self.money += money
 
 
-	def obtainItem(self,I,S,msg=None):
+	def obtainItem(self,I,msg=None):
+		source = I.parent
 		if self.addItem(I):
-			S.removeItem(I)
+			if source != None:
+				source.removeItem(I)
 			if msg != None:
 				print(msg)
 			I.Obtain(self)
@@ -1737,10 +1728,10 @@ class Player(Creature):
 		return count
 
 
-	# wrapper for objTreeToSet()
+	# wrapper for objSearch()
 	# returns player Inventory as a set of all items in the Item Tree
 	def invSet(self):
-		return objTreeToSet(self,d=2)
+		return objSearch(self,d=2)
 
 
 	# weird formula right? returns a positive number rounded down to nearest int
@@ -1753,10 +1744,17 @@ class Player(Creature):
 
 	# wrapper for objSearch, sets the degree of the search 2 by default
 	# returns an item in player inv object tree whose name matches given term
-	def search(self,term,d=2,getSource=False,getPath=False,reqSource=None):
-		return objSearch(term,self,
-		d=d,getSource=getSource,getPath=getPath,reqSource=reqSource)
+	def search(self,term,d=2,reqParent=None):
+		term = term.lower()
+		key = lambda obj: term == obj.name.lower() or term in obj.aliases
+		matches = objSearch(self,key=key,d=d)
 
+		if reqParent != None:
+			reqParent = reqParent.lower()
+			condition = lambda obj: reqParent == obj.parent.name.lower() or reqParent in obj.parent.aliases
+			matches = list(filter(condition,matches))
+
+		return matches
 
 
 	### User Output ###
@@ -2187,6 +2185,6 @@ class Person(Creature):
 
 
 
-player = Player("","",0,0,[0]*10,0,[],{},[],0,0,[])
+player = Player("","",[0]*10,[],0,0,0,[],{},0,0,[])
 game = Game(-1,-1,-1,-1)
 world = {}
