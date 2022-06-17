@@ -571,7 +571,7 @@ def CarryCreature(creature):
 
 
 def Cast(dobj,iobj,prep):
-	if prep not in {"at","on","onto","upon",}:
+	if prep not in {"at","on","onto","upon",None}:
 		print("Command not understood")
 		return False
 	if dobj == None:
@@ -580,7 +580,7 @@ def Cast(dobj,iobj,prep):
 	if dobj not in Core.player.spells:
 		print("You don't know a spell called " + dobj)
 		return False
-	if dobj not in spells:
+	if dobj not in Effects.spells:
 		# this shouldn't happen
 		print("That spell doesn't exist")
 		return False
