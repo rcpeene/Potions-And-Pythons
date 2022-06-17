@@ -415,11 +415,11 @@ def Hello(): print(Core.capWords(choice(list(Data.hellos)),n=1))
 def Help():
 	Core.clearScreen()
 	print("\nPlayer Statistics Commands")
-	Core.columnPrint(Data.statcommands,10,10)
+	Core.columnPrint(Data.statcommands,12,10)
 	print("\nOther Single-Word Commands")
-	Core.columnPrint(Data.shortverbs,10,10)
+	Core.columnPrint(Data.shortverbs,12,10)
 	print("\nVerb Commands (Does not include cheat codes and secret commands)")
-	Core.columnPrint(Data.verbs,10,10)
+	Core.columnPrint(Data.verbs,12,10)
 	print("\nDuring the game, type 'info' for information on the game and how to play")
 	input()
 	Core.clearScreen()
@@ -1330,6 +1330,20 @@ def Tie(dobj,iobj,prep):
 	print("tieing")
 
 
+def TakeAll():
+	takenAnything = False
+	# deep copy to prevent deleting-while-iterating error
+	items = [item for item in Core.game.currentroom.items]
+	for obj in items:
+		count = obj.parent.itemNames().count(obj.name)
+		msg = f"You take {obj.stringName(definite=(count==1))}"
+
+		taken = Core.player.obtainItem(obj,msg)
+		takenAnything = taken or takenAnything
+
+	return takenAnything
+
+
 def Take(dobj,iobj,prep):
 	if prep not in {"from","in","inside","up",None}:
 		print("Command not understood")
@@ -1338,12 +1352,7 @@ def Take(dobj,iobj,prep):
 		dobj = getNoun("What will you take?")
 		if dobj in Data.cancels: return False
 
-	if dobj in {"all","everything","it all"}:
-		names = [name.lower() for name in Core.game.currentroom.itemNames()]
-		taken = False
-		for name in names:
-			taken = Take(name,iobj,prep) or taken
-		return taken
+	if dobj in {"all","everything","it all"}: return TakeAll()
 
 	matches = Core.game.currentroom.search(dobj,d=2,reqParent=iobj)
 	if len(matches) == 0:
@@ -1361,12 +1370,12 @@ def Take(dobj,iobj,prep):
 		return False
 
 	parent = obj.parent
-	if isinstance(parent,Core.Creature) and prep == "from":
-		return Steal(dobj,iobj,prep,I=obj)
-	count = parent.itemNames().count(obj.name)
 	if parent is Core.player:
 		print("You can't take from your own Inventory")
 		return False
+	if any(isinstance(anc,Core.Creature) for anc in obj.ancestors()):
+		return Steal(dobj,iobj,prep,I=obj)
+	count = parent.itemNames().count(obj.name)
 
 	if parent is Core.game.currentroom: suffix = ""
 	elif Core.player in obj.ancestors(): suffix = " from your " + parent.name

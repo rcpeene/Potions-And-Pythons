@@ -19,7 +19,7 @@ menuinstructions = "\nType 'info' for information on how to play\nType 'new' to 
 
 gameinfo = "="*70 + "\n\nPotions & Pythons\nv.Alpha\nBy Carter Peene, 2022\n\n" + "-"*70 + "\n\nTo play, type a command of the form:\n[verb] [*noun] [*preposition] [*noun]\nOR\n[verb] [*preposition] [*noun]\n\n* denotes a term that can be omitted when unnecessary\nArticles, determiners, and most symbols are removed from your input\n\n" + "-"*70 + "\n\nDuring the game:\nGet a list of valid commands by typing 'help'\nGet a list of command examples by typing 'examples'\nSee your main player statistics by typing 'stats' and 'traits'\nSee a description of your current location by typing 'here'\nLearn about most game terms and commands by typing 'define [term]'\n\n" + "="*70
 
-examples = "\nValid input examples include:\n- go\n- go north\n- go nw\n- go up the stairs\n- go back\n- go to tunnel\n- look at python\n- i will fight the python!\n- hit the python with my sword\n- attack python sword\n- equip a sword\n- unequip sword\n- take red potion\n- take the red potion from the chest\n- put red potion in the chest\n- put red potion chest\n- drop the red potion\n- close chest"
+examples = "\nValid input examples include:\n- go\n- go north\n- go nw\n- go up the stairs\n- go back\n- go to tunnel\n- look at python\n- i will fight the python!\n- hit the python with my sword\n- attack python sword\n- fight it\n- equip a sword\n- unequip sword\n- take red potion\n- take the red potion from the chest\n- put red potion in the chest\n- put red potion chest\n- drop the red potion\n- pour it out\n- close chest"
 
 symbols = ".,!?~`\"()[]{}<>+=/*&^%$#@\t"
 

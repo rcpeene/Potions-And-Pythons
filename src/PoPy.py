@@ -73,14 +73,10 @@ if __name__ == "__main__":
 
 # remove game.activeroom? maybe?
 # flush input not working?? (should be fixed, but make sure)
-# change call to I.Pour() in pour action to pass R
 # make it say 'there are 2 pythons' instead of 'there is': refactor listObjects
 # rephrase a lot of action functions to use stringname instead of 'the {name}'
 # rename I, C, R, F and other variables to worded names
-
-# add object generalization (so you can say 'take potion' on the 'red potion')
-	# >>>>> alter how take is done (maybe) (check for ancestors when directing to steal)
-	# adjust how taking and listing items works (eg allow for saying "take swords")
+# fix bug with displaying correct amount of gold when there is multiple gold objects in the room
 
 # restructure map and revise tests, add attack tests
 	# add magic beans or food to pour stuff on

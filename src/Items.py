@@ -30,8 +30,8 @@ class Bottle(Core.Item):
 		print(f"The {self.name} breaks. Shards of glass scatter everywhere")
 		self.parent.removeItem(self)
 		for i in range(randint(3,6)):	#randomly generates n shards between 3,6
-			newShard = Shard("shard","a sharp shard of glass",[],"shards",1,-1)
-			self.parent.addItem(newShard)
+			shard = Shard("shard","a sharp shard of glass",[],"shards",1,-1,[])
+			self.parent.addItem(shard)
 
 
 
@@ -287,14 +287,15 @@ class Potion(Bottle):
 		print(f"You drink the {self.name}")
 		Core.player.heal(1000)
 		self.parent.removeItem(self)
-		Core.player.addItem(Bottle("bottle","an empty glass bottle",3,3,{}))
+		Core.player.addItem(Bottle("bottle","an empty glass bottle",[],"",3,3,[]))
 
 
 	def Pour(self,obj=None):
 		if obj != None:
-			obj.Drench(self)
+			if Core.hasMethod(obj,"Drench"):
+				obj.Drench(self)
 		self.parent.removeItem(self)
-		Core.player.addItem(Bottle("bottle","an empty glass bottle",3,3,{}))
+		Core.player.addItem(Bottle("bottle","an empty glass bottle",[],"bottles",3,3,[]))
 
 
 
