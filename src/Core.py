@@ -446,8 +446,6 @@ class Game():
 		self.silent = False
 		# the creature who is currently acting
 		self.whoseturn = None
-		# the room that events are being executed in
-		self.activeroom = None
 		# stores the last command before processing. Used for cheatcode input
 		self.lastRawCommand = None
 		# these pronoun attributes will point to an object which the user may...
@@ -993,6 +991,8 @@ class Item():
 			ancs.append(ancestor)
 		return ancs
 
+	def room(self):
+		return self.ancestors()[-1]
 
 	# Used to create a generic Weapon() if this item is used to attack something
 	def improviseWeapon(self):
@@ -1333,7 +1333,7 @@ class Creature():
 		print("agh its... ded?")
 		# TODO: make this just drop some random number of money not just LOOT
 		n = diceRoll(3,player.LOOT(),-2)
-		game.activeroom.addItem(Pylars(n,[]))
+		self.room().addItem(Pylars(n,[]))
 		if not game.silent:
 			print(f"Dropped Ᵽ {n}")
 		if game.whoseturn is player:
@@ -1404,6 +1404,10 @@ class Creature():
 			ancestor = ancestor.parent
 			ancs.append(ancestor)
 		return ancs
+
+
+	def room.(self):
+		return self.ancestors()[-1]
 
 
 	# returns sum of the weight of all items in the inventory
@@ -2146,7 +2150,7 @@ class Monster(Creature):
 
 	def attack(self):
 		# if creature is not in same room as player
-		if game.currentroom != game.activeroom:
+		if game.currentroom != self.room():
 			return
 		# choose strongest weapon or use hand
 		# if len(self.weapons()) == 0:

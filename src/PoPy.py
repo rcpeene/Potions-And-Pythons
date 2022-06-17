@@ -31,7 +31,6 @@ def main():
 	# main input loop
 	while True:
 		Core.game.silent = False
-		Core.game.activeroom = Core.game.currentroom
 		Core.game.whoseturn = Core.player
 
 		# take user input until player successfully performs an action
@@ -39,7 +38,6 @@ def main():
 		if Core.game.quit: return
 
 		# creatures in current room's turn
-		Core.game.activeroom = Core.game.currentroom
 		for creature in Core.game.currentroom.creatures:
 			Core.game.whoseturn = creature
 			creature.act()
@@ -47,13 +45,11 @@ def main():
 		# creatures in nearby rooms' turn
 		Core.game.silent = True
 		for room in Core.game.nearbyRooms():
-			Core.game.activeroom = room
 			for creature in room.creatures:
 				Core.game.whoseturn = creature
 				creature.act()
 
 		# cleanup before looping
-		Core.game.activeroom = None
 		Core.game.whoseturn = None
 		# pass the time for all rooms and creatures
 		Core.game.incrementTime()
@@ -71,19 +67,17 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# remove game.activeroom? maybe?
 # flush input not working?? (should be fixed, but make sure)
 # make it say 'there are 2 pythons' instead of 'there is': refactor listObjects
 # rephrase a lot of action functions to use stringname instead of 'the {name}'
 # rename I, C, R, F and other variables to worded names
 # fix bug with displaying correct amount of gold when there is multiple gold objects in the room
+# figure out cast command cuz its also a short verb
 
 # restructure map and revise tests, add attack tests
 	# add magic beans or food to pour stuff on
 	# "drink from the fountain"
 	# make a list of all possible uses and inputs for each action and systematically test them. Revise the world to accomodate them
-
-# figure out cast command cuz its also a short verb
 
 # add some preliminary spells and add effects file
 	# reevaluate effect functions, is there a way to reference a function by string?
