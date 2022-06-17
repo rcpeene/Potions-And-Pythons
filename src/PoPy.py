@@ -20,8 +20,7 @@ def main():
 	Menu.gameIntro()
 	# instantiate global objects Player, World, Game
 	Menu.mainMenu()
-	if Core.game.quit == True:
-		return
+	if Core.game.quit == True: return
 	# assign parents to objects, which specifies what they are contained in
 	Core.assignParents()
 	# eliminate any room connections which don't exist in the world dict

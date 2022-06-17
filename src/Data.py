@@ -40,7 +40,7 @@ magicaldmg = "inrv"
 
 articles = {"a","an","her","his","i","its","my","that","the","their","this","will"}
 
-cancels = {"cancel","done","end","nevermind","no","undo"}
+cancels = {"cancel","done","end","nevermind","no","nvm","undo"}
 
 yesses = {"absolutely","affirmative","aye","certainly","definitely","indeed","ja","ok","okay","oui","si","sure","surely","y","ya","yaa","yaaa","yaaaa","ye","yea","yeah","yes","yess","yesss","yup"}
 

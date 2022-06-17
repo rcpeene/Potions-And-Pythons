@@ -36,7 +36,7 @@ def chooseObject(name,objects):
 				entry += f"	({object.parent.name})"
 			print(f"{n+1}. {entry}")
 
-		print(f"Which {name}?")
+		print(f"\nWhich {name}?")
 		choice = input("\n> ").lower()
 		if choice == "": continue
 		if choice in Data.cancels: return None
@@ -1352,6 +1352,7 @@ def Take(dobj,iobj,prep):
 		return False
 	elif len(matches) == 1: obj = matches[0]
 	else: obj = chooseObject(dobj,matches)
+	if obj == None: return False
 	Core.game.setPronouns(obj)
 
 	if isinstance(obj,Core.Creature): return CarryCreature(obj)
