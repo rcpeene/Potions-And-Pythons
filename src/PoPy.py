@@ -20,7 +20,7 @@ def main():
 	Menu.gameIntro()
 	# instantiate global objects Player, World, Game
 	Menu.mainMenu()
-	if Core.game.quit == True: return
+	if Core.game.quit: return
 	# assign parents to objects, which specifies what they are contained in
 	Core.assignParents()
 	# eliminate any room connections which don't exist in the world dict
@@ -67,7 +67,6 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# flush input not working?? (should be fixed, but make sure)
 # make it say 'there are 2 pythons' instead of 'there is': refactor listObjects
 # rephrase a lot of action functions to use stringname instead of 'the {name}'
 # rename I, C, R, F and other variables to worded names

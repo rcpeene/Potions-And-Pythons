@@ -312,6 +312,7 @@ def newGame():
 	# enter the starting room
 	sleep(0.5)
 	Core.clearScreen()
+	Core.flushInput()
 
 
 # automatically starts a new game with a premade character for easy testing
@@ -344,6 +345,7 @@ def mainMenu():
 
 	while True:
 		Core.clearScreen()
+		Core.flushInput()
 		print(Data.logo)
 		print(Data.menuinstructions)
 		g = input("> ").lower().split()

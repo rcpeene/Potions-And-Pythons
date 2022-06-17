@@ -1406,7 +1406,7 @@ class Creature():
 		return ancs
 
 
-	def room.(self):
+	def room(self):
 		return self.ancestors()[-1]
 
 
