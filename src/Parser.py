@@ -731,10 +731,11 @@ def Don(dobj,iobj,prep):
 		dobj = getNoun("What do you want to don?")
 		if dobj in Data.cancels: return False
 
-	I = Core.player.inInv(dobj)
+	I = findObjFromTerm(dobj,True,False)
 	if I == None:
 		print(f"There is no '{dobj}' in your inventory")
 		return False
+	Core.game.setPronouns(I)
 
 	if not isinstance(I,Core.Armor):
 		print(f"You cannot wear your {I.name}")
@@ -742,7 +743,6 @@ def Don(dobj,iobj,prep):
 	if I in Core.player.gear.values():
 		print(f"You are already wearing your {I.name}")
 		return False
-	Core.game.setPronouns(I)
 
 	if not Core.player.equipArmor(I):
 		return False
@@ -940,7 +940,7 @@ def assignGoTerms(dobj,iobj,prep):
 
 # parses user input to determine the intended direction, destination, and/or... # passage. Then calls either traverse or changeroom accordingly
 def Go(dobj,iobj,prep):
-	preps = {"down","through","to","toward","up","in","into","on","onto","out",None}
+	preps = {"down","through","to","toward","up","in","inside","into","on","onto","out",None}
 	if (dobj,iobj,prep) == (None,None,None):
 		dobj,iobj,prep = parseWithoutVerb("Where will you go?",preps)
 	if dobj in Data.cancels: return False
