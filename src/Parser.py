@@ -953,17 +953,16 @@ def Go(dobj,iobj,prep):
 		print("Command not understood")
 		return False
 
-	print(dobj,iobj,prep)
 	# get dir, dest, and passage and validate them
 	dir,dest,passage = assignGoTerms(dobj,iobj,prep)
-	print(dir,dest,passage)
 	if (dir,dest,passage) == (None,None,None):
 		print(f"There is no exit leading to a '{dobj}' here")
 		return False
 	if dir == None:
 		dir = Core.game.currentroom.getDirFromDest(dest)
 	if (dest,passage) == (None,None):
-		dest = Core.game.currentroom.allExits()[dir]
+		if dir in Core.game.currentroom.allExits():
+			dest = Core.game.currentroom.allExits()[dir]
 	if passage == None:
 		passage = Core.game.currentroom.getPassageFromDir(dir)
 	if (dest,passage) == (None,None):
