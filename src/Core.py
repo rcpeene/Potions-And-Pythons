@@ -2111,22 +2111,22 @@ class Armor(Item):
 
 
 class Helm(Armor):
-	def __init__(self,name,desc,weight,durability,status,prot):
-		Armor.__init__(self,name,desc,weight,status,prot)
+	def __init__(self,name,desc,aliases,plural,weight,durability,status,prot):
+		Armor.__init__(self,name,desc,aliases,plural,weight,durability,status,prot)
 
 
 
 
 class Tunic(Armor):
-	def __init__(self,name,desc,weight,durability,status,prot):
-		Armor.__init__(self,name,desc,weight,durability,status,prot)
+	def __init__(self,name,desc,aliases,plural,weight,durability,status,prot):
+		Armor.__init__(self,name,desc,aliases,plural,weight,durability,status,prot)
 
 
 
 
 class Greaves(Armor):
-	def __init__(self,name,desc,weight,durability,status,prot):
-		Armor.__init__(self,name,desc,weight,durability,status,prot)
+	def __init__(self,name,desc,aliases,plural,weight,durability,status,prot):
+		Armor.__init__(self,name,desc,aliases,plural,weight,durability,status,prot)
 
 
 
