@@ -430,7 +430,7 @@ class Empty():
 # It also offers a series of methods for identifying the currently rendered...
 # rooms and finding information about them.
 class Game():
-	def __init__(self,mode,currentroom,prevroom,time):
+	def __init__(self,mode,currentroom,prevroom,time,events):
 		# the gamemode, either 0 for normal mode or 1 for god mode
 		self.mode = mode
 		# the room that the player is currently in
@@ -439,6 +439,8 @@ class Game():
 		self.prevroom = prevroom
 		# the number of game loops that have elapsed since the game's start
 		self.time = time
+		# set of important events that have transpired in the game's progression
+		self.events = events
 		# used to break out of the main input loop when the player wants to quit
 		self.quit = False
 		# used for determining whether or not to print certain things
@@ -626,9 +628,6 @@ class Room():
 		self.items = items
 		self.creatures = creatures
 		self.status = status
-
-		# this should remain unused, but may be accessed when using item.parent
-		self.aliases = []
 
 
 	### Dunder Methods ###
@@ -2190,5 +2189,5 @@ class Person(Creature):
 
 
 player = Player("","",[0]*10,[],0,0,0,[],{},0,0,[])
-game = Game(-1,-1,-1,-1)
+game = Game(-1,-1,-1,-1,-1)
 world = {}

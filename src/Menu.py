@@ -32,6 +32,7 @@ def writeGame(filename,Game,World):
 	gfd.write(Core.getRoomKey(Game.currentroom,World) + "\n")
 	gfd.write(Core.getRoomKey(Game.prevroom,World) + "\n")
 	gfd.write(str(Game.time) + "\n")
+	gfd.write(str(Game.events) + "\n")
 	gfd.close()
 
 
@@ -115,8 +116,9 @@ def readGame(filename,World):
 	currentroom = gametext[1][:-1]		# second line is name of current room
 	prevroom = gametext[2][:-1]			# third line is name of previous room
 	time = int(gametext[3][:-1])		# fourth line is time int
+	events = eval(gametext[4][:-1])
 	gfd.close()
-	return Core.Game(mode,World[currentroom],World[prevroom],time)
+	return Core.Game(mode,World[currentroom],World[prevroom],time,events)
 
 
 
@@ -307,7 +309,7 @@ def newGame():
 	# initializes from the character creation screen
 	Core.player = createCharacter()
 	# initializes the game at the "cave" room
-	Core.game = Core.Game(0,Core.world["cave"],Core.world["cave"],0)
+	Core.game = Core.Game(0,Core.world["cave"],Core.world["cave"],0,{})
 	Core.ellipsis(3)
 	# enter the starting room
 	sleep(0.5)
@@ -324,7 +326,7 @@ def testGame():
 	["sharpshooter",50], ["invisible",15], ["poisoned",-1], ["flying",5]]
 
 	Core.player = Core.Player("Norman","a hero",[4]*10,status,24,24,1000,inv,Data.initgear,1585,100,[])
-	Core.game = Core.Game(0,Core.world["cave"],Core.world["tunnel"],0)
+	Core.game = Core.Game(0,Core.world["cave"],Core.world["tunnel"],0,{})
 
 	Core.clearScreen()
 	Core.game.mode = 1
