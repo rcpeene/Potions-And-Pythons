@@ -346,9 +346,9 @@ class Sword(Core.Weapon):
 
 
 
-class Table(Core.Fixture):
-	def __init__(self,name,desc,aliases,plural,weight,durability,status,mention,items,descname):
-		Core.Fixture.__init__(self,name,desc,aliases,plural,weight,durability,status,mention)
+class Table(Core.Item):
+	def __init__(self,name,desc,aliases,plural,weight,durability,status,items,descname):
+		Core.Item.__init__(self,name,desc,aliases,plural,weight,durability,status)
 		self.items = items
 		self.descname = descname
 

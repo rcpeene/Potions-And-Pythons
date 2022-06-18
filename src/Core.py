@@ -1998,7 +1998,7 @@ class Passage(Fixture):
 	### Operation ###
 
 	def Traverse(self,dir=None):
-		if dir == None:
+		if dir == None or dir not in self.connections:
 			if len(set(self.connections.values())) == 1:
 				dir = list(self.connections.keys())[0]
 			else:
