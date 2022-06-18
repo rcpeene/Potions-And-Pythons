@@ -94,7 +94,7 @@ def default(jsonDict):
 			try:
 				return objClass(*objAttributes)
 			except TypeError:
-				raise TypeError("Failed to instantiate object from JSON with attributes:\n",objAttributes)
+				raise TypeError(f"Failed to instantiate object: '{objClassname}' from JSON with attributes:\n",objAttributes)
 		else:
 			raise Exception("ERROR in decoding JSON object class type: " + objClassname)
 	else:
