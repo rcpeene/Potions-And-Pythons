@@ -1336,7 +1336,7 @@ class Creature():
 		if not game.silent:
 			print(f"Dropped Ᵽ {n}")
 		if game.whoseturn is player:
-			player.gainxp(10)
+			player.gainxp(diceRoll(1,player.LCK,1))
 
 
 	def Carry(self,creature):
@@ -1370,7 +1370,7 @@ class Creature():
 	# these are creature stats that are determined dynamically with formulas
 	# these formulas are difficult to read, check design document for details
 	def ACCU(self): return 50 + 2*self.SKL + self.LCK + self.weapon.sleight
-	def ATCK(self): return diceRoll(self.STR, self.weapon.might, 0)
+	def ATCK(self): return diceRoll(self.STR, self.weapon.might, self.atkmod())
 	def ATHL(self): return self.STR + self.SKL + self.STM
 	def ATSP(self): return self.SPD - min0(self.handheldWeight()//4 - self.CON)
 	def BRDN(self): return self.CON * self.STR * 4 + 60
@@ -1378,7 +1378,7 @@ class Creature():
 	def CRIT(self): return self.SKL + self.LCK + self.weapon.sharpness
 	def CSSP(self): return self.WIS - min0(self.invWeight() - self.BRDN()) - min0(self.gearWeight()//4 - self.CON)
 	def DCPT(self): return 2*self.CHA + self.INT
-	def DFNS(self): return self.CON + self.armor()
+	def DFNS(self): return self.CON + self.protection()
 	def ENDR(self): return 2*self.STM + self.CON
 	def EVSN(self): return 2*self.ATSP() + self.LCK
 	def INVS(self): return 2*self.INT + self.WIS
@@ -1407,6 +1407,18 @@ class Creature():
 
 	def room(self):
 		return self.ancestors()[-1]
+
+	# TODO: add logic here for conditions which improve atkmod
+	def atkmod(self):
+		return 0
+
+
+	def level(self):
+		return 1
+
+
+	def rating(self):
+		return self.STR + self.SPD + self.SKL + self.STM + self.CON + self.CHA + self.INT + self.WIS + self.FTH + self.LCK
 
 
 	# returns sum of the weight of all items in the inventory
@@ -1462,10 +1474,9 @@ class Creature():
 
 
 	# returns sum of all protection values of all items in gear
-	def armor(self):
+	def protection(self):
 		prot = 0
-		for slot in self.gear:
-			item = self.gear[slot]
+		for item in self.gear.values():
 			if hasattr(item, "prot"):
 				prot += item.prot
 		return prot
@@ -1677,7 +1688,7 @@ class Player(Creature):
 			if crit:
 				print("Critical hit!")
 				attack *= 2
-			damage = min0( attack - target.DFNS())
+			damage = min0( attack - target.DFNS() )
 			target.takeDamage(damage,self.weapon2.type)
 			if target.alive == False:
 				return
@@ -1687,18 +1698,21 @@ class Player(Creature):
 
 	def attackCreature(self,target):
 		n = min1( self.ATSP() // min1(target.ATSP()) )
-		print(f"{n} attacks:")
+		if n > 1:
+			print(f"{n} attacks:")
 		for i in range(n):
-			print(f"\n{ordinal(i+1)} attack")
+			if n > 1:
+				print(f"\n{ordinal(i+1)} attack")
 			# TODO: what about if weapon is ranged?
 			hit = min1(maxm(99, self.ACCU() - target.EVSN()))
 			if diceRoll(1,100,0) <= hit:
 				crit = diceRoll(1,100,0) <= self.CRIT()
 				attack = self.ATCK()
+				print("attack: " + str(attack))
 				if crit:
 					print("Critical hit!")
 					attack *= 2
-				damage = min0( attack - target.DFNS())
+				damage = min0( attack - target.DFNS() )
 				target.takeDamage(damage,self.weapon.type)
 				if target.alive == False:
 					return
@@ -2139,6 +2153,8 @@ class Compass(Item):
 
 
 class Monster(Creature):
+	### Operation ###
+
 	def act(self):
 		if not self.alive:
 			return
@@ -2158,6 +2174,35 @@ class Monster(Creature):
 		# else:
 		# 	weapon = max(self.weapons(),key=lambda x: x.might)
 
+
+	# called when a creature's hp hits 0
+	def death(self):
+		self.alive = False
+		print("agh its... ded?")
+		# TODO: make this just drop some random number of money not just LOOT
+		n = diceRoll(3,player.LOOT(),-2)
+		self.room().addItem(Pylars(n,[]))
+		if not game.silent:
+			print(f"Dropped Ᵽ {n}")
+		if game.whoseturn is player:
+			# TODO: verify that this is an acceptable formula
+			lv = player.level()
+			xp = lv * self.level() + diceRoll(lv,self.LCK,self.LCK)
+			player.gainxp(xp)
+
+
+	### Getters ###
+
+	def describe(self):
+		print("It's " + self.stringName(n=1,definite=False))
+		print(self.desc)
+		gearitems = [item for item in self.gear.values() if item != Empty()]
+		if len(gearitems) != 0:
+			print("It has " + listObjects(gearitems) + ".")
+
+
+	def level(self):
+		return self.rating() // 10
 
 
 	def isArmed():
