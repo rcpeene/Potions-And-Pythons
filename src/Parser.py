@@ -474,11 +474,15 @@ def Attack(dobj,iobj,prep,target=None,weapon=None):
 	if iobj != None and weapon == Core.Empty():
 		weapon = Core.player.inGear(iobj)
 		if weapon == None:
-			weapon = Core.player.inInv(iobj)
+			weapons = Core.player.inInv(iobj)
+			if len(weapons) == 1:
+				weapon = weapons[0]
+			if len(weapons) > 1:
+				weapon = chooseObject(weapons)
 		if iobj in {"fist","hand"}:
 			weapon = Items.Hand("your hand","",[],"",4,-1,[])
 		if iobj in {"foot","leg"}:
-			weapon = Items.Foot("your foot","",[],"",8,-1,[])
+			weapon = Items.Foot("your foot","",[],"",6,-1,[])
 		if iobj in {"mouth","teeth"}:
 			weapon = Items.Mouth("your mouth","",[],"",4,-1,[])
 		if weapon == None:
@@ -1091,7 +1095,7 @@ def Look(dobj,iobj,prep):
 		dobj = getNoun("What will you look at?")
 		if dobj in Data.cancels: return False
 
-	if dobj in {"around","here","room"} or dobj == Game.currentroom.name.lower():
+	if dobj in {"around","here","room"} or dobj == Core.game.currentroom.name.lower():
 		Core.game.currentroom.describe()
 		return True
 	if dobj in {"me","myself",Core.player.name}:
