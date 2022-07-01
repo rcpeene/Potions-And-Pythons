@@ -1262,8 +1262,7 @@ class Creature():
 		slot = gearslots[gearitems.index(I)]
 		self.gear[slot] = Empty()
 		self.assignWeaponAndShield()
-		if hasMethod(I,"Unequip"):
-			I.Unequip()
+		if hasMethod(I,"Unequip"): I.Unequip()
 
 
 	# if the item is armor, equip it, otherwise return False
@@ -1680,6 +1679,7 @@ class Player(Creature):
 
 
 	def dualAttack(self,target):
+		print("Dual Attack!")
 		hit = min1(maxm(99, self.ACCU() - target.EVSN()))
 		if diceRoll(1,100,0) <= hit:
 			print()

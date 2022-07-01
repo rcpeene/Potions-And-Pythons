@@ -457,20 +457,8 @@ def Yawn(): print("This is no time for slumber!")
 ##################################
 
 
-def Attack(dobj,iobj,prep,target=None,weapon=None):
-	if prep not in {"with","using",None}:
-		print("Command not understood")
-		return False
-
-	if iobj == None:
-		if len(Core.player.weapons()) == 0:
-			iobj = "fist"
-		elif Core.player.gear["right"] == Empty() and Core.player.gear["left"] == Empty():
-			iobj = getNoun("What will you attack with?")
-			if iobj in Data.cancels: return False
-
-	if weapon == None:
-		weapon = Core.player.weapon
+def getWeapons(iobj):
+	weapon = Core.player.weapon
 	if iobj != None and weapon == Core.Empty():
 		weapon = Core.player.inGear(iobj)
 		if weapon == None:
@@ -486,8 +474,48 @@ def Attack(dobj,iobj,prep,target=None,weapon=None):
 		if iobj in {"mouth","teeth"}:
 			weapon = Items.Mouth("your mouth","",[],"",4,-1,[])
 		if weapon == None:
-			print(f"There is no '{iobj}' in your Inventory")
-			return False
+			return False,False
+
+	if isinstance(weapon,(Items.Hand,Items.Foot,Items.Mouth)):
+		stowedweapons = Core.player.weapon,Core.player.weapon2
+		Core.player.weapon,Core.player.weapon2 = weapon.improviseWeapon(),Core.Empty()
+		stowed = True
+	elif weapon not in Core.player.gear.values():
+		Core.player.equipInHand(weapon)
+
+
+def Attack(dobj,iobj,prep,target=None,weapon=None,weapon2=None):
+	if prep not in {"with","using",None}:
+		print("Command not understood")
+		return False
+
+	if iobj == None:
+		if len(Core.player.weapons()) == 0:
+			iobj = "fist"
+		elif Core.player.gear["right"] == Core.Empty() and Core.player.gear["left"] == Core.Empty():
+			iobj = getNoun("What will you attack with?")
+			if iobj in Data.cancels: return False
+
+	if weapon == None and weapon2 != None:
+		weapon, weapon2 = weapon2, None
+	if iobj in {"fist","hand"}:
+		weapon = Items.Hand("your hand","",[],"",4,-1,[])
+	if iobj in {"foot","leg"}:
+		weapon = Items.Foot("your foot","",[],"",6,-1,[])
+	if iobj in {"mouth","teeth"}:
+		weapon = Items.Mouth("your mouth","",[],"",4,-1,[])
+	if iobj != None:
+		print("here!")
+		if weapon == None:
+			weapon = Core.player.inGear(iobj)
+		if weapon == None:
+			weapons = Core.player.inInv(iobj)
+			if len(weapons) == 0: print(f"There is no '{iobj}' in your inventory")
+			elif len(weapons) == 1: weapon = weapons[0]
+			else: weapon = chooseObject(weapons)
+			if weapon == None: return False
+	else:
+		weapon = Core.player.gear["left"]
 
 	if target == None:
 		if dobj == None: dobj = getNoun("What will you attack?")
@@ -498,20 +526,17 @@ def Attack(dobj,iobj,prep,target=None,weapon=None):
 	Core.game.setPronouns(target)
 
 	stowed = False
-	if isinstance(weapon,(Items.Hand,Items.Foot,Items.Mouth)):
-		stowedweapons = Core.player.weapon,Core.player.weapon2
-		Core.player.weapon,Core.player.weapon2 = weapon.improviseWeapon(),Core.Empty()
+	if isinstance(weapon,(Items.Foot,Items.Mouth,Items.Hand)):
 		stowed = True
-	elif weapon not in Core.player.gear.values():
-		Core.player.equipInHand(weapon)
+		stowedweapons = (Core.player.weapon, Core.player.weapon2)
+	if not isinstance(weapon,Core.Weapon):
+		weapon = weapon.improviseWeapon()
+	Core.player.weapon = weapon
 
 	print(f"\nYou attack the {target.name} with {Core.player.weapon.name}")
-	if isinstance(target,Core.Creature):
-		Core.player.attackCreature(target)
-	elif isinstance(target,Core.Item):
-		Core.player.attackItem(target)
-	if stowed:
-		Core.player.weapon,Core.player.weapon2 = stowedweapons
+	if isinstance(target,Core.Creature): Core.player.attackCreature(target)
+	elif isinstance(target,Core.Item): Core.player.attackItem(target)
+	if stowed: Core.player.weapon,Core.player.weapon2 = stowedweapons
 	return True
 
 
