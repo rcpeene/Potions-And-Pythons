@@ -896,6 +896,7 @@ proteins/meats - vastly increase hp, synergize well in meals
 grains/starches - moderately increase hp, cheapest/most common
 fruits - minimally increase hp, each fruit adds a different status effect
 veggies - minimally increase hp and mp, can remove bad status effects
+mushrooms - have one significant benefit and one debuff
 dairy - minimally increase hp and mp, can remove bad status effects
 alcohol - same effects as fruit, but adds drunkeness
 water - raises hp and mp by 2
@@ -997,6 +998,8 @@ so these dungeons are generally just clusters of room nodes in the world graph t
 	- in the alien spaceship have a recording or text log of a dead captain/space explorer
 -snowy peaks, maybe ice castle? something cold themed
 -hunt the wumpus map, with a WUMPUS!!! and traps and whatnot
+-at the bottom of the pit, a temple to the imprisoned god uramut.
+	Uramut manages to possess someone in the world and they gouge their eyes out and have one yellow eye on their head, Uramut wants to be released.
 
 several settlements exist in the world (aim for like at least 9)
 - Folkston/Folksvale
@@ -1039,6 +1042,11 @@ misc world ideas
 -the mist
 
 
+QUEST IDEAS:
+
+- golden bug quest (collect 50 hidden bugs throughout the world) [reward??]
+- one quest for each god's temple, and the player gets rewarded with a QP for it.
+
 
 CHARACTER NAMES:
 	Orion - boss
@@ -1080,12 +1088,14 @@ CHARACTER NAMES:
 	one bbeg is the world serpent called Aeormungand (Leviathan?)
 	another bbg (Behemoth)
 	also an evil wizard ofc
+	a cultist of Uramut who becomes possessed and tries to unleash him
 	a fighter/warrior warlord
 	a mob boss criminal type
 
 
 
 CREATURE IDEAS:
+sirens
 stoats
 lemmings
 stork babies
@@ -1181,8 +1191,8 @@ Goblinmite, Brainworm, Orc Beetle, Mimicbug, Waterbear
 SPELL NAME IDEAS:
 Amphibify, Anathema, Armistice, Asterism, Avulsion
 Bamboozle, Bang, Banquet, Beacon, Bellow, Bolster, Boogaloo, Boom, Busk
-Cacophony, Catharsis, Chutzpah, Clemency
-Deluge, Dessicate, Discord
+Cacophony, Catharsis, Chutzpah, Clemency, Collapse
+Delirium, Deluge, Dessicate, Discord
 Effervesce, Eidolon, Ennervation, Enthrall, Expectorate, Expell
 Facade, Facsimile, Feast, Fib, Fizz, Flare, Frostbite
 Galvanize, Gambit, Glower, Goad, Gorgonize, Gravitas
@@ -1190,9 +1200,9 @@ Halo, Haste, Harmony, Hex, Hypnosis
 Immolate, Invigorate, Invisibility, Iridescence
 Jamboree, Jargon, Judgement
 Lash, Lethargy, Levitate, Lignify, Limerence, Lure
-Maelstrom, Malaise, Manumit, Melancholy, Mirage, Moonshot
+Maelstrom, Malaise, Manumit, Melancholy, Micturate, Mirage, Moonshot
 Nyctophobia
-Parley, Paroxysm, Penumbra, Petrify, Phantasm, Pilfer, Ponder, Prescience, Putrefaction
+Parley, Paroxysm, Penumbra, Petrify, Phantasm, Pilfer, Ponder, Prescience, Psychosis, Putrefaction
 Refection, Rend, Repast, Revelry
 Sanctuary, Scry, Serein, Shivaree, Simulacrum, Smite, Spangle, Squib, Sunder, Synpase
 Telekinesis, Tempest, Tether, Torrent
@@ -1203,14 +1213,9 @@ Zeitgeist, Zephyr
 
 
 okay rooms to include in new world for testing:
-- some kind of armor/weapon room
-- a python encounter
 - a goblin with some weapons/items on it
-- multiple items with same name in one room
 - a key/locked chest
-- breadroll
 - chest within a chest
-- table with things on it
 - wall that can be climbed or flown past
 - amulet that spawns something
 - amulet that adds condition
@@ -1221,6 +1226,7 @@ okay rooms to include in new world for testing:
 
 - a room with magic items/wand?
 - what about the pit?
+- magic thing that reacts when you look on/through it
 - fish in the pond
 - fountain to take water from
 - seed to plant and water

@@ -91,10 +91,10 @@
 				"desc": "a medium-length iron sword that is slightly dulled",
 				"aliases": ["sword"],
 				"plural": "iron swords",
-				"weight": 12,
+				"weight": 10,
 				"durability": 12,
 				"status": [],
-				"might": 2,
+				"might": 5,
 				"sleight": 2,
 				"sharpness": 2,
 				"range": 0,
@@ -104,18 +104,29 @@
 			{
 				"__class__": "Sword",
 				"name": "rusty sword",
-				"desc": "a medium-length iron sword with a slightly rusted edge",
+				"desc": "a medium-length iron sword with a rusted edge",
 				"aliases": ["sword"],
 				"plural": "rusty swords",
-				"weight": 12,
-				"durability": 12,
+				"weight": 11,
+				"durability": 10,
 				"status": [],
-				"might": 2,
+				"might": 3,
 				"sleight": 2,
-				"sharpness": 2,
+				"sharpness": 0,
 				"range": 0,
 				"twohanded": false,
 				"type": "s"
+			},
+			{
+				"__class__": "Helm",
+				"name": "broken helm",
+				"desc": "An old iron soldier's helmet with a hole on the left side.",
+				"aliases": ["helm","iron helm"],
+				"plural": "broken helms",
+				"weight": 4,
+				"durability": 5,
+				"status": [],
+				"prot": 3
 			}
 		],
 		"creatures": [],
@@ -160,14 +171,92 @@
 		"__class__": "Room",
 		"name": "Cabin Kitchen",
 		"domain": "Cabin",
-		"desc": "A room with a wooden shelf in the wall and a grey stone hearth, still blackened with ash. Light beams in from a northern window.",
+		"desc": "A room with a grey stone hearth, still blackened with ash. Light beams in from a northern window.",
 		"exits": {
 			"south": "cabin hallway",
 			"out": "cabin hallway",
 			"doorway": "cabin hallway"
 		},
-		"fixtures": [],
-		"items": [],
+		"fixtures": [
+			{
+				"__class__": "Fixture",
+				"name": "hearth",
+				"desc": "A cold stone hearth embedded in the wall. It is blackened from soot and ash.",
+				"aliases": ["stone hearth","grey stone hearth"],
+				"plural": "hearths",
+				"weight": -1,
+				"durability": -1,
+				"status": [],
+				"mention": false
+			},
+			{
+				"__class__": "Fixture",
+				"name": "window",
+				"desc": "A brittle, dusty window on the northern wall of this room. You can't see through it",
+				"aliases": ["northern window"],
+				"plural": "hearths",
+				"weight": -1,
+				"durability": 2,
+				"status": [],
+				"mention": false
+			}
+		],
+		"items": [
+			{
+				"__class__": "Table",
+				"name": "table",
+				"desc": "A sturdy oaken kitchen table",
+				"aliases": ["kitchen table"],
+				"plural": "tables",
+				"weight": 1,
+				"durability": 1,
+				"status": [],
+				"items": [
+					{
+						"__class__": "Potion",
+						"name": "red potion",
+						"desc": "A bubbling red liquid in a glass bottle",
+						"aliases": ["potion"],
+						"plural": "red potions",
+						"weight": 4,
+						"durability": 3,
+						"status": []
+					},
+					{
+						"__class__": "Potion",
+						"name": "",
+						"desc": "",
+						"aliases": [],
+						"plural": "",
+						"weight": 4,
+						"durability": 3,
+						"status": []
+					},
+					{
+						"__class__": "Food",
+						"name": "bread roll",
+						"desc": "A stale wheat roll of baked bread. Very Dry!",
+						"aliases": ["bread","roll","biscuit"],
+						"plural": "bread rolls",
+						"weight": 1,
+						"durability": 2,
+						"status": [],
+						"heal": 1
+					}
+				],
+				"descname": "A table with items on it"
+			},
+			{
+				"__class__": "Potion",
+				"name": "red potion",
+				"desc": "A bubbling red liquid in a glass bottle",
+				"aliases": ["potion"],
+				"plural": "red potions",
+				"weight": 4,
+				"durability": 3,
+				"status": []
+			}
+		],
 		"creatures": [],
 		"status": []
 	},
@@ -292,7 +381,19 @@
 			"up": "above the woods"
 		},
 		"fixtures": [],
-		"items": [],
+		"items": [
+			{
+				"__class__": "Sign",
+				"name": "sign",
+				"desc": "A wooden sign with white text painted on",
+				"aliases": ["wooden sign"],
+				"plural": "signs",
+				"weight": 12,
+				"durability": 8,
+				"status": [],
+				"text": "Beware of snakes!"
+			}
+		],
 		"creatures": [],
 		"status": []
 	},
@@ -367,7 +468,30 @@
 		},
 		"fixtures": [],
 		"items": [],
-		"creatures": [],
+		"creatures": [
+			{
+				"__class__": "Monster",
+				"name": "Goblin",
+				"desc": "A small green person with long ears, a pointy nose, and a grimacing visage.",
+				"aliases": [],
+				"plural": "goblins",
+				"traits": [2,2,2,2,2,2,2,2,2,2],
+				"status": [],
+				"hp": 10,
+				"mp": 0,
+				"money": 0,
+				"inv": [
+
+				],
+				"gear": {
+					"head":-1,
+					"body":-1,
+					"left":-1,
+					"right":-1,
+					"legs":-1
+				}
+			}
+		],
 		"status": []
 	},
 	"tunnel": {
@@ -381,7 +505,26 @@
 		},
 		"fixtures": [],
 		"items": [],
-		"creatures": [],
+		"creatures": [
+			{
+				"__class__": "Animal",
+				"name": "python",
+				"desc": "A small brown and green spotted snake",
+				"aliases": ["snake"],
+				"plural": "pythons",
+				"traits": [1,1,1,1,1,1,1,1,1,1],
+				"status": [],
+				"hp": 2,
+				"mp": 0,
+				"money": 0,
+				"inv": [],
+				"gear": {
+					"tail": -1,
+					"head": -1,
+					"mouth": -1
+				}
+			}
+		],
 		"status": []
 	}
 }

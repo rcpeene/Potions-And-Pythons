@@ -73,6 +73,8 @@ if __name__ == "__main__":
 # fix bug with displaying correct amount of gold when there is multiple gold objects in the room
 # figure out cast command cuz its also a short verb
 
+# redo attack function with equip
+
 # restructure map and revise tests, add attack tests
 	# add magic beans or food to pour stuff on
 	# "drink from the fountain"
