@@ -29,11 +29,11 @@ def chooseObject(name,objects):
 		for n,object in enumerate(objects):
 			entry = object.name
 			if isinstance(object,Core.Creature):
-				entry += f"	({object.hp} hp)"
+				entry += f"  ({object.hp} hp)"
 			elif isinstance(object.parent,Core.Player):
-				entry += "	(inv)"
+				entry += "  (inv)"
 			elif not isinstance(object.parent,Core.Room):
-				entry += f"	({object.parent.name})"
+				entry += f"  ({object.parent.name})"
 			print(f"{n+1}. {entry}")
 
 		print(f"\nWhich {name}?")
@@ -455,33 +455,6 @@ def Yawn(): print("This is no time for slumber!")
 ##################################
 ## ACTION AND RELATED FUNCTIONS ##
 ##################################
-
-
-def getWeapons(iobj):
-	weapon = Core.player.weapon
-	if iobj != None and weapon == Core.Empty():
-		weapon = Core.player.inGear(iobj)
-		if weapon == None:
-			weapons = Core.player.inInv(iobj)
-			if len(weapons) == 1:
-				weapon = weapons[0]
-			if len(weapons) > 1:
-				weapon = chooseObject(weapons)
-		if iobj in {"fist","hand"}:
-			weapon = Items.Hand("your hand","",[],"",4,-1,[])
-		if iobj in {"foot","leg"}:
-			weapon = Items.Foot("your foot","",[],"",6,-1,[])
-		if iobj in {"mouth","teeth"}:
-			weapon = Items.Mouth("your mouth","",[],"",4,-1,[])
-		if weapon == None:
-			return False,False
-
-	if isinstance(weapon,(Items.Hand,Items.Foot,Items.Mouth)):
-		stowedweapons = Core.player.weapon,Core.player.weapon2
-		Core.player.weapon,Core.player.weapon2 = weapon.improviseWeapon(),Core.Empty()
-		stowed = True
-	elif weapon not in Core.player.gear.values():
-		Core.player.equipInHand(weapon)
 
 
 def Attack(dobj,iobj,prep,target=None,weapon=None,weapon2=None):

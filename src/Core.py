@@ -418,8 +418,7 @@ class Empty():
 
 
 	def improviseWeapon(self):
-		return Weapon("empty hand","",[],"",0,-1,[],1,0,0,0,False,"b")
-
+		return self
 
 
 
@@ -1682,7 +1681,6 @@ class Player(Creature):
 		print("\nDual Attack!")
 		hit = min1(maxm(99, self.ACCU() - target.EVSN()))
 		if diceRoll(1,100,0) <= hit:
-			print()
 			crit = diceRoll(1,100,0) <= self.CRIT()
 			attack = self.ATCK()
 			if crit:
