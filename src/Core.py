@@ -1679,7 +1679,7 @@ class Player(Creature):
 
 
 	def dualAttack(self,target):
-		print("Dual Attack!")
+		print("\nDual Attack!")
 		hit = min1(maxm(99, self.ACCU() - target.EVSN()))
 		if diceRoll(1,100,0) <= hit:
 			print()
@@ -1708,7 +1708,6 @@ class Player(Creature):
 			if diceRoll(1,100,0) <= hit:
 				crit = diceRoll(1,100,0) <= self.CRIT()
 				attack = self.ATCK()
-				print("attack: " + str(attack))
 				if crit:
 					print("Critical hit!")
 					attack *= 2
@@ -2178,7 +2177,7 @@ class Monster(Creature):
 	# called when a creature's hp hits 0
 	def death(self):
 		self.alive = False
-		print("agh its... ded?")
+		print("\nagh its... ded?")
 		# TODO: make this just drop some random number of money not just LOOT
 		n = diceRoll(3,player.LOOT(),-2)
 		self.room().addItem(Pylars(n,[]))

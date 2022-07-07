@@ -496,26 +496,30 @@ def Attack(dobj,iobj,prep,target=None,weapon=None,weapon2=None):
 			iobj = getNoun("What will you attack with?")
 			if iobj in Data.cancels: return False
 
+	# assigning weapons based on input and what is in player's hand
 	if weapon == None and weapon2 != None:
 		weapon, weapon2 = weapon2, None
 	if iobj in {"fist","hand"}:
+		Core.player.unequip(Core.player.gear["right"])
 		weapon = Items.Hand("your hand","",[],"",4,-1,[])
 	if iobj in {"foot","leg"}:
 		weapon = Items.Foot("your foot","",[],"",6,-1,[])
 	if iobj in {"mouth","teeth"}:
 		weapon = Items.Mouth("your mouth","",[],"",4,-1,[])
 	if iobj != None:
-		print("here!")
 		if weapon == None:
 			weapon = Core.player.inGear(iobj)
 		if weapon == None:
 			weapons = Core.player.inInv(iobj)
 			if len(weapons) == 0: print(f"There is no '{iobj}' in your inventory")
 			elif len(weapons) == 1: weapon = weapons[0]
-			else: weapon = chooseObject(weapons)
+			else: weapon = chooseObject(iobj,weapons)
 			if weapon == None: return False
 	else:
-		weapon = Core.player.gear["left"]
+		if Core.player.gear["right"] != Core.Empty():
+			weapon = Core.player.gear["right"]
+		elif Core.player.gear["left"] != Core.Empty():
+			weapon = Core.player.gear["right"]
 
 	if target == None:
 		if dobj == None: dobj = getNoun("What will you attack?")
@@ -526,7 +530,7 @@ def Attack(dobj,iobj,prep,target=None,weapon=None,weapon2=None):
 	Core.game.setPronouns(target)
 
 	stowed = False
-	if isinstance(weapon,(Items.Foot,Items.Mouth,Items.Hand)):
+	if isinstance(weapon,(Items.Foot,Items.Mouth)):
 		stowed = True
 		stowedweapons = (Core.player.weapon, Core.player.weapon2)
 	if not isinstance(weapon,Core.Weapon):
@@ -876,8 +880,8 @@ def Equip(dobj,iobj,prep):
 	if I == None: return False
 	Core.game.setPronouns(I)
 
-	if Core.player.inGear(dobj) and Core.player.invNames(lower=True).count(dobj) == 1:
-		print(f"Your {dobj} is already equipped")
+	if I in Core.player.gear.values():
+		print(f"Your {I.name} is already equipped")
 		return False
 	# if item is armor, equip it as armor, otherwise, equip it in hand
 	if isinstance(I,Core.Armor):
