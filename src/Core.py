@@ -904,7 +904,7 @@ class Room():
 
 
 
-# The Item class is the main game object class of things that cannot move
+# The Item class is the main game object class of things that cannot act
 # Anything in a Room that is not a Creature will be an Item
 # All items come with a name, description, weight, and durability
 class Item():

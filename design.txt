@@ -1095,6 +1095,7 @@ CHARACTER NAMES:
 
 
 CREATURE IDEAS:
+yellow python -- red python -- brown python -- white python -- black python -- giant python -- aeormungand
 sirens
 stoats
 lemmings
@@ -1143,7 +1144,7 @@ A woman with a flower garland and very long light hair. Sometimes shown covered 
 Ixis - Goddess of fire, rebirth, dragons, chaos
 Rebelled and lost to Brym. Often appears as a large red Dragoness. Gives a random buff from {flying, fireproof, blazing, total heal}
 
-Uramut - Deity of the unknown, secrets, darkness, plagues
+Uramut - Deity of the unknown, secrets, darkness
 Symbolized by a yellow eye. Shown as a shadowy creature or a tentacle beast.
 
 https://www.ancient.eu/article/885/egyptian-gods---the-complete-list/

@@ -67,7 +67,6 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# make it say 'there are 2 pythons' instead of 'there is': refactor listObjects
 # rephrase a lot of action functions to use stringname instead of 'the {name}'
 # rename I, C, R, F and other variables to worded names
 # fix bug with displaying correct amount of gold when there is multiple gold objects in the room
