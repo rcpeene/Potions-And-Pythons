@@ -30,6 +30,8 @@ def chooseObject(name,objects):
 			entry = object.name
 			if isinstance(object,Core.Creature):
 				entry += f"  ({object.hp} hp)"
+			elif object in Core.player.gear.values():
+				entry += "  (equipped)"
 			elif isinstance(object.parent,Core.Player):
 				entry += "  (inv)"
 			elif not isinstance(object.parent,Core.Room):
@@ -738,9 +740,7 @@ def Don(dobj,iobj,prep):
 		if dobj in Data.cancels: return False
 
 	I = findObjFromTerm(dobj,True,False)
-	if I == None:
-		print(f"There is no '{dobj}' in your inventory")
-		return False
+	if I == None: return False
 	Core.game.setPronouns(I)
 
 	if not isinstance(I,Core.Armor):

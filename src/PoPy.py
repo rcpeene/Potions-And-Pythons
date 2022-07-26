@@ -68,6 +68,7 @@ if __name__ == "__main__":
 # CURRENT TASKS
 
 # rephrase a lot of action functions to use stringname instead of 'the {name}'
+	# rephrase listing of two objects with same name
 # rename I, C, R, F and other variables to worded names
 # fix bug with displaying correct amount of gold when there is multiple gold objects in the room
 # figure out cast command cuz its also a short verb
@@ -98,8 +99,6 @@ if __name__ == "__main__":
 # add resilient error handling, for file I/O, maybe in action loop
 
 # examine output grammar/statements for lower level actions (in case non-player creatures do actions, we dont want it to print the same msgs), alter print to use G.print which depends on silent
-
-# there is a bug in equip where two of the same item can be equipped twice???
 
 # behavior
 	# design persons and person behavior all of the RP system?

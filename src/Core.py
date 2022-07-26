@@ -1062,7 +1062,7 @@ class Creature():
 		self.inv = inv
 
 		# convert gear from its stored form in files to its runtime form
-		self.gear = {key: inv[gear[key]] if gear[key] != -1 else Empty() for key in gear}
+		self.gear = {key: inv[idx] if idx != -1 else Empty() for key, idx in gear.items()}
 
 		self.parent = None
 
@@ -1113,17 +1113,7 @@ class Creature():
 	# the index of the equipped object in the creature's inventory
 	# if the gear slot is empty, replaces it with -1
 	def compressGear(self):
-		C = {}
-		for key in self.gear:
-			item = self.gear[key]
-			if item == Empty():
-				C[key] = -1
-				continue
-			try:
-				C[key] = self.inv.index(item)
-			except:
-				raise Exception("gear item not found in inventory")
-		return C
+		return {key: (self.inv.index(item) if item != Empty() else -1) for key, item in self.gear.items()}
 
 
 	# returns a dict which contains all the necessary information to store...
@@ -1735,11 +1725,7 @@ class Player(Creature):
 	### Getters ###
 
 	def countCompasses(self):
-		count = 0
-		for item in self.inv:
-			if isinstance(item,Compass):
-				count +=1
-		return count
+		return len([item for item in self.inv if isinstance(item,Compass)])
 
 
 	# wrapper for objSearch()
