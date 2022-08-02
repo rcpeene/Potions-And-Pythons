@@ -1006,27 +1006,58 @@ class Item():
 		print(self.desc)
 
 
-	def stringName(self,n=-1,definite=True,cap=False,plural=False):
+	def stringName(self,n=1,plural=False,definite=False,cap=False):
 		strname = self.descname if hasattr(self,"descname") else self.name
 		if len(strname) == 0:
 			return ""
-		if definite and not plural:
+		if n > 1:
+			plural = True
+		if plural:
+			strname = pluralize(strname)
+		if n > 1:
+			strname = str(n) + " " + strname
+		if definite:
 			strname = "the " + strname
-		elif strname[0] in Data.vowels and not plural:
-			strname = "an " + strname
-		elif not plural and not n > 1:
-			strname = "a " + strname
-		elif definite and plural:
-			strname = "the " + strname + "s"
+		elif not plural:
+			if strname[0] in Data.vowels:
+				strname = "an " + strname
+			else:
+				strname = "a " + strname
 		if cap:
 			strname = capWords(strname)
-		if plural or n > 1:
-			strname += "s"
-			if n > 1:
-				strname = str(n) + " " + strname
 		return strname
 
 
+# cases (with sword, and apple):
+#
+# definite True:
+#	n = 1:
+# 		plural True:
+#			'the swords', 'the apples'
+# 		plural False:
+#			'the sword', 'the apple'
+#
+# 	n > 1:
+# 		plural True:
+#			'the (n) swords', 'the (n) apples'
+#
+# 		plural False:
+#			'the (n) swords', 'the (n) apples'
+#
+# definite False:
+# 	n = 1:
+# 		plural True:
+#			'swords', 'apples'
+#
+# 		plural False:
+#			'a sword', 'an apple'
+#
+#	n > 1:
+# 		plural True:
+#			'(n) swords', '(n) apples'
+#
+# 		plural False:
+#			'(n) swords', '(n) apples'
 
 
 # The Creature class is the main class for anything in the game that can act
@@ -1501,25 +1532,27 @@ class Creature():
 
 	### User Output ###
 
-	def stringName(self,n=-1,definite=True,cap=False,plural=False):
+	def stringName(self,n=1,plural=False,definite=False,cap=False):
 		strname = self.descname if hasattr(self,"descname") else self.name
 		if len(strname) == 0:
 			return ""
-		if definite and not plural:
+		if n > 1:
+			plural = True
+		if plural:
+			strname = pluralize(strname)
+		if n > 1:
+			strname = str(n) + " " + strname
+		if definite:
 			strname = "the " + strname
-		elif strname[0] in Data.vowels and not plural:
-			strname = "an " + strname
-		elif not plural and not n > 1:
-			strname = "a " + strname
-		elif definite and plural:
-			strname = "the " + strname + "s"
+		elif not plural:
+			if strname[0] in Data.vowels:
+				strname = "an " + strname
+			else:
+				strname = "a " + strname
 		if cap:
 			strname = capWords(strname)
-		if plural or n > 1:
-			strname += "s"
-			if n > 1:
-				strname = str(n) + " " + strname
 		return strname
+
 
 
 	def describe(self):
@@ -1976,7 +2009,7 @@ class Fixture(Item):
 	def Break(self):
 		if self.durability == -1:
 			if not game.silent:
-				print(f"{self.name} cannot be broken")
+				print(f"The {self.name} cannot be broken")
 			return False
 		self.parent.removeFixture(self)
 
@@ -2052,7 +2085,8 @@ class Pylars(Item):
 
 
 	### User Output ###
-	def stringName(self,n=-1,definite=True,cap=False,plural=False):
+
+	def stringName(self,n=1,plural=False,definite=False,cap=False):
 		strname = self.descname if hasattr(self,"descname") else self.name
 		strname = "Gold"
 		strname = str(self.value) + " " + strname

@@ -33,7 +33,7 @@ def chooseObject(name,objects):
 			elif object in Core.player.gear.values():
 				entry += "  (equipped)"
 			elif isinstance(object.parent,Core.Player):
-				entry += "  (inv)"
+				entry += "  (inventory)"
 			elif not isinstance(object.parent,Core.Room):
 				entry += f"  ({object.parent.name})"
 			print(f"{n+1}. {entry}")
