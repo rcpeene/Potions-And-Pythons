@@ -141,17 +141,17 @@ def saveGame():
 	# player names their save
 	savename = input("\nWhat name will you give this save file?\n> ").lower()
 	if savename == "":
-		print("Save name cannot be empty")
+		print("Save name cannot be empty.")
 		os.chdir("..")
 		return
 	if savename == "all":
-		print("Save name cannot be 'all'")
+		print("Save name cannot be 'all'.")
 		os.chdir("..")
 		return
 
 	# if the save name is used, ask to overwrite it
 	if os.path.exists(savename):
-		print("A save file with this name already exists")
+		print("A save file with this name already exists.")
 		#if dont overwrite, then just return
 		if not (Core.yesno("Would you like to overwrite it?")):
 			os.chdir("..")
@@ -161,7 +161,7 @@ def saveGame():
 		try:
 			os.mkdir(savename)
 		except:
-			print("Invalid save name")
+			print("Invalid save name.")
 			os.chdir("..")
 			return
 
@@ -180,7 +180,7 @@ def saveGame():
 def loadGame(filename):
 	Core.clearScreen()
 	if not (os.path.exists("saves")) or len(os.listdir("./saves")) == 0:
-		print("\nThere are no save files\n")
+		print("\nThere are no save files.\n")
 		input()
 		return False
 	os.chdir("saves")
@@ -200,7 +200,7 @@ def loadGame(filename):
 
 	# if user inputs a save name that doesn't exist
 	if not os.path.exists(savename):
-		print("\nThere is no save file named '" + savename + "'\n")
+		print(f"\nThere is no save file named '{savename}'.\n")
 		os.chdir("..")
 		input()
 		return False
@@ -240,7 +240,7 @@ def deleteAll():
 		os.rmdir(savename)
 	os.chdir("..")
 	sleep(1)
-	print("\nAll save files deleted\n")
+	print("\nAll save files deleted.\n")
 	input()
 
 
@@ -248,7 +248,7 @@ def deleteAll():
 def delete(filename):
 	Core.clearScreen()
 	if not os.path.exists("saves") or len(os.listdir("./saves")) == 0:
-		print("\nThere are no save files\n")
+		print("\nThere are no save files.\n")
 		input()
 		return
 	os.chdir("saves")
@@ -270,7 +270,7 @@ def delete(filename):
 
 	# if the user inputs a save name that doesn't exist
 	if not os.path.exists(savename):
-		print("\nThere is no save file named '" + savename + "'\n")
+		print(f"\nThere is no save file named '{savename}'.\n")
 		os.chdir("..")
 		input()
 		return mainMenu()
@@ -296,7 +296,7 @@ def createCharacter():
 	name = input("What is your name?\n> ")
 	while len(name) == 0:
 		name = input("> ")
-	desc = input("Describe yourself\n> ")
+	desc = input("Describe yourself.\n> ")
 	while len(desc) == 0:
 		desc = input("> ")
 	return Core.Player(name,desc,[1]*10,[],1,1,0,[],Data.initgear,0,0,[])

@@ -148,7 +148,8 @@ def capWords(string,n=-1):
 				cappedString += word[0].upper() + word[1:] + ' '
 			else:
 				cappedString += word + ' '
-	return cappedString[0:-1]	# removes trailing space character
+	# removes trailing space character
+	return cappedString[0:-1]
 
 
 def pluralize(term):
@@ -222,11 +223,11 @@ def listObjects(objects):
 	l = len(objBag)
 	for i, (obj, count) in enumerate(objBag):
 		if i == l-1:
-			liststring += obj.stringName(n=count,definite=False)
+			liststring += obj.stringName(n=count)
 		elif i == l-2:
-			liststring += obj.stringName(n=count,definite=False) + " and "
+			liststring += obj.stringName(n=count) + " and "
 		else:
-			liststring += obj.stringName(n=count,definite=False) + ", "
+			liststring += obj.stringName(n=count) + ", "
 	return liststring
 
 
@@ -893,13 +894,13 @@ class Room():
 	def describeItems(self):
 		items = self.listableItems()
 		if len(items) != 0:
-			print("There is " + listObjects(self.listableItems()) + ".")
+			print(f"There is {listObjects(self.listableItems())}.")
 
 
 	# prints all the creatures in the room in sentence form
 	def describeCreatures(self):
 		if len(self.creatures) != 0:
-			print("There is " + listObjects(self.creatures) + ".")
+			print(f"There is {listObjects(self.creatures)}.")
 
 
 
@@ -955,7 +956,7 @@ class Item():
 	def Break(self):
 		if self.durability == -1:
 			if not game.silent:
-				print(f"{self.name} cannot be broken")
+				print(f"The {self.name} cannot be broken.")
 			return False
 		self.parent.removeItem(self)
 
@@ -1002,7 +1003,7 @@ class Item():
 	### User Output ###
 
 	def describe(self):
-		print("It's " + self.stringName(n=1,definite=False))
+		print(f"It's {self.stringName()}.")
 		print(self.desc)
 
 
@@ -1028,36 +1029,6 @@ class Item():
 		return strname
 
 
-# cases (with sword, and apple):
-#
-# definite True:
-#	n = 1:
-# 		plural True:
-#			'the swords', 'the apples'
-# 		plural False:
-#			'the sword', 'the apple'
-#
-# 	n > 1:
-# 		plural True:
-#			'the (n) swords', 'the (n) apples'
-#
-# 		plural False:
-#			'the (n) swords', 'the (n) apples'
-#
-# definite False:
-# 	n = 1:
-# 		plural True:
-#			'swords', 'apples'
-#
-# 		plural False:
-#			'a sword', 'an apple'
-#
-#	n > 1:
-# 		plural True:
-#			'(n) swords', '(n) apples'
-#
-# 		plural False:
-#			'(n) swords', '(n) apples'
 
 
 # The Creature class is the main class for anything in the game that can act
@@ -1353,7 +1324,7 @@ class Creature():
 		n = diceRoll(3,player.LOOT(),-2)
 		self.room().addItem(Pylars(n,[]))
 		if not game.silent:
-			print(f"Dropped Ᵽ {n}")
+			print(f"Dropped Ᵽ {n}.")
 		if game.whoseturn is player:
 			player.gainxp(diceRoll(1,player.LCK,1))
 
@@ -1556,7 +1527,7 @@ class Creature():
 
 
 	def describe(self):
-		print("It's " + self.stringName(n=1,definite=False))
+		print(f"It's {self.stringName()}.")
 		print(self.desc)
 
 
@@ -1587,7 +1558,7 @@ class Player(Creature):
 		if(f"{type} vulnerability" in self.status): dmg *= 2
 		if(f"{type} resistance" in self.status): dmg /= 2
 		if(f"{type} immunity" in self.status): dmg = 0
-		print(f"You took {dmg} {Data.dmgtypes[type]} damage")
+		print(f"You took {dmg} {Data.dmgtypes[type]} damage.")
 		# player hp lowered to a minimum of 0
 		self.hp = min0(self.hp-dmg)
 		if(self.hp == 0):
@@ -1599,7 +1570,7 @@ class Player(Creature):
 		if self.hp + heal > self.MXHP():
 			heal = self.MXHP() - self.hp
 		self.hp += heal
-		print(f"You healed {heal} HP")
+		print(f"You healed {heal} HP.")
 		return heal
 
 
@@ -1617,14 +1588,14 @@ class Player(Creature):
 			# increment corresponding player trait
 			traitval = getattr(self,trait)
 			if traitval >= 20:
-				input(f"Your {trait} cannot be raised any higher\n")
+				input(f"Your {trait} cannot be raised any higher.\n")
 				continue
 			setattr(self,trait.upper(),traitval+1)
 			QP -= 1
 		clearScreen()
 		self.printTraits()
 		print(f"\nQuality Points:	{QP}")
-		input("You are done leveling up\n")
+		input("You are done leveling up.\n")
 		clearScreen()
 		self.checkHindered()
 
@@ -1645,14 +1616,14 @@ class Player(Creature):
 			I.Obtain(self)
 			self.checkHindered()
 			return True
-		print(f"You can't take the {I.name}, your Inventory is too full")
+		print(f"You can't take the {I.name}, your Inventory is too full.")
 		return False
 
 
 	# adds xp, checks for player level up
 	def gainxp(self,newxp):
 		oldlv = self.level()
-		print(f"\nYou gained {newxp} xp\n{self.xp} + {newxp} = {self.xp+newxp}")
+		print(f"\nYou gained {newxp} xp.\n{self.xp} + {newxp} = {self.xp+newxp}")
 		self.xp += newxp
 		newlv = self.level()
 		if oldlv != newlv:
@@ -1665,7 +1636,7 @@ class Player(Creature):
 		pair = [name,dur]
 		insort(self.status,pair)
 		if not silent:
-			print("You are " + name)
+			print(f"You are {name}.")
 
 
 	# removes all condition of the same name
@@ -1676,17 +1647,17 @@ class Player(Creature):
 				if reqDuration == None or reqDuration == duration:
 					self.status.remove([condname,duration])
 					if not self.hasCondition(condname):
-						print("You are no longer " + condname)
+						print(f"You are no longer {condname}.")
 
 
 	def checkHindered(self):
 		if self.invWeight() > self.BRDN():
 			if not self.hasCondition("hindered"):
-				print("Your Inventory grows heavy")
+				print("Your Inventory grows heavy.")
 				self.addCondition("hindered",-3)
 		if self.invWeight() <= self.BRDN():
 			if self.hasCondition("hindered"):
-				print("Your Inventory feels lighter")
+				print("Your Inventory feels lighter.")
 				self.removeCondition("hindered",-3)
 
 
@@ -1714,7 +1685,7 @@ class Player(Creature):
 			if target.alive == False:
 				return
 		else:
-			print("Aw it missed")
+			print("Aw it missed.")
 
 
 	def attackCreature(self,target):
@@ -1723,7 +1694,7 @@ class Player(Creature):
 			print(f"{n} attacks:")
 		for i in range(n):
 			if n > 1:
-				print(f"\n{ordinal(i+1)} attack")
+				print(f"\n{ordinal(i+1)} attack:")
 			# TODO: what about if weapon is ranged?
 			hit = min1(maxm(99, self.ACCU() - target.EVSN()))
 			if diceRoll(1,100,0) <= hit:
@@ -1737,7 +1708,7 @@ class Player(Creature):
 				if target.alive == False:
 					return
 			else:
-				print("Aw it missed")
+				print("Aw it missed.")
 			if self.weapon2 != Empty():
 				self.dualAttack(target)
 			if target.alive == False:
@@ -1750,7 +1721,7 @@ class Player(Creature):
 		if target.durability != -1 and attack > target.durability:
 			target.Break(self)
 		else:
-			print("Nothing happens")
+			print("Nothing happens.")
 			return
 
 
@@ -1829,7 +1800,7 @@ class Player(Creature):
 	# prints player inventory
 	def printInv(self):
 		if len(self.inv) == 0:
-			print("Inventory is empty")
+			print("Inventory is empty.")
 		else:
 			print("Weight:",self.invWeight())
 			columnPrint(self.invNames(),8,12)
@@ -1889,7 +1860,7 @@ class Player(Creature):
 	# for every item in player inventory, if its a weapon, print it
 	def printWeapons(self):
 		if len(self.weapons()) == 0:
-			print("You have no weapons")
+			print("You have no weapons.")
 		else:
 			columnPrint(self.weapons(),12,12)
 
@@ -2009,7 +1980,7 @@ class Fixture(Item):
 	def Break(self):
 		if self.durability == -1:
 			if not game.silent:
-				print(f"The {self.name} cannot be broken")
+				print(f"The {self.name} cannot be broken.")
 			return False
 		self.parent.removeFixture(self)
 
@@ -2036,13 +2007,13 @@ class Passage(Fixture):
 		if dir in Data.cancels:
 			return False
 		if dir not in self.connections:
-			print(f"The {self.name} does not go '{dir}'")
+			print(f"The {self.name} does not go '{dir}'.")
 			return False
 
 		if self.passprep != "":
-			print(f"You go {dir} {self.passprep} the {self.name}")
+			print(f"You go {dir} {self.passprep} the {self.name}.")
 		else:
-			print(f"You go {dir} the {self.name}")
+			print(f"You go {dir} the {self.name}.")
 
 		newroom = world[self.connections[dir]]
 		game.changeRoom(newroom)
@@ -2200,7 +2171,7 @@ class Monster(Creature):
 		n = diceRoll(3,player.LOOT(),-2)
 		self.room().addItem(Pylars(n,[]))
 		if not game.silent:
-			print(f"Dropped Ᵽ {n}")
+			print(f"Dropped Ᵽ {n}.")
 		if game.whoseturn is player:
 			# TODO: verify that this is an acceptable formula
 			lv = player.level()
@@ -2211,11 +2182,11 @@ class Monster(Creature):
 	### Getters ###
 
 	def describe(self):
-		print("It's " + self.stringName(n=1,definite=False))
+		print(f"It's {self.stringName()}.")
 		print(self.desc)
 		gearitems = [item for item in self.gear.values() if item != Empty()]
 		if len(gearitems) != 0:
-			print("It has " + listObjects(gearitems) + ".")
+			print(f"It has {listObjects(gearitems)}.")
 
 
 	def level(self):

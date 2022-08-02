@@ -27,7 +27,7 @@ class Bottle(Core.Item):
 	# breaks the bottle, removes it from player inventory, and randomly...
 	# generates a number of shards between 1,5 into the room.
 	def Break(self):
-		print(f"The {self.name} breaks. Shards of glass scatter everywhere")
+		print(f"The {self.name} breaks. Shards of glass scatter everywhere.")
 		self.parent.removeItem(self)
 		for i in range(randint(3,6)):	#randomly generates n shards between 3,6
 			shard = Shard("shard","a sharp shard of glass",[],"shards",1,-1,[])
@@ -57,28 +57,28 @@ class Box(Core.Item):
 	# sets open bool to true, prints its items
 	def Open(self):
 		if self.open:
-			print(f"The {self.name} is already open")
+			print(f"The {self.name} is already open.")
 		else:
-			print(f"You open the {self.name}")
+			print(f"You open the {self.name}.")
 			self.open = True
 		if len(self.items) == 0:
-			print("It is empty")
+			print("It is empty.")
 		else:
-			print("Inside there is " + Core.listObjects(self.items))
+			print(f"Inside there is {Core.listObjects(self.items)}.")
 
 
 	# sets open bool to false
 	def Close(self):
 		self.open = False
-		print(f"You close the {self.name}")
+		print(f"You close the {self.name}.")
 
 
 	def Look(self):
 		if len(self.items) == 0:
-			print("It is empty")
+			print("It is empty.")
 		else:
 			self.open = True
-			print("Inside there is " + Core.listObjects(self.items))
+			print(f"Inside there is {Core.listObjects(self.items)}.")
 
 
 	def addItem(self,I):
@@ -137,9 +137,9 @@ class Door(Core.Fixture):
 	# sets open bool to true, triggers the effect
 	def Open(self,Currentroom):
 		if self.open:
-			print(f"The {self.name} is already open")
+			print(f"The {self.name} is already open.")
 		else:
-			print(f"You open the {self.name}")
+			print(f"You open the {self.name}.")
 			self.open = True
 		outdir = self.connections[0]
 		outloc = self.connections[1]
@@ -159,11 +159,11 @@ class Food(Core.Item):
 
 	# heals 'heal' hp to the player, removes food from inventory
 	def Eat(self):
-		print("You consume the " + self.name)
+		print(f"You consume the {self.name}.")
 		h = Core.player.heal(self.heal)
 		self.parent.removeItem(self)
 		if h == 0:
-			print("Yummy")
+			print("Yummy...")
 
 
 
@@ -180,7 +180,7 @@ class Fountain(Core.Fixture):
 		pass
 
 	def Drink(self):
-		print(f"You drink from the {self.name}")
+		print(f"You drink from the {self.name}.")
 
 
 
@@ -221,50 +221,50 @@ class Lockbox(Box):
 	# sets open bool to true, prints its items
 	def Open(self):
 		if self.open:
-			print(f"The {self.name} is already open")
+			print(f"The {self.name} is already open.")
 		elif self.locked:
-			print(f"The {self.name} is locked")
+			print(f"The {self.name} is locked.")
 			return False
 		else:
-			print(f"You open the {self.name}")
+			print(f"You open the {self.name}.")
 			self.open = True
 		if len(self.items) == 0:
-			print("It is empty")
+			print("It is empty.")
 		else:
-			print("Inside there is " + listObjects(self.items))
+			print(f"Inside there is {listObjects(self.items)}.")
 
 
 	def Look(self):
 		if self.locked == True:
-			print("It is locked")
+			print("It is locked.")
 		elif len(self.items) == 0:
-			print("It is empty")
+			print("It is empty.")
 		else:
 			self.open = True
-			print("Inside there is " + listObjects(self.items))
+			print(f"Inside there is {listObjects(self.items)}.")
 
 
 	def Lock(self,key):
 		if I.locked:
-			print(f"The {I.name} is already locked")
+			print(f"The {I.name} is already locked.")
 			return False
 		if key.id in self.keyids:
 			self.locked = True
-			print(f"You lock the {self.name}")
+			print(f"You lock the {self.name}.")
 			if Core.hasMethod(key,"UnlockWith"):
 				key.UnlockWith(self)
 			return True
-		print(f"You can't lock the {self.name} with the {key.name}")
+		print(f"You can't lock the {self.name} with the {key.name}.")
 		return True
 
 
 	def Unlock(self,key):
 		if not self.locked:
-			print(f"The {self.name} is not locked")
+			print(f"The {self.name} is not locked.")
 			return False
 		if key.id in self.keyids:
 			self.locked = False
-			print(f"You unlock the {self.name}")
+			print(f"You unlock the {self.name}.")
 			if Core.hasMethod(key,"LockWith"):
 				key.LockWith(self)
 			return True
@@ -284,7 +284,7 @@ class Mouth(Core.Item):
 class Potion(Bottle):
 	# heals the player hp 1000, replaces potion with an empty bottle
 	def Drink(self):
-		print(f"You drink the {self.name}")
+		print(f"You drink the {self.name}.")
 		Core.player.heal(1000)
 		self.parent.removeItem(self)
 		Core.player.addItem(Bottle("bottle","an empty glass bottle",[],"",3,3,[]))
@@ -316,7 +316,7 @@ class Sign(Core.Item):
 
 	# prints the text on the sign in quotes
 	def Look(self):
-		print('\n"' + self.text + '"')
+		print(f'\n"{self.text}"')
 
 
 
@@ -406,9 +406,9 @@ class Table(Core.Item):
 	def describe(self):
 		print(self.descname)
 		if len(self.items) != 0:
-			print("On it is " + listObjects(self.items))
+			print(f"On it is {listObjects(self.items)}.")
 		else:
-			print("There is nothing on it")
+			print("There is nothing on it.")
 
 
 
@@ -429,7 +429,7 @@ class Wall(Core.Passage):
 		if dir in Data.cancels:
 			return False
 		if dir not in self.connections:
-			print(f"The {self.name} does not go '{dir}'")
+			print(f"The {self.name} does not go '{dir}'.")
 			return False
 
 		if Core.player.ATHL() < self.cr:
@@ -440,6 +440,6 @@ class Wall(Core.Passage):
 				Core.player.takeDamage(self.cr-Core.player.ATHL(),"b")
 			return True
 
-		print(f"You climb {dir} the {self.name}")
+		print(f"You climb {dir} the {self.name}.")
 		Core.game.changeRoom(Core.world[self.connections[dir]])
 		return True

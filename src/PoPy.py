@@ -67,8 +67,6 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# rephrase a lot of action functions to use stringname instead of 'the {name}'
-	# rephrase listing of two objects with same name
 # rename I, C, R, F and other variables to worded names
 # fix bug with displaying correct amount of gold when there is multiple gold objects in the room
 # figure out cast command cuz its also a short verb
