@@ -462,7 +462,7 @@ def Yawn(): print("This is no time for slumber!")
 
 
 def Attack(dobj,iobj,prep,target=None,weapon=None,weapon2=None):
-	if prep not in {"with","using",None}:
+	if prep not in {"using","with",None}:
 		print("Command not understood.")
 		return False
 
@@ -522,7 +522,7 @@ def Attack(dobj,iobj,prep,target=None,weapon=None,weapon2=None):
 
 
 def Bite(dobj,iobj,prep):
-	if prep not in {"with","using",None}:
+	if prep not in {"using","with",None}:
 		print("Command not understood.")
 	if dobj == None:
 		dobj = getNoun("What do you want to bite?")
@@ -544,7 +544,7 @@ def Bite(dobj,iobj,prep):
 
 def Break(dobj,iobj,prep):
 	# TODO: potentially just redirect this func to attack, idk
-	if prep not in {"with",None}:
+	if prep not in {"using","with",None}:
 		print("Command not understood.")
 		return False
 	if dobj == None:
@@ -581,7 +581,7 @@ def CarryCreature(creature):
 
 
 def Cast(dobj,iobj,prep):
-	if prep not in {"at","on","onto","upon",None}:
+	if prep not in {"at","on","onto","upon","using","with",None}:
 		print("Command not understood.")
 		return False
 	if dobj == None:
@@ -759,7 +759,7 @@ def Don(dobj,iobj,prep):
 
 
 def Drink(dobj,iobj,prep):
-	if prep != "with" and prep != None:
+	if not in {"using","with",None}:
 		print("Command not understood.")
 		return False
 	if dobj == None:
@@ -818,7 +818,7 @@ def Dump(dobj,iobj,prep):
 
 
 def Eat(dobj,iobj,prep):
-	if prep not in {"with",None}:
+	if prep not in {"using","with",None}:
 		print("Command not understood.")
 		return False
 	if dobj == None:
@@ -1037,7 +1037,7 @@ def Kick(dobj,iobj,prep):
 
 
 def Kill(dobj,iobj,prep):
-	if prep not in {"with","using",None}:
+	if prep not in {"using","with",None}:
 		print("Command not understood.")
 		return False
 	if dobj in {"myself","me"}:
@@ -1062,7 +1062,7 @@ def Listen(dobj,iobj,prep):
 
 
 def Lock(dobj,iobj,prep):
-	if prep != "with" and prep != None:
+	if prep not in {"using","with",None}:
 		print("Command not understood.")
 		return False
 
@@ -1125,7 +1125,7 @@ def Move(dobj,iobj,prep):
 
 
 def Open(dobj,iobj,prep):
-	if prep != "with" and prep != None:
+	if not in {"using","with",None}:
 		print("Command not understood.")
 		return False
 	if dobj == None:
@@ -1261,7 +1261,7 @@ def Rest(dobj,iobj,prep):
 
 
 def Restrain(dobj,iobj,prep):
-	if prep != "with" and prep != None:
+	if not in {"using","with",None}:
 		print("Command not understood.")
 		return False
 
@@ -1424,7 +1424,7 @@ def Unequip(dobj,iobj,prep):
 
 
 def Unlock(dobj,iobj,prep):
-	if prep != "with" and prep != None:
+	if not in {"using","with",None}:
 		print("Command not understood.")
 		return False
 	if dobj == None:
