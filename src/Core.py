@@ -651,6 +651,13 @@ class Room():
 
 
 	def addItem(self,I):
+		# ensure only one bunch of Gold exists here
+		if isinstance(I,Pylars):
+			for item in self.items:
+				if isinstance(item,Pylars):
+					item.merge(I)
+					return
+
 		insort(self.items,I)
 		I.parent = self
 
@@ -2025,12 +2032,12 @@ class Passage(Fixture):
 class Pylars(Item):
 	def __init__(self,value,status):
 		self.name = "Gold"
-		self.desc = str(value) + " glistening coins made of an ancient metal"
-		self.aliases = ["pylar","coin"]
+		self.desc = f"{str(value)} glistening coins made of an ancient metal"
+		self.aliases = ["coin","coins","money","pylar","pylars"]
 		self.plural = "gold"
 		self.weight = value
 		self.durability = -1
-		self.status = set()
+		self.status = []
 		self.descname = str(value) + " Gold"
 		self.value = value
 
@@ -2053,6 +2060,16 @@ class Pylars(Item):
 
 	def Obtain(self,creature):
 		creature.gainMoney(self.value)
+
+
+	def merge(self,other):
+		if not isinstance(other,Pylars):
+			raise TypeError("Cannot merge non-Pylars with Pylars")
+
+		self.status += other.status
+		self.value += other.value
+		self.desc = f"{str(self.value)} glistening coins made of an ancient metal"
+
 
 
 	### User Output ###

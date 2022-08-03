@@ -83,6 +83,13 @@ class Box(Core.Item):
 
 
 	def addItem(self,I):
+		# ensure only one bunch of Gold exists here
+		if isinstance(I,Pylars):
+			for item in self.items:
+				if isinstance(item,Pylars):
+					item.merge(I)
+					return
+
 		insort(self.items,I)
 		I.parent = self
 
@@ -358,6 +365,13 @@ class Table(Core.Item):
 	### Operation ###
 
 	def addItem(self,I):
+		# ensure only one bunch of Gold exists here
+		if isinstance(I,Pylars):
+			for item in self.items:
+				if isinstance(item,Pylars):
+					item.merge(I)
+					return
+
 		insort(self.items,I)
 		I.parent = self
 		if len(self.items) == 1:
