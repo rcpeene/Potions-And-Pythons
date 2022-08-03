@@ -2030,7 +2030,7 @@ class Pylars(Item):
 		self.plural = "gold"
 		self.weight = value
 		self.durability = -1
-		self.status = {}
+		self.status = set()
 		self.descname = str(value) + " Gold"
 		self.value = value
 

@@ -83,6 +83,8 @@ def isMeaningful(noun):
 	noun in actions or \
 	noun in Data.definitions or \
 	noun in Data.miscexpressions or \
+	noun in Data.hellos or \
+	noun in Data.goodbyes or \
 	Core.player.search(noun) or \
 	Core.game.inWorld(noun):
 		return True

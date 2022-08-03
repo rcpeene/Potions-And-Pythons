@@ -67,7 +67,6 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# rename I, C, R, F and other variables to worded names
 # fix bug with displaying correct amount of gold when there is multiple gold objects in the room
 # figure out cast command cuz its also a short verb
 
