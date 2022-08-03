@@ -522,7 +522,7 @@ def Attack(dobj,iobj,prep,target=None,weapon=None,weapon2=None):
 
 
 def Bite(dobj,iobj,prep):
-	if prep not in {"using","with",None}:
+	if prep != None:
 		print("Command not understood.")
 	if dobj == None:
 		dobj = getNoun("What do you want to bite?")
@@ -581,7 +581,7 @@ def CarryCreature(creature):
 
 
 def Cast(dobj,iobj,prep):
-	if prep not in {"at","on","onto","upon","using","with",None}:
+	if prep not in {"at","on","onto","upon",None}:
 		print("Command not understood.")
 		return False
 	if dobj == None:
@@ -759,7 +759,7 @@ def Don(dobj,iobj,prep):
 
 
 def Drink(dobj,iobj,prep):
-	if not in {"using","with",None}:
+	if prep not in {"using","with",None}:
 		print("Command not understood.")
 		return False
 	if dobj == None:
@@ -1081,7 +1081,7 @@ def Lock(dobj,iobj,prep):
 	if iobj == None:
 		iobj = getNoun("What will you lock with?")
 		if iobj in Data.cancels: return False
-	K = findObjFromTerm(dobj,True,False)
+	K = findObjFromTerm(iobj,True,False)
 	if K == None: return False
 
 	if not isinstance(K,Items.Key):
@@ -1125,7 +1125,7 @@ def Move(dobj,iobj,prep):
 
 
 def Open(dobj,iobj,prep):
-	if not in {"using","with",None}:
+	if prep not in {"using","with",None}:
 		print("Command not understood.")
 		return False
 	if dobj == None:
@@ -1261,7 +1261,7 @@ def Rest(dobj,iobj,prep):
 
 
 def Restrain(dobj,iobj,prep):
-	if not in {"using","with",None}:
+	if prep not in {"using","with",None}:
 		print("Command not understood.")
 		return False
 
@@ -1279,7 +1279,7 @@ def Restrain(dobj,iobj,prep):
 
 	I = None
 	if iobj != None:
-		I = findObjFromTerm(dobj,True,False)
+		I = findObjFromTerm(iobj,True,False)
 		if I == None: return False
 		if not Core.hasMethod(I,"RestrainWith"):
 			print(f"You can't restrain with the {I.name}.")
@@ -1424,7 +1424,7 @@ def Unequip(dobj,iobj,prep):
 
 
 def Unlock(dobj,iobj,prep):
-	if not in {"using","with",None}:
+	if prep not in {"using","with",None}:
 		print("Command not understood.")
 		return False
 	if dobj == None:
@@ -1442,7 +1442,7 @@ def Unlock(dobj,iobj,prep):
 		iobj = getNoun("What will you unlock with?")
 		if iobj in Data.cancels: return False
 
-	K = findObjFromTerm(dobj,True,False)
+	K = findObjFromTerm(iobj,True,False)
 	if K == None: return False
 
 	if not isinstance(K,Items.Key):

@@ -1281,7 +1281,7 @@ class Creature():
 		self.unequip(self.gear["left"])
 		self.gear["left"] = self.gear["right"]
 		self.gear["right"] = I
-		if (hasattr(I, "twohanded") and I.twohanded) or isinstance(I, Creature):
+		if (hasattr(I,"twohanded") and I.twohanded) or isinstance(I,Creature):
 			self.gear["left"] = Empty()
 		self.assignWeaponAndShield()
 		if hasMethod(I,"Equip"): I.Equip(self)
