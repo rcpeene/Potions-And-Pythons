@@ -27,7 +27,7 @@ def chooseObject(name,objects):
 	print()
 	while True:
 		for n,object in enumerate(objects):
-			entry = object.name
+			entry = object.descname
 			if isinstance(object,Core.Creature):
 				entry += f"  ({object.hp} hp)"
 			elif object in Core.player.gear.values():
@@ -48,7 +48,7 @@ def chooseObject(name,objects):
 		return objects[int(choice)-1]
 	except:
 		for obj in objects:
-			if choice == obj.name.lower():
+			if choice == obj.descname.lower():
 				return obj
 	print("That is not one of the options.")
 	return None

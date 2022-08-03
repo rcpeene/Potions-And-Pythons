@@ -207,7 +207,7 @@ def bagObjects(objects):
 	bag = []
 	for obj in objects:
 		for entry in bag:
-			if entry[0].name == obj.name:
+			if entry[0].descname == obj.descname:
 				entry[1] += 1
 				break
 		else:
@@ -586,7 +586,7 @@ class Game():
 	# True if there's an object in rendered rooms whose name matches objname
 	# not case sensitive
 	def inWorld(self,objname):
-		key = lambda obj: objname == obj.name.lower() or objname in obj.aliases
+		key = lambda obj: objname == obj.name.lower() or objname == obj.descname.lower() or objname in obj.aliases
 		objects = self.searchRooms(key)
 		return len(objects) > 0
 
@@ -864,12 +864,12 @@ class Room():
 	# recursively searches the room for an object whose name matches given term
 	def search(self,term,d=0,reqParent=None):
 		term = term.lower()
-		key = lambda obj: term == obj.name.lower() or term in obj.aliases
+		key = lambda obj: term == obj.name.lower() or term == obj.descname.lower() or term in obj.aliases
 		matches = objSearch(self,key=key,d=d)
 
 		if reqParent != None:
 			reqParent = reqParent.lower()
-			condition = lambda obj: reqParent == obj.parent.name.lower() or reqParent in obj.parent.aliases
+			condition = lambda obj: reqParent == obj.parent.name.lower() or reqParent == obj.parent.descname.lower() or reqParent in obj.parent.aliases
 			matches = list(filter(condition,matches))
 
 		return matches
@@ -918,6 +918,7 @@ class Room():
 class Item():
 	def __init__(self,name,desc,aliases,plural,weight,durability,status):
 		self.name = name
+		self.descname = name
 		self.desc = desc
 		self.aliases = aliases
 		self.plural = plural
@@ -1015,7 +1016,7 @@ class Item():
 
 
 	def stringName(self,n=1,plural=False,definite=False,cap=False):
-		strname = self.descname if hasattr(self,"descname") else self.name
+		strname = self.descname
 		if len(strname) == 0:
 			return ""
 		if n > 1:
@@ -1046,6 +1047,7 @@ class Item():
 class Creature():
 	def __init__(self,name,desc,aliases,plural,traits,status,hp,mp,money,inv,gear):
 		self.name = name
+		self.descname = name
 		self.desc = desc
 		self.aliases = aliases
 		self.plural = plural
@@ -1511,7 +1513,7 @@ class Creature():
 	### User Output ###
 
 	def stringName(self,n=1,plural=False,definite=False,cap=False):
-		strname = self.descname if hasattr(self,"descname") else self.name
+		strname = self.descname
 		if len(strname) == 0:
 			return ""
 		if n > 1:
@@ -1726,7 +1728,7 @@ class Player(Creature):
 		attack = self.ATCK()
 		print(f"{attack} damage")
 		if target.durability != -1 and attack > target.durability:
-			target.Break(self)
+			target.Break()
 		else:
 			print("Nothing happens.")
 			return
@@ -1757,12 +1759,12 @@ class Player(Creature):
 	# returns an item in player inv object tree whose name matches given term
 	def search(self,term,d=2,reqParent=None):
 		term = term.lower()
-		key = lambda obj: term == obj.name.lower() or term in obj.aliases
+		key = lambda obj: term == obj.name.lower() or term == obj.descname.lower() or term in obj.aliases
 		matches = objSearch(self,key=key,d=d)
 
 		if reqParent != None:
 			reqParent = reqParent.lower()
-			condition = lambda obj: reqParent == obj.parent.name.lower() or reqParent in obj.parent.aliases
+			condition = lambda obj: reqParent == obj.parent.name.lower() or reqParent == obj.parent.descname.lower() or reqParent in obj.parent.aliases
 			matches = list(filter(condition,matches))
 
 		return matches
@@ -2083,7 +2085,7 @@ class Pylars(Item):
 	### User Output ###
 
 	def stringName(self,n=1,plural=False,definite=False,cap=False):
-		strname = self.descname if hasattr(self,"descname") else self.name
+		strname = self.descname
 		strname = "Gold"
 		strname = str(self.value) + " " + strname
 		if definite:

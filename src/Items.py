@@ -239,7 +239,7 @@ class Lockbox(Box):
 		if len(self.items) == 0:
 			print("It is empty.")
 		else:
-			print(f"Inside there is {listObjects(self.items)}.")
+			print(f"Inside there is {Core.listObjects(self.items)}.")
 
 
 	def Look(self):
@@ -249,7 +249,7 @@ class Lockbox(Box):
 			print("It is empty.")
 		else:
 			self.open = True
-			print(f"Inside there is {listObjects(self.items)}.")
+			print(f"Inside there is {Core.listObjects(self.items)}.")
 
 
 	def Lock(self,key):
@@ -419,9 +419,9 @@ class Table(Core.Item):
 	### User Output ###
 
 	def describe(self):
-		print(self.descname)
+		print(f"It's {self.stringName()}.")
 		if len(self.items) != 0:
-			print(f"On it is {listObjects(self.items)}.")
+			print(f"On it is {Core.listObjects(self.items)}.")
 		else:
 			print("There is nothing on it.")
 
