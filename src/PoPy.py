@@ -67,8 +67,6 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# figure out cast command cuz its also a short verb
-
 # restructure map and revise tests, add attack tests
 	# add magic beans or food to pour stuff on
 	# "drink from the fountain"
@@ -77,6 +75,7 @@ if __name__ == "__main__":
 # add some preliminary spells and add effects file
 	# reevaluate effect functions, is there a way to reference a function by string?
 	# how will amulet effects work??
+	# added spell/effects tests
 
 # FLESH OUT MORE VERBS (and add items to go with them)
 # add "insert the key into the lock"

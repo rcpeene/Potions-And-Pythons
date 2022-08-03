@@ -205,7 +205,7 @@ def promptHelp(msg,n):
 # it returns True only when the player successfully takes an action in the game
 # n denotes how many times parse has recurred
 def parse(n=0):
-	command = processCmd("What will you do?",storeRawCmd=True)
+	command = processCmd("\nWhat will you do?",storeRawCmd=True)
 	if len(command) == 0:
 		return promptHelp("Command not understood.",n)
 	verb = command[0]	# verb is always first word
@@ -221,15 +221,17 @@ def parse(n=0):
 	elif verb in Data.goodbyes:
 		return Goodbye()
 	elif verb in Data.shortverbs or verb in Data.statcommands:
-		if len(command) != 1:
-			return promptHelp(f"The '{verb}' command can only be one word.",n)
-		if verb.upper() in Data.abilities:
-			return Core.player.printAbility(verb.upper())
-		if verb in Data.statcommands:
-			return shortactions[verb](Core.player)
-		if verb == "here":
-			return Core.game.currentroom.describe()
-		return shortactions[verb]()
+		# 'cast' may be a stat command or a regular action
+		if verb != "cast" or len(command) == 1:
+			if len(command) != 1:
+				return promptHelp(f"The '{verb}' command can only be one word.",n)
+			if verb == "here":
+				return Core.game.currentroom.describe()
+			if verb.upper() in Data.abilities:
+				return Core.player.printAbility(verb.upper())
+			if verb in Data.statcommands and verb != "cast":
+				return shortactions[verb](Core.player)
+			return shortactions[verb]()
 	elif verb not in actions:
 		return promptHelp(f"'{verb}' is not a valid verb",n)
 
@@ -595,7 +597,14 @@ def Cast(dobj,iobj,prep):
 		print("That spell doesn't exist.")
 		return False
 
-	return Effects.spells[dobj](iobj)
+	target = None
+	if prep != None:
+		if iobj == None:
+			iobj = getNoun(f"What will you cast upon?")
+			if iobj in Data.cancels: return False
+		target = findObjFromTerm(iobj)
+
+	return Effects.spells[dobj](target)
 
 
 def Catch(dobj,iobj,prep):
@@ -1528,6 +1537,7 @@ shortactions = {
 "scream":Shout,
 "shout":Shout,
 "sing":Sing,
+"spells":Core.Player.printSpells,
 "stats":Core.Player.printStats,
 "status":Core.Player.printStatus,
 "time":Time,

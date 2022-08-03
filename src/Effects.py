@@ -27,7 +27,7 @@ def destroyObject(obj):
 		parent.removeItem(obj)
 
 
-
+spells = {}
 
 # effects may include:
 

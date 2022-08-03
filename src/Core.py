@@ -1804,12 +1804,20 @@ class Player(Creature):
 	def printRP(self): print(f"RP: {self.rp}")
 
 
+	def printSpells(self):
+		print(f"Spells: {len(self.spells)}/{self.SPLS()}")
+		if len(self.spells) == 0:
+			print("\nYou don't know any spells.")
+		else:
+			columnPrint(self.spells,8,12)
+
+
 	# prints player inventory
 	def printInv(self):
+		print(f"Weight: {self.invWeight()}/{self.BRDN()}")
 		if len(self.inv) == 0:
-			print("Inventory is empty.")
+			print("\nInventory is empty.")
 		else:
-			print("Weight:",self.invWeight())
 			columnPrint(self.invNames(),8,12)
 
 
