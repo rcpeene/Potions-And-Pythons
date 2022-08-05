@@ -550,7 +550,7 @@ def Break(dobj,iobj,prep):
 		print("Command not understood.")
 		return False
 	if dobj == None:
-		dobj = getNoun("What do you want to break?.")
+		dobj = getNoun("What do you want to break?")
 		if dobj in Data.cancels: return False
 
 	I = findObjFromTerm(dobj,True,True)
@@ -558,10 +558,12 @@ def Break(dobj,iobj,prep):
 	Core.game.setPronouns(I)
 
 	if not Core.hasMethod(I,"Break"):
-		print(f"You can't break the {I.name}")
+		print(f"You can't break the {I.name}.")
 		return False
-	I.Break()
-	return True
+	if I.Break():
+		return True
+	else:
+		return False
 
 
 # this is not intended to be called directly from Parse
