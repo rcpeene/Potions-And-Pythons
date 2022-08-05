@@ -375,8 +375,8 @@ class Table(Core.Item):
 		insort(self.items,I)
 		I.parent = self
 		if len(self.items) == 1:
-			item = Core.gprint("a",self.items[0].name,4)
-			self.descname = f"{self.name} with {item} on it"
+			itemName = self.items[0].stringName()
+			self.descname = f"{self.name} with {itemName} on it"
 		elif len(self.items) > 1:
 			self.descname = f"{self.name} with items on it"
 
@@ -385,8 +385,8 @@ class Table(Core.Item):
 	def removeItem(self,I):
 		self.items.remove(I)
 		if len(self.items) == 1:
-			item = Core.gprint("a",self.items[0].name,4)
-			self.descname = f"{self.name} with {item} on it"
+			itemName = self.items[0].stringName()
+			self.descname = f"{self.name} with {itemName} on it"
 		elif len(self.items) == 0:
 			self.descname = f"empty {self.name}"
 

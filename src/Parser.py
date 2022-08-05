@@ -516,7 +516,7 @@ def Attack(dobj,iobj,prep,target=None,weapon=None,weapon2=None):
 		weapon = weapon.improviseWeapon()
 	Core.player.weapon = weapon
 
-	print(f"\nYou attack the {target.name} with {Core.player.weapon.name}.")
+	print(f"\nYou attack {target.stringName(True)} with {Core.player.weapon.name}.")
 	if isinstance(target,Core.Creature): Core.player.attackCreature(target)
 	elif isinstance(target,Core.Item): Core.player.attackItem(target)
 	if stowed: Core.player.weapon,Core.player.weapon2 = stowedweapons

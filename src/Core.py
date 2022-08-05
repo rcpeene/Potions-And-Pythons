@@ -116,27 +116,6 @@ def columnPrint(l,n,w):
 	print()
 
 
-# grammar print; adds punctuation and determiners
-# n is the 'number' of an item, denoting its plurality
-def gprint(det,text,pos,n):
-	if text[0] in Data.vowels and det == "a":
-		det = "an"
-	if n > 1:
-		det = str(n)
-		#pluralize the text, maybe find a more robust way
-		text = pluralize(text)
-	if "pylars" not in text.lower():
-		text = det + " " + text
-	if pos == 0:
-		text = text[0].upper() + text[1:]
-	elif pos == 2:
-		text = text + "."
-	elif pos == 3:
-		text = text + ","
-	text = text + " "
-	return text
-
-
 # capitalizes the first letter of all the words in a string
 # if n is given, then only capitalize the first n words
 def capWords(string,n=-1):
@@ -150,19 +129,6 @@ def capWords(string,n=-1):
 				cappedString += word + ' '
 	# removes trailing space character
 	return cappedString[0:-1]
-
-
-def pluralize(term):
-	# TODO: do some checking for special words here
-	return term + "s"
-
-
-def singularize(term):
-	# TODO: do some checking for special words here
-	if term.endswith("s"):
-		return term[:-1]
-	else:
-		return term
 
 
 # returns the ordinal string for a number n
@@ -207,7 +173,7 @@ def bagObjects(objects):
 	bag = []
 	for obj in objects:
 		for entry in bag:
-			if entry[0].descname == obj.descname:
+			if entry[0].name == obj.name:
 				entry[1] += 1
 				break
 		else:
@@ -1015,14 +981,14 @@ class Item():
 		print(self.desc)
 
 
-	def stringName(self,n=1,plural=False,definite=False,cap=False):
+	def stringName(self,definite=False,n=1,plural=False,cap=False):
 		strname = self.descname
 		if len(strname) == 0:
 			return ""
 		if n > 1:
 			plural = True
 		if plural:
-			strname = pluralize(strname)
+			strname = self.plural
 		if n > 1:
 			strname = str(n) + " " + strname
 		if definite:
@@ -1512,14 +1478,14 @@ class Creature():
 
 	### User Output ###
 
-	def stringName(self,n=1,plural=False,definite=False,cap=False):
+	def stringName(self,definite=False,n=1,plural=False,cap=False):
 		strname = self.descname
 		if len(strname) == 0:
 			return ""
 		if n > 1:
 			plural = True
 		if plural:
-			strname = pluralize(strname)
+			strname = self.plural
 		if n > 1:
 			strname = str(n) + " " + strname
 		if definite:
@@ -1772,6 +1738,9 @@ class Player(Creature):
 
 
 	### User Output ###
+
+	def stringName(self,definite=False,n=1,plural=False,cap=False):
+		return "yourself"
 
 	# prints all 10 player traits
 	def printTraits(self):
@@ -2085,7 +2054,7 @@ class Pylars(Item):
 
 	### User Output ###
 
-	def stringName(self,n=1,plural=False,definite=False,cap=False):
+	def stringName(self,definite=False,n=1,plural=False,cap=False):
 		strname = self.descname
 		strname = "Gold"
 		strname = str(self.value) + " " + strname

@@ -38,7 +38,7 @@ magicaldmg = "inrv"
 ## USEFUL SETS ##
 #################
 
-articles = {"a","an","her","his","i","its","my","that","the","their","this","will"}
+articles = {"a","an","her","his","i","its","my","the","their","this","will"}
 
 cancels = {"cancel","done","end","nevermind","no","nvm","undo"}
 
