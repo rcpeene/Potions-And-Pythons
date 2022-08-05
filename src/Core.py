@@ -1601,7 +1601,8 @@ class Player(Creature):
 	# adds xp, checks for player level up
 	def gainxp(self,newxp):
 		oldlv = self.level()
-		print(f"\nYou gained {newxp} xp.\n{self.xp} + {newxp} = {self.xp+newxp}")
+		print(f"\nYou gained {newxp} xp.")
+		print(f"{self.xp} + {newxp} = {self.xp+newxp}")
 		self.xp += newxp
 		newlv = self.level()
 		if oldlv != newlv:
