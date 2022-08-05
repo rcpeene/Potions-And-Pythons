@@ -33,6 +33,7 @@ class Bottle(Core.Item):
 		for _ in range(randint(3,6)):
 			shard = Shard("shard","a sharp shard of glass",[],"shards",1,-1,[])
 			self.parent.addItem(shard)
+		return True
 
 
 
@@ -46,14 +47,6 @@ class Box(Core.Item):
 
 
 	### Operation ###
-
-	# the weight of a box is equal to its own weight + weights of its items
-	def Weight(self):
-		w = self.weight
-		for i in self.items:
-			w += i.Weight()
-		return w
-
 
 	# sets open bool to true, prints its items
 	def Open(self):
@@ -82,6 +75,19 @@ class Box(Core.Item):
 			print(f"Inside there is {Core.listObjects(self.items)}.")
 
 
+	def Break(self):
+		if self.durability == -1:
+			if not game.silent:
+				print(f"The {self.name} cannot be broken.")
+			return False
+		print(f"The {self.name} breaks.")
+		self.parent.removeItem(self)
+		# drop things it contains into parent
+		for item in self.items():
+			self.parent.addItem(item)
+		return True
+
+
 	def addItem(self,I):
 		# ensure only one bunch of Gold exists here
 		if isinstance(I,Pylars):
@@ -100,6 +106,14 @@ class Box(Core.Item):
 
 
 	### Getters ###
+
+	# the weight of a box is equal to its own weight + weights of its items
+	def Weight(self):
+		w = self.weight
+		for i in self.items:
+			w += i.Weight()
+		return w
+
 
 	# takes a string, term, and searches the box's items
 	# if an item is found that matches term, return it, otherwise, return None
@@ -364,6 +378,19 @@ class Table(Core.Item):
 
 	### Operation ###
 
+	def Break(self):
+		if self.durability == -1:
+			if not game.silent:
+				print(f"The {self.name} cannot be broken.")
+			return False
+		print(f"The {self.name} breaks.")
+		self.parent.removeItem(self)
+		# drop things it contains into parent
+		for item in self.items():
+			self.parent.addItem(item)
+		return True
+
+
 	def addItem(self,I):
 		# ensure only one bunch of Gold exists here
 		if isinstance(I,Pylars):
@@ -379,7 +406,6 @@ class Table(Core.Item):
 			self.descname = f"{self.name} with {itemName} on it"
 		elif len(self.items) > 1:
 			self.descname = f"{self.name} with items on it"
-
 
 
 	def removeItem(self,I):

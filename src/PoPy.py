@@ -67,8 +67,6 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# ensure 'Break table' works?
-
 # restructure map and revise tests, add attack tests
 	# add magic beans or food to pour stuff on
 	# "drink from the fountain"

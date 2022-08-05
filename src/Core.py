@@ -932,7 +932,9 @@ class Item():
 			if not game.silent:
 				print(f"The {self.name} cannot be broken.")
 			return False
+		print(f"The {self.name} breaks.")
 		self.parent.removeItem(self)
+		return True
 
 
 	def takeDamage(self,dmg):
@@ -1973,7 +1975,9 @@ class Fixture(Item):
 			if not game.silent:
 				print(f"The {self.name} cannot be broken.")
 			return False
+		print(f"The {self.name} breaks.")
 		self.parent.removeFixture(self)
+		return True
 
 
 
