@@ -67,13 +67,7 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# fix pluralization with listObjects
-	# add pluralization code
-# fix spacing error with listObjects
-
-# refine creature/monster death functions
 # ensure 'Break table' works?
-# sift through TODOs
 
 # restructure map and revise tests, add attack tests
 	# add magic beans or food to pour stuff on
@@ -85,6 +79,8 @@ if __name__ == "__main__":
 	# how will amulet effects work??
 	# add spells functions and fill in spells dict
 	# added spell/effects tests
+
+# sift through TODOs
 
 # FLESH OUT MORE VERBS (and add items to go with them)
 # add "insert the key into the lock"

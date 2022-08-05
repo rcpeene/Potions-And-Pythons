@@ -1294,14 +1294,17 @@ class Creature():
 	# called when a creature's hp hits 0
 	def death(self):
 		self.alive = False
-		print("agh its... ded?")
+		print("\n" + capWords(f"{self.stringName(True)} died.",n=1))
 		# TODO: make this just drop some random number of money not just LOOT
 		n = diceRoll(3,player.LOOT(),-2)
 		self.room().addItem(Pylars(n,[]))
 		if not game.silent:
 			print(f"Dropped Ᵽ {n}.")
 		if game.whoseturn is player:
-			player.gainxp(diceRoll(1,player.LCK,1))
+			# TODO: verify that this is an acceptable formula
+			lv = player.level()
+			xp = lv * self.level() + diceRoll(lv,player.LCK,player.LCK)
+			player.gainxp(xp)
 
 
 	def Carry(self,creature):
@@ -1577,8 +1580,8 @@ class Player(Creature):
 
 	# adds money
 	def gainMoney(self,money):
-		print(f"\nYou gained Ᵽ{money}!")
 		self.money += money
+		print(f"\nYou have Ᵽ {self.money}!")
 
 
 	def obtainItem(self,I,msg=None):
@@ -2160,22 +2163,6 @@ class Monster(Creature):
 		# 	weapon = max(self.weapons(),key=lambda x: x.might)
 
 
-	# called when a creature's hp hits 0
-	def death(self):
-		self.alive = False
-		print("\nagh its... ded?")
-		# TODO: make this just drop some random number of money not just LOOT
-		n = diceRoll(3,player.LOOT(),-2)
-		self.room().addItem(Pylars(n,[]))
-		if not game.silent:
-			print(f"Dropped Ᵽ {n}.")
-		if game.whoseturn is player:
-			# TODO: verify that this is an acceptable formula
-			lv = player.level()
-			xp = lv * self.level() + diceRoll(lv,self.LCK,self.LCK)
-			player.gainxp(xp)
-
-
 	### Getters ###
 
 	def describe(self):
@@ -2187,7 +2174,7 @@ class Monster(Creature):
 
 
 	def level(self):
-		return self.rating() // 10
+		return (self.rating() - 10) // 10
 
 
 	def isArmed():
