@@ -67,14 +67,13 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# refactor searchRoom and searchRooms?
-# allow to search items by descname?
 # fix pluralization with listObjects
 	# add pluralization code
 # fix spacing error with listObjects
 
 # refine creature/monster death functions
 # ensure 'Break table' works?
+# sift through TODOs
 
 # restructure map and revise tests, add attack tests
 	# add magic beans or food to pour stuff on

@@ -436,7 +436,7 @@ class Wall(Core.Passage):
 
 	def Traverse(self,dir=None):
 		if dir == None:
-			if len(set(self.connections.valyues())) == 1:
+			if len(set(self.connections.values())) == 1:
 				dir = list(self.connections.keys())[0]
 			else:
 				msg = f"Which direction will you go on the {self.name}?\n> "

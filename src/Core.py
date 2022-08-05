@@ -861,7 +861,7 @@ class Room():
 
 
 	# wrapper for objSearch()
-	# recursively searches the room for an object whose name matches given term
+	# recursively searches the room for object whose names match given term
 	def search(self,term,d=0,reqParent=None):
 		term = term.lower()
 		key = lambda obj: term == obj.name.lower() or term == obj.descname.lower() or term in obj.aliases
@@ -1673,6 +1673,7 @@ class Player(Creature):
 	# called when player hp hits 0
 	def death(self):
 		print("You have died!")
+		game.quit = True
 		# TODO:
 		# check if there's any auto-resurrect features
 		# ask to continue from checkpoint (last save)
@@ -1752,11 +1753,11 @@ class Player(Creature):
 	# note that a lower bound is set to level 1 when xp < 16
 	# also note that the level cannot be higher than 50
 	def level(self):
-		return 1 if self.xp < 16 else maxm( 50, floor( 5*log10(self.xp/10) ) )
+		return 1 if self.xp < 16 else maxm(50,floor( 5*log10(self.xp/10) ))
 
 
 	# wrapper for objSearch, sets the degree of the search 2 by default
-	# returns an item in player inv object tree whose name matches given term
+	# returns items in player inv object tree whose names match given term
 	def search(self,term,d=2,reqParent=None):
 		term = term.lower()
 		key = lambda obj: term == obj.name.lower() or term == obj.descname.lower() or term in obj.aliases

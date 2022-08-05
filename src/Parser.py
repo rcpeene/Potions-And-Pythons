@@ -809,7 +809,7 @@ def Drop(dobj,iobj,prep,I=None,R=None):
 
 
 def Dump(dobj,iobj,prep):
-	if prep not in {"in","into","inside","on","onto","upon",None}:
+	if prep not in {"in","into","inside","on","onto","out","upon",None}:
 		print("Command not understood.")
 		return False
 	if dobj == None:
@@ -1168,7 +1168,7 @@ def Point(dobj,iobj,prep):
 
 
 def Pour(dobj,iobj,prep):
-	if prep not in {"in","into","inside","on","onto","upon",None}:
+	if prep not in {"in","into","inside","on","onto","out","upon",None}:
 		print("Command not understood.")
 		return False
 	if dobj == None:
