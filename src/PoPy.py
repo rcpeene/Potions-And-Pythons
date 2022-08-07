@@ -103,6 +103,7 @@ if __name__ == "__main__":
 	# figure out animal behavior
 	# add monsters/monster behavior
 	# creatures attacking?
+	# improve attack tests
 	# add creatures with many limbs (or can equip more than 2 weapons/shields)
 	# figure out combat? attack items?
 

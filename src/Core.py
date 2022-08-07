@@ -117,13 +117,13 @@ def columnPrint(l,n,w):
 
 
 # capitalizes the first letter of all the words in a string
-# if n is given, then only capitalize the first n words
-def capWords(string,n=-1):
+# if c is given, then only capitalize the first c words
+def capWords(string,c=-1):
 	listString = string.split(' ')
 	cappedString = ''
 	for idx,word in enumerate(listString):
 		if len(word) > 0:
-			if n != -1 and idx < n:
+			if c != -1 and idx < c:
 				cappedString += word[0].upper() + word[1:] + ' '
 			else:
 				cappedString += word + ' '
@@ -983,7 +983,7 @@ class Item():
 		print(self.desc)
 
 
-	def stringName(self,definite=False,n=1,plural=False,cap=False):
+	def stringName(self,definite=False,n=1,plural=False,cap=False,c=-1):
 		strname = self.descname
 		if len(strname) == 0:
 			return ""
@@ -1001,7 +1001,7 @@ class Item():
 			else:
 				strname = "a " + strname
 		if cap:
-			strname = capWords(strname)
+			strname = capWords(strname,c=c)
 		return strname
 
 
@@ -1296,7 +1296,7 @@ class Creature():
 	# called when a creature's hp hits 0
 	def death(self):
 		self.alive = False
-		print("\n" + capWords(f"{self.stringName(True)} died.",n=1))
+		print("\n" + f"{self.stringName(True,cap=True,c=1)} died.")
 		# TODO: make this just drop some random number of money not just LOOT
 		n = diceRoll(3,player.LOOT(),-2)
 		self.room().addItem(Pylars(n,[]))
@@ -1483,7 +1483,7 @@ class Creature():
 
 	### User Output ###
 
-	def stringName(self,definite=False,n=1,plural=False,cap=False):
+	def stringName(self,definite=False,n=1,plural=False,cap=False,c=-1):
 		strname = self.descname
 		if len(strname) == 0:
 			return ""
@@ -1501,7 +1501,7 @@ class Creature():
 			else:
 				strname = "a " + strname
 		if cap:
-			strname = capWords(strname)
+			strname = capWords(strname,c=c)
 		return strname
 
 
@@ -1745,7 +1745,7 @@ class Player(Creature):
 
 	### User Output ###
 
-	def stringName(self,definite=False,n=1,plural=False,cap=False):
+	def stringName(self,definite=False,n=1,plural=False,cap=False,c=-1):
 		return "yourself"
 
 	# prints all 10 player traits
@@ -2062,14 +2062,14 @@ class Pylars(Item):
 
 	### User Output ###
 
-	def stringName(self,definite=False,n=1,plural=False,cap=False):
+	def stringName(self,definite=False,n=1,plural=False,cap=False,c=-1):
 		strname = self.descname
 		strname = "Gold"
 		strname = str(self.value) + " " + strname
 		if definite:
 			strname = "the " + strname
 		if cap:
-			strname = capWords(strname)
+			strname = capWords(strname,c=c)
 		return strname
 
 

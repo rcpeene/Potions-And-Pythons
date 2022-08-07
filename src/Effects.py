@@ -19,11 +19,23 @@ def applyAreaEffect(effect,root,condfunc=lambda x:True):
 		effect(object)
 
 
+def spawnObject(room,obj):
+	if isinstance(obj,Core.Creature):
+		room.addCreature(obj)
+	elif isinstance(obj,Core.Fixture):
+		room.addFixture(obj)
+	elif isinstance(obj,Core.Item):
+		room.addItem(obj)
+	print(f"{obj.stringName(cap=True,c=1)} appeared!")
+
+
 def destroyObject(obj):
 	parent = obj.parent
-	if isinstance(obj,Creature):
+	if isinstance(obj,Core.Creature):
 		parent.removeCreature(obj)
-	elif isinstance(obj,Item):
+	elif isinstance(obj,Core.Fixture):
+		parent.removeFixture(obj)
+	elif isinstance(obj,Core.Item):
 		parent.removeItem(obj)
 
 

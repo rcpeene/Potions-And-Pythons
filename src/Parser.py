@@ -361,6 +361,20 @@ def Set(command):
 	setattr(obj,attrString,val)
 
 
+def Spawn(command):
+	if len(command) < 2:
+		print("Not enough arguments")
+	try:
+		obj = eval(" ".join(command[1:]))
+	except Exception as e:
+		print("Error: Object could not be instantiated:")
+		print(e)
+		return False
+	if not (isinstance(obj,Core.Creature) or isinstance(obj,Core.Item)):
+		print("Could not instantiate game object")
+	Effects.spawnObject(Core.game.currentroom,obj)
+
+
 def Teleport(command):
 	if len(command) < 2:
 		print("Not enough arguments")
@@ -1504,6 +1518,7 @@ cheatcodes = {
 	"\\mod":Mode,
 	"\\pot":Pypot,
 	"\\set":Set,
+	"\\spn":Spawn,
 	"\\tst":Test,
 	"\\tpt":Teleport,
 	"\\wrp":Warp,
