@@ -1,0 +1,14 @@
+
+test
+\spn Core.Weapon('iron sword','an iron sword',['sword'],'iron swords',10,12,[],5,2,2,0,False,'s')
+take sword
+go n
+attack python with sword
+\tpt treeline
+punch gobln
+kick goblin
+attack goblin with sword
+\tpt cabin kitchen
+break table
+1
+break table with sword

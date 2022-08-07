@@ -103,7 +103,7 @@
 			},
 			{
 				"__class__": "Sword",
-				"name": "rusty sword",
+				"name": "rusty sword sword",
 				"desc": "a medium-length iron sword with a rusted edge",
 				"aliases": ["sword"],
 				"plural": "rusty swords",
@@ -224,10 +224,10 @@
 					},
 					{
 						"__class__": "Potion",
-						"name": "",
-						"desc": "",
-						"aliases": [],
-						"plural": "",
+						"name": "blue potion",
+						"desc": "A bubbling blue liquid in a glass bottle",
+						"aliases": ["potion"],
+						"plural": "blue potions",
 						"weight": 4,
 						"durability": 3,
 						"status": []
@@ -244,7 +244,19 @@
 						"heal": 1
 					}
 				],
-				"descname": "A table with items on it"
+				"descname": "table with things on it"
+			},
+			{
+				"__class__": "Table",
+				"name": "table",
+				"desc": "A sturdy oaken kitchen table",
+				"aliases": ["kitchen table"],
+				"plural": "tables",
+				"weight": 1,
+				"durability": 1,
+				"status": [],
+				"items": [],
+				"descname": "table"
 			},
 			{
 				"__class__": "Potion",

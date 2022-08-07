@@ -67,7 +67,7 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# restructure map and revise tests, add attack tests
+# restructure map and revise tests
 	# add magic beans or food to pour stuff on
 	# "drink from the fountain"
 	# make a list of all possible uses and inputs for each action and systematically test them. Revise the world to accomodate them

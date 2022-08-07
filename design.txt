@@ -91,7 +91,6 @@ NOTES ON THE CONVENTIONS AND FORMATTING USED IN THIS CODE PROJECT
 	f"There is no '{obj.name}' here"
 	f"There is {listObjects()} in this room"
 	"You take the " + item.name
-	"There is " + gprint("a",obj.name,3,1)
 
 
 
@@ -830,6 +829,7 @@ Pantalon
 Step Reckoner
 (Magic?) Umbrella
 Shrunken heads
+dunce hat
 Magic Teapot (or just a normal teapot idk)
 Cloak of Bees
 Estoc
@@ -1012,6 +1012,7 @@ several settlements exist in the world (aim for like at least 9)
 additional place ideas
 -colonnade
 -amphitheatre
+-pavilion
 -panopticon
 -athenaeum
 -the garden path "to mislead someone"
@@ -1027,6 +1028,9 @@ additional place ideas
 
 
 misc world ideas
+-monolith
+-magic nail
+-gnomes
 -small peoples like the minish and maybe theyre quirky in some way
 -wicklewort trees
 -something called "The Wizard's Fee"
