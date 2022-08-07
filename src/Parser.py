@@ -27,7 +27,7 @@ def chooseObject(name,objects):
 	print()
 	while True:
 		for n,object in enumerate(objects):
-			entry = object.descname
+			entry = object.stringName(det=False)
 			if isinstance(object,Core.Creature):
 				entry += f"  ({object.hp} hp)"
 			elif object in Core.player.gear.values():
@@ -48,7 +48,7 @@ def chooseObject(name,objects):
 		return objects[int(choice)-1]
 	except:
 		for obj in objects:
-			if choice == obj.descname.lower():
+			if choice == obj.stringName(det=False).lower():
 				return obj
 	print("That is not one of the options.")
 	return None
@@ -358,7 +358,7 @@ def Set(command):
 	elif objname in {"w","world"}: obj = Core.world
 	else: obj = findObjFromTerm(command[1],True,True,playerD=3,roomD=3)
 
-	setattr(obj,attrString,val)
+	setattr(obj,attrname,value)
 
 
 def Spawn(command):
@@ -428,9 +428,9 @@ def Examples():
 	input()
 	Core.clearScreen()
 
-def Goodbye(): print(Core.capWords(choice(list(Data.goodbyes)),n=1))
+def Goodbye(): print(Core.capWords(choice(list(Data.goodbyes)),c=1))
 
-def Hello(): print(Core.capWords(choice(list(Data.hellos)),n=1))
+def Hello(): print(Core.capWords(choice(list(Data.hellos)),c=1))
 
 def Help():
 	Core.clearScreen()
@@ -530,7 +530,7 @@ def Attack(dobj,iobj,prep,target=None,weapon=None,weapon2=None):
 		weapon = weapon.improviseWeapon()
 	Core.player.weapon = weapon
 
-	print(f"\nYou attack {target.stringName(True)} with {Core.player.weapon.name}.")
+	print(f"\nYou attack {target.stringName(definite=True)} with {Core.player.weapon.name}.")
 	if isinstance(target,Core.Creature): Core.player.attackCreature(target)
 	elif isinstance(target,Core.Item): Core.player.attackItem(target)
 	if stowed: Core.player.weapon,Core.player.weapon2 = stowedweapons

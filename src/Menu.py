@@ -83,7 +83,7 @@ def default(jsonDict):
 		if objClass == None:
 			raise Exception("Could not find class for world key:",objClassname)
 		objAttributes = list(jsonDict.values())
-		# print("========: " + d["name"] + " " + str(objAttributes))
+		# print("========: " + jsonDict["name"] + " " + str(objAttributes))
 		if objClassname == "Room":
 			return Core.Room(*objAttributes)
 		elif objClassname == "Empty":
@@ -93,8 +93,8 @@ def default(jsonDict):
 				return objClass.convertFromJSON(jsonDict)
 			try:
 				return objClass(*objAttributes)
-			except TypeError:
-				raise TypeError(f"Failed to instantiate object: '{objClassname}' from JSON with attributes:\n",objAttributes)
+			except TypeError as e:
+				raise TypeError(f"Failed to instantiate object: '{objClassname}' from JSON with attributes:\n",objAttributes,e)
 		else:
 			raise Exception("ERROR in decoding JSON object class type: " + objClassname)
 	else:

@@ -304,6 +304,7 @@ def assignParentsRecur(root):
 	else: return
 
 	for obj in searchThrough:
+		print("%",obj)
 		obj.parent = root
 		assignParentsRecur(obj)
 
@@ -552,7 +553,7 @@ class Game():
 	# True if there's an object in rendered rooms whose name matches objname
 	# not case sensitive
 	def inWorld(self,objname):
-		key = lambda obj: objname == obj.name.lower() or objname == obj.descname.lower() or objname in obj.aliases
+		key = lambda obj: objname == obj.name.lower() or objname == obj.stringName(det=False).lower() or objname in obj.aliases
 		objects = self.searchRooms(key)
 		return len(objects) > 0
 
@@ -830,12 +831,12 @@ class Room():
 	# recursively searches the room for object whose names match given term
 	def search(self,term,d=0,reqParent=None):
 		term = term.lower()
-		key = lambda obj: term == obj.name.lower() or term == obj.descname.lower() or term in obj.aliases
+		key = lambda obj: term == obj.name.lower() or term == obj.stringName(det=False).lower() or term in obj.aliases
 		matches = objSearch(self,key=key,d=d)
 
 		if reqParent != None:
 			reqParent = reqParent.lower()
-			condition = lambda obj: reqParent == obj.parent.name.lower() or reqParent == obj.parent.descname.lower() or reqParent in obj.parent.aliases
+			condition = lambda obj: reqParent == obj.parent.name.lower() or reqParent == obj.parent.stringName(det=False).lower() or reqParent in obj.parent.aliases
 			matches = list(filter(condition,matches))
 
 		return matches
@@ -884,7 +885,6 @@ class Room():
 class Item():
 	def __init__(self,name,desc,aliases,plural,weight,durability,status):
 		self.name = name
-		self.descname = name
 		self.desc = desc
 		self.aliases = aliases
 		self.plural = plural
@@ -983,8 +983,8 @@ class Item():
 		print(self.desc)
 
 
-	def stringName(self,definite=False,n=1,plural=False,cap=False,c=-1):
-		strname = self.descname
+	def stringName(self,det=True,definite=False,n=1,plural=False,cap=False,c=-1):
+		strname = getattr(self,"descname",self.name)
 		if len(strname) == 0:
 			return ""
 		if n > 1:
@@ -993,13 +993,14 @@ class Item():
 			strname = self.plural
 		if n > 1:
 			strname = str(n) + " " + strname
-		if definite:
-			strname = "the " + strname
-		elif not plural:
-			if strname[0] in Data.vowels:
-				strname = "an " + strname
-			else:
-				strname = "a " + strname
+		if det:
+			if definite:
+				strname = "the " + strname
+			elif not plural:
+				if strname[0] in Data.vowels:
+					strname = "an " + strname
+				else:
+					strname = "a " + strname
 		if cap:
 			strname = capWords(strname,c=c)
 		return strname
@@ -1296,7 +1297,7 @@ class Creature():
 	# called when a creature's hp hits 0
 	def death(self):
 		self.alive = False
-		print("\n" + f"{self.stringName(True,cap=True,c=1)} died.")
+		print("\n" + f"{self.stringName(definite=True,cap=True,c=1)} died.")
 		# TODO: make this just drop some random number of money not just LOOT
 		n = diceRoll(3,player.LOOT(),-2)
 		self.room().addItem(Pylars(n,[]))
@@ -1483,8 +1484,8 @@ class Creature():
 
 	### User Output ###
 
-	def stringName(self,definite=False,n=1,plural=False,cap=False,c=-1):
-		strname = self.descname
+	def stringName(self,det=True,definite=False,n=1,plural=False,cap=False,c=-1):
+		strname = getattr(self,"descname",self.name)
 		if len(strname) == 0:
 			return ""
 		if n > 1:
@@ -1493,13 +1494,14 @@ class Creature():
 			strname = self.plural
 		if n > 1:
 			strname = str(n) + " " + strname
-		if definite:
-			strname = "the " + strname
-		elif not plural:
-			if strname[0] in Data.vowels:
-				strname = "an " + strname
-			else:
-				strname = "a " + strname
+		if det:
+			if definite:
+				strname = "the " + strname
+			elif not plural:
+				if strname[0] in Data.vowels:
+					strname = "an " + strname
+				else:
+					strname = "a " + strname
 		if cap:
 			strname = capWords(strname,c=c)
 		return strname
@@ -1732,12 +1734,12 @@ class Player(Creature):
 	# returns items in player inv object tree whose names match given term
 	def search(self,term,d=2,reqParent=None):
 		term = term.lower()
-		key = lambda obj: term == obj.name.lower() or term == obj.descname.lower() or term in obj.aliases
+		key = lambda obj: term == obj.name.lower() or term == obj.stringName(det=False).lower() or term in obj.aliases
 		matches = objSearch(self,key=key,d=d)
 
 		if reqParent != None:
 			reqParent = reqParent.lower()
-			condition = lambda obj: reqParent == obj.parent.name.lower() or reqParent == obj.parent.descname.lower() or reqParent in obj.parent.aliases
+			condition = lambda obj: reqParent == obj.parent.name.lower() or reqParent == obj.parent.stringName(det=False).lower() or reqParent in obj.parent.aliases
 			matches = list(filter(condition,matches))
 
 		return matches
@@ -1745,7 +1747,7 @@ class Player(Creature):
 
 	### User Output ###
 
-	def stringName(self,definite=False,n=1,plural=False,cap=False,c=-1):
+	def stringName(self,det=True,definite=False,n=1,plural=False,cap=False,c=-1):
 		return "yourself"
 
 	# prints all 10 player traits
@@ -2062,8 +2064,7 @@ class Pylars(Item):
 
 	### User Output ###
 
-	def stringName(self,definite=False,n=1,plural=False,cap=False,c=-1):
-		strname = self.descname
+	def stringName(self,det=True,definite=False,n=1,plural=False,cap=False,c=-1):
 		strname = "Gold"
 		strname = str(self.value) + " " + strname
 		if definite:

@@ -4,6 +4,7 @@
 
 
 from bisect import insort
+from random import randint
 
 import Core
 import Data
@@ -83,16 +84,16 @@ class Box(Core.Item):
 		print(f"The {self.name} breaks.")
 		self.parent.removeItem(self)
 		# drop things it contains into parent
-		for item in self.items():
+		for item in self.items:
 			self.parent.addItem(item)
 		return True
 
 
 	def addItem(self,I):
 		# ensure only one bunch of Gold exists here
-		if isinstance(I,Pylars):
+		if isinstance(I,Core.Pylars):
 			for item in self.items:
-				if isinstance(item,Pylars):
+				if isinstance(item,Core.Pylars):
 					item.merge(I)
 					return
 
@@ -386,16 +387,18 @@ class Table(Core.Item):
 		print(f"The {self.name} breaks.")
 		self.parent.removeItem(self)
 		# drop things it contains into parent
-		for item in self.items():
+		if self.items:
+			print(f"It's contents fall onto the ground.")
+		for item in self.items:
 			self.parent.addItem(item)
 		return True
 
 
 	def addItem(self,I):
 		# ensure only one bunch of Gold exists here
-		if isinstance(I,Pylars):
+		if isinstance(I,Core.Pylars):
 			for item in self.items:
-				if isinstance(item,Pylars):
+				if isinstance(item,Core.Pylars):
 					item.merge(I)
 					return
 
