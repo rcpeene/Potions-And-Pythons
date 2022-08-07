@@ -363,7 +363,7 @@ def Set(command):
 
 def Spawn(command):
 	if len(command) < 2:
-		print("Not enough arguments")
+		print("Error: no object given")
 	try:
 		obj = eval(" ".join(command[1:]))
 	except Exception as e:
@@ -377,7 +377,7 @@ def Spawn(command):
 
 def Teleport(command):
 	if len(command) < 2:
-		print("Not enough arguments")
+		print("Error: no location given")
 		return
 	location = " ".join(command[1:])
 	if location in Core.world:
@@ -392,6 +392,9 @@ def Test(command):
 
 
 def Warp(command):
+	if len(command) < 2:
+		print("Error: no warp value given")
+		return
 	try:
 		Core.game.time += int(command[1])
 	except:
@@ -399,6 +402,9 @@ def Warp(command):
 
 
 def Zap(command):
+	if len(command) < 2:
+		print("Error: no object given")
+		return
 	objname = " ".join(command[1:])
 	allObjects = Core.game.getAllObjects()
 	zappedObjects = 0
