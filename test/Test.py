@@ -18,40 +18,41 @@ def testMenu():
 		for filename in os.listdir("saves/testsave"):
 			os.remove("saves/testsave/" + filename)
 		os.rmdir("saves/testsave")
-	PoPy.main()
-	PoPy.main()
-	PoPy.main()
+	PoPy.main(skipIntro=True)
+	PoPy.main(skipIntro=True)
+	PoPy.main(skipIntro=True)
 
 
 # tests each of the cheatcodes
 def testCheatcodes():
 	sys.stdin = open("test/testCheatcodes.txt")
-	PoPy.main()
+	PoPy.main(skipIntro=True)
 
 
 # tests look, listen, and actions which don't alter the world state
 def testInfo():
 	sys.stdin = open("test/testInfo.txt")
-	PoPy.main()
+	PoPy.main(skipIntro=True)
 
 # tests go, govertical, go through passages multi/single directionally, open/closing doors,
 def testNavigation():
 	sys.stdin = open("test/testNavigation.txt")
-	PoPy.main()
+	PoPy.main(skipIntro=True)
 
 # tests open, close, take/grab, put, and drop actions
 def testInventory():
 	sys.stdin = open("test/testInventory.txt")
-	PoPy.main()
+	PoPy.main(skipIntro=True)
 
 # tests use, eat, equip, lock, pour and related actions
 def testBasicItems():
 	sys.stdin = open("test/testInventory.txt")
-	PoPy.main()
+	PoPy.main(skipIntro=True)
 
 # tests attacking and breaking, cut
 def testCombat():
-	pass
+	sys.stdin = open("test/testCombat.txt")
+	PoPy.main(skipIntro=True)
 
 # tests crawl, hide, stealth, mount, laying, flying, jump, climb, swim
 def testMobility():

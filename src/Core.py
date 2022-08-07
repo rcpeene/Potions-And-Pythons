@@ -304,7 +304,6 @@ def assignParentsRecur(root):
 	else: return
 
 	for obj in searchThrough:
-		print("%",obj)
 		obj.parent = root
 		assignParentsRecur(obj)
 

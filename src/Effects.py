@@ -26,7 +26,8 @@ def spawnObject(room,obj):
 		room.addFixture(obj)
 	elif isinstance(obj,Core.Item):
 		room.addItem(obj)
-	print(f"{obj.stringName(cap=True,c=1)} appeared!")
+	if not Core.game.silent:
+		print(f"{obj.stringName(cap=True,c=1)} appeared!")
 
 
 def destroyObject(obj):
@@ -37,6 +38,9 @@ def destroyObject(obj):
 		parent.removeFixture(obj)
 	elif isinstance(obj,Core.Item):
 		parent.removeItem(obj)
+	if not Core.game.silent:
+		print(f"{obj.stringName(definite=True,cap=True,c=1)} was destroyed.")
+
 
 
 spells = {}

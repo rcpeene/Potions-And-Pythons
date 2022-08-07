@@ -12,3 +12,6 @@ attack goblin with sword
 break table
 1
 break table with sword
+
+quit
+yes
