@@ -41,6 +41,7 @@ def main(skipIntro=False):
 		for creature in Core.game.currentroom.creatures:
 			Core.game.whoseturn = creature
 			creature.act()
+			if Core.game.quit: return
 
 		# creatures in nearby rooms' turn
 		Core.game.silent = True
@@ -48,6 +49,7 @@ def main(skipIntro=False):
 			for creature in room.creatures:
 				Core.game.whoseturn = creature
 				creature.act()
+				if Core.game.quit: return
 
 		# cleanup before looping
 		Core.game.whoseturn = None
@@ -57,6 +59,7 @@ def main(skipIntro=False):
 		Core.game.reapCreatures()
 		# sort the creatures in each rendered room by their MVMT attribute
 		Core.game.sortCreatures()
+		if Core.game.quit: return
 
 
 if __name__ == "__main__":
