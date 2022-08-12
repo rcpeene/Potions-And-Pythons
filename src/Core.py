@@ -693,6 +693,7 @@ class Room():
 		insort(self.status,pair)
 		if name.startswith("AREA"):
 			self.addAreaCondition(name)
+		return True
 
 
 	# removes all conditions of the same name
@@ -1593,6 +1594,7 @@ class Player(Creature):
 		insort(self.status,pair)
 		if not silent:
 			print(f"You are {name}.")
+		return True
 
 
 	# removes all condition of the same name
