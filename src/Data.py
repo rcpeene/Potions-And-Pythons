@@ -60,7 +60,7 @@ pronouns = {"she","he","they","her","him","them","it"}
 
 # TODO: words which will be split into two meaningful words
 # make this a dict?
-compounds = {"downstairs"}
+compounds = {"downstairs":["down","stairs"], "upstairs":["up","stairs"]}
 
 # used in nounify() in Parser.py to combine multiple words that might have a single meaning as a whole term
 miscexpressions = {"it all","spell list"}

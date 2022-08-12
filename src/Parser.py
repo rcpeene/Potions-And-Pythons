@@ -116,6 +116,21 @@ def nounify(command,i):
 	return nounify(command,i+1)
 
 
+# iterates over the command list and splits compound words into separate words
+def decompose(command):
+	i = 0
+	while True:
+		if i >= len(command):
+			break
+		word = command[i]
+		if word in Data.compounds:
+			newwords = Data.compounds[word]
+			command[i:i+1] = newwords
+		else:
+			i += 1
+	return command
+
+
 # if the term is a given pronoun, returns the name of the object which...
 # matches the pronoun in the Game class. Intended to return a "best guess"
 def replacePronoun(term):
@@ -149,8 +164,10 @@ def processCmd(prompt,storeRawCmd=False):
 	purecommand = "".join([i for i in rawcommand.lower() if i not in Data.symbols])
 	# copy command, delimited by spaces, into a list of words excluding articles
 	listcommand = [i for i in purecommand.split() if i not in Data.articles]
-	# finally, combine certain words if they appear to make one noun term
+	# combine certain words if they appear to make one noun term
 	finalcommand = nounify(listcommand,0)
+	# split compound words that ought to be two separate words for parsing
+	finalcommand = decompose(finalcommand)
 	return finalcommand
 
 
