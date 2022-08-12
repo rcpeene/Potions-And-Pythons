@@ -419,7 +419,8 @@ class Table(Core.Item):
 	# the weight of a box is equal to its own weight + weights of its items
 	def Weight(self):
 		w = self.weight
-		for i in self.items:	w += i.Weight()
+		for i in self.items:
+			w += i.Weight()
 		return w
 
 

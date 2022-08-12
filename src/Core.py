@@ -386,7 +386,8 @@ class Empty():
 
 	### Getters ###
 
-	def Weight(self):	return 0
+	def Weight(self):
+		return 0
 
 
 	def improviseWeapon(self):
