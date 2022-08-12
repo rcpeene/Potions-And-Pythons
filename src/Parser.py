@@ -91,37 +91,31 @@ def isMeaningful(noun):
 	return False
 
 
-# recursively inspects the command, which is a list of words, starting at i
 # combines multiple words into single terms that appear to be a meaningful term
 # returns the command after any relevant words are joined into one term
 # ex. ["attack","green","snake"] -> ["attack","green snake"]
 # this algorithm favors the meaningful terms which contain the most words
-def nounify(command,i):
-	# base case when end of command is reached
-	if i >= len(command)-1:
-		return command
-	# the possible noun begins as the word at i (subsequent words will be added)
-	possibleNoun = command[i]
-	j = i+1
-	while j < len(command):
-		# possibleNoun is all words between i and j joined
-		possibleNoun += ' '+command[j]
-		# if new term refers to a rendered object, a location, or a game term:
-		if isMeaningful(possibleNoun):
-			# combine words into one element and recur
-			del command[i:j+1]
-			command.insert(i,possibleNoun)
-			return nounify(command,i)
-		j += 1
-	return nounify(command,i+1)
+def nounify(command):
+	# i is the index of the starting word
+	i = 0
+	while i < len(command):
+		# j is the index of the ending word
+		j = i+1
+		while j < len(command):
+			possibleNoun = " ".join(command[i:j+1])
+			if isMeaningful(possibleNoun):
+				# replace elements with joined term element
+				command[i:j+1] = [possibleNoun]
+			else:
+				j += 1
+		i += 1
+	return command
 
 
 # iterates over the command list and splits compound words into separate words
 def decompose(command):
 	i = 0
-	while True:
-		if i >= len(command):
-			break
+	while i < len(command):
 		word = command[i]
 		if word in Data.compounds:
 			newwords = Data.compounds[word]
@@ -165,7 +159,7 @@ def processCmd(prompt,storeRawCmd=False):
 	# copy command, delimited by spaces, into a list of words excluding articles
 	listcommand = [i for i in purecommand.split() if i not in Data.articles]
 	# combine certain words if they appear to make one noun term
-	finalcommand = nounify(listcommand,0)
+	finalcommand = nounify(listcommand)
 	# split compound words that ought to be two separate words for parsing
 	finalcommand = decompose(finalcommand)
 	return finalcommand
