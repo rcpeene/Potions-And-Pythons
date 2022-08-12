@@ -386,6 +386,10 @@ class Empty():
 
 	### Getters ###
 
+	def stringName(self,det=True,definite=False,n=1,plural=False,cap=False,c=-1):
+		return ""
+
+
 	def Weight(self):
 		return 0
 
@@ -1413,9 +1417,9 @@ class Creature():
 	# searches through gear for an item whose name matches 'term'
 	# if a match is found, return the item, otherwise return None
 	def inGear(self,term):
-		for slot in self.gear:
-			if self.gear[slot].name.lower() == term:
-				return self.gear[slot]
+		for slot,object in self.gear.items():
+			if nameMatch(term,object) or term.lower() == slot.lower():
+				return object
 		return None
 
 

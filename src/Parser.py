@@ -1282,11 +1282,6 @@ def Release(dobj,iobj,prep):
 	print("releaseing")
 
 
-# TODO:
-# def Remove(dobj,iobj,prep):
-# 	print("removeing")
-
-
 def Rest(dobj,iobj,prep):
 	print("resting")
 
