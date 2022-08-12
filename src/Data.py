@@ -58,8 +58,6 @@ prepositions = {"above","across","at","behind","below","beneath","by","d","down"
 
 pronouns = {"she","he","they","her","him","them","it"}
 
-# TODO: words which will be split into two meaningful words
-# make this a dict?
 compounds = {"downstairs":["down","stairs"], "upstairs":["up","stairs"]}
 
 # used in nounify() in Parser.py to combine multiple words that might have a single meaning as a whole term

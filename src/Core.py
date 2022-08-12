@@ -82,7 +82,6 @@ def flushInput():
 
 
 # checks for any keyboard input
-# TODO: add functionality for non-windows operating systems
 def kbInput():
 	try:
 		dr,dw,de = select.select([sys.stdin], [], [], 0.00001)
@@ -1277,7 +1276,6 @@ class Creature():
 	def death(self):
 		self.alive = False
 		print("\n" + f"{self.stringName(definite=True,cap=True,c=1)} died.")
-		# TODO: make this just drop some random number of money not just LOOT
 		n = diceRoll(3,player.LOOT(),-2)
 		self.room().addItem(Pylars(n,[]))
 		if not game.silent:

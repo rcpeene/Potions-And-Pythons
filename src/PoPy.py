@@ -81,7 +81,6 @@ if __name__ == "__main__":
 	# add spells functions and fill in spells dict
 	# added spell/effects tests
 
-# sift through TODOs
 
 # FLESH OUT MORE VERBS (and add items to go with them)
 # add "insert the key into the lock"
@@ -112,6 +111,7 @@ if __name__ == "__main__":
 
 # add possession? (so you can say 'break goblin's sword', 'take his food')... these could be easily restructured as "break sword from goblin", "take food from him"
 
+# sift through TODOs
 
 ################################################################################
 
