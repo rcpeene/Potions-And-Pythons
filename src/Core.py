@@ -751,17 +751,6 @@ class Room():
 		return all
 
 
-	# takes a string, term, and searches the room's items
-	# if an item is found that matches term, return it, otherwise, return None
-	def inItems(self,term):
-		term = term.lower()
-		matches = []
-		for item in self.items:
-			if term == item.name.lower() or term in item.aliases:
-				matches.append(item)
-		return matches
-
-
 	def itemNames(self):
 		return [item.name for item in self.items]
 
@@ -769,17 +758,6 @@ class Room():
 	# returns a list of Passage objects within the room's items
 	def getPassages(self):
 		return [item for item in self.contents() if isinstance(item,Passage)]
-
-
-	# takes a string, term, and searches the room's occuptants
-	# if a creature matches the term , return it, otherwise, return False
-	def inCreatures(self,term):
-		term = term.lower()
-		matches = []
-		for creature in self.creatures:
-			if term == creature.name.lower() or term in creature.aliases:
-				matches.append(creatures)
-		return matches
 
 
 	def creatureNames(self):

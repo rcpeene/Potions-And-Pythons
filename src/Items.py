@@ -116,14 +116,6 @@ class Box(Core.Item):
 		return w
 
 
-	# takes a string, term, and searches the box's items
-	# if an item is found that matches term, return it, otherwise, return None
-	def inItems(self,term):
-		for item in self.items:
-			if item.name == term:	return item
-		return None
-
-
 	def itemNames(self):
 		return [item.name for item in self.items]
 
@@ -429,14 +421,6 @@ class Table(Core.Item):
 		w = self.weight
 		for i in self.items:	w += i.Weight()
 		return w
-
-
-	# takes a string, term, and searches the box's items
-	# if an item is found that matches term, return it, otherwise, return None
-	def inItems(self,term):
-		for item in self.items:
-			if item.name == term:	return item
-		return None
 
 
 	def itemNames(self):
