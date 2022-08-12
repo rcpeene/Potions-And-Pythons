@@ -27,6 +27,11 @@ import Data
 ####################
 
 
+def nameMatch(term, obj):
+	term = term.lower()
+	return term == obj.name.lower() or term == obj.stringName(det=False).lower() or term in obj.aliases
+
+
 # retrieves a class object with className from the modules list
 # returns None if no such object exists
 def strToClass(className,moduleNames):
@@ -551,8 +556,8 @@ class Game():
 
 	# True if there's an object in rendered rooms whose name matches objname
 	# not case sensitive
-	def inWorld(self,objname):
-		key = lambda obj: objname == obj.name.lower() or objname == obj.stringName(det=False).lower() or objname in obj.aliases
+	def inWorld(self,term):
+		key = lambda obj: nameMatch(term,obj)
 		objects = self.searchRooms(key)
 		return len(objects) > 0
 
@@ -768,15 +773,6 @@ class Room():
 		return self.fixtures + self.items + self.creatures
 
 
-	def inContents(self,term):
-		term = term.lower()
-		matches = []
-		for item in self.contents():
-			if term == item.name.lower() or term in item.aliases:
-				matches.append(item)
-		return matches
-
-
 	# given a direction (like 'north' or 'down)...
 	# return the first Passage object with that direction in its connections
 	def getPassageFromDir(self,dir):
@@ -808,12 +804,12 @@ class Room():
 	# recursively searches the room for object whose names match given term
 	def search(self,term,d=0,reqParent=None):
 		term = term.lower()
-		key = lambda obj: term == obj.name.lower() or term == obj.stringName(det=False).lower() or term in obj.aliases
+		key = lambda obj: nameMatch(term,obj)
 		matches = objSearch(self,key=key,d=d)
 
 		if reqParent != None:
 			reqParent = reqParent.lower()
-			condition = lambda obj: reqParent == obj.parent.name.lower() or reqParent == obj.parent.stringName(det=False).lower() or reqParent in obj.parent.aliases
+			condition = lambda obj: nameMatch(reqParent,obj.parent)
 			matches = list(filter(condition,matches))
 
 		return matches
@@ -1711,12 +1707,12 @@ class Player(Creature):
 	# returns items in player inv object tree whose names match given term
 	def search(self,term,d=2,reqParent=None):
 		term = term.lower()
-		key = lambda obj: term == obj.name.lower() or term == obj.stringName(det=False).lower() or term in obj.aliases
+		key = lambda obj: nameMatch(term,obj)
 		matches = objSearch(self,key=key,d=d)
 
 		if reqParent != None:
 			reqParent = reqParent.lower()
-			condition = lambda obj: reqParent == obj.parent.name.lower() or reqParent == obj.parent.stringName(det=False).lower() or reqParent in obj.parent.aliases
+			condition = lambda obj: nameMatch(reqParent,obj.parent)
 			matches = list(filter(condition,matches))
 
 		return matches
