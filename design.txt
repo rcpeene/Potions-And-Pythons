@@ -911,7 +911,7 @@ Bronze (defense), Silver (speed), Gold (atk/dmg/crit)
 
 Fruits:
 
-Apple - reduces disease conditions
+Apple - reduces disease conditions (special apple for special diseases?)
 Banana
 Blueberry
 Blackberry
@@ -1037,6 +1037,7 @@ misc world ideas
 -Eternal Stew
 -a pink potion being deadly
 -bonefire
+-a deal with a demon (with consequences)
 -label that reads "FOR SCIENTIFIC USE ONLY"
 -RICKROLL
 -the four horsemen of awesomeness (or happiness)
@@ -1089,6 +1090,7 @@ CHARACTER NAMES:
 	Beowin
 	Rook
 
+	a cobbler
 	one bbeg is the world serpent called Aeormungand (Leviathan?)
 	another bbg (Behemoth)
 	also an evil wizard ofc

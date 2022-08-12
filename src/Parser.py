@@ -23,6 +23,11 @@ import Effects
 #######################
 
 
+# this is used to disambiguate user input...
+# when the object name given is not specific enough
+# takes the object name and list of matching objects
+# prints the list of objects with entry 'tags' to help the user distinguish them
+# will return when user cancels or when they select an object by name or number
 def chooseObject(name,objects):
 	print()
 	while True:
@@ -54,6 +59,10 @@ def chooseObject(name,objects):
 	return None
 
 
+# gets a list of potential objects whose name matches the given user input term
+# searchPlayer and searchRoom indicate which places to look for matching objects
+# roomD and playerD are the 'degree' of the search.
+# Look at Core.py objSearch for details on search degree and on reqParent
 def findObjFromTerm(term,searchPlayer,searchRoom,roomD=1,playerD=2,reqParent=None,silent=False):
 	matches = []
 	if searchPlayer:
@@ -211,7 +220,6 @@ def promptHelp(msg,n):
 
 # the primary input parsing function for the game
 # its purpose is to parse command grammar and call the related action function
-# it is called by main() with processCmd() as its first argument
 # it is called on infinite loop until it returns True
 # it returns True only when the player successfully takes an action in the game
 # n denotes how many times parse has recurred

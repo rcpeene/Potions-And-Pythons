@@ -27,7 +27,7 @@ import Data
 ####################
 
 
-def nameMatch(term, obj):
+def nameMatch(term,obj):
 	term = term.lower()
 	return term == obj.name.lower() or term == obj.stringName(det=False).lower() or term in obj.aliases
 
@@ -1391,10 +1391,9 @@ class Creature():
 	# searches through inventory for an item whose name matches 'term'
 	# if a match is found, return the item, otherwise return None
 	def inInv(self,term):
-		term = term.lower()
 		matches = []
 		for item in self.inv:
-			if term == item.name.lower() or term in item.aliases:
+			if nameMatch(term,item):
 				matches.append(item)
 		return matches
 
