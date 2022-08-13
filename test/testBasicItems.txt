@@ -1,42 +1,38 @@
 
 test
 
-go n
-take breadroll
-eat the breadroll
-take sword
-take the red potion
+\tpt cabin kitchen
+eat the bread
 drink the red potion
-go n
-go n
-take
-take the blue potion
-pour out the blue potion
+2
 take blue potion
-pour blue potion
+pour out the blue potion
 take green potion
-go s
-take tunic
-go s
-dump green potion on python
-take all
-don tunic
-put on tunic
-take off tunic
-put on tunic
-doff tunic
-\tpt field
+\tpt cabin basement
+take helm
+don helm
+put on helm
+take off helm
+put on helm
+doff helm
+take sword
+broken sword
+take rusty sword
+\tpt big stump
 take axe
 \tpt tunnel
-equip sword
+dump green potion on python
+equip rusty sword
+equip hatchet
 equip axe
-equip axe
-dump sword
-\tpt pond
-take iron key
-\tpt glen
+dump rusty sword
+drop hatchet
+\tpt cabin quarters
+take rusty key
+\tpt cabin privy
 take capsule
 open capsule
 unlock capsule
 my sword
-unlock capsule with iron key
+unlock capsule with rusty key
+open capsule

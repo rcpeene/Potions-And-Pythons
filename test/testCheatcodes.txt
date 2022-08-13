@@ -1,15 +1,25 @@
 
 test
-\exe Core.player.addItem(Items.Bottle("bottle","an empty glass bottle",3,3,{}))
+\exe
 \exe Core.player.addCondition("flying",3)
 \exe this should not execute
+
+\spn Items.Bottle("bottle","an empty glass bottle",[],"bottles",3,3,[])
+take bottle
+break bottle
+\spn blah
+
+\xpl cool
+\mbu cool
+\xpl cool
+\mbu cool 3
 
 \get
 \get blah
 \get p
 \get my xp
 \get here
-\get room occupants
+\get room items
 \get world
 
 \lrn
@@ -17,11 +27,11 @@ test
 \lrn 1
 \lrn 1000
 
+STR
+STR
+STR
 
 blah
-STR
-CHA
-INT
 
 \mod
 \mod blah
@@ -41,25 +51,28 @@ INT
 \set p STR 20
 \set room blah
 \set room name testroom
-
+here
 
 \tpt
 \tpt blah
 \tpt big tree
-\tpt cabin
+\tpt cabin basement
 
 \tst
 \tst blah
 
 \wrp
 \wrp blah
-\wrp 20 blah
+time
 \wrp 20
+time
+\wrp -20
 
 \zap
 \zap here
 \zap player
 \zap sword
+\tpt tunnel
 \zap python
 
 quit

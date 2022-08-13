@@ -59,6 +59,7 @@ def chooseObject(name,objects):
 	return None
 
 
+# return an object in player inv or room based on player input
 # gets a list of potential objects whose name matches the given user input term
 # searchPlayer and searchRoom indicate which places to look for matching objects
 # roomD and playerD are the 'degree' of the search.
@@ -290,7 +291,7 @@ def parse(n=0):
 ##########################################
 
 
-def Exe(command):
+def Execute(command):
 	if len(command) < 2:
 		print("Error: No code given")
 		return
@@ -302,12 +303,17 @@ def Exe(command):
 		print(e)
 
 
+def Expell(command):
+	if len(command) < 2:
+		print("Error: no condition given")
+		return
+	condname = " ".join(command[1:])
+	Core.player.removeCondition(condname)
+
+
 def Get(command):
 	if len(command) < 2:
 		print("Error: No object name given")
-		return
-	if len(command) < 3:
-		print("Error: No attribute name given")
 		return
 	objname = command[1].lower()
 	attrname = ( " ".join(command[2:]) ).lower()
@@ -322,10 +328,27 @@ def Get(command):
 		print("Error: Object not found")
 		return
 
-	try:
-		print(getattr(obj,attrname))
-	except:
-		print("Error: Attribute does not exist")
+	if len(command) < 3:
+		print(obj)
+	else:
+		try:
+			print(getattr(obj,attrname))
+		except:
+			print("Error: Attribute does not exist")
+
+
+def Imbue(command):
+	if len(command) < 2:
+		print("Error: no status condition given")
+		return
+	if len(command) < 3:
+		duration = -2
+		condname = " ".join(command[1:])
+	else:
+		condname = " ".join(command[1:-1])
+		duration = command[-1]
+
+	Core.player.addCondition(condname,duration)
 
 
 def Learn(command):
@@ -425,16 +448,15 @@ def Zap(command):
 		print("Error: no object given")
 		return
 	objname = " ".join(command[1:])
-	allObjects = Core.game.getAllObjects()
+	key = lambda obj: Core.nameMatch(objname, obj)
+	matches = Core.game.searchRooms(key=key)
 	zappedObjects = 0
-	for obj in allObjects:
-		if objname.lower() == obj.name.lower():
-			if isinstance(obj,Core.Item):
-				obj.Break()
-			elif isinstance(obj,Core.Creature):
-				obj.death()
-			zappedObjects += 1
-	print("Zapped objects: " + str(zappedObjects))
+	for obj in matches:
+		if isinstance(obj,Core.Item):
+			obj.Break()
+		elif isinstance(obj,Core.Creature):
+			obj.death()
+	print(f"Zapped objects: {len(matches)}")
 
 
 
@@ -1208,7 +1230,7 @@ def Point(dobj,iobj,prep):
 	print("pointing")
 
 
-def Pour(dobj,iobj,prep):
+def Pour(dobj,iobj,prep,I=None):
 	if prep not in {"in","into","inside","on","onto","out","upon",None}:
 		print("Command not understood.")
 		return False
@@ -1216,7 +1238,7 @@ def Pour(dobj,iobj,prep):
 		dobj = getNoun("What will you pour?")
 		if dobj in Data.cancels: return False
 
-	I = findObjFromTerm(dobj,True,False)
+	if I == None: I = findObjFromTerm(dobj,True,False)
 	if I == None: return False
 	Core.game.setPronouns(I)
 
@@ -1532,9 +1554,10 @@ def Wave(dobj,iobj,prep):
 
 
 cheatcodes = {
-	"\\exe":Exe,
+	"\\exe":Execute,
 	"\\get":Get,
 	"\\lrn":Learn,
+	"\\mbu":Imbue,
 	"\\mod":Mode,
 	"\\pot":Pypot,
 	"\\set":Set,
@@ -1542,6 +1565,7 @@ cheatcodes = {
 	"\\tst":Test,
 	"\\tpt":Teleport,
 	"\\wrp":Warp,
+	"\\xpl":Expell,
 	"\\zap":Zap
 }
 
@@ -1611,6 +1635,7 @@ actions = {
 "drop":Drop,
 "duck":Crouch,
 "dump":Dump,
+"dump out":Dump,
 "eat":Eat,
 "empty":Dump,
 "enter":Enter,
@@ -1659,6 +1684,7 @@ actions = {
 "play":Play,
 "point":Point,
 "pour":Pour,
+"pour out":Pour,
 "pray":Pray,
 "press":Press,
 "pull":Pull,

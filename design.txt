@@ -715,6 +715,7 @@ prosperity - raises LCK
 
 CONDITION IDEAS:
 
+'cool' with glasses or something so it says "you are cool"
 raising a base stat
 raising a derived stat
 lowering a base stat
@@ -982,6 +983,7 @@ so these dungeons are generally just clusters of room nodes in the world graph t
 
 -regular forest (starting location)
 -the gallery
+-hinterlands
 -mobile massive wizard school (with portal entrances around the world)
 -a buried giant (inside of which is a dungeon? rooms like "giant foot")
 -haunted manor, abandoned manor on a hill thats v spooky

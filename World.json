@@ -87,23 +87,23 @@
 		"items": [
 			{
 				"__class__": "Sword",
-				"name": "iron sword",
-				"desc": "a medium-length iron sword that is slightly dulled",
+				"name": "broken sword",
+				"desc": "an iron sword that is broken halfway down the blade",
 				"aliases": ["sword"],
-				"plural": "iron swords",
-				"weight": 10,
+				"plural": "broken swords",
+				"weight": 6,
 				"durability": 12,
 				"status": [],
-				"might": 5,
-				"sleight": 2,
+				"might": 3,
+				"sleight": 3,
 				"sharpness": 2,
 				"range": 0,
 				"twohanded": false,
-				"type": "s"
+				"type": "p"
 			},
 			{
 				"__class__": "Sword",
-				"name": "rusty sword sword",
+				"name": "rusty sword",
 				"desc": "a medium-length iron sword with a rusted edge",
 				"aliases": ["sword"],
 				"plural": "rusty swords",
@@ -233,6 +233,16 @@
 						"status": []
 					},
 					{
+						"__class__": "Potion",
+						"name": "green potion",
+						"desc": "A bubbling green liquid in a glass bottle",
+						"aliases": ["potion"],
+						"plural": "green potions",
+						"weight": 4,
+						"durability": 3,
+						"status": []
+					},
+					{
 						"__class__": "Food",
 						"name": "bread roll",
 						"desc": "A stale wheat roll of baked bread. Very Dry!",
@@ -283,7 +293,22 @@
 			"doorway": "cabin hallway"
 		},
 		"fixtures": [],
-		"items": [],
+		"items": [
+			{
+				"__class__": "Lockbox",
+				"name": "capsule",
+				"desc": "a bronze capsule which is remarkably durable",
+				"aliases": ["bronze capsule"],
+				"plural": "capsules",
+				"weight": 1,
+				"durability": -1,
+				"status": [],
+				"open": false,
+				"items": [],
+				"keyids": [-1,1],
+				"locked": true
+			}
+		],
 		"creatures": [],
 		"status": []
 	},
@@ -312,7 +337,32 @@
 				"passprep": ""
 			}
 		],
-		"items": [],
+		"items": [
+			{
+				"__class__": "Box",
+				"name": "wooden chest",
+				"desc": "A small wooden chest reinforced by iron",
+				"aliases": ["box","chest"],
+				"plural": "wooden chests",
+				"weight": 8,
+				"durability": 10,
+				"status": [],
+				"open": false,
+				"items": [
+					{
+						"__class__": "Key",
+						"name": "rusty key",
+						"desc": "a small and simple rusted iron key",
+						"aliases": ["key"],
+						"plural": "rusty keys",
+						"weight": 2,
+						"durability": 3,
+						"status": [],
+						"id": 1
+					}
+				]
+			}
+		],
 		"creatures": [],
 		"status": []
 	},
@@ -376,7 +426,9 @@
 			"south": "treeline"
 		},
 		"fixtures": [],
-		"items": [],
+		"items": [
+
+		],
 		"creatures": [],
 		"status": []
 	},
@@ -463,7 +515,24 @@
 			"east": "glen"
 		},
 		"fixtures": [],
-		"items": [],
+		"items": [
+			{
+				"__class__": "Axe",
+				"name": "iron hatchet",
+				"desc": "a small one-handed axe that is slightly dulled from use",
+				"aliases": ["axe","hatchet"],
+				"plural": "hatchets",
+				"weight": 4,
+				"durability": 10,
+				"status": [],
+				"might": 4,
+				"sleight": 0,
+				"sharpness": 1,
+				"range": 0,
+				"twohanded": false,
+				"type": "s"
+			}
+		],
 		"creatures": [],
 		"status": []
 	},
