@@ -56,11 +56,7 @@ class Box(Core.Item):
 		else:
 			print(f"You open the {self.name}.")
 			self.open = True
-		if len(self.items) == 0:
-			print("It is empty.")
-		else:
-			print(f"Inside there is {Core.listObjects(self.items)}.")
-
+		self.Look()
 
 	# sets open bool to false
 	def Close(self):
@@ -194,8 +190,44 @@ class Fountain(Core.Fixture):
 	def Douse():
 		pass
 
+
 	def Drink(self):
 		print(f"You drink from the {self.name}.")
+
+
+
+
+class Generator(Controller):
+	def __init__(self,name,desc,aliases,plural,weight,durability,status,effect,charge,capacity,rate,cost):
+		Core.Controller.__init__(self,name,desc,aliases,plural,weight,durability,status,effect)
+		self.charge = charge
+		self.capacity = capacity
+		self.rate = rate
+		self.cost = cost
+
+
+	def Trigger(self):
+		if charge > cost:
+			charge -= cost
+			eval(self.effect)
+		if not Core.game.silent:
+			print("Nothing happened...")
+
+
+	def passTime(self):
+		self.charge += self.rate
+		if self.charge > self.capacity:
+			self.charge = self.capacity
+		for condition in self.status:
+			# if condition is has a special duration, ignore it
+			if condition[1] < 0:
+				continue
+			# subtract remaining duration on condition
+			elif condition[1] > 0:
+				condition[1] -= t
+			# if, after subtraction, condition is non-positive, remove it
+			if condition[1] <= 0:
+				self.removeCondition(condition[0],0)
 
 
 

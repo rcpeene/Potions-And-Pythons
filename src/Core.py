@@ -973,7 +973,7 @@ class Item():
 
 	def describe(self):
 		print(f"It's {self.stringName()}.")
-		print(self.desc)
+		print(f"{self.desc}.")
 
 
 	def stringName(self,det=True,definite=False,n=1,plural=False,cap=False,c=-1):
@@ -1501,7 +1501,7 @@ class Creature():
 
 	def describe(self):
 		print(f"It's {self.stringName()}.")
-		print(self.desc)
+		print(f"{self.desc}.")
 
 
 
@@ -2165,7 +2165,7 @@ class Monster(Creature):
 
 	def describe(self):
 		print(f"It's {self.stringName()}.")
-		print(self.desc)
+		print(f"{self.desc}.")
 		gearitems = [item for item in self.gear.values() if item != Empty()]
 		if len(gearitems) != 0:
 			print(f"It has {listObjects(gearitems)}.")
