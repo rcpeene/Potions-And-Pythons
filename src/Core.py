@@ -674,7 +674,8 @@ class Room():
 
 	def addAreaCondition(areacond):
 		cond,dur = extractConditionInfo(areacond)
-		for creature in game.searchRoom():
+		key = lambda x: isinstance(x,Creatue)
+		for creature in game.searchRoom(key=key):
 			creature.addCondition(cond,dur)
 
 
@@ -683,7 +684,8 @@ class Room():
 		# depending on how you want room conditions to work, perhaps remove this
 		if dur != -1:
 			return
-		for creature in game.searchRoom():
+		key = lambda x: isinstance(x,Creatue)
+		for creature in game.searchRoom(key=key):
 			creature.removeCondition(cond,-1)
 
 
