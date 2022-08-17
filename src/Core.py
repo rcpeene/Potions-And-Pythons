@@ -458,8 +458,6 @@ class Game():
 		for room in self.renderedRooms():
 			self.silent = room is not self.currentroom
 			room.passTime(1)
-			for creature in room.creatures:
-				creature.passTime(1)
 
 
 	def clearPronouns(self):
@@ -726,6 +724,9 @@ class Room():
 			# if, after subtraction, condition is non-positive, remove it
 			if condition[1] <= 0:
 				self.removeCondition(condition[0],0)
+
+		for obj in self.contents():
+			obj.passTime(t)
 
 
 	# describe the room, and apply any room effects to the creature entering
