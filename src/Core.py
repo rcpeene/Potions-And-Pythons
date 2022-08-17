@@ -674,8 +674,7 @@ class Room():
 
 	def addAreaCondition(areacond):
 		cond,dur = extractConditionInfo(areacond)
-		key = lambda x: hasMethod(x,"addCondition")
-		for creature in game.searchRoom(key):
+		for creature in game.searchRoom():
 			creature.addCondition(cond,dur)
 
 
@@ -684,8 +683,7 @@ class Room():
 		# depending on how you want room conditions to work, perhaps remove this
 		if dur != -1:
 			return
-		key = lambda x: hasMethod(x,"removeCondition")
-		for creature in game.searchRoom(key):
+		for creature in game.searchRoom():
 			creature.removeCondition(cond,-1)
 
 
@@ -942,6 +940,15 @@ class Item():
 		pair = [name,dur]
 		insort(self.status,pair)
 		return True
+
+
+	# removes all condition of the same name
+	# if reqDuration is given, only removes conditions with that duration
+	def removeCondition(self,name,reqDuration=None):
+		for condname,duration in self.status:
+			if condname == name:
+				if reqDuration == None or reqDuration == duration:
+					self.status.remove([condname,duration])
 
 
 
