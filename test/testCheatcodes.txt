@@ -12,6 +12,7 @@ break bottle
 \xpl cool
 \mbu cool
 \xpl cool
+\mbu cool NaN
 \mbu cool 3
 
 \get

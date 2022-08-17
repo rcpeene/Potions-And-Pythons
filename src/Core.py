@@ -357,6 +357,7 @@ def ensureWorldIntegrity():
 class Empty():
 	def __init__(self):
 		self.name = "[empty]"
+		self.aliases = []
 		self.weight = 0
 		self.prot = 0
 		self.might = 1
@@ -901,6 +902,19 @@ class Item():
 
 
 	### Operation ###
+
+	def passTime(self,t):
+		for condition in self.status:
+			# if condition is has a special duration, ignore it
+			if condition[1] < 0:
+				continue
+			# subtract remaining duration on condition
+			elif condition[1] > 0:
+				condition[1] -= t
+			# if, after subtraction, condition is non-positive, remove it
+			if condition[1] <= 0:
+				self.removeCondition(condition[0],0)
+
 
 	def Obtain(self,creature):
 		pass

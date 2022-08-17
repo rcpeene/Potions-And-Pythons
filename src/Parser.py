@@ -339,14 +339,18 @@ def Get(command):
 
 def Imbue(command):
 	if len(command) < 2:
-		print("Error: no status condition given")
+		print("Error: No status condition given")
 		return
 	if len(command) < 3:
 		duration = -2
 		condname = " ".join(command[1:])
 	else:
 		condname = " ".join(command[1:-1])
-		duration = command[-1]
+		try:
+			duration = int(command[-1])
+		except:
+			print("Error: Duration not number")
+			return
 
 	Core.player.addCondition(condname,duration)
 
