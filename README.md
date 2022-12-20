@@ -1,7 +1,7 @@
 # Potions and Pythons
-### version Alpha
-### by Ross Carter Peene
-### 2022
+*version Alpha
+by Ross Carter Peene
+2022*
 
 To play the game, you can run the executable file in the main directory containing the World.json file.
 
