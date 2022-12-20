@@ -1,4 +1,4 @@
-# Potions and Pythons  
+# Potions & Pythons  
 
 *version Alpha*  
 *by Ross Carter Peene*  
