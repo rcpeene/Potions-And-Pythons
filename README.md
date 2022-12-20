@@ -8,8 +8,10 @@
 To compile the executable yourself from the source code, you must have Python and Pip installed. Python and Pip can be installed [here](https://www.python.org/downloads/).
 You must install pyinstaller using the following command in your terminal.  
 
-```command pip install pyinstaller```
-
+Dandihub, you must sign in with your github account. To set up the correct environment on Dandihub, open a `terminal` tab and navigate to the directory `openscope_databook` and run the command
+```
+pip install -r requirements.txt --user
+```
 Then you can run `make.bat` (for Windows) or `make.sh` (for Linux/Mac) in the main directory. The source code will be compiled into an executable called `PoPy` which can be run and played!
 
 ### Play from source code
