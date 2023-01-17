@@ -387,7 +387,7 @@ class Empty():
 
 	### Getters ###
 
-	def stringName(self,det=True,definite=False,n=1,plural=False,cap=False,c=-1):
+	def stringName(self,det=True,definite=False,n=1,plural=False,cap=False,c=1):
 		return ""
 
 
@@ -837,10 +837,10 @@ class Room():
 	def describe(self):
 		print("\n\n" + self.domain)
 		print(self.name)
-		if player.countCompasses() == 0:
-			print("\n" + ambiguateDirections(self.desc))
-		else:
-			print("\n" + self.desc)
+		# if player.countCompasses() == 0:
+		# 	print("\n" + ambiguateDirections(self.desc))
+		# else:
+		print("\n" + self.desc)
 		self.describeItems()
 		self.describeCreatures()
 
@@ -986,7 +986,7 @@ class Item():
 		print(f"{self.desc}.")
 
 
-	def stringName(self,det=True,definite=False,n=1,plural=False,cap=False,c=-1):
+	def stringName(self,det=True,definite=False,n=1,plural=False,cap=False,c=1):
 		strname = getattr(self,"descname",self.name)
 		if len(strname) == 0:
 			return ""
@@ -1381,6 +1381,7 @@ class Creature():
 	def room(self):
 		return self.ancestors()[-1]
 
+
 	# TODO: add logic here for conditions which improve atkmod
 	def atkmod(self):
 		return 0
@@ -1447,11 +1448,7 @@ class Creature():
 
 	# returns sum of all protection values of all items in gear
 	def protection(self):
-		prot = 0
-		for item in self.gear.values():
-			if hasattr(item, "prot"):
-				prot += item.prot
-		return prot
+		return sum(item.prot for item in self.gear.values() if hasattr(item, "prot"))
 
 
 	def hasCondition(self,name,reqDuration=None):
@@ -1485,7 +1482,7 @@ class Creature():
 
 	### User Output ###
 
-	def stringName(self,det=True,definite=False,n=1,plural=False,cap=False,c=-1):
+	def stringName(self,det=True,definite=False,n=1,plural=False,cap=False,c=1):
 		strname = getattr(self,"descname",self.name)
 		if len(strname) == 0:
 			return ""
@@ -1749,7 +1746,7 @@ class Player(Creature):
 
 	### User Output ###
 
-	def stringName(self,det=True,definite=False,n=1,plural=False,cap=False,c=-1):
+	def stringName(self,det=True,definite=False,n=1,plural=False,cap=False,c=1):
 		return "yourself"
 
 	# prints all 10 player traits
@@ -2066,7 +2063,7 @@ class Pylars(Item):
 
 	### User Output ###
 
-	def stringName(self,det=True,definite=False,n=1,plural=False,cap=False,c=-1):
+	def stringName(self,det=True,definite=False,n=1,plural=False,cap=False,c=1):
 		strname = "Gold"
 		strname = str(self.value) + " " + strname
 		if definite:
@@ -2163,12 +2160,41 @@ class Monster(Creature):
 		# if creature is not in same room as player
 		if game.currentroom != self.room():
 			return
-		# choose strongest weapon or use hand
-		# if len(self.weapons()) == 0:
-		# 	weapon = Hand("goblin hand","",4,-1,[])
-		# 	weapon = weapon.improviseWeapon()
-		# else:
-		# 	weapon = max(self.weapons(),key=lambda x: x.might)
+		else:
+			self.attackCreature(player)
+
+
+	def attackCreature(self,target):
+		if target == player:
+			targetname = "you"
+		else:
+			targname = target.stringName()
+		print(f"{self.stringName(definite=True, cap=True)} tries to attack {targetname}")
+
+		n = min1( self.ATSP() // min1(target.ATSP()) )
+		if n > 1:
+			print(f"{n} attacks:")
+		for i in range(n):
+			if n > 1:
+				print(f"\n{ordinal(i+1)} attack:")
+			# TODO: what about if weapon is ranged?
+			hit = min1(maxm(99, self.ACCU() - target.EVSN()))
+			if diceRoll(1,100,0) <= hit:
+				crit = diceRoll(1,100,0) <= self.CRIT()
+				attack = self.ATCK()
+				if crit:
+					print("Critical hit!")
+					attack *= 2
+				damage = min0( attack - target.DFNS() )
+				target.takeDamage(damage,self.weapon.type)
+				if target.alive == False:
+					return
+			else:
+				print("It missed!")
+			if self.weapon2 != Empty():
+				self.dualAttack(target)
+			if target.alive == False:
+				return
 
 
 	### Getters ###

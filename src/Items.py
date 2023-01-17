@@ -357,7 +357,7 @@ class Shard(Core.Item):
 
 class Sign(Core.Item):
 	def __init__(self,name,desc,aliases,plural,weight,durability,status,text):
-		Core.Item.__init__(self,name,desc,aliases,plural,durability,status,weight)
+		Core.Item.__init__(self,name,desc,aliases,plural,weight,durability,status)
 		self.text = text
 
 

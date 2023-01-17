@@ -552,7 +552,7 @@
 		"creatures": [
 			{
 				"__class__": "Monster",
-				"name": "Goblin",
+				"name": "goblin",
 				"desc": "A small green person with long ears, a pointy nose, and a grimacing visage.",
 				"aliases": [],
 				"plural": "goblins",
@@ -562,7 +562,6 @@
 				"mp": 0,
 				"money": 0,
 				"inv": [
-
 				],
 				"gear": {
 					"head":-1,

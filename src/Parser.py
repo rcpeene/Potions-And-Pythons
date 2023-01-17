@@ -352,6 +352,7 @@ def Imbue(command):
 			print("Error: Duration not number")
 			return
 
+
 	Core.player.addCondition(condname,duration)
 
 
