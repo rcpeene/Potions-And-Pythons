@@ -12,9 +12,6 @@ from time import sleep
 from random import randint, choice
 import os, sys, json
 
-import Items
-import Creatures
-import Effects
 import Data
 import Core
 
@@ -82,17 +79,17 @@ def default(jsonDict):
 		objClass = Core.strToClass(objClassname,["Core","Creatures","Items"])
 		if objClass == None:
 			raise Exception("Could not find class for world key:",objClassname)
-		objAttributes = list(jsonDict.values())
+		objAttributes = jsonDict
 		# print("========: " + jsonDict["name"] + " " + str(objAttributes))
 		if objClassname == "Room":
-			return Core.Room(*objAttributes)
+			return Core.Room(**objAttributes)
 		elif objClassname == "Empty":
-			return Empty()
+			return Core.Empty()
 		elif objClass != None:
-			if Core.hasMethod(objClass,"convertFromJSON"):
-				return objClass.convertFromJSON(jsonDict)
+			# if Core.hasMethod(objClass,"convertFromJSON"):
+			# 	return objClass.convertFromJSON(jsonDict)
 			try:
-				return objClass(*objAttributes)
+				return objClass(**objAttributes)
 			except TypeError as e:
 				raise TypeError(f"Failed to instantiate object: '{objClassname}' from JSON with attributes:\n",objAttributes,e)
 		else:
@@ -530,6 +527,7 @@ def dynamicBubbleAnimation(t,b,n):
 		growBubbles(logoArray)
 		# add a small delay for the final three bubbles for pizazz
 		if currentBubbles < 3:	sleep(t)
+		if currentBubbles == 1: sleep(t)
 		sleep(t)
 		printLogoArray(logoArray)
 		poppedBubbles = moveBubbles(logoArray)

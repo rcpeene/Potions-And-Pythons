@@ -70,6 +70,9 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
+# give default values to creature classes to save space in world file?
+# add dialect processor to chatterpool output?
+
 # restructure map and revise tests
 	# add magic beans or food to pour stuff on
 	# "drink from the fountain"

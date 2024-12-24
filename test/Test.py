@@ -85,4 +85,4 @@ if __name__ == "__main__":
 	testBasicItems()
 	testCombat()
 	testSpells()
-	print("\nAll test passed without error\n")
+	print("\nAll tests passed without error\n")

@@ -4,7 +4,8 @@
 
 # It consists of two main parts;
 # 1. Core functions			(used in Objects.py, Menu.py, and Parser.py)
-# 2. Core class definitions	(empty, game, room, item, creature, player, etc.)
+# 2. Dialogue Classes		(DialogueNode and DialogueTree)
+# 3. Core class definitions	(empty, game, room, item, creature, player, etc.)
 
 from time import sleep
 from random import randint,choice
@@ -205,7 +206,7 @@ def listObjects(objects):
 # used on room area conditions to extract the info of the condition it causses
 def extractConditionInfo(roomCondition):
 	if not roomCondition.startswith("AREA"):
-		raise Exception("extracting condition info from invalid area condition")
+		raise Exception("Extracting condition info from invalid area condition")
 	condInfo = roomCondition.split(" ")
 	name = ' '.join(condInfo[1:-1])
 	dur = int(condInfo[-1])
@@ -224,9 +225,9 @@ def yesno(question):
 
 
 # rolls n dice of range d, adds a modifier m, returns number
-def diceRoll(n,d,m):
+def diceRoll(n,d,m=0):
 	x = 0
-	for roll in range(n):
+	for _ in range(n):
 		x += randint(1,d)
 	x += m
 	return x
@@ -342,10 +343,172 @@ def ensureWorldIntegrity():
 
 			for connection in connectionsToDelete:
 				del passage.connections[connection]
+
+		for creature in room.creatures:
+			if isinstance(creature, Person):
+				creature.ensureDialogueIntegrity()
 	# this is done in a separate loop to prevent errors caused by...
 	# deleting elements from dict while iterating over the dict
 	for name in namesToDelete:
 		del world[name]
+
+
+
+######################
+## DIALOGUE CLASSES ##
+######################
+
+
+class DialogueNode():
+	def __init__(self,parent,node_json):
+		self.parent = parent
+		self.id = self.getID()
+		self.n_traversals = node_json.get('n_traversals',0)
+		self.rapport_level = node_json.get('rapport_level',None)
+		self.is_checkpoint = node_json.get('is_checkpoint',False)
+		self.remark = node_json.get('remark',None)
+		self.chatterpools = node_json.get('chatterpools',[])
+		self.conditions = node_json.get('conditions',[])
+		self.responses = node_json.get('responses',[])
+		self.children = [DialogueNode(self,child_json) for child_json in node_json.get('children',[])]
+
+		# ensure the number of child nodes matches the conditions or responses
+		if self.conditions:
+			if type(self.conditions) != list:
+				self.conditions = [self.conditions]
+			assert len(self.children) == len(self.conditions) + 1
+		elif self.responses:
+			if type(self.responses) != list:
+				self.responses = [self.responses]
+			assert len(self.children) == len(self.responses) + 1
+		else:
+			assert self.children == []
+
+		# ensure node doesn't have both a remark and a chatterpool
+		assert self.remark is None or self.chatterpools == []
+		# ensure node doesn't have both conditional cases and response cases
+		assert self.conditions == [] or self.responses == []
+
+
+	def getID(self):
+		for idx, child in enumerate(self.parent.children):
+			if self is child:
+				return self.parent.id + [idx]
+		else:
+			raise Exception("node not found in parent's children")
+
+
+	def ensureIntegrity(self,person,player,game,world):
+		for condition in self.conditions:
+			val = eval(condition)
+			if type(val) not in (int, bool):
+				raise Exception(f'Invalid case node condition')
+		for chatterpool in self.chatterpools:
+			getattr(Data,chatterpool)
+		for child in self.children:
+			child.ensureIntegrity(person,player,game,world)
+
+
+	def newEncounter(self):
+		self.n_traversals = 0
+		for child in self.children:
+			child.new_encounter(self)
+
+
+	def conditional(self,person,tree,player,game,world):
+		for i, case in enumerate(self.conditions):
+			# cases can either be boolean conditions or integers representing probability
+			val = eval(case)
+			if type(val) is int and diceRoll(1,100) <= val:
+				return self.childen[i]	
+			if type(val) is bool and val:
+				return self.childen[i]
+		else:
+			return self.children[-1]
+	
+
+	def takeResponse(self,person,tree,player,game,world):
+		for i, response in enumerate(self.responses):
+			print(f'{i+1}. {response}\n')
+
+		while True:
+			choice = input("\n> ").lower()
+			if choice == "":
+				continue
+			if choice in Data.cancels: 
+				return False
+
+			try:
+				return self.children[int(choice)-1]
+			except:
+				print('That is not one of the options. Input a number or type "cancel"')
+				continue
+
+
+	def traverse(self,person,tree,player,game,world):
+		if self.rapport_level and self.rapport_level != person.rap:
+			return None
+		self.n_traversals += 1
+		if self.is_checkpoint:
+			tree.checkpoint = self.id
+		if self.remark:
+			print(f'"{self.remark}"\n')
+		elif self.chatterpools:
+			all_pools = []
+			for chatterpool in self.chatterpools:
+				all_pools |= getattr(Data,chatterpool)
+			print(f'"{choice(all_pools)}"\n')
+		if self.conditions:
+			return self.conditional()
+		elif self.responses:
+			return self.takeResponse()
+		else:
+			return None		
+
+
+class DialogueTree():
+	def __init__(self,tree_json):
+		self.surprise = DialogueNode(self,tree_json['surprise'])
+		self.quest = DialogueNode(self,tree_json['quest'])
+		self.rapport = DialogueNode(self,tree_json['rapport'])
+		self.chatter = DialogueNode(self,tree_json['chatter'])
+		self.checkpoint = tree_json.get('checkpoint', None)
+		self.id = []
+		self.children = [self.surprise, self.quest, self.rapport, self.chatter]
+
+
+	def ensureIntegrity(self,person,player,game,world):
+		for child in self.children:
+			child.ensureIntegrity(person,player,game,world)
+
+
+	def traverseBranch(node):
+		had_dialogue = False
+		while node:
+			if node.remark or node.chatterpools:
+				had_dialogue = True
+			node = node.traverse(person,self,player,game,world)
+		return had_dialogue
+
+
+	def traverse(person,player,game,world):
+		for branch in self.children:
+			if self.traverseBranch(branch):
+				return True
+		return False
+
+
+	def findNode(self,node_id):
+		node = self.dialogue_tree
+		for idx in node_id:
+			node = node.children[idx]
+		return node
+
+
+	def newEncounter(self):
+		for node in self.children():
+			node.new_encounter()
+
 
 
 ############################
@@ -674,7 +837,7 @@ class Room():
 
 	def addAreaCondition(areacond):
 		cond,dur = extractConditionInfo(areacond)
-		key = lambda x: isinstance(x,Creatue)
+		key = lambda x: isinstance(x,Creature)
 		for creature in game.searchRoom(key=key):
 			creature.addCondition(cond,dur)
 
@@ -684,7 +847,7 @@ class Room():
 		# depending on how you want room conditions to work, perhaps remove this
 		if dur != -1:
 			return
-		key = lambda x: isinstance(x,Creatue)
+		key = lambda x: isinstance(x,Creature)
 		for creature in game.searchRoom(key=key):
 			creature.removeCondition(cond,-1)
 
@@ -1017,9 +1180,10 @@ class Item():
 # Creatures have 10 base stats, called traits
 # They also have abilities; stats which are derived from traits through formulas
 class Creature():
-	def __init__(self,name,desc,aliases,plural,traits,status,hp,mp,money,inv,gear):
+	def __init__(self,name,desc,aliases,plural,traits,status,hp,mp,money,inv,gear,descname=None):
 		self.name = name
-		self.descname = name
+		if descname is None:
+			self.descname = name
 		self.desc = desc
 		self.aliases = aliases
 		self.plural = plural
@@ -1119,10 +1283,10 @@ class Creature():
 		return d
 
 
-	# returns an instance of this class given a dict from a JSON file
-	@classmethod
-	def convertFromJSON(cls,d):
-		return cls(d["name"],d["desc"],d["aliases"],d["plural"],d["traits"],d["status"],d["hp"],d["mp"],d["money"],d["inv"],d["gear"])
+	# # returns an instance of this class given a dict from a JSON file
+	# @classmethod
+	# def convertFromJSON(cls,d):
+	# 	return cls(**d)
 
 
 
@@ -1342,11 +1506,11 @@ class Creature():
 
 	# these are creature stats that are determined dynamically with formulas
 	# these formulas are difficult to read, check design document for details
-	def ACCU(self): return 50 + 2*self.SKL + self.LCK + self.weapon.sleight
+	def ACCU(self): return 45 + 2*self.SKL + self.LCK + self.weapon.sleight
 	def ATCK(self): return diceRoll(self.STR, self.weapon.might, self.atkmod())
 	def ATHL(self): return self.STR + self.SKL + self.STM
 	def ATSP(self): return self.SPD - min0(self.handheldWeight()//4 - self.CON)
-	def BRDN(self): return self.CON * self.STR * 4 + 60
+	def BRDN(self): return self.CON * self.STR * 4 + self.FTH + 45
 	def CAST(self): return self.WIS + self.FTH + self.INT - min0(self.gearWeight()//4 - self.CON)
 	def CRIT(self): return self.SKL + self.LCK + self.weapon.sharpness
 	def CSSP(self): return self.WIS - min0(self.invWeight() - self.BRDN()) - min0(self.gearWeight()//4 - self.CON)
@@ -1464,6 +1628,16 @@ class Creature():
 		return self.weapon.weight + self.weapon2.weight + self.shield.weight + self.shield2.weight
 
 
+	def isNaked(self):
+		if self.gear['legs'] == None and self.gear['body'] == None:
+			return True
+
+
+	def isHolding(self, term):
+		if nameMatch(term, self.gear['left']) or nameMatch(term, self.gear['right']):
+			return True
+
+
 	def isBloodied(self):
 		# returns true is creature has less than half health
 		pass
@@ -1515,8 +1689,8 @@ class Creature():
 
 # the class representing the player, contains all player stats
 class Player(Creature):
-	def __init__(self,name,desc,traits,status,hp,mp,money,inv,gear,xp,rp,spells):
-		Creature.__init__(self,name,desc,"","",traits,status,hp,mp,money,inv,gear)
+	def __init__(self,name,desc,traits,status,hp,mp,money,inv,gear,xp,rp,spells,descname=None,aliases=None,plural=None):
+		Creature.__init__(self,name,desc,"","",traits,status,hp,mp,money,inv,gear,descname)
 		self.xp = xp
 		self.rp = rp
 		self.spells = spells
@@ -1525,9 +1699,9 @@ class Player(Creature):
 
 	### File I/O ###
 
-	@classmethod
-	def convertFromJSON(cls,d):
-		return cls(d["name"],d["desc"],d["traits"],d["status"],d["hp"],d["mp"],d["money"],d["inv"],d["gear"],d["xp"],d["rp"],d["spells"])
+	# @classmethod
+	# def convertFromJSON(cls,d):
+	# 	return cls(**d)
 
 
 
@@ -1657,8 +1831,8 @@ class Player(Creature):
 	def dualAttack(self,target):
 		print("\nDual Attack!")
 		hit = min1(maxm(99, self.ACCU() - target.EVSN()))
-		if diceRoll(1,100,0) <= hit:
-			crit = diceRoll(1,100,0) <= self.CRIT()
+		if diceRoll(1,100) <= hit:
+			crit = diceRoll(1,100) <= self.CRIT()
 			attack = self.ATCK()
 			if crit:
 				print("Critical hit!")
@@ -1680,8 +1854,8 @@ class Player(Creature):
 				print(f"\n{ordinal(i+1)} attack:")
 			# TODO: what about if weapon is ranged?
 			hit = min1(maxm(99, self.ACCU() - target.EVSN()))
-			if diceRoll(1,100,0) <= hit:
-				crit = diceRoll(1,100,0) <= self.CRIT()
+			if diceRoll(1,100) <= hit:
+				crit = diceRoll(1,100) <= self.CRIT()
 				attack = self.ATCK()
 				if crit:
 					print("Critical hit!")
@@ -1864,6 +2038,65 @@ class Player(Creature):
 ##########################
 ## SUBCLASS DEFINITIONS ##
 ##########################
+
+
+class Person(Creature):
+	def __init__(self,name,desc,traits,status,hp,mp,money,inv,gear,spells,love,fear,dialogue_tree,rap,lastEncounter=None,checkpoint_id=None):
+		Creature.__init__(self,name,desc,"","",traits,status,hp,mp,money,inv,gear)
+		self.spells = spells
+		self.love = love
+		self.fear = fear
+		self.dialogue_tree = DialogueTree(dialogue_tree)
+		self.rap = rap
+		self.lastEncounter = lastEncounter
+		if checkpoint_id != None:
+			self.find_node(checkpoint_id)
+
+
+	### File I/O ###
+
+	@classmethod
+	def convertFromJSON(cls,d):
+		return cls(**d)
+
+
+	def convertToJSON(self):
+		d = self.__dict__.copy()
+		d["checkpoint_id"] = self.checkpoint.get_id()
+		d = {"__class__":self.__class__.__name__, **d}
+		return d
+
+
+	### Operation ###
+
+	def act(self):
+		pass
+
+	
+	def firstImpression(self):
+		# adjust love, fear, and rep from person baselines
+		pass
+
+
+	def appraise(self,player,game):
+		if self.rap == 0:
+			self.firstImpression()
+		elif game.time - lastEncounter > 100:
+			self.checkpoint = None
+			self.new_encounter()
+		lastEncounter = game.time
+
+		# adjust love, fear and rep here also?
+
+		self.appraisal = set()
+		if player.isNaked():
+			self.appraisal.add("naked")
+		
+		
+	def dialogue(self,player,game,world):
+		self.appraise(player,game)
+		if not self.dialogue_tree.traverse(self,player,game,world):
+			print(f"{self.name} says nothing...")
 
 
 class Animal(Creature):
@@ -2179,8 +2412,8 @@ class Monster(Creature):
 				print(f"\n{ordinal(i+1)} attack:")
 			# TODO: what about if weapon is ranged?
 			hit = min1(maxm(99, self.ACCU() - target.EVSN()))
-			if diceRoll(1,100,0) <= hit:
-				crit = diceRoll(1,100,0) <= self.CRIT()
+			if diceRoll(1,100) <= hit:
+				crit = diceRoll(1,100) <= self.CRIT()
 				attack = self.ATCK()
 				if crit:
 					print("Critical hit!")
@@ -2232,10 +2465,6 @@ class Monster(Creature):
 
 
 
-
-class Person(Creature):
-	def act(self):
-		pass
 
 
 
