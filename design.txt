@@ -822,27 +822,41 @@ Norman's sword
 Norman's shield
 Norman's etc.
 
-holy water
-the magic map
-Camphor Staff (or sm othr tree idk) Gingko Staff? etc,
-willow staff, banyan, aspen, birch, baobab, elm, sycamore, oak, pine, cyprus
-Pantalon
-Step Reckoner
-(Magic?) Umbrella
-Shrunken heads
-dunce hat
-Magic Teapot (or just a normal teapot idk)
-Cloak of Bees
+WEAPONS:
 Estoc
+other boomerangs
 The Master Boomerang - (always comes back no matter what u do with it)
+blade of healing (useless mostly)
 Raygun (that deals E damage)
 Paragon Blade
-Nebula Shroud/Cloak
 Durendal
 Caliburn
 Tyrfing (Cursed)
 Shamshir (Poisonous)
 Carnwennan (Shadow Dagger)
+Sword with the same name as a princess (sounds like Eilonwy maybe)
+
+
+GEAR:
+Cloak of Bees
+Nebula Shroud/Cloak
+
+
+MAGIC ITEMS:
+Camphor Staff (or sm othr tree idk) Gingko Staff? etc,
+willow staff, banyan, aspen, birch, baobab, elm, sycamore, oak, pine, cyprus
+the magic map
+(Magic?) Umbrella
+Magic Teapot (or just a normal teapot idk)
+Astra - from hindu myth, divine projectiles
+
+
+MISC EQUIPMENT:
+Evil eye - wards off spirits
+Pantalon
+Step Reckoner
+Shrunken heads
+dunce hat
 
 
 Sci-fi set
@@ -903,12 +917,15 @@ alcohol - same effects as fruit, but adds drunkeness
 water - raises hp and mp by 2
 
 Potions are bottled items that have different effects. Types of potions are:
-Red, Orange, Yellow, Green, Blue, Purple
-Pale Red, Pale Orange, Pale Yellow, Pale Green, Pale Blue, Pale Purple
-Dark Red, Dark Orange, Dark Yellow, Dark Green, Dark Blue, Dark Purple
-Bright Red, Bright Orange, Bright Yellow, Bright Green, Bright Blue, Bright Purple
-Clear, Pink, Brown, Black, Grey, White
+Red, Pink (deadly), Burgundy, Scarlet
+Orange, Rusty, Tawny, Amber,
+Yellow, Flaxen, Ochre, Citrine,
+Green, Viridian, Mossy, Chartreuse
+Blue, Azure, Teal, Cyan
+Purple, Lavender, Indigo, Violet
+Clear, Brown, Black (explodes), Grey, White
 Bronze (defense), Silver (speed), Gold (atk/dmg/crit)
+
 
 Fruits:
 
@@ -916,43 +933,43 @@ Apple - reduces disease conditions (special apple for special diseases?)
 Banana
 Blueberry
 Blackberry
-Cherry
+Breadfruit
 
+Cherry
 Coconut
 Cowberry
 Cranberry
 Currant (Black) - physical resistance
-Currant (Red) - elemental resistance
 
+Currant (Red) - elemental resistance
 Currant (White) - magical resistance
 Dragonfruit - firebreath? fly? fire resistance?
 Durian - bonus to endurance or wpn durability?
 Elderberry
-Fig
 
+Fig
 Ghostberry - ghost effects? gaseous form? cold resistance (as snowberry)?
 Gojiberry - something awesome, remove all bad conditions?
 Goldenberry - double money gained?
 Gooseberry - bonus to luck?
-Grape
 
+Grape
 Grapefruit - temporarily raises MXMP
 Guava
 Huckleberry
 Juniperberry
-Kiwi
 
+Kiwi
 Kumquat - something with mp
 Lemon - improved spells
 Lime - improved spells some other way
 Loquat
-Lychee
 
+Lychee
 Mango
 Mulberry - immune to bleed?
 Muskmelon - immune to poison
 Olive
-Orange - double regen of MP
 
 Passionfruit - bonus to social interaction (love stat)
 Peach
@@ -970,7 +987,26 @@ Raspberry
 Seaberry - water breathing
 Starfruit
 Strawberry
+Tangerine - double regen of MP
+
 Watermelon - water walking?
+
+
+MISC ITEM IDEAS:
+holy water
+molasses
+ambergris
+herb of immortality (makes potion, can be smoked? made into quintessence?)
+strange milk - makes you high, made from cows fed certain mushrooms
+mushrooms - glowing ones too
+Poisonwood
+Wormwood
+Catgut
+star jelly
+alembic
+lodestone
+wooden spoon
+crocs - made from crocodile
 
 
 
@@ -984,6 +1020,7 @@ so these dungeons are generally just clusters of room nodes in the world graph t
 -regular forest (starting location)
 -the gallery
 -hinterlands
+-stim dungeon?
 -mobile massive wizard school (with portal entrances around the world)
 -a buried giant (inside of which is a dungeon? rooms like "giant foot")
 -haunted manor, abandoned manor on a hill thats v spooky
@@ -1010,8 +1047,24 @@ several settlements exist in the world (aim for like at least 9)
 - Bellfort
 - Dandelot
 
+thirteen historical cities
+phillopolos (feldiv/pilov) - still exists
+jericho (ariha) - still exists, has an ancient tree 
+catalhoyuk (kadala) - razed by first empire
+jerusalem (shalem) - disappeared into a crater (became a floating city)
+knossos (nessos) - sank
+uruk (orca) - nuked (engulfed by dragon, maybe orcs are from here in irradiated place)
+nineveh (ninava) - desertified by demons
+babylon (babilim) - still exists as a village, dismantled in civil war brick by brick
+luoyang - unknown
+xian - unknown
+cahokia - unknown
+norte chico - unknown
+chichen itza - unknown
 
 additional place ideas
+-apple forest (early quest setting)
+-seawall
 -colonnade
 -amphitheatre
 -pavilion
@@ -1030,6 +1083,9 @@ additional place ideas
 
 
 misc world ideas
+- the world underwent a 'cataclysm' and then a 'salvation'
+-giant eternal clock
+-a story legend of a hero who masters magic in an underground empire, called "ZORK"
 -monolith
 -magic nail
 -gnomes
@@ -1037,7 +1093,6 @@ misc world ideas
 -wicklewort trees
 -something called "The Wizard's Fee"
 -Eternal Stew
--a pink potion being deadly
 -bonefire
 -a deal with a demon (with consequences)
 -label that reads "FOR SCIENTIFIC USE ONLY"
@@ -1047,12 +1102,19 @@ misc world ideas
 -pandora box "banishment box" which unleashes all creatures the player has ever banished with the banish spell
 -limericks/poems/poem book?
 -the mist
+-a jar that is REALLY hard to open
+-bottomless pit
+-the four humors
+-"sphinx of black quartz, judge my vow"
+-"if you see a fox in the forest, don't follow it"
 
 
 QUEST IDEAS:
 
 - golden bug quest (collect 50 hidden bugs throughout the world) [reward??]
-- one quest for each god's temple, and the player gets rewarded with a QP for it.
+- one quest for each god's temple, and the player gets rewarded with a QP for it and a word from the god.
+- bone faeries which will give you money for bones
+- fighting bones malone and the spooky boys
 
 
 CHARACTER NAMES:
@@ -1092,6 +1154,10 @@ CHARACTER NAMES:
 	Beowin
 	Rook
 
+	Yernagate the wise giant
+	Galigantus the giant
+	Archons (regional rulers?)
+	The Benevolent Frog King (looking for his son the frog prince?)
 	a cobbler
 	one bbeg is the world serpent called Aeormungand (Leviathan?)
 	another bbg (Behemoth)
@@ -1110,7 +1176,15 @@ lemmings
 stork babies
 messenger demons
 argentavis (big bird)
-
+fey - a class of intelligent creatures
+goblins - intelligent small green bipedal creatures
+orcs - disturbing creatures that resemble large mutant humans
+dragons - large majestic serpentine winged creatrues
+Vodyanoys and Vodyantsar (where the 'kappa horn' item would be)
+slime skeletons
+slime armor monster
+snark
+wumpus
 
 
 
@@ -1197,27 +1271,27 @@ Goblinmite, Brainworm, Orc Beetle, Mimicbug, Waterbear
 
 
 
-SPELL NAME IDEAS:
-Amphibify, Anathema, Armistice, Asterism, Avulsion
+SPELL IDEAS:
+Abjure, Aliment, Amphibify, Anathema, Armistice, Aspersion, Asterism, Avulsion
 Bamboozle, Bang, Banquet, Beacon, Bellow, Bolster, Boogaloo, Boom, Busk
-Cacophony, Catharsis, Chutzpah, Clemency, Collapse
+Cacophony, Catharsis, Chutzpah, Clemency, Collapse, Conjure
 Delirium, Deluge, Dessicate, Discord
-Effervesce, Eidolon, Ennervation, Enthrall, Expectorate, Expell
-Facade, Facsimile, Feast, Fib, Fizz, Flare, Frostbite
+Effervesce, Eidolon, Enchant, Ennervation, Enthrall, Expectorate, Expell
+Facade, Facsimile, Feast, Festoon, Fib, Fizz, Flare, Frostbite
 Galvanize, Gambit, Glower, Goad, Gorgonize, Gravitas
-Halo, Haste, Harmony, Hex, Hypnosis
+Halo, Harmony, Haste, Haunt, Hex, Hypnosis
 Immolate, Invigorate, Invisibility, Iridescence
-Jamboree, Jargon, Judgement
-Lash, Lethargy, Levitate, Lignify, Limerence, Lure
+Jackpot, Jamboree, Jargon, Jeopardy, Judgement
+Lampoon, Lash, Lethargy, Levitate, Lignify, Limerence, Lure
 Maelstrom, Malaise, Manumit, Melancholy, Micturate, Mirage, Moonshot
 Nyctophobia
-Parley, Paroxysm, Penumbra, Petrify, Phantasm, Pilfer, Ponder, Prescience, Psychosis, Putrefaction
-Refection, Rend, Repast, Revelry
+Parley, Paroxysm, Parry, Penumbra, Petrify, Phantasm, Pilfer, Ponder, Prescience, Psychosis, Putrefaction
+Refection, Rend, Repast, Revelry, Riposte
 Sanctuary, Scry, Serein, Shivaree, Simulacrum, Smite, Spangle, Squib, Sunder, Synpase
 Telekinesis, Tempest, Tether, Torrent
 Usurp
 Vamoose, Vendetta, Volley
-Wallop, Weal, Woe
+Wallop, Weal, Wode, Woe
 Zeitgeist, Zephyr
 
 
@@ -1262,3 +1336,21 @@ DIALOGUE IDEAS:
 - some people will ask you to do something for them
 - some people will say tales and tidbits
 - some will ask you to give them stuff
+
+- TALK TO ANIMALS:
+	- there will be a spell to talk to animal (maybe called beastspeak)
+	- octopi will speak to you in an undecipherable text (maybe jumbled letters or other symbols)
+	- horses will be bold cowboy-like talk
+	- goats will be rude
+	- sheep may be all similar
+	- cows will be apathetic
+	- pigs will be italian or mafiosos? they are smart
+	- chickens will crack chicken jokes and dad jokes
+	- dogs and cats will be helpful. Dogs will say positive things. cats will give you human gossip
+	- there will be a zoo with some animals
+	- not sure about deer, squirrels, rats
+	- wolves, lions, and bears will be austere but intelligent. they will want to trade
+	- birds will only speak in performative language; songs, poems (maybe lore/hints), jokes. maybe eagles will say haikus
+	- reptiles will use cryptic speech with old grammar and simple ideas
+	- fish will say glub glub or say simple words
+	- bugs will just make weird sounds
