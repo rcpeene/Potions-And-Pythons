@@ -74,7 +74,7 @@ class Box(Core.Item):
 
 	def Break(self):
 		if self.durability == -1:
-			if not game.silent:
+			if not Core.game.silent:
 				print(f"The {self.name} cannot be broken.")
 			return False
 		print(f"The {self.name} breaks.")
@@ -110,6 +110,10 @@ class Box(Core.Item):
 		for i in self.items:
 			w += i.Weight()
 		return w
+
+	
+	def contents(self):
+		return self.items
 
 
 	def itemNames(self):
@@ -405,7 +409,7 @@ class Table(Core.Item):
 
 	def Break(self):
 		if self.durability == -1:
-			if not game.silent:
+			if not Core.game.silent:
 				print(f"The {self.name} cannot be broken.")
 			return False
 		print(f"The {self.name} breaks.")
@@ -459,6 +463,9 @@ class Table(Core.Item):
 	def itemNames(self):
 		return [item.name for item in self.items]
 
+
+	def contents(self):
+		return self.items
 
 
 

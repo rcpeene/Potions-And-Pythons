@@ -156,7 +156,7 @@ def replacePronoun(term):
 # namely, it returns a list of words without capitals, symbols, or articles
 # the last step, nounify(), joins words that may only be meaningful as one term
 def processCmd(prompt,storeRawCmd=False):
-	rawcommand = input("\n" + prompt + "\n> ")
+	rawcommand = input(prompt + "\n> ")
 	# take input until input has any non-whitespace characters in it
 	while not any(i not in "\t " for i in rawcommand):
 		rawcommand = input("> ")
@@ -290,6 +290,17 @@ def parse(n=0):
 ## CHEATCODES AND DEV COMMAND FUNCTIONS ##
 ##########################################
 
+def Evaluate(command):
+	if len(command) < 2:
+		print("Error: No code given")
+		return
+	code = " ".join(command[1:])
+	try:
+		print(eval(code))
+	except Exception as e:
+		print("Error: Code was unable to be executed.")
+		print(e)
+
 
 def Execute(command):
 	if len(command) < 2:
@@ -299,7 +310,7 @@ def Execute(command):
 	try:
 		exec(code)
 	except Exception as e:
-		print("Error: Code was unable to be executed:")
+		print("Error: Code was unable to be executed.")
 		print(e)
 
 
@@ -1312,7 +1323,7 @@ def Put(dobj,iobj,prep):
 		if not Core.yesno(q):
 			return False
 
-	if not Core.hasMethod(I,"addItem"):
+	if not Core.hasMethod(R,"addItem"):
 		print(f"You can't put the {I.name} {prep} the {R.name}.")
 		return False
 
@@ -1401,7 +1412,26 @@ def Swim(dobj,iobj,prep):
 
 
 def Talk(dobj,iobj,prep):
-	print("talking")
+	if prep not in {"at","into","to","toward","with",None}:
+		print("Command not understood.")
+		return False
+
+	if dobj == None: dobj = iobj
+	if dobj == None:
+		dobj = getNoun("Who do you want to talk to?")
+		if dobj in Data.cancels: return False
+
+	target = findObjFromTerm(dobj,False,True)
+	if target == None: 
+		return False
+	Core.game.setPronouns(target)
+
+	if not hasattr(target,'Talk'):
+		print(f"There is no response...")
+		return False
+
+	target.Talk(Core.player,Core.game,Core.world)
+	return True
 
 
 def Throw(dobj,iobj,prep):
@@ -1559,6 +1589,7 @@ def Wave(dobj,iobj,prep):
 
 
 cheatcodes = {
+	"\\evl":Evaluate,
 	"\\exe":Execute,
 	"\\get":Get,
 	"\\lrn":Learn,
@@ -1748,3 +1779,88 @@ actions = {
 "wave":Wave,
 "wear":Don
 }
+
+
+# headbutt
+# poke
+# think
+# show/reveal
+# write
+# remove clothing/strip
+# draw/sheath/stow
+# bow
+# slap
+# sit
+# vomit?
+# sniff
+# grunt/moan/groan/roar/rawr/argh/snarl
+# squirm -> struggle
+# dive/jump
+# untie
+# whip (attack)
+# dress/undress/strip
+# spit
+# converse/communicate/discuss
+# sprint/run
+# flick?
+# insert (key) -> unlock
+# lift -> carry
+# mix/stir -> brew?
+# greet -> wave or talk?
+# scratch/itch
+# leap -> jump
+# knock/bang
+# switch
+# smoke
+# weave/sew
+# evade -> dodge
+# stare/gaze -> look
+# fart, burp
+# pick -> a lock or a berry
+# kiss/smooch
+# shake?
+# browse/peruse -> look
+# pilfer -> steal
+# swing (an item)
+# ligma/sugma
+# buy/pay/purchase, sell?
+# embrace/hug
+# stab/slash
+# shave?
+# swallow
+# fly/float/hover? (rename the spell)
+# pierce
+# hump -> fuck
+# curse/swear
+# squat - > crouch
+# pee/poop (soil your pants if they have them on)
+# caress -> pet
+# choke/strangle
+# paint/draw
+# carve/whittle
+# chase -> follow?
+# drive -> ride
+# feed (food) -> give
+# scale -> climb
+# water -> pour on
+# dig, bury
+# rip, tear -> break
+# reload?
+# reel -> fish?
+# cook/brew
+# sweep? wipe?
+# lay -> lay? (make own command?)
+# chop -> slash -> atk
+# chew -> eat
+# strike -> ignite/hit
+# lift -> carry
+# kneel -> crouch
+# lasso
+# ask/inquire -> talk
+# snuff/put out/blow out
+# investigate -> examine -> look??
+# sit
+# stand
+# backflip??
+# row/steer (if not mounted -> ride, else -> go)
+# stop, get off, dismount

@@ -1,5 +1,5 @@
 # Effects.py
-# This file contaisn all the functions which represent some "effect" in the game
+# This file contains all the functions which represent some "effect" in the game
 # This file is dependent on Menu.py and is a dependency of PoPy.py
 
 import Core
@@ -40,6 +40,17 @@ def destroyObject(obj):
 		parent.removeItem(obj)
 	if not Core.game.silent:
 		print(f"{obj.stringName(definite=True,cap=True,c=1)} was destroyed.")
+
+
+def increment(obj,attribute,num):
+    if hasattr(obj, attribute):
+        current_value = getattr(obj, attribute)
+        if isinstance(current_value, int):
+            setattr(obj, attribute, current_value + increment)
+        else:
+            raise TypeError(f"The attribute '{attribute}' is not an integer.")
+    else:
+        raise AttributeError(f"The object has no attribute '{attribute}'.")
 
 
 

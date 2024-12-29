@@ -246,7 +246,7 @@
 						"__class__": "Food",
 						"name": "bread roll",
 						"desc": "A stale wheat roll of baked bread. Very Dry!",
-						"aliases": ["bread","roll","biscuit"],
+						"aliases": ["bread","breadroll","roll","biscuit"],
 						"plural": "bread rolls",
 						"weight": 1,
 						"durability": 2,
@@ -279,7 +279,29 @@
 				"status": []
 			}
 		],
-		"creatures": [],
+		"creatures": [
+			{
+				"__class__": "Monster",
+				"name": "goblin",
+				"desc": "A small green person with long ears, a pointy nose, and a grimacing visage.",
+				"aliases": [],
+				"plural": "goblins",
+				"traits": [2,2,2,2,2,2,2,2,2,2],
+				"status": [],
+				"hp": 10,
+				"mp": 0,
+				"money": 0,
+				"inv": [
+				],
+				"gear": {
+					"head":-1,
+					"body":-1,
+					"left":-1,
+					"right":-1,
+					"legs":-1
+				}
+			}
+		],
 		"status": []
 	},
 	"cabin privy": {
@@ -551,24 +573,74 @@
 		"items": [],
 		"creatures": [
 			{
-				"__class__": "Monster",
-				"name": "goblin",
-				"desc": "A small green person with long ears, a pointy nose, and a grimacing visage.",
-				"aliases": [],
-				"plural": "goblins",
-				"traits": [2,2,2,2,2,2,2,2,2,2],
+				"__class__": "Person",
+				"name": "Dale",
+				"descname": "plain man",
+				"traits": [1,1,1,1,1,1,1,1,1,1],
 				"status": [],
 				"hp": 10,
 				"mp": 0,
-				"money": 0,
-				"inv": [
-				],
+				"money": 10,
+				"inv": [],
 				"gear": {
 					"head":-1,
 					"body":-1,
 					"left":-1,
 					"right":-1,
 					"legs":-1
+				},
+				"dlogtree":{
+					"surprise":{
+						"cases": "'naked' in speaker.appraisal",
+						"children": [{"remark": "Gollee! Put some clothes on!"}, {}]
+					},
+					"quest": {},
+					"rapport": {
+						"visitLimit": 1,
+						"children": [
+							{
+								"rapportLevel": 0,
+								"is_checkpoint": true,
+								"remark": "Howdy! We don't see many folks around here. I'm Dale",
+								"cases": [25,50],
+								"children": [
+									{
+										"remark": "You look like a fancy fella."
+									},
+									{
+										"remark": "You look like a nice fella."
+									},
+									{
+										"remark": "You look like a mean fella."
+									}
+								]
+							},
+							{
+								"rapportLevel": 1,
+								"is_checkpoint": true,
+								"remark": "So you've come back around?",
+								"responses": ["Aye.","What's it to you?","I love you..."],
+								"children": [
+									{
+										"remark": "Alrighty then."
+									},
+									{
+										"remark": "Nuthin"
+									},
+									{
+										"remark": "Good golly... I'm not sure what to say..."
+									}
+								]
+							},
+							{
+								"rapportLevel": 2,
+								"remark": "Again?"
+							}
+						]
+					},
+					"chatter": {
+						"trites": "basic_chatter"
+					}
 				}
 			}
 		],

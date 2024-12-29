@@ -13,7 +13,7 @@ import Parser
 
 def main(skipIntro=False):
 	# formatting the prompt window
-	os.system("mode con:cols=130 lines=32")
+	os.system("mode con: lines=9999")
 	os.system("title Potions ^& Pythons")
 
 	# run intro logo animation
@@ -69,9 +69,30 @@ if __name__ == "__main__":
 ################################################################################
 
 # CURRENT TASKS
+	
+# replace Empty object? with none
 
-# give default values to creature classes to save space in world file?
-# add dialect processor to chatterpool output?
+# fix this:
+# What will you do?
+# > open the chest
+# You open the wooden chest.
+# Inside there is a rusty key.
+# What will you do?
+# > take the key
+# There is no 'key' here.
+
+# add "you're already there" when trying to go to current room
+# improve 'go' with 'go to tunnel' for instance (filter out prepositions basically)
+# add 'forward(s), ahead' to 'go' command
+# add dialect processor to tritepool output?
+
+# add print which writes text letter by letter
+
+# add basic time cycling, and clock items which tell you the hour
+# add astronomical events based on the time cycling
+
+# add basic equipment and clothing items
+# fix/add Creature.isNaked or Player.isNaked
 
 # restructure map and revise tests
 	# add magic beans or food to pour stuff on
@@ -83,21 +104,6 @@ if __name__ == "__main__":
 	# how will amulet effects work??
 	# add spells functions and fill in spells dict
 	# added spell/effects tests
-
-
-# FLESH OUT MORE VERBS (and add items to go with them)
-# add "insert the key into the lock"
-	# implement escape
-	# add a wait command (cant wait with enemies nearby, cuz they could just kill you)
-	# add in armor and shields and protection and test them
-	# add range and ranged weapons???
-	# add new weapons
-	# more switches, levers, buttons
-	# add douse function
-	# add carry/put down (HOW IS THIS GONNA WORK? does it equip the creature? while they are restraining is the player unable to do anything else?)
-	# try "pick him up"
-	# add Steal
-	# determine what can be hid behind
 
 # add resilient error handling, for file I/O, maybe in action loop
 
@@ -115,6 +121,21 @@ if __name__ == "__main__":
 # add possession? (so you can say 'break goblin's sword', 'take his food')... these could be easily restructured as "break sword from goblin", "take food from him"
 
 # sift through TODOs
+
+# FLESH OUT MORE VERBS (and add items to go with them)
+# add "insert the key into the lock"
+	# implement escape
+	# add a wait command (cant wait with enemies nearby, cuz they could just kill you)
+	# add in armor and shields and protection and test them
+	# add range and ranged weapons???
+	# add new weapons
+	# more switches, levers, buttons
+	# add douse function
+	# add carry/put down (HOW IS THIS GONNA WORK? does it equip the creature? while they are restraining is the player unable to do anything else?)
+	# try "pick him up"
+	# add Steal
+	# determine what can be hid behind
+
 
 ################################################################################
 
