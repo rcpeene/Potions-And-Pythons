@@ -10,7 +10,7 @@
 
 from time import sleep
 from random import randint, choice
-import os, sys, json
+import os, json
 
 import Data
 import Core
@@ -215,7 +215,7 @@ def loadGame(filename):
 	# 	return False
 
 	os.chdir("../..")
-	Core.ellipsis(3)
+	# Core.ellipsis(3)
 	Core.flushInput()
 	Core.clearScreen()
 	return True
@@ -296,7 +296,7 @@ def createCharacter():
 	desc = input("Describe yourself.\n> ")
 	while len(desc) == 0:
 		desc = input("> ")
-	return Core.Player(name,desc,[1]*10,[],1,1,0,[],Data.initgear,0,0,[])
+	return Core.Player(name,desc,[1]*10,1,1,0,[],Data.initgear,0,0)
 
 
 # starts a new game and returns player, world, and game objects
@@ -307,7 +307,7 @@ def newGame():
 	Core.player = createCharacter()
 	# initializes the game at the "cave" room
 	Core.game = Core.Game(0,Core.world["cave"],Core.world["cave"],0,{})
-	Core.ellipsis(3)
+	# Core.ellipsis(3)
 	# enter the starting room
 	sleep(0.5)
 	Core.clearScreen()
@@ -321,8 +321,7 @@ def testGame():
 	inv = [Core.Compass("compass","a plain steel compass with a red arrow",[],"compasses",2,10,[])]
 	status = [["fireproof",-1], ["poisoned",5], ["cursed",-2], ["immortal",-1],
 	["sharpshooter",50], ["invisible",15], ["poisoned",-1], ["flying",5]]
-
-	Core.player = Core.Player("Norman","a hero",[4]*10,status,24,24,1000,inv,Data.initgear,1585,100,[])
+	Core.player = Core.Player("Norman","a hero",[4]*10,24,24,1000,inv,Data.initgear,1585,100,[],[])
 	Core.game = Core.Game(0,Core.world["cave"],Core.world["tunnel"],0,{})
 
 	Core.clearScreen()

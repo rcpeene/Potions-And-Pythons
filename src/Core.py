@@ -8,7 +8,7 @@
 # 3. Core class definitions	(empty, game, room, item, creature, player, etc.)
 
 from time import sleep
-from random import randint,choice
+from random import randint,sample
 from math import floor, log10
 from bisect import insort
 import sys, os
@@ -83,13 +83,32 @@ def flushInput():
 			pass
 
 
-# checks for any keyboard input
+# checks for any keyboard input in buffer
 def kbInput():
 	try:
 		dr,dw,de = select.select([sys.stdin], [], [], 0.00001)
 		return dr != []
 	except:
 		return msvcrt.kbhit()
+
+
+# waits for any keyboard input
+def waitKbInput(text):
+	print(text)
+	if os.name == 'nt':  # For Windows
+		import msvcrt
+		msvcrt.getch()
+	else:  # For Unix-based systems
+		import termios
+		import tty
+		fd = sys.stdin.fileno()
+		old_settings = termios.tcgetattr(fd)
+		try:
+			tty.setraw(fd)
+			sys.stdin.read(1)  # Wait for a single keypress
+		finally:
+			termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+	print()
 
 
 # prints a timed ellipsis, used for dramatic transitions
@@ -250,11 +269,11 @@ def maxm(m,n): return m if n > m else n
 
 
 
-# the room, creatures, and some items can contain items within themselves...
-# thus all objects within a room can be thought of as a tree...
+# the room, creatures, and some items can contain items within themselves
+# thus all objects within a room can be thought of as a tree
 # where each node is an item or creature, and the root is the room
 # the player object can also be thought of this way where the player is the root
-# this function recursively searches the tree of objects for an object...
+# this function recursively searches the tree of objects for an object
 # whose name matches the given term, (not case sensitive)
 # the object tree might look as follows:
 
@@ -269,9 +288,9 @@ def maxm(m,n): return m if n > m else n
 # d is the 'degree' of the search; how thorough it is'
 # if d is 3: searches through all objects from the root
 # elif d is 2: searches through all objects which are not locked
-# elif d is 1: searches through objects which are not locked and not in...
+# elif d is 1: searches through objects which are not locked and not in
 # creature inventories; i.e. objects which are "accessible" to the player
-# if d is 0: searches through items which are not "closed" and not in...
+# if d is 0: searches through items which are not "closed" and not in
 # creature inventories; i.e. objects which are "visible" to the player
 
 # this function is a wrapper for objSearchRecur()
@@ -281,14 +300,11 @@ def objSearch(root,key=lambda obj:True,d=0):
 
 
 def objSearchRecur(node,matches,key,d):
-	# choose list of objects to search through depending on the node's type
-	if isinstance(node,Room): searchThrough = node.contents()
-	elif hasattr(node,"items"): searchThrough = node.items
-	elif hasattr(node,"inv"): searchThrough = node.inv
 	# if node is unsearchable: return
-	else: return matches
+	if not hasattr(node, 'contents'):
+		return matches
 
-	for obj in searchThrough:
+	for obj in node.contents():
 		# check if obj is a match
 		if key(obj): matches.append(obj)
 		# depending on the degree, may skip closed, locked, or creature objects
@@ -298,6 +314,14 @@ def objSearchRecur(node,matches,key,d):
 		# recur the search on each object's subtree
 		matches = objSearchRecur(obj,matches,key,d)
 	return matches
+
+
+# iterates through each object in the object tree of each room and assigns...
+# its 'parent' attribute to the object it is contained in
+def assignParents():
+	for room in world.values():
+		assignParentsRecur(room)
+	assignParentsRecur(player)
 
 
 # helper function for assignParents()
@@ -312,14 +336,6 @@ def assignParentsRecur(root):
 	for obj in searchThrough:
 		obj.parent = root
 		assignParentsRecur(obj)
-
-
-# iterates through each object in the object tree of each room and assigns...
-# its 'parent' attribute to the object it is contained in
-def assignParents():
-	for room in world.values():
-		assignParentsRecur(room)
-	assignParentsRecur(player)
 
 
 # takes a dict of room names and room objects,
@@ -344,9 +360,9 @@ def ensureWorldIntegrity():
 			for connection in connectionsToDelete:
 				del passage.connections[connection]
 
-		for creature in room.creatures:
-			if isinstance(creature, Person):
-				creature.ensureDialogueIntegrity()
+		for creature in objSearch(room, d=3, key=lambda x: isinstance(x,Person)):
+			creature.dlogtree.ensureIntegrity(creature,player,game,world)
+
 	# this is done in a separate loop to prevent errors caused by...
 	# deleting elements from dict while iterating over the dict
 	for name in namesToDelete:
@@ -359,37 +375,95 @@ def ensureWorldIntegrity():
 ######################
 
 
-class DialogueNode():
-	def __init__(self,parent,node_json):
-		self.parent = parent
-		self.id = self.getID()
-		self.n_traversals = node_json.get('n_traversals',0)
-		self.rapport_level = node_json.get('rapport_level',None)
-		self.is_checkpoint = node_json.get('is_checkpoint',False)
-		self.remark = node_json.get('remark',None)
-		self.chatterpools = node_json.get('chatterpools',[])
-		self.conditions = node_json.get('conditions',[])
-		self.responses = node_json.get('responses',[])
-		self.children = [DialogueNode(self,child_json) for child_json in node_json.get('children',[])]
+# in order for characters to produce unique and variable dialogue with minimal repetition
+# and apparent intelligence, the dialogue is stored as a directed tree
 
-		# ensure the number of child nodes matches the conditions or responses
-		if self.conditions:
-			if type(self.conditions) != list:
-				self.conditions = [self.conditions]
-			assert len(self.children) == len(self.conditions) + 1
+# in addition to having children, each node in the tree may have a few important parameters;
+# a node may contain either a remark or a list of 'trites' from which to generate dialogue
+# - a remark is a simple line of output dialogue. A trite is the name of a 'triteset'
+# - tritesets are sets of predetermined remarks, which can be sampled by many characters
+# the node may also contain either a 'cases' list or a 'responses' list
+# - cases is a list of boolean expressions which can reference the character, player, game, or world objects
+# - instead of a boolean expression, a case may be an integer, representing a random probability
+# - responses is a list of potential dialogue responses that the user may choose during the dialogue
+# the child that is visited next can depend on the value of the corresponding case or the user-selected response
+
+# there are four branches from the root; surprise, quest, rapport, and chatter
+# the tree will try to traverse each branch in order until one produces dialogue output
+# 1. surprise is for dialogue which a character would prioritize before any other possibilities
+# 2. quest is for dialogue which indicates tasks for the player
+# 3. rapport is for more casual dialogue that is meant to give the character depth or individuality
+# 4. chatter is for when all other dialogue is exhausted, it is randomly sampled from specified tritesets 
+
+# a few additional features of dialogue trees:
+# to give the characters the appearance of short term memory, the tree maintains its state until a new 'parley'
+# a new parley occurs after a set period of time since the previous dialogue
+# it can store a node 'checkpoint' in case the user leaves and reenters the dialogue
+# nodes may have a 'visitLimit', to ensure dialogue is not repeated in one parley
+# nodes may have a 'rapportLevel' which requires the character has a certain 'rap' value to be visited
+# the characters's rap value is incremented as the user engages in more dialogue
+# rap is meant to give the dialogue a progression throughout the game
+# reaching certain nodes can modify the character's love and fear for the player
+
+
+class DialogueNode():
+	def __init__(self,parent,root,nVisits=0,visitLimit=None,rapportLevel=None,is_checkpoint=False,loveBonus=0,fearBonus=0,remark=None,trites=[],cases=[],responses=[],children=[]):
+		self.parent = parent
+		self.root = root
+		self.nVisits = nVisits
+		self.visitLimit = visitLimit
+		self.rapportLevel = rapportLevel
+		self.is_checkpoint = is_checkpoint
+		self.loveBonus=loveBonus
+		self.fearBonus=fearBonus
+		self.remark = remark
+		self.children = [DialogueNode(self,root,**child_json) for child_json in children]
+
+		# these are names of sets of strings in Data.py, representing 'canned' dialogue
+		self.trites = trites
+		if type(self.trites) != list:
+			self.trites = [trites]
+		# these are strings of python code which should evaluate to a bool or int
+		self.cases = cases
+		# these are the optional Player responses to the dialogue
+		self.responses = responses
+
+		# cases or responses correspond to child nodes and are used to determine where to visit next
+		# ensure the number of child nodes matches the cases or responses
+		if self.cases:
+			if type(self.cases) != list:
+				self.cases = [self.cases]
+			# one extra child for when all cases are false
+			assert len(self.children) == len(self.cases) + 1
 		elif self.responses:
 			if type(self.responses) != list:
 				self.responses = [self.responses]
-			assert len(self.children) == len(self.responses) + 1
-		else:
-			assert self.children == []
+			assert len(self.children) == len(self.responses)
 
-		# ensure node doesn't have both a remark and a chatterpool
-		assert self.remark is None or self.chatterpools == []
+		# ensure node doesn't have both a remark and a trite set
+		assert self.remark is None or self.trites == []
 		# ensure node doesn't have both conditional cases and response cases
-		assert self.conditions == [] or self.responses == []
+		assert self.cases == [] or self.responses == []
+		
+		if hasattr(self.parent, 'responses'):
+			assert self.visitLimit == None and self.rapportLevel == None, 'child of response node must not have visitLimit or rapportLevel'
 
 
+	### File I/O ###
+
+	def convertToJSON(self):
+		return self.__dict__.copy()
+	
+
+	@classmethod
+	def convertFromJSON(cls,d):
+		print('converting...')
+		print(d)
+		return cls(**d)
+
+
+	# ID is the same thing as the 'path' through the tree
+	# which is a list of indices, specifying which child to go to from each parent
 	def getID(self):
 		for idx, child in enumerate(self.parent.children):
 			if self is child:
@@ -398,36 +472,61 @@ class DialogueNode():
 			raise Exception("node not found in parent's children")
 
 
-	def ensureIntegrity(self,person,player,game,world):
-		for condition in self.conditions:
-			val = eval(condition)
-			if type(val) not in (int, bool):
-				raise Exception(f'Invalid case node condition')
-		for chatterpool in self.chatterpools:
-			getattr(Data,chatterpool)
+	# ensures the following:
+	# that the tree is structurally valid by determining the ID
+	# that all cases (which are stored in JSON as strings) ints or evaluate to a bool
+	# that all trites (which are stored in JSON as strings) are valid sets in Data.py
+	# note that speaker, player, game, and world are provided to ensure eval() is valid
+	def ensureIntegrity(self,speaker,player,game,world):
+		self.id = self.getID()
+		for case in self.cases:
+			try:
+				assert type(case) == int or type(eval(case)) == bool
+			except Exception as e:
+				raise Exception(f"Invalid case node condition in {speaker.name}'s node {self.id}: {case}, {e}")
+		for trite in self.trites:
+			assert type(getattr(Data,trite)) is set
 		for child in self.children:
-			child.ensureIntegrity(person,player,game,world)
+			child.ensureIntegrity(speaker,player,game,world)
 
 
-	def newEncounter(self):
-		self.n_traversals = 0
+	### Operation ###
+
+	# set all visit counts back to 0 
+	def newParley(self):
+		self.nVisits = 0
 		for child in self.children:
-			child.new_encounter(self)
+			child.newParley()
 
 
-	def conditional(self,person,tree,player,game,world):
-		for i, case in enumerate(self.conditions):
-			# cases can either be boolean conditions or integers representing probability
-			val = eval(case)
-			if type(val) is int and diceRoll(1,100) <= val:
-				return self.childen[i]	
-			if type(val) is bool and val:
-				return self.childen[i]
+	# try to visit the child with the first true case
+	# cases can be numbers, representing a probability of visiting that child
+	# if all are false, visit the last child (like an 'else')
+	# note that speaker, player, game, and world are provided to ensure eval() is valid
+	def conditionalHop(self,speaker,player,game,world):
+		for i, case in enumerate(self.cases):
+			nextNode = self.children[i]
+
+			# cases can either be boolean cases or integers representing probability
+			if type(case) is int and diceRoll(1,100) <= case:
+				if nextNode.hop(speaker):
+					return nextNode
+
+			elif type(case) is str and eval(case) is True:
+				if nextNode.hop(speaker):
+					return nextNode
+
 		else:
-			return self.children[-1]
+			nextNode = self.children[-1]
+			if nextNode.hop(speaker):
+				return nextNode
+		
+		return None
 	
 
-	def takeResponse(self,person,tree,player,game,world):
+	# try to visit the child corresponding to the user-chosen dialogue response
+	# users can end the dialogue by inputting a cancel command
+	def responseHop(self,speaker):
 		for i, response in enumerate(self.responses):
 			print(f'{i+1}. {response}\n')
 
@@ -436,78 +535,174 @@ class DialogueNode():
 			if choice == "":
 				continue
 			if choice in Data.cancels: 
-				return False
+				return None
 
 			try:
+				# note that this does *not* hop(); it ignores child's visitLimit and rapportLevel
 				return self.children[int(choice)-1]
 			except:
 				print('That is not one of the options. Input a number or type "cancel"')
 				continue
 
 
-	def traverse(self,person,tree,player,game,world):
-		if self.rapport_level and self.rapport_level != person.rap:
-			return None
-		self.n_traversals += 1
+	def hop(self,speaker):
+		print('hop',self.id,self.visitLimit, self.nVisits, self.rapportLevel, speaker.rap)
+		if self.visitLimit and self.nVisits >= self.visitLimit:
+			return False
+		if self.rapportLevel != None:
+			if speaker.rap != self.rapportLevel:
+				return False
+		return True
+
+
+	# attempt to branch down the tree, visiting this node
+	# printing a dialogue remark if the node has one, and visiting a child node
+	def visit(self,speaker,player,game,world):		
+		# output this node's remark
 		if self.is_checkpoint:
-			tree.checkpoint = self.id
+			self.root.checkpoint = self.id
 		if self.remark:
-			print(f'"{self.remark}"\n')
-		elif self.chatterpools:
-			all_pools = []
-			for chatterpool in self.chatterpools:
-				all_pools |= getattr(Data,chatterpool)
-			print(f'"{choice(all_pools)}"\n')
-		if self.conditions:
-			return self.conditional()
+			waitKbInput(f'"{self.remark}"')
+		elif self.trites:
+			tritepool = set()
+			for trite in self.trites:
+				tritepool |= getattr(Data,trite)
+			triteRemark = sample(tritepool,1)[0]
+			waitKbInput(f'"{triteRemark}"')
+
+		# return next node if this node has children
+		nextNode = None
+		if self.cases:
+			nextNode = self.conditionalHop(speaker,player,game,world)
 		elif self.responses:
-			return self.takeResponse()
+			nextNode = self.responseHop(speaker)
 		else:
-			return None		
+			for child in self.children:
+				if child.hop(speaker):
+					nextNode = child
+					break
+		if nextNode == None:
+			return None
+
+		# count this node as successfully visited
+		self.nVisits += 1
+		if self.rapportLevel != None:
+			print('incrementing rap')
+			speaker.rap += 1
+		
+		# reaching a node can change the speaker's love or fear for the player
+		speaker.love += self.loveBonus
+		speaker.fear += self.fearBonus
+
+		# unmark checkpoint if this node was succesfully visited
+		if nextNode and self.root.checkpoint == self.id:
+			self.root.checkpoint = None
+		return nextNode
 
 
-class DialogueTree():
-	def __init__(self,tree_json):
-		self.surprise = DialogueNode(self,tree_json['surprise'])
-		self.quest = DialogueNode(self,tree_json['quest'])
-		self.rapport = DialogueNode(self,tree_json['rapport'])
-		self.chatter = DialogueNode(self,tree_json['chatter'])
-		self.checkpoint = tree_json.get('checkpoint', None)
-		self.id = []
-		self.children = [self.surprise, self.quest, self.rapport, self.chatter]
+	### Getters ###
 
-
-	def ensureIntegrity(self,person,player,game,world):
+	# ensures that at least one path in the tree will provide dialogue in all cases
+	def hasUnconditionalDialogue(self):
+		if self.remark or self.trites:
+			return True
+		if self.cases:
+			if self.children[-1].hasUnconditionalDialogue():
+				return True
+			return False
 		for child in self.children:
-			child.ensureIntegrity(person,player,game,world)
-
-
-	def traverseBranch(node):
-		had_dialogue = False
-		while node:
-			if node.remark or node.chatterpools:
-				had_dialogue = True
-			node = node.traverse(person,self,player,game,world)
-		return had_dialogue
-
-
-	def traverse(person,player,game,world):
-		for branch in self.children:
-			if self.traverseBranch(branch):
+			if child.hasUnconditionalDialogue():
 				return True
 		return False
 
 
-	def findNode(self,node_id):
-		node = self.dialogue_tree
-		for idx in node_id:
+
+class DialogueTree():
+	def __init__(self,tree_json):
+		self.surprise = DialogueNode(self,self,**tree_json['surprise'])
+		self.quest = DialogueNode(self,self,**tree_json['quest'])
+		self.rapport = DialogueNode(self,self,**tree_json['rapport'])
+		self.chatter = DialogueNode(self,self,**tree_json['chatter'])
+		self.checkpoint = tree_json.get('checkpoint',None)
+		self.id = []
+		self.children = [self.surprise, self.quest, self.rapport, self.chatter]
+
+
+	### File I/O ###
+
+	def convertToJSON(self):
+		return self.__dict__.copy()
+	
+
+	@classmethod
+	def convertFromJSON(cls,d):
+		return cls(**d)
+
+
+	# ensures the following;
+	# that the tree is structurally valid (parents are assigned to children)
+	# that the checkpoint, if there is one, is a valid node
+	# that at least one path of the tree will yield dialogue in all cases
+	def ensureIntegrity(self,speaker,player,game,world):
+		for child in self.children:
+			child.ensureIntegrity(speaker,player,game,world)
+		if self.checkpoint:
+			try:
+				self.findNode(self.checkpoint)
+			except:
+				raise Exception(f"Checkpoint {self.checkpoint} not found in {speaker.name}'s dialogue tree")
+		if not self.chatter.hasUnconditionalDialogue():
+			raise Exception("Dialogue Tree has no unconditional dialogue")
+
+
+	### Operation ###
+
+	# visit the branch, return True if navigating any branch resulted in speaker dialogue
+	def visitBranch(self,node,speaker,player,game,world):
+		had_dialogue = False
+		while node:
+			if node.remark or node.trites:
+				had_dialogue = True
+			node = node.visit(speaker,player,game,world)
+		return had_dialogue
+
+
+	# attempt to visit each branch of the tree until one yields dialogue
+	# after the surprise branch, start at the dialogue checkpoint if there is one
+	# returns True if any branch successfully yielded dialogue. Visiting 'chatter' should always succeed
+	def visit(self,speaker,player,game,world):
+		if self.surprise.hop(speaker):
+			if self.visitBranch(self.surprise,speaker,player,game,world):
+				return True
+
+		if self.checkpoint:
+			checkpointNode = self.findNode(self.checkpoint)
+			if checkpointNode.hop(speaker):
+				if self.visitBranch(checkpointNode,speaker,player,game,world):
+					return True
+
+		for branch in self.quest,self.rapport,self.chatter:
+			if branch.hop(speaker):
+				if self.visitBranch(branch,speaker,player,game,world):
+					return True
+
+		return False
+
+
+	# uses a nodeId (the path to the node using child indices) to retrieve node
+	def findNode(self,nodeId):
+		node = self
+		for idx in nodeId:
 			node = node.children[idx]
 		return node
 
 
-	def newEncounter(self):
-		for node in self.children():
-			node.new_encounter()
+	# resets all nodes for new parley
+	def newParley(self):
+		self.checkpoint = None
+		for node in self.children:
+			node.newParley()
+
 
 
 
@@ -998,7 +1193,7 @@ class Room():
 
 	# prints room name, description, all its items and creatures
 	def describe(self):
-		print("\n\n" + self.domain)
+		print("\n" + self.domain)
 		print(self.name)
 		# if player.countCompasses() == 0:
 		# 	print("\n" + ambiguateDirections(self.desc))
@@ -1132,8 +1327,10 @@ class Item():
 			ancs.append(ancestor)
 		return ancs
 
+
 	def room(self):
 		return self.ancestors()[-1]
+
 
 	# Used to create a generic Weapon() if this item is used to attack something
 	def improviseWeapon(self):
@@ -1180,13 +1377,16 @@ class Item():
 # Creatures have 10 base stats, called traits
 # They also have abilities; stats which are derived from traits through formulas
 class Creature():
-	def __init__(self,name,desc,aliases,plural,traits,status,hp,mp,money,inv,gear,descname=None):
+	def __init__(self,name,desc,plural,traits,hp,mp,money,inv,gear,status=[],aliases=[],descname=None):
 		self.name = name
 		if descname is None:
 			self.descname = name
 		self.desc = desc
 		self.aliases = aliases
-		self.plural = plural
+		if plural == None:
+			self.plural = self.name + 's'
+		else:
+			self.plural = plural
 
 		self.STR = traits[0]
 		self.SPD = traits[1]
@@ -1515,7 +1715,7 @@ class Creature():
 	def CRIT(self): return self.SKL + self.LCK + self.weapon.sharpness
 	def CSSP(self): return self.WIS - min0(self.invWeight() - self.BRDN()) - min0(self.gearWeight()//4 - self.CON)
 	def DCPT(self): return 2*self.CHA + self.INT
-	def DFNS(self): return self.CON + self.protection()
+	def DFNS(self): return 2*self.CON + self.protection()
 	def ENDR(self): return 2*self.STM + self.CON
 	def EVSN(self): return 2*self.ATSP() + self.LCK
 	def INVS(self): return 2*self.INT + self.WIS
@@ -1525,11 +1725,15 @@ class Creature():
 	def MXHP(self): return self.level()*self.CON + self.STM
 	def MXMP(self): return self.level()*self.WIS + self.STM
 	def PRSD(self): return 2*self.CHA + self.WIS
-	def RESC(self): return 2*self.FTH + self.STM
+	def RSST(self): return 2*self.FTH + self.STM
 	def RITL(self): return 2*self.FTH + self.LCK
 	def SLTH(self): return ( 2*self.SKL + self.INT - min0(self.invWeight() - self.BRDN()) ) * 2*int(self.hasCondition("hiding"))
 	def SPLS(self): return 3*self.INT
 	def TNKR(self): return 2*self.INT + self.SKL
+
+
+	def contents(self):
+		return self.inv
 
 
 	def ancestors(self):
@@ -1629,7 +1833,8 @@ class Creature():
 
 
 	def isNaked(self):
-		if self.gear['legs'] == None and self.gear['body'] == None:
+		return False
+		if self.gear['legs'] == Empty() and self.gear['body'] == Empty():
 			return True
 
 
@@ -1689,8 +1894,8 @@ class Creature():
 
 # the class representing the player, contains all player stats
 class Player(Creature):
-	def __init__(self,name,desc,traits,status,hp,mp,money,inv,gear,xp,rp,spells,descname=None,aliases=None,plural=None):
-		Creature.__init__(self,name,desc,"","",traits,status,hp,mp,money,inv,gear,descname)
+	def __init__(self,name,desc,traits,hp,mp,money,inv,gear,xp,rp,status=[],spells=[],descname=None,aliases=None,plural=None):
+		Creature.__init__(self,name,desc,None,traits,hp,mp,money,inv,gear,status=status,descname=descname)
 		self.xp = xp
 		self.rp = rp
 		self.spells = spells
@@ -2041,30 +2246,32 @@ class Player(Creature):
 
 
 class Person(Creature):
-	def __init__(self,name,desc,traits,status,hp,mp,money,inv,gear,spells,love,fear,dialogue_tree,rap,lastEncounter=None,checkpoint_id=None):
-		Creature.__init__(self,name,desc,"","",traits,status,hp,mp,money,inv,gear)
+	def __init__(self,name,descname,traits,hp,mp,money,inv,gear,dlogtree,desc=None,love=0,fear=0,rap=0,status=[],spells=[],aliases=[],lastParley=None,memories=set(),appraisal=set(),**kwargs):
+		if desc == None:
+			desc = f"A {descname}"
+		Creature.__init__(self,name,desc,None,traits,hp,mp,money,inv,gear,status=status,aliases=aliases,descname=descname)
+		self.descname = descname
 		self.spells = spells
 		self.love = love
 		self.fear = fear
-		self.dialogue_tree = DialogueTree(dialogue_tree)
+		self.dlogtree = DialogueTree(dlogtree)
 		self.rap = rap
-		self.lastEncounter = lastEncounter
-		if checkpoint_id != None:
-			self.find_node(checkpoint_id)
+		self.lastParley = lastParley
+		self.appraisal = appraisal
+		self.memories = memories
 
 
 	### File I/O ###
 
-	@classmethod
-	def convertFromJSON(cls,d):
-		return cls(**d)
+	# @classmethod
+	# def convertFromJSON(cls,d):
+	# 	return cls(**d)
 
 
-	def convertToJSON(self):
-		d = self.__dict__.copy()
-		d["checkpoint_id"] = self.checkpoint.get_id()
-		d = {"__class__":self.__class__.__name__, **d}
-		return d
+	# def convertToJSON(self):
+	# 	d = self.__dict__.copy()
+	# 	d = {"__class__":self.__class__.__name__, **d}
+	# 	return d
 
 
 	### Operation ###
@@ -2074,29 +2281,56 @@ class Person(Creature):
 
 	
 	def firstImpression(self):
-		# adjust love, fear, and rep from person baselines
+		# adjust love, fear from person baselines
 		pass
 
 
 	def appraise(self,player,game):
-		if self.rap == 0:
-			self.firstImpression()
-		elif game.time - lastEncounter > 100:
-			self.checkpoint = None
-			self.new_encounter()
-		lastEncounter = game.time
-
-		# adjust love, fear and rep here also?
-
 		self.appraisal = set()
+
+		if self.lastParley is None:
+			self.lastParley = game.time
+		elif game.time - self.lastParley > 100:
+			self.dlogtree.newParley()
+		self.lastParley = game.time
+
+		# adjust love, fear here also?
+
 		if player.isNaked():
 			self.appraisal.add("naked")
 		
 		
-	def dialogue(self,player,game,world):
+	def Talk(self,player,game,world):
 		self.appraise(player,game)
-		if not self.dialogue_tree.traverse(self,player,game,world):
+		if not self.dlogtree.visit(self,player,game,world):
 			print(f"{self.name} says nothing...")
+
+
+	### User Output ###
+
+	def stringName(self,det=True,definite=False,n=1,plural=False,cap=False,c=1):
+		strname = self.name if "met" in self.memories else self.descname
+		if len(strname) == 0:
+			return ""
+		if n > 1:
+			plural = True
+		if plural:
+			strname = self.plural
+		if n > 1:
+			strname = str(n) + " " + strname
+		if det:
+			if definite:
+				strname = "the " + strname
+			elif not plural:
+				if strname[0] in Data.vowels:
+					strname = "an " + strname
+				else:
+					strname = "a " + strname
+		if cap:
+			strname = capWords(strname,c=c)
+		return strname
+
+	
 
 
 class Animal(Creature):
@@ -2401,7 +2635,7 @@ class Monster(Creature):
 		if target == player:
 			targetname = "you"
 		else:
-			targname = target.stringName()
+			targetname = target.stringName()
 		print(f"{self.stringName(definite=True, cap=True)} tries to attack {targetname}")
 
 		n = min1( self.ATSP() // min1(target.ATSP()) )
@@ -2468,6 +2702,6 @@ class Monster(Creature):
 
 
 
-player = Player("","",[0]*10,[],0,0,0,[],{},0,0,[])
+player = Player("","",[0]*10,0,0,0,[],{},0,0)
 game = Game(-1,-1,-1,-1,-1)
 world = {}

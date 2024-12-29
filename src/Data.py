@@ -385,8 +385,7 @@ popyLines = ["",
 "   POTIONS  &  PYTHONS   	"]
 
 
-
-
+basic_chatter = {"How about the weather?", "I like your shirt.", "Gods be with ye."}
 
 
 
