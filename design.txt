@@ -993,10 +993,13 @@ Watermelon - water walking?
 
 
 MISC ITEM IDEAS:
+cadeuceus
+uroboros
 holy water
 molasses
 ambergris
 herb of immortality (makes potion, can be smoked? made into quintessence?)
+elixir of immortality (also requires venom)
 strange milk - makes you high, made from cows fed certain mushrooms
 mushrooms - glowing ones too
 Poisonwood
@@ -1155,7 +1158,10 @@ CHARACTER NAMES:
 	Beowin
 	Rook
 
-	Yernagate the wise giant
+	Yernagate the wise 
+	The Oracle
+	Glycon the false Serpent God (secretly a puppet?)
+	Leviathan
 	Galigantus the giant
 	Archons (regional rulers?)
 	The Benevolent Frog King (looking for his son the frog prince?)
@@ -1172,6 +1178,8 @@ CHARACTER NAMES:
 CREATURE IDEAS:
 yellow python -- red python -- brown python -- white python -- black python -- giant python -- aeormungand
 sirens
+nagas
+basilisks
 stoats
 lemmings
 stork babies
