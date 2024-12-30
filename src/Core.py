@@ -30,6 +30,8 @@ import Data
 
 # Used to determine if a term has a match with any of an object's names
 def nameMatch(term,obj):
+	if term == None:
+		return False
 	term = term.lower()
 	if isinstance(obj, Room):
 		return term == obj.name.lower() or term in ["here", "room"]

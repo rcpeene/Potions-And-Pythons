@@ -1052,7 +1052,9 @@ def assignGoTerms(dobj,iobj,prep):
 
 	# assign dest
 	if dobj in Core.game.currentroom.allExits().values(): dest = dobj
+	elif Core.nameMatch(dobj,Core.game.currentroom): dest = dobj
 	if iobj in Core.game.currentroom.allExits().values(): dest = iobj
+	elif Core.nameMatch(iobj,Core.game.currentroom): dest = iobj
 
 	# assign passage
 	if dobj != None: passage = findObjFromTerm(dobj,"room",silent=True)
@@ -1061,13 +1063,15 @@ def assignGoTerms(dobj,iobj,prep):
 	return dir,dest,passage
 
 
-# parses user input to determine the intended direction, destination, and/or... # passage. Then calls either traverse or changeroom accordingly
+# parses user input to determine the intended direction, destination, and/or
+# passage. Then calls either traverse or changeroom accordingly
 def Go(dobj,iobj,prep):
 	preps = {"down","through","to","toward","up","in","inside","into","on","onto","out",None}
 	if (dobj,iobj,prep) == (None,None,None):
 		dobj,iobj,prep = parseWithoutVerb("Where will you go?",preps)
 	if dobj in Data.cancels: return False
-	if dobj == "back": dobj = Core.game.prevroom.name.lower()
+	if dobj in ("back", "backward", "backwards"): dobj = Core.game.prevroom.name.lower()
+	if dobj in ("ahead", "forward", "forwards"): dobj = getNoun("In which direction?")
 	if dobj == None: dobj = iobj
 
 	# if any terms are abbreviations for a direction, expand them
@@ -1080,6 +1084,9 @@ def Go(dobj,iobj,prep):
 	dir,dest,passage = assignGoTerms(dobj,iobj,prep)
 	if (dir,dest,passage) == (None,None,None):
 		Core.game.print(f"There is no exit leading to a '{dobj}' here.")
+		return False
+	if Core.nameMatch(dest,Core.game.currentroom):
+		Core.game.print(f"You are already there!")
 		return False
 	if dir == None:
 		dir = Core.game.currentroom.getDirFromDest(dest)

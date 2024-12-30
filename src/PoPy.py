@@ -73,13 +73,6 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# add print which writes text letter by letter
-
-# add "you're already there" when trying to go to current room
-# improve 'go' with 'go to tunnel' for instance (filter out prepositions basically)
-# add 'forward(s), ahead' to 'go' command
-# add dialect processor to tritepool output?
-
 # add basic time cycling, and clock items which tell you the hour
 # add astronomical events based on the time cycling
 
@@ -110,6 +103,7 @@ if __name__ == "__main__":
 	# add creatures with many limbs (or can equip more than 2 weapons/shields)
 	# figure out combat? attack items?
 
+# add dialect processor to tritepool output?
 # add possession? (so you can say 'break goblin's sword', 'take his food')... these could be easily restructured as "break sword from goblin", "take food from him"
 
 # sift through TODOs
