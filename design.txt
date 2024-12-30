@@ -319,7 +319,7 @@ BASE STATS: also called qualities, a players base stats determine all other stat
 STR - ATCK, BRDN, ATHL
 SPD - ATSP, MVMT
 SKL - ACCU, CRIT, ATHL, SLTH, TNKR
-STM - MXHP, MXMP, RESC, MVMT, ATHL, ENDR
+STM - MXHP, MXMP, RSTN, MVMT, ATHL, ENDR
 CON - ATSP, DFNS, MXHP, CAST, CSSP, BRDN, MVMT, ENDR
 
 CHA - PRSD, DCPT
@@ -455,7 +455,7 @@ SPLS - number of spells
 2*INT
 the maximum number of spells known
 
-RESC - resistance
+RSTN - resistance
 2*FTH + STM
 magical damage negation
 
@@ -895,7 +895,7 @@ Sigma tunic			EVSN
 
 Tau hammer			ATHL
 Upsilon glaive	ENDR
-Phi helm				RESC
+Phi helm				RSTN
 Chi torch				INVS
 Psi boots				MVMT
 Omega shield		DFNS

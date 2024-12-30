@@ -31,6 +31,8 @@ import Data
 # Used to determine if a term has a match with any of an object's names
 def nameMatch(term,obj):
 	term = term.lower()
+	if isinstance(obj, Room):
+		return term == obj.name.lower() or term in ["here", "room"]
 	return term == obj.name.lower() or term == obj.stringName(det=False).lower() or term in obj.aliases
 
 
@@ -273,7 +275,7 @@ def maxm(m,n): return m if n > m else n
 # thus all objects within a room can be thought of as a tree
 # where each node is an item or creature, and the root is the room
 # the player object can also be thought of this way where the player is the root
-# this function recursively searches the tree of objects for an object
+# this function recursively queries the tree of objects for an object
 # whose name matches the given term, (not case sensitive)
 # the object tree might look as follows:
 
@@ -285,23 +287,23 @@ def maxm(m,n): return m if n > m else n
 #        |
 #     saffron
 
-# d is the 'degree' of the search; how thorough it is'
-# if d is 3: searches through all objects from the root
-# elif d is 2: searches through all objects which are not locked
-# elif d is 1: searches through objects which are not locked and not in
+# d is the 'degree' of the query; how thorough it is'
+# if d is 3: queries through all objects from the root
+# elif d is 2: queries through all objects which are not locked
+# elif d is 1: queries through objects which are not locked and not in
 # creature inventories; i.e. objects which are "accessible" to the player
-# if d is 0: searches through items which are not "closed" and not in
+# if d is 0: queries through items which are not "closed" and not in
 # creature inventories; i.e. objects which are "visible" to the player
 
-# this function is a wrapper for objSearchRecur()
-def objSearch(root,key=lambda obj:True,d=0):
-	matches = objSearchRecur(root,[],key,d)
+# this function is a wrapper for objQueryRecur()
+def objQuery(root,key=lambda obj:True,d=0):
+	matches = objQueryRecur(root,[],key,d)
 	return matches
 
 
-def objSearchRecur(node,matches,key,d):
-	# if node is unsearchable: return
-	if not hasattr(node, 'contents'):
+def objQueryRecur(node,matches,key,d):
+	# if node is terminal: return
+	if not hasMethod(node, 'contents'):
 		return matches
 
 	for obj in node.contents():
@@ -311,8 +313,8 @@ def objSearchRecur(node,matches,key,d):
 		if d == 0 and hasattr(obj,"open") and not obj.open: continue
 		elif (d <= 1) and isinstance(obj,Creature): continue
 		elif d <= 2 and hasattr(obj,"locked") and obj.locked: continue
-		# recur the search on each object's subtree
-		matches = objSearchRecur(obj,matches,key,d)
+		# recur the query on each object's subtree
+		matches = objQueryRecur(obj,matches,key,d)
 	return matches
 
 
@@ -327,14 +329,11 @@ def assignParents():
 # helper function for assignParents()
 # iterates through objects within the root and assigns root as their parent
 # recurs for each object
-def assignParentsRecur(root):
-	if isinstance(root,Room): searchThrough = root.contents()
-	elif hasattr(root,"items"): searchThrough = root.items
-	elif hasattr(root,"inv"): searchThrough = root.inv
-	else: return
-
-	for obj in searchThrough:
-		obj.parent = root
+def assignParentsRecur(parent):
+	if not hasMethod(parent,'contents'):
+		return
+	for obj in parent.contents():
+		obj.parent = parent
 		assignParentsRecur(obj)
 
 
@@ -360,7 +359,7 @@ def ensureWorldIntegrity():
 			for connection in connectionsToDelete:
 				del passage.connections[connection]
 
-		for creature in objSearch(room, d=3, key=lambda x: isinstance(x,Person)):
+		for creature in objQuery(room, d=3, key=lambda x: isinstance(x,Person)):
 			creature.dlogtree.ensureIntegrity(creature,player,game,world)
 
 	# this is done in a separate loop to prevent errors caused by...
@@ -407,13 +406,13 @@ def ensureWorldIntegrity():
 
 
 class DialogueNode():
-	def __init__(self,parent,root,nVisits=0,visitLimit=None,rapportLevel=None,is_checkpoint=False,loveBonus=0,fearBonus=0,remark=None,trites=[],cases=[],responses=[],children=[]):
+	def __init__(self,parent,root,nVisits=0,visitLimit=None,rapportLevel=None,isCheckpoint=False,loveBonus=0,fearBonus=0,remark=None,trites=[],cases=[],responses=[],children=[]):
 		self.parent = parent
 		self.root = root
 		self.nVisits = nVisits
 		self.visitLimit = visitLimit
 		self.rapportLevel = rapportLevel
-		self.is_checkpoint = is_checkpoint
+		self.isCheckpoint = isCheckpoint
 		self.loveBonus=loveBonus
 		self.fearBonus=fearBonus
 		self.remark = remark
@@ -452,6 +451,7 @@ class DialogueNode():
 	### File I/O ###
 
 	def convertToJSON(self):
+		del self.id
 		return self.__dict__.copy()
 	
 
@@ -546,7 +546,6 @@ class DialogueNode():
 
 
 	def hop(self,speaker):
-		print('hop',self.id,self.visitLimit, self.nVisits, self.rapportLevel, speaker.rap)
 		if self.visitLimit and self.nVisits >= self.visitLimit:
 			return False
 		if self.rapportLevel != None:
@@ -559,7 +558,7 @@ class DialogueNode():
 	# printing a dialogue remark if the node has one, and visiting a child node
 	def visit(self,speaker,player,game,world):		
 		# output this node's remark
-		if self.is_checkpoint:
+		if self.isCheckpoint:
 			self.root.checkpoint = self.id
 		if self.remark:
 			waitKbInput(f'"{self.remark}"')
@@ -631,6 +630,8 @@ class DialogueTree():
 	### File I/O ###
 
 	def convertToJSON(self):
+		del self.id
+		del self.children
 		return self.__dict__.copy()
 	
 
@@ -861,8 +862,8 @@ class Game():
 
 	# recursively adds all adjacent rooms to the set of found rooms
 	# used by renderedRooms()
-	# n is the path length at which the search stops
-	# Sroom is the "source" room, or the current node in the search
+	# n is the path length at which the query stops
+	# Sroom is the "source" room, or the current node in the query
 	def roomFinder(self,n,Sroom,pathlen,foundrooms):
 		if pathlen >= n:
 			return
@@ -892,18 +893,18 @@ class Game():
 
 	# returns a list of objects in current room which fit a certain condition
 	# key is a function which identifies a condition about the obj
-	# d is the 'degree' of the search. See objSearch() for details
-	def searchRoom(self,room=None,key=lambda x:True,d=3):
+	# d is the 'degree' of the query. See objQuery() for details
+	def queryRoom(self,room=None,key=lambda x:True,d=3):
 		if room == None:
 			room = self.currentroom
-		return objSearch(room,key=key,d=d)
+		return objQuery(room,key=key,d=d)
 
 
 	# returns a list of objects in rendered rooms which fit a certain condition
-	def searchRooms(self,key=lambda x:True,d=3):
+	def queryRooms(self,key=lambda x:True,d=3):
 		matchingObjects = []
 		for room in self.renderedRooms():
-			matchingObjects += self.searchRoom(room,key=key,d=d)
+			matchingObjects += self.queryRoom(room,key=key,d=d)
 		return matchingObjects
 
 
@@ -912,15 +913,21 @@ class Game():
 	def getAllObjects(self):
 		allObjects = []
 		for room in self.renderedRooms():
-			allObjects += objSearch(room,key=lambda x:True,d=3)
+			allObjects += objQuery(room,key=lambda x:True,d=3)
 		return allObjects
+
+
+	def nameQueryRoom(self,term,d=3,room=None):
+		term = term.lower()
+		key = lambda obj: nameMatch(term,obj)
+		return self.queryRoom(room=room,key=key,d=d)
 
 
 	# True if there's an object in rendered rooms whose name matches objname
 	# not case sensitive
 	def inWorld(self,term):
 		key = lambda obj: nameMatch(term,obj)
-		objects = self.searchRooms(key)
+		objects = self.queryRooms(key)
 		return len(objects) > 0
 
 
@@ -1033,7 +1040,7 @@ class Room():
 	def addAreaCondition(areacond):
 		cond,dur = extractConditionInfo(areacond)
 		key = lambda x: isinstance(x,Creature)
-		for creature in game.searchRoom(key=key):
+		for creature in game.queryRoom(key=key):
 			creature.addCondition(cond,dur)
 
 
@@ -1043,7 +1050,7 @@ class Room():
 		if dur != -1:
 			return
 		key = lambda x: isinstance(x,Creature)
-		for creature in game.searchRoom(key=key):
+		for creature in game.queryRoom(key=key):
 			creature.removeCondition(cond,-1)
 
 
@@ -1164,21 +1171,6 @@ class Room():
 				if reqDuration == None or reqDuration == duration:
 					return True
 		return False
-
-
-	# wrapper for objSearch()
-	# recursively searches the room for object whose names match given term
-	def search(self,term,d=0,reqParent=None):
-		term = term.lower()
-		key = lambda obj: nameMatch(term,obj)
-		matches = objSearch(self,key=key,d=d)
-
-		if reqParent != None:
-			reqParent = reqParent.lower()
-			condition = lambda obj: nameMatch(reqParent,obj.parent)
-			matches = list(filter(condition,matches))
-
-		return matches
 
 
 	def listableItems(self):
@@ -1591,13 +1583,15 @@ class Creature():
 
 	# finds the slot in which item resides, sets it to Empty()
 	# calls the item's Unequip() method if it has one
-	def unequip(self,I):
+	def unequip(self,I,silent=True):
 		gearslots = list(self.gear.keys())
 		gearitems = list(self.gear.values())
 		# finds the slot whose value is I, sets it to empty
 		slot = gearslots[gearitems.index(I)]
 		self.gear[slot] = Empty()
 		self.assignWeaponAndShield()
+		if not silent:
+			print(f"You unequip your {I.name}")
 		if hasMethod(I,"Unequip"): I.Unequip()
 
 
@@ -1725,7 +1719,7 @@ class Creature():
 	def MXHP(self): return self.level()*self.CON + self.STM
 	def MXMP(self): return self.level()*self.WIS + self.STM
 	def PRSD(self): return 2*self.CHA + self.WIS
-	def RSST(self): return 2*self.FTH + self.STM
+	def RSTN(self): return 2*self.FTH + self.STM
 	def RITL(self): return 2*self.FTH + self.LCK
 	def SLTH(self): return ( 2*self.SKL + self.INT - min0(self.invWeight() - self.BRDN()) ) * 2*int(self.hasCondition("hiding"))
 	def SPLS(self): return 3*self.INT
@@ -1734,6 +1728,24 @@ class Creature():
 
 	def contents(self):
 		return self.inv
+
+
+	# wrapper for objQuery()
+	# returns player Inventory as a set of all items in the Item Tree
+	def invSet(self):
+		return objQuery(self,d=2)
+
+
+	# wrapper for objQuery, sets the degree of the query to 2 by default
+	def query(self,key=None,d=2):
+		matches = objQuery(self,key=key,d=d)
+		return matches
+
+
+	def nameQuery(self,term,d=2):
+		term = term.lower()
+		key = lambda obj: nameMatch(term,obj)
+		return self.query(key=key,d=d)
 
 
 	def ancestors(self):
@@ -1782,16 +1794,6 @@ class Creature():
 		return self.invNames()
 
 
-	# searches through inventory for an item whose name matches 'term'
-	# if a match is found, return the item, otherwise return None
-	def inInv(self,term):
-		matches = []
-		for item in self.inv:
-			if nameMatch(term,item):
-				matches.append(item)
-		return matches
-
-
 	def weapons(self):
 		return [I for I in self.inv if isinstance(I,Weapon)]
 
@@ -1805,13 +1807,18 @@ class Creature():
 		return weight
 
 
-	# searches through gear for an item whose name matches 'term'
+	# looks through gear for an item whose name matches 'term'
 	# if a match is found, return the item, otherwise return None
 	def inGear(self,term):
 		for slot,object in self.gear.items():
 			if nameMatch(term,object) or term.lower() == slot.lower():
 				return object
 		return None
+
+
+	# return all items in inv whose name matches term, otherwise return None
+	def inInv(self,term):
+		return [obj for obj in self.inv if nameMatch(term,obj)]
 
 
 	# returns sum of all protection values of all items in gear
@@ -2094,12 +2101,6 @@ class Player(Creature):
 		return len([item for item in self.inv if isinstance(item,Compass)])
 
 
-	# wrapper for objSearch()
-	# returns player Inventory as a set of all items in the Item Tree
-	def invSet(self):
-		return objSearch(self,d=2)
-
-
 	# weird formula right? returns a positive number rounded down to nearest int
 	# to see an approximate curve, graph y = 5*log10(x/10)
 	# note that a lower bound is set to level 1 when xp < 16
@@ -2107,20 +2108,6 @@ class Player(Creature):
 	def level(self):
 		return 1 if self.xp < 16 else maxm(50,floor( 5*log10(self.xp/10) ))
 
-
-	# wrapper for objSearch, sets the degree of the search 2 by default
-	# returns items in player inv object tree whose names match given term
-	def search(self,term,d=2,reqParent=None):
-		term = term.lower()
-		key = lambda obj: nameMatch(term,obj)
-		matches = objSearch(self,key=key,d=d)
-
-		if reqParent != None:
-			reqParent = reqParent.lower()
-			condition = lambda obj: nameMatch(reqParent,obj.parent)
-			matches = list(filter(condition,matches))
-
-		return matches
 
 
 	### User Output ###
