@@ -72,11 +72,6 @@ if __name__ == "__main__":
 	
 # replace Empty object? with none
 
-# What will you do?
-# > take key out of chest
-# key of out
-# Command not understood.
-
 # reaping not working after zapping goblin
 
 # add print which writes text letter by letter

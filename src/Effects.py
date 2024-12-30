@@ -14,9 +14,9 @@ import Data
 
 
 def applyAreaEffect(effect,root,condfunc=lambda x:True):
-	objects = objQuery(root,key=condfunc,d=3)
-	for object in objects:
-		effect(object)
+	objs = Core.objQuery(root,key=condfunc,d=3)
+	for obj in objs:
+		effect(obj)
 
 
 def spawnObject(room,obj):

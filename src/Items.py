@@ -87,9 +87,9 @@ class Box(Core.Item):
 
 	def addItem(self,I):
 		# ensure only one bunch of Gold exists here
-		if isinstance(I,Core.Pylars):
+		if isinstance(I,Core.Serpens):
 			for item in self.items:
-				if isinstance(item,Core.Pylars):
+				if isinstance(item,Core.Serpens):
 					item.merge(I)
 					return
 
@@ -424,9 +424,9 @@ class Table(Core.Item):
 
 	def addItem(self,I):
 		# ensure only one bunch of Gold exists here
-		if isinstance(I,Core.Pylars):
+		if isinstance(I,Core.Serpens):
 			for item in self.items:
-				if isinstance(item,Core.Pylars):
+				if isinstance(item,Core.Serpens):
 					item.merge(I)
 					return
 
@@ -445,7 +445,7 @@ class Table(Core.Item):
 			itemName = self.items[0].stringName()
 			self.descname = f"{self.name} with {itemName} on it"
 		elif len(self.items) == 0:
-			self.descname = f"empty {self.name}"
+			self.descname = f"{self.name}"
 
 
 

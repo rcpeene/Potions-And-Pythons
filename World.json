@@ -248,7 +248,7 @@
 						"desc": "A stale wheat roll of baked bread. Very Dry!",
 						"aliases": ["bread","breadroll","roll","biscuit"],
 						"plural": "bread rolls",
-						"weight": 1,
+						"weight": 2,
 						"durability": 2,
 						"status": [],
 						"heal": 1
@@ -286,6 +286,7 @@
 				"desc": "A small green person with long ears, a pointy nose, and a grimacing visage.",
 				"aliases": [],
 				"plural": "goblins",
+				"weight": 10,
 				"traits": [2,2,2,2,2,2,2,2,2,2],
 				"status": [],
 				"hp": 10,
@@ -575,6 +576,8 @@
 				"__class__": "Person",
 				"name": "Dale",
 				"descname": "plain man",
+				"gender": "m",
+				"weight": 15,
 				"traits": [1,1,1,1,1,1,1,1,1,1],
 				"status": [],
 				"hp": 10,
@@ -659,10 +662,30 @@
 		"creatures": [
 			{
 				"__class__": "Animal",
-				"name": "python",
+				"name": "red python",
 				"desc": "A small brown and green spotted snake",
 				"aliases": ["snake"],
 				"plural": "pythons",
+				"weight": 3,
+				"traits": [1,1,1,1,1,1,1,1,1,1],
+				"status": [],
+				"hp": 2,
+				"mp": 0,
+				"money": 0,
+				"inv": [],
+				"gear": {
+					"tail": -1,
+					"head": -1,
+					"mouth": -1
+				}
+			},
+			{
+				"__class__": "Animal",
+				"name": "green python",
+				"desc": "A small brown and green spotted snake",
+				"aliases": ["snake"],
+				"plural": "pythons",
+				"weight": 3,
 				"traits": [1,1,1,1,1,1,1,1,1,1],
 				"status": [],
 				"hp": 2,
@@ -675,6 +698,7 @@
 					"mouth": -1
 				}
 			}
+
 		],
 		"status": []
 	}
