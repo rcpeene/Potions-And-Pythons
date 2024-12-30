@@ -830,17 +830,6 @@ class Game():
 			self.checkDaytime()
 
 
-	def checkDaytime(self):
-		if self.hour() == 'stag':
-			self.print('It is morning.')
-		if self.hour() == 'bell':
-			self.print('It is day.')
-		if self.hour() == 'lily':
-			self.print('It is evening.')
-		if self.hour() == 'mouse':
-			self.print('It is night.')
-
-
 	def clearPronouns(self):
 		self.it = None
 		self.they = None
@@ -954,7 +943,9 @@ class Game():
 
 
 	def hour(self):
-		return Data.hours[int(self.time % 300)]
+		# hour changes every 23 time units
+		# with 13 hours in a day, a day lasts 299 time units
+		return Data.hours[(self.time % 299) // 23]
 
 
 
@@ -993,6 +984,17 @@ class Game():
 
 	def describeRoom(self):
 		self.currentroom.describe()
+
+
+	def checkDaytime(self):
+		if self.hour() == 'stag':
+			self.print('It is morning.')
+		if self.hour() == 'bell':
+			self.print('It is day.')
+		if self.hour() == 'hearth':
+			self.print('It is evening.')
+		if self.hour() == 'owl':
+			self.print('It is night.')
 
 
 

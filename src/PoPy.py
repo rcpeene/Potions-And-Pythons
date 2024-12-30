@@ -60,9 +60,9 @@ def main(skipIntro=False):
 		# sort the creatures in each rendered room by their MVMT attribute
 		Core.game.sortCreatures()
 
+		if Core.game.quit: return
 		# save game every so often just in case
 		if Core.game.time % 10 == 0: Menu.quicksave()
-		if Core.game.quit: return
 
 
 if __name__ == "__main__":
