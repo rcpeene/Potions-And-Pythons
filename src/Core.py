@@ -120,11 +120,9 @@ def ellipsis(n):
 
 # prints a list of strings, l, into n columns of width w characters
 # if an element is longer than one column, it takes up as many columns as needed
-def columnPrint(l,n,w,flowPrint=True):
-	if flowPrint:
+def columnPrint(l,n,w,printf=None):
+	if printf is None:
 		printf = game.print
-	else:
-		printf = print
 	# k is the number of characters that have been printed in the current row
 	k = 0
 	# for each string element in l
@@ -236,13 +234,11 @@ def extractConditionInfo(roomCondition):
 
 
 # prints a question, gets a yes or no, returns True or False respectively
-def yesno(question,flowPrint=True):
-	if flowPrint:
+def yesno(question,printf=None,inputf=None):
+	if printf is None:
 		printf = game.print
+	if inputf is None:
 		inputf = game.input
-	else:
-		printf = print
-		inputf = input
 	while True:
 		command = inputf(question + "\n> ").lower()
 		if command in Data.yesses:

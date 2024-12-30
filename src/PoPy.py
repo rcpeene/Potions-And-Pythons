@@ -59,8 +59,9 @@ def main(skipIntro=False):
 		Core.game.reapCreatures()
 		# sort the creatures in each rendered room by their MVMT attribute
 		Core.game.sortCreatures()
+
 		# save game every so often just in case
-		Menu.quicksave(Core.game.time)
+		if Core.game.time % 10 == 0: Menu.quicksave()
 		if Core.game.quit: return
 
 
