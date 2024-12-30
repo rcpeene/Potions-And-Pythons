@@ -211,27 +211,18 @@ class Generator(Controller):
 
 
 	def Trigger(self):
-		if charge > cost:
-			charge -= cost
+		if charge > self.cost:
+			charge -= self.cost
 			eval(self.effect)
 		if not Core.game.silent:
 			print("Nothing happened...")
 
 
-	def passTime(self):
-		self.charge += self.rate
+	def passTime(self,t):
+		Controller.passTime(self,t)
+		self.charge += self.rate*t
 		if self.charge > self.capacity:
 			self.charge = self.capacity
-		for condition in self.status:
-			# if condition is has a special duration, ignore it
-			if condition[1] < 0:
-				continue
-			# subtract remaining duration on condition
-			elif condition[1] > 0:
-				condition[1] -= t
-			# if, after subtraction, condition is non-positive, remove it
-			if condition[1] <= 0:
-				self.removeCondition(condition[0],0)
 
 
 
@@ -296,8 +287,8 @@ class Lockbox(Box):
 
 
 	def Lock(self,key):
-		if I.locked:
-			print(f"The {I.name} is already locked.")
+		if self.locked:
+			print(f"The {self.name} is already locked.")
 			return False
 		if key.id in self.keyids:
 			self.locked = True
@@ -503,7 +494,7 @@ class Wall(Core.Passage):
 		if Core.player.ATHL() < self.cr:
 			print(f"You fall down the {self.name}!")
 			if dir == "down":
-				Core.game.changeRoom(W[self.connections["down"]])
+				Core.game.changeRoom(Core.world[self.connections["down"]])
 			if not (Core.player.hasCondition("fly") or Core.player.hasCondition("feather fall")):
 				Core.player.takeDamage(self.cr-Core.player.ATHL(),"b")
 			return True
