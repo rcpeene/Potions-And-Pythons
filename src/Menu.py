@@ -126,6 +126,21 @@ def readGame(filename,World):
 ## MENU FUNCTIONS ##
 ####################
 
+def quicksave(time):
+	if time % 10 == 0:
+		# create save directory if it doesn't exist
+		if not os.path.exists("saves"):
+			os.mkdir("saves")
+		os.chdir("saves")
+
+		# write world, player, and game files
+		os.chdir('quicksave')
+		writeJSON("world.json", Core.world)
+		writeJSON("player.json", Core.player)
+		writeGame("game.txt", Core.game, Core.world)
+		os.chdir("../..")
+		print('quicksaved')
+
 
 # saves data from player, world, and game objects to respective text files
 def saveGame():
@@ -139,14 +154,13 @@ def saveGame():
 	Core.columnPrint(saves,10,10)
 	# player names their save
 	savename = input("\nWhat name will you give this save file?\n> ").lower()
-	if savename == "":
-		print("Save name cannot be empty.")
+	if savename in ("", "all", "quicksave"):
+		if savename == "":
+			print(f"Save name cannot be empty.")
+		else:
+			print(f"Save name cannot be '{savename}'.")
 		os.chdir("..")
-		return
-	if savename == "all":
-		print("Save name cannot be 'all'.")
-		os.chdir("..")
-		return
+		return		
 
 	# if the save name is used, ask to overwrite it
 	if os.path.exists(savename):
@@ -199,7 +213,7 @@ def loadGame(filename):
 
 	# if user inputs a save name that doesn't exist
 	if not os.path.exists(savename):
-		print(f"\nThere is no save file named '{savename}'.\n")
+		print(f"\nThere is no save file named '{savename}'.")
 		os.chdir("..")
 		input()
 		return False
@@ -226,10 +240,10 @@ def loadGame(filename):
 # deletes all save files in 'save' directory (if the user is very, very sure)
 def deleteAll():
 	Core.clearScreen()
-	if not Core.yesno("Are you sure you want to delete all save files?"):
+	if not Core.yesno("Are you sure you want to delete all save files?",flowPrint=False):
 		os.chdir("..")
 		return mainMenu()
-	if not Core.yesno("Are you very, very sure??"):
+	if not Core.yesno("Are you very, very sure??",flowPrint=False):
 		os.chdir("..")
 		return mainMenu()
 	for savename in os.listdir():
@@ -274,7 +288,7 @@ def delete(filename):
 		input()
 		return mainMenu()
 	# ask for confirmation, if no, then return to menu
-	if not Core.yesno("Are you sure you want to delete this save file?"):
+	if not Core.yesno("Are you sure you want to delete this save file?",flowPrint=False):
 		os.chdir("..")
 		return
 
