@@ -54,7 +54,7 @@ goodbyes = {"adieu","bye","bye bye","bye then","prosper and live long","may luck
 # this is because "up" and "down" are also in the "directions" dict
 # they are not necessary entries here, but make interpreting more consistent...
 # for use in the Go() action functions
-prepositions = {"above","across","at","behind","below","beneath","by","d","down","for","from","in","inside","into","near","off","on","onto","out","over","through","to","toward","under","u","up","upon","using","with"}
+prepositions = {"above","across","at","behind","below","beneath","by","d","down","for","from","in","inside","into","near","off","on","onto","out","out of","over","through","to","toward","under","u","up","upon","using","with"}
 
 pronouns = {"she","he","they","her","him","them","it"}
 
@@ -216,9 +216,9 @@ definitions = {
 
 "level":"Level\nLevel is determined by XP. Player Level starts at 1. Player gains 3 QP upon Level-up. Type 'lv' to view your Level.",
 
-"loot":"Loot Rate\nRate and tier at which items and Pylars are dropped by creatures. LOOT is determined primarily by LCK, is also improved by FTH. Type 'loot' to view your LOOT.",
+"loot":"Loot Rate\nRate and tier at which items and Serpens are dropped by creatures. LOOT is determined primarily by LCK, is also improved by FTH. Type 'loot' to view your LOOT.",
 
-"loot rate":"Loot Rate\nRate and tier at which items and Pylars are dropped by creatures. LOOT is determined primarily by LCK, is also improved by FTH. Type 'loot' to view your LOOT.",
+"loot rate":"Loot Rate\nRate and tier at which items and Serpens are dropped by creatures. LOOT is determined primarily by LCK, is also improved by FTH. Type 'loot' to view your LOOT.",
 
 "lv":"Level\nLevel is determined by XP. Player Level starts at 1. Player gains 3 QP upon Level-up. Type 'lv' to view your Level.",
 
@@ -230,7 +230,7 @@ definitions = {
 
 "might":"Might\nWeapons have a Might value. When making an attack, ATCK is determined by Might and STR.",
 
-"money":"Money\nPlayer currency in the local denomination, Pylars (ᵽ). Money can be used to buy and sell goods. Type 'money' to view your Money.",
+"money":"Money\nPlayer currency in the local denomination, Serpens ($). Money can be used to buy and sell goods. Type 'money' to view your Money.",
 
 "monster":"Monster\nAny Creature which can use Items, but cannot Talk or Trade.",
 
@@ -258,9 +258,9 @@ definitions = {
 
 "prsd":"Persuasion\nAbility to persuade People. PRSN is determined primarily by CHA, and is also improved by WIS. Type 'prsd' to view your PRSD.",
 
-"pylar":"Pylar\nThe local denomination of currency. Money can be used to buy and sell goods. Type 'money' to view your money.",
+"serpen":"Serpen\nThe local denomination of currency. Money can be used to buy and sell goods. Type 'money' to view your money.",
 
-"pylars":"Pylars\nThe local denomination of currency. Money can be used to buy and sell goods. Type 'money' to view your money.",
+"serpens":"Serpens\nThe local denomination of currency. Money can be used to buy and sell goods. Type 'money' to view your money.",
 
 "qp":"Quality Points\nQP are used to improve player Traits. 3 QP are gained upon Level-up..",
 

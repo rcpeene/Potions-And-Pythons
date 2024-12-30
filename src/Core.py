@@ -793,8 +793,8 @@ class Game():
 		# for instance, if the user inputs "attack him", or "take it"
 		self.it = None
 		self.they = None
-		self.her = None
-		self.him = None
+		self.he = None
+		self.she = None
 
 
 
@@ -836,9 +836,9 @@ class Game():
 			self.they = obj
 		if hasattr(obj,"gender"):
 			if obj.gender == "m":
-				self.him = obj
+				self.he = obj
 			elif obj.gender == "f":
-				self.her = obj
+				self.she = obj
 
 
 	def reapCreatures(self):
@@ -994,11 +994,10 @@ class Room():
 
 	def addItem(self,I):
 		# ensure only one bunch of Gold exists here
-		if isinstance(I,Pylars):
+		if isinstance(I,Serpens):
 			for item in self.items:
-				if isinstance(item,Pylars):
-					item.merge(I)
-					return
+				if isinstance(item,Serpens):
+					I = item.merge(I)
 
 		insort(self.items,I)
 		I.parent = self
@@ -1026,7 +1025,12 @@ class Room():
 
 	# remove all dead creatures from creatures list
 	def reapCreatures(self):
-		self.creatures = list(filter(lambda x: x.alive, self.creatures))
+		reapable = lambda creature: creature.timeOfDeath is not None and \
+		(game.time - creature.timeOfDeath) > 100 and \
+		self is not game.currentroom() and \
+		player not in creature.ancestors()
+
+		self.creatures = [creature for creature in self.creatures if not reapable(creature)]
 
 
 	def addFixture(self,F):
@@ -1202,13 +1206,16 @@ class Room():
 		items = self.listableItems()
 		if len(items) != 0:
 			print(f"There is {listObjects(self.listableItems())}.")
+		if len(items) == 1:
+			game.setPronouns(items[0])
 
 
 	# prints all the creatures in the room in sentence form
 	def describeCreatures(self):
 		if len(self.creatures) != 0:
 			print(f"There is {listObjects(self.creatures)}.")
-
+		for creature in self.creatures:
+			game.setPronouns(creature)
 
 
 
@@ -1371,7 +1378,7 @@ class Item():
 # Creatures have 10 base stats, called traits
 # They also have abilities; stats which are derived from traits through formulas
 class Creature():
-	def __init__(self,name,desc,plural,traits,hp,mp,money,inv,gear,status=[],aliases=[],descname=None):
+	def __init__(self,name,desc,plural,weight,traits,hp,mp,money,inv,gear,status=[],aliases=[],descname=None,timeOfDeath=None,alert=False,seesPlayer=False,sawPlayer=False):
 		self.name = name
 		if descname is None:
 			self.descname = name
@@ -1381,6 +1388,7 @@ class Creature():
 			self.plural = self.name + 's'
 		else:
 			self.plural = plural
+		self.weight = weight
 
 		self.STR = traits[0]
 		self.SPD = traits[1]
@@ -1413,7 +1421,7 @@ class Creature():
 		self.shield2 = Empty()
 
 		# these attributes remain unused in the Player subclass
-		self.alive = True
+		self.timeOfDeath = None
 		self.alert = False
 		self.seesPlayer = False
 		self.sawPlayer = -1
@@ -1443,7 +1451,9 @@ class Creature():
 
 
 	def __lt__(self,other):
-		return self.MVMT() < other.MVMT()
+		if isinstance(other, Creature):
+			return self.MVMT() < other.MVMT()
+		return self.name.lower() < other.name.lower()
 
 
 
@@ -1466,7 +1476,7 @@ class Creature():
 		dictkeys = list(d.keys())
 		# these attributes do not get stored between saves (except gear)
 		for key in dictkeys:
-			if key in Data.traits or key in {"gear","weapon","weapon2","shield","shield2","alive","alert","seesPlayer","sawPlayer"}:
+			if key in Data.traits or key in {"gear","weapon","weapon2","shield","shield2"}:
 				del d[key]
 		d["gear"] = compressedGear
 		# convert traits to a form more easily writable in a JSON object
@@ -1493,20 +1503,20 @@ class Creature():
 		if(f"{type} immunity" in self.status): dmg = 0
 		print(f"Took {dmg} {Data.dmgtypes[type]} damage")
 		#player hp lowered to a minimum of 0
-		self.hp = min0( self.hp-dmg)
+		self.hp = min0(self.hp-dmg)
 		if self.hp == 0:
 			self.death()
 
 
 	# adds money
-	def gainMoney(self,money):
+	def updateMoney(self,money):
 		self.money += money
 
 
 	# try to add an Item to Inventory
 	# it will fail if the inventory is too heavy
 	def addItem(self,I):
-		if isinstance(I,Pylars):
+		if isinstance(I,Serpens):
 			return True
 		if self.invWeight() + I.Weight() > self.BRDN() * 2:
 			return False
@@ -1535,10 +1545,9 @@ class Creature():
 	# if it has an Obtain() method, call that
 	# finally, check if the new inventory weight has hindered the creature
 	def obtainItem(self,I,msg=None):
-		source = I.parent
+		oldParent = I.parent
 		if self.addItem(I):
-			if source != None:
-				source.removeItem(I)
+			oldParent.removeItem(I)
 			if msg != None:
 				print(msg)
 			I.Obtain(self)
@@ -1599,6 +1608,7 @@ class Creature():
 
 	# if the item is armor, equip it, otherwise return False
 	def equipArmor(self,I):
+		assert I in self.inv
 		if isinstance(I,Helm): self.gear["head"] = I
 		elif isinstance(I,Tunic): self.gear["body"] = I
 		elif isinstance(I,Greaves): self.gear["legs"] = I
@@ -1612,6 +1622,7 @@ class Creature():
 	# if the new item is twohanded, set lefthand to Empty()
 	# calls the new item's Equip() method if it has one
 	def equipInHand(self,I):
+		assert I in self.inv
 		self.unequip(self.gear["left"])
 		self.gear["left"] = self.gear["right"]
 		self.gear["right"] = I
@@ -1659,12 +1670,13 @@ class Creature():
 
 	# called when a creature's hp hits 0
 	def death(self):
-		self.alive = False
+		self.timeOfDeath = game.time
 		print("\n" + f"{self.stringName(definite=True,cap=True,c=1)} died.")
+		self.descname = f"dead {self.descname}"
 		n = diceRoll(3,player.LOOT(),-2)
-		self.room().addItem(Pylars(n,[]))
+		self.room().addItem(Serpens(n,[]))
 		if not game.silent:
-			print(f"Dropped Ᵽ {n}.")
+			print(f"Dropped $ {n}.")
 		if game.whoseturn is player:
 			# TODO: verify that this is an acceptable formula
 			lv = player.level()
@@ -1674,8 +1686,10 @@ class Creature():
 
 	def Carry(self,creature):
 		self.addCondition("carrying",-3,silent=True)
-		self.equipInHand(creature)
 		creature.addCondition("carried",-3)
+		creature.parent.removeCreature(creature)
+		self.addItem(creature)
+		# self.equipInHand(creature)
 		return True
 
 
@@ -1726,6 +1740,14 @@ class Creature():
 	def SLTH(self): return ( 2*self.SKL + self.INT - min0(self.invWeight() - self.BRDN()) ) * 2*int(self.hasCondition("hiding"))
 	def SPLS(self): return 3*self.INT
 	def TNKR(self): return 2*self.INT + self.SKL
+
+
+	def Weight(self):
+		return self.weight + self.invWeight()
+
+
+	def isAlive(self):
+		return self.timeOfDeath is None
 
 
 	def contents(self):
@@ -1785,10 +1807,8 @@ class Creature():
 
 
 	# returns a list of names of all items in player inventory
-	def invNames(self,lower=False):
-		if lower:
-			return [item.name.lower() for item in self.inv]
-		return [item.name for item in self.inv]
+	def invNames(self):
+		return [item.stringName(det=False) if isinstance(item,Creature) else item.name for item in self.inv]
 
 
 	# just a function wrapper for functions that call itemNames on objects
@@ -1903,8 +1923,8 @@ class Creature():
 
 # the class representing the player, contains all player stats
 class Player(Creature):
-	def __init__(self,name,desc,traits,hp,mp,money,inv,gear,xp,rp,status=[],spells=[],descname=None,aliases=None,plural=None):
-		Creature.__init__(self,name,desc,None,traits,hp,mp,money,inv,gear,status=status,descname=descname)
+	def __init__(self,name,desc,traits,hp,mp,money,inv,gear,xp,rp,status=[],spells=[],descname=None,aliases=None,plural=None,**kwargs):
+		Creature.__init__(self,name,desc,None,0,traits,hp,mp,money,inv,gear,status=status,descname=descname)
 		self.xp = xp
 		self.rp = rp
 		self.spells = spells
@@ -1972,23 +1992,25 @@ class Player(Creature):
 		self.RP = maxm(100, minm(-100, repMod))
 
 
-	# adds money
-	def gainMoney(self,money):
+	def updateMoney(self,money):
 		self.money += money
-		print(f"\nYou have Ᵽ {self.money}!")
+		if money > 0:
+			print(f"\nYou have $ {self.money}!")
+		else:
+			print(f"\nYou have $ {self.money}.")
 
 
-	def obtainItem(self,I,msg=None):
-		source = I.parent
+	def obtainItem(self,I,tookMsg=None,failMsg=None):
+		oldParent = I.parent
 		if self.addItem(I):
-			if source != None:
-				source.removeItem(I)
-			if msg != None:
-				print(msg)
+			oldParent.removeItem(I)
+			if tookMsg != None:
+				print(tookMsg)
 			I.Obtain(self)
 			self.checkHindered()
 			return True
-		print(f"You can't take the {I.name}, your Inventory is too full.")
+		if failMsg != None:
+			print(failMsg)
 		return False
 
 
@@ -2057,7 +2079,7 @@ class Player(Creature):
 				attack *= 2
 			damage = min0( attack - target.DFNS() )
 			target.takeDamage(damage,self.weapon2.type)
-			if target.alive == False:
+			if not target.isAlive():
 				return
 		else:
 			print("Aw it missed.")
@@ -2080,13 +2102,13 @@ class Player(Creature):
 					attack *= 2
 				damage = min0( attack - target.DFNS() )
 				target.takeDamage(damage,self.weapon.type)
-				if target.alive == False:
+				if not target.isAlive():
 					return
 			else:
 				print("Aw it missed.")
 			if self.weapon2 != Empty():
 				self.dualAttack(target)
-			if target.alive == False:
+			if not target.isAlive():
 				return
 
 
@@ -2147,7 +2169,7 @@ class Player(Creature):
 
 
 	# each prints a different player stat
-	def printMoney(self): print(f"Ᵽ {self.money}")
+	def printMoney(self): print(f"$ {self.money}")
 	def printHP(self): print(f"HP: {self.hp}/{self.MXHP()}")
 	def printLV(self): print(f"LV: {self.level()}")
 	def printMP(self): print(f"MP: {self.mp}/{self.MXMP()}")
@@ -2167,7 +2189,7 @@ class Player(Creature):
 	def printInv(self):
 		print(f"Weight: {self.invWeight()}/{self.BRDN()}")
 		if len(self.inv) == 0:
-			print("\nInventory is empty.")
+			print("\nYour Inventory is empty.")
 		else:
 			columnPrint(self.invNames(),8,12)
 
@@ -2217,7 +2239,7 @@ class Player(Creature):
 
 	# prints player level, money, hp, mp, rp, and status effects
 	def printStats(self):
-		stats = [self.name, f"Ᵽ {self.money}", f"LV: {self.level()}", f"RP: {self.rp}", f"HP: {self.hp}/{self.MXHP()}", f"MP: {self.mp}/{self.MXMP()}"]
+		stats = [self.name, f"$ {self.money}", f"LV: {self.level()}", f"RP: {self.rp}", f"HP: {self.hp}/{self.MXHP()}", f"MP: {self.mp}/{self.MXMP()}"]
 		columnPrint(stats,2,16)
 		if len(self.status) != 0:
 			self.printStatus()
@@ -2239,16 +2261,17 @@ class Player(Creature):
 
 
 class Person(Creature):
-	def __init__(self,name,descname,traits,hp,mp,money,inv,gear,dlogtree,desc=None,love=0,fear=0,rap=0,status=[],spells=[],aliases=[],lastParley=None,memories=set(),appraisal=set(),**kwargs):
+	def __init__(self,name,descname,gender,weight,traits,hp,mp,money,inv,gear,dlogtree,desc=None,love=0,fear=0,rapport=0,status=[],spells=[],aliases=[],lastParley=None,memories=set(),appraisal=set(),**kwargs):
 		if desc == None:
 			desc = f"A {descname}"
-		Creature.__init__(self,name,desc,None,traits,hp,mp,money,inv,gear,status=status,aliases=aliases,descname=descname)
+		Creature.__init__(self,name,desc,None,weight,traits,hp,mp,money,inv,gear,status=status,aliases=aliases,descname=descname)
 		self.descname = descname
+		self.gender = gender
 		self.spells = spells
 		self.love = love
 		self.fear = fear
 		self.dlogtree = DialogueTree(dlogtree)
-		self.rap = rap
+		self.rapport = rapport
 		self.lastParley = lastParley
 		self.appraisal = appraisal
 		self.memories = memories
@@ -2273,9 +2296,11 @@ class Person(Creature):
 		pass
 
 	
-	def firstImpression(self):
+	def firstImpression(self,player):
 		# adjust love, fear from person baselines
-		pass
+		self.memories.add("met")
+		self.love += player.rp
+		self.fear += player.rp
 
 
 	def appraise(self,player,game):
@@ -2286,14 +2311,13 @@ class Person(Creature):
 		elif game.time - self.lastParley > 100:
 			self.dlogtree.newParley()
 		self.lastParley = game.time
-
-		# adjust love, fear here also?
-
 		if player.isNaked():
 			self.appraisal.add("naked")
 		
 		
 	def Talk(self,player,game,world):
+		if "met" not in self.memories:
+			self.firstImpression(player)
 		self.appraise(player,game)
 		if not self.dlogtree.visit(self,player,game,world):
 			print(f"{self.name} says nothing...")
@@ -2302,7 +2326,9 @@ class Person(Creature):
 	### User Output ###
 
 	def stringName(self,det=True,definite=False,n=1,plural=False,cap=False,c=1):
-		strname = self.name if "met" in self.memories else self.descname
+		if "met" in self.memories:
+			return self.name
+		strname = self.descname			
 		if len(strname) == 0:
 			return ""
 		if n > 1:
@@ -2328,7 +2354,7 @@ class Person(Creature):
 
 class Animal(Creature):
 	def act(self):
-		if not self.alive:
+		if not self.timeOfDeath:
 			return
 		if not game.silent:
 			print(f"\n{self.name}'s turn!")
@@ -2478,11 +2504,11 @@ class Passage(Fixture):
 
 
 
-class Pylars(Item):
+class Serpens(Item):
 	def __init__(self,value,status):
 		self.name = "Gold"
 		self.desc = f"{str(value)} glistening coins made of an ancient metal"
-		self.aliases = ["coin","coins","money","pylar","pylars"]
+		self.aliases = ["coin","coins","money","serpen","serpens"]
 		self.plural = "gold"
 		self.weight = value
 		self.durability = -1
@@ -2508,12 +2534,12 @@ class Pylars(Item):
 	### Operation ###
 
 	def Obtain(self,creature):
-		creature.gainMoney(self.value)
+		creature.updateMoney(self.value)
 
 
 	def merge(self,other):
-		if not isinstance(other,Pylars):
-			raise TypeError("Cannot merge non-Pylars with Pylars")
+		if not isinstance(other,Serpens):
+			raise TypeError("Cannot merge non-Serpens with Serpens")
 
 		self.status += other.status
 		self.value += other.value
@@ -2609,7 +2635,7 @@ class Monster(Creature):
 	### Operation ###
 
 	def act(self):
-		if not self.alive:
+		if not self.isAlive():
 			return
 		if not game.silent:
 			print(f"\n{self.name}'s turn!")
@@ -2647,13 +2673,13 @@ class Monster(Creature):
 					attack *= 2
 				damage = min0( attack - target.DFNS() )
 				target.takeDamage(damage,self.weapon.type)
-				if target.alive == False:
+				if not target.isAlive():
 					return
 			else:
 				print("It missed!")
 			if self.weapon2 != Empty():
 				self.dualAttack(target)
-			if target.alive == False:
+			if not target.isAlive():
 				return
 
 

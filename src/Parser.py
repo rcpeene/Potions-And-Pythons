@@ -39,7 +39,10 @@ def chooseObject(name,objects):
 			strname = object.stringName(det=False)
 			label = ""
 			if isinstance(object,Core.Creature):
-				label += f" ({object.hp} hp)"
+				if not object.isAlive():
+					label += f" (dead)"
+				else:
+					label += f" ({object.hp} hp)"
 			if not isinstance(object.parent,(Core.Room,Core.Player)):
 				label += f" ({object.parent.name})"
 			if object in Core.player.gear.values():
@@ -49,7 +52,7 @@ def chooseObject(name,objects):
 			print(f"{n+1}. {strname}{label}")
 
 		print(f"\nWhich {name}?")
-		choice = input("\n> ").lower()
+		choice = input("> ").lower()
 		if choice == "": continue
 		if choice in Data.cancels: return None
 		break
@@ -109,6 +112,7 @@ def isMeaningful(noun):
 	noun in Data.miscexpressions or \
 	noun in Data.hellos or \
 	noun in Data.goodbyes or \
+	noun in Data.prepositions or \
 	Core.player.nameQuery(noun) or \
 	Core.game.inWorld(noun):
 		return True
@@ -162,8 +166,8 @@ def replacePronoun(term):
 	elif term in {"they","them"}:
 		obj = Core.game.they
 	if obj == None:
-		return None
-	return obj.name
+		return term
+	return obj.stringName(det=False)
 
 
 # validates user input and processes into into a command form usable by parse(),
@@ -212,10 +216,8 @@ def parseWithoutVerb(prompt,preps):
 		else:
 			iobj = term
 
-	if dobj in Data.pronouns:
-		dobj = replacePronoun(dobj)
-	if iobj in Data.pronouns:
-		iobj = replacePronoun(iobj)
+	dobj = replacePronoun(dobj)
+	iobj = replacePronoun(iobj)
 
 	return dobj,iobj,prep
 
@@ -282,10 +284,8 @@ def parse(n=0):
 		elif iobj == None:
 			iobj = term
 
-	if dobj in Data.pronouns:
-		dobj = replacePronoun(dobj)
-	if iobj in Data.pronouns:
-		iobj = replacePronoun(iobj)
+	dobj = replacePronoun(dobj)
+	iobj = replacePronoun(iobj)
 
 	# this line calls the action function using the 'actions' dict
 	actionCompleted = actions[verb](dobj,iobj,prep)
@@ -487,6 +487,7 @@ def Zap(command):
 		elif isinstance(obj,Core.Creature):
 			obj.death()
 	print(f"Zapped objects: {len(matches)}")
+	Core.game.reapCreatures()
 
 
 
@@ -665,14 +666,18 @@ def CarryCreature(creature):
 		print(f"You can't carry the {creature.name}")
 		return False
 
-	print(f"You try to pick up the {creature.name}")
-	if creature.Restrain(Core.player):
+	print(f"You try to pick up {creature.stringName(definite=True)}.")
+	
+	if not creature.isAlive():
 		Core.player.Carry(creature)
-		print(f"You successfully carry the {creature.name}!")
-		return True
+	elif creature.Restrain(Core.player):
+		print(f"You succesfully restrain {creature.stringName(definite=True)}!")
+		Core.player.Carry(creature)
 	else:
-		print(f"You fail to restrain the {creature.name}!")
+		print(f"You fail to restrain {creature.stringName(definite=True)}!")
 		return True
+	print(f"You are carrying {creature.stringName(definite=True)}.")
+	return True
 
 
 def Cast(dobj,iobj,prep):
@@ -895,9 +900,13 @@ def Drop(dobj,iobj,prep,I=None,R=None):
 		if not Core.yesno(q):
 			return False
 
-	print(f"You drop your {I.name}")
 	I.parent.removeItem(I)
-	Core.game.currentroom.addItem(I)
+	if isinstance(I, Core.Creature):
+		print(f"You drop {I.stringName(definite=True)}")
+		Core.game.currentroom.addCreature(I)
+	else:
+		print(f"You drop your {I.name}")
+		Core.game.currentroom.addItem(I)
 	return True
 
 
@@ -1462,23 +1471,41 @@ def Tie(dobj,iobj,prep):
 	print("tieing")
 
 
+# if an item is a container, take each of its contents before taking it
+def TakeAllRecur(objToTake):
+	takenAll = True
+	takenAny = False
+	if hasattr(objToTake, "contents"):
+		# deep copy to prevent removing-while-iterating error
+		contents = [obj for obj in objToTake.contents()]
+		for content in contents:
+			takenAny = TakeAllRecur(content) or takenAny
+
+	parent = objToTake.parent
+	count = parent.itemNames().count(objToTake.name)
+	
+	if parent is Core.game.currentroom: suffix = ""
+	elif Core.player in objToTake.ancestors(): suffix = " from your " + parent.name
+	else: suffix = " from the " + parent.name
+	strname = objToTake.stringName(definite=(count==1))
+	tookMsg = f"You take {strname}{suffix}."
+	failMsg = f"You can't take the {objToTake.name}, your Inventory is too full."
+
+	return Core.player.obtainItem(objToTake,tookMsg,failMsg) or takenAny
+
+
 def TakeAll():
-	takenAnything = False
-	# deep copy to prevent deleting-while-iterating error
-	items = [item for item in Core.game.currentroom.items]
-	for obj in items:
-		count = obj.parent.itemNames().count(obj.name)
-		msg = f"You take {obj.stringName(definite=(count==1))}"
-
-		taken = Core.player.obtainItem(obj,msg)
-		takenAnything = taken or takenAnything
-
-	return takenAnything
+	if len(Core.game.currentroom.items) == 0:
+		print("There are no items to take.")
+		return False
+	takenAny = False
+	for obj in [obj for obj in Core.game.currentroom.items]:
+		takenAny = TakeAllRecur(obj) or takenAny
+	return takenAny
 
 
 def Take(dobj,iobj,prep):
-	print(dobj, iobj, prep)
-	if prep not in {"from","in","inside","up",None}:
+	if prep not in {"from","in","inside","out","out of","up",None}:
 		print("Command not understood.")
 		return False
 	if dobj == None:
@@ -1510,9 +1537,10 @@ def Take(dobj,iobj,prep):
 	elif Core.player in obj.ancestors(): suffix = " from your " + parent.name
 	else: suffix = " from the " + parent.name
 	strname = obj.stringName(definite=(count==1))
-	msg = f"You take {strname}{suffix}."
+	tookMsg = f"You take {strname}{suffix}."
+	failMsg = f"You can't take the {obj.name}, your Inventory is too full."
 
-	return Core.player.obtainItem(obj,msg)
+	return Core.player.obtainItem(obj,tookMsg,failMsg)
 
 
 def Touch(dobj,iobj,prep):
@@ -1744,6 +1772,7 @@ actions = {
 "punch":Punch,
 "push":Push,
 "put":Put,
+"put away":Unequip,
 "put down":Drop,
 "put on":Don,
 "quaff":Drink,
