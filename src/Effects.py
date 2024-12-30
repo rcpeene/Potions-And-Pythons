@@ -14,7 +14,7 @@ import Data
 
 
 def applyAreaEffect(effect,root,condfunc=lambda x:True):
-	objects = objSearch(root,key=condfunc,d=3)
+	objects = objQuery(root,key=condfunc,d=3)
 	for object in objects:
 		effect(object)
 

@@ -81,13 +81,13 @@ instantactions = {"describe","define","gear","help","hp","info","information","i
 traits = ("STR","SKL","SPD","STM","CON","CHA","INT","WIS","FTH","LCK")
 
 # derived creature stats. they can be found as Creature methods
-abilities = ("ACCU","ATCK","ATHL","ATSP","BRDN","CAST","CRIT","CSSP","DCPT","DFNS","ENDR","EVSN","INVS","KNWL","LOOT","MVMT","MXHP","MXMP","PRSD","RESC","RITL","SLTH","SPLS","TNKR")
+abilities = ("ACCU","ATCK","ATHL","ATSP","BRDN","CAST","CRIT","CSSP","DCPT","DFNS","ENDR","EVSN","INVS","KNWL","LOOT","MVMT","MXHP","MXMP","PRSD","RSTN","RITL","SLTH","SPLS","TNKR")
 
 # verb commands which may only be entered as single, lonesome words
 shortverbs = ("back","clear","cry","dance","examples","hi","hello","help","here","info","information","laugh","quit","return","save","scream","shout","sing","time","yawn","yell")
 
 # commands which just serve to print stats to the player
-statcommands = ("abilities","accu","atck","athl","atsp","brdn","cast","crit","cssp","dcpt","dfns","endr","evsn","gear","hp","inventory","inv","invs","knwl","level","loot","lv","money","mp","mvmt","mxhp","mxmp","prsd","resc","ritl","rp","slth","spells","spls","stats","status","tnkr","traits","weapons","xp")
+statcommands = ("abilities","accu","atck","athl","atsp","brdn","cast","crit","cssp","dcpt","dfns","endr","evsn","gear","hp","inventory","inv","invs","knwl","level","loot","lv","money","mp","mvmt","mxhp","mxmp","prsd","rstn","ritl","rp","slth","spells","spls","stats","status","tnkr","traits","weapons","xp")
 
 # all valid verbs which are not a shortverb or a statcommand
 verbs = ("attack","bite","break","build","carry","cast","catch","climb","close","craft","crawl","create","cross","crouch","cut","dash","define","describe","do","dodge","doff","don","drink","drop","duck","dump","eat","enter","equip","escape","examine","exit","feed","feel","fight","fill","find","fish","follow","fuck","get","give","go","grab","grapple","head","hear","hide","hit","ignite","insert","jump","kick","kill","lay","leave","lick","light","listen","lock","look","make","mount","move","obtain","open","pet","pick","pick up","place","play","point","pour","pray","pull","punch","push","put","put down","put on","quaff","read","release","remove","rest","restrain","return","ride","ring","rub","run","search","set","set down","shove","shut","slap","sleep","slice","smell","sneak","sniff","speak","steal","stomp","stow","strike","struggle","swim","take","take off","talk","taste","throw","tie","tinker","toss","touch","travel","trip","unequip","unlock","untie","use","view","wait","walk","wave","wear")
@@ -102,9 +102,9 @@ verbs = ("attack","bite","break","build","carry","cast","catch","climb","close",
 
 # Library of game terms to help players, used by the Define() verb in Parser.py
 definitions = {
-"abilities":"Abilities\n24 stats which dictate the chance to accomplish a goal, such as attacking, investigating, or persuading. The 24 abilities are ACCU, ATCK, ATHL, ATSP, BRDN, CAST, CRIT, CSSP, DCPT, DFNS, ENDR, EVSN, INVS, KNWL, LOOT, MVMT, MXHP, MXMP, PRSD, RESC, RITL, SLTH, SPLS, and TNKR. Type 'abilities' to view your abilities.",
+"abilities":"Abilities\n24 stats which dictate the chance to accomplish a goal, such as attacking, investigating, or persuading. The 24 abilities are ACCU, ATCK, ATHL, ATSP, BRDN, CAST, CRIT, CSSP, DCPT, DFNS, ENDR, EVSN, INVS, KNWL, LOOT, MVMT, MXHP, MXMP, PRSD, RSTN, RITL, SLTH, SPLS, and TNKR. Type 'abilities' to view your abilities.",
 
-"ability":"Ability\nOne of 24 stats which dictate the chance to accomplish a goal, such as attacking, investigating, or persuading. The 24 abilities are ACCU, ATCK, ATHL, ATSP, BRDN, CAST, CRIT, CSSP, DCPT, DFNS, ENDR, EVSN, INVS, KNWL, LOOT, MVMT, MXHP, MXMP, PRSD, RESC, RITL, SLTH, SPLS, and TNKR. Type 'abilities' to view your abilities.",
+"ability":"Ability\nOne of 24 stats which dictate the chance to accomplish a goal, such as attacking, investigating, or persuading. The 24 abilities are ACCU, ATCK, ATHL, ATSP, BRDN, CAST, CRIT, CSSP, DCPT, DFNS, ENDR, EVSN, INVS, KNWL, LOOT, MVMT, MXHP, MXMP, PRSD, RSTN, RITL, SLTH, SPLS, and TNKR. Type 'abilities' to view your abilities.",
 
 "accu":"Accuracy\nChance to hit against enemy EVSN. ACCU is determined primarily by SKL, and is also improved by LCK and Sleight. Type 'accu' to view your ACCU.",
 
@@ -266,9 +266,9 @@ definitions = {
 
 "range":"Range\nWeapons have a range value. When making an attack at a distance, ACCU is determined by Range, Sleight, SKL, and LCK. If the distance of the target is greater than weapon range, ACCU will be reduced. Weapons intended for melee attacks which are thrown usually have a poor Range..",
 
-"resc":"Resistance\nAmount that incoming Magical Damage is reduced. RESC is determined primarily by FTH, and is also improved by STM. Type 'resc' to view your RESC.",
+"rstn":"Resistance\nAmount that incoming Magical Damage is reduced. RSTN is determined primarily by FTH, and is also improved by STM. Type 'rstn' to view your RSTN.",
 
-"resistance":"Resistance\nAmount that incoming Magical Damage is reduced. RESC is determined primarily by FTH, and is also improved by STM. Type 'resc' to view your RESC.",
+"resistance":"Resistance\nAmount that incoming Magical Damage is reduced. RSTN is determined primarily by FTH, and is also improved by STM. Type 'rstn' to view your RSTN.",
 
 "ritl":"Ritual\nBonus added to rituals and healing Spells. RITL is determined primarily by FTH and is also improved by LCK. Type 'ritl' to view your RITL.",
 
@@ -302,7 +302,7 @@ definitions = {
 
 "spell list":"Spell List\nList of spells which a Creature has learned. The maximum number of spells a Creature can know is determined by SPLS. Type 'spell list' to view your Spell List.",
 
-"stamina":"Stamina\nTrait representing physical energy capacity. STM contributes to determining ATHL, ENDR, MVMT, MXHP, MXMP, and RESC. Type 'stm' to view your STM.",
+"stamina":"Stamina\nTrait representing physical energy capacity. STM contributes to determining ATHL, ENDR, MVMT, MXHP, MXMP, and RSTN. Type 'stm' to view your STM.",
 
 "status":"Status Conditions\nAll the player Status Conditions including Blessings and Curses. Status Conditions are temporary and affect player Stats in a variety of ways. Type 'status' to view your Status.",
 
@@ -312,7 +312,7 @@ definitions = {
 
 "stealth":"Stealth\nAbility to hide and be sneaky. SLTH is determined primarily by SKL and is also improved by INT. SLTH can be reduced if player is Hindered. Type 'slth' to view your SLTH.",
 
-"stm":"Stamina\nTrait representing physical energy capacity. STM contributes to determining ATHL, ENDR, MVMT, MXHP, MXMP, and RESC. Type 'stm' to view your STM.",
+"stm":"Stamina\nTrait representing physical energy capacity. STM contributes to determining ATHL, ENDR, MVMT, MXHP, MXMP, and RSTN. Type 'stm' to view your STM.",
 
 "str":"Strength\nTrait representing physical force. STR contributes to determining, ATCK, ATHL, and BRDN. Type 'str' to view your STR.",
 

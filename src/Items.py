@@ -436,7 +436,7 @@ class Table(Core.Item):
 			itemName = self.items[0].stringName()
 			self.descname = f"{self.name} with {itemName} on it"
 		elif len(self.items) > 1:
-			self.descname = f"{self.name} with items on it"
+			self.descname = f"{self.name} with things on it"
 
 
 	def removeItem(self,I):

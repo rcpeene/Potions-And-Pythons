@@ -38,6 +38,8 @@ class worldEncoder(json.JSONEncoder):
 		JSONprimitives = {dict,list,str,int,float,bool,None}
 		if hasattr(objToWrite,"parent"):
 			del objToWrite.parent
+		if hasattr(objToWrite,"root"):
+			del objToWrite.root
 		if type(objToWrite) == set:
 			return {"__class__":"set","setdata":list(objToWrite)}
 		# elif type(objToWrite) == Room:

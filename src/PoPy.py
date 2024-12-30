@@ -72,21 +72,19 @@ if __name__ == "__main__":
 	
 # replace Empty object? with none
 
-# fix this:
 # What will you do?
-# > open the chest
-# You open the wooden chest.
-# Inside there is a rusty key.
-# What will you do?
-# > take the key
-# There is no 'key' here.
+# > take key out of chest
+# key of out
+# Command not understood.
+
+# reaping not working after zapping goblin
+
+# add print which writes text letter by letter
 
 # add "you're already there" when trying to go to current room
 # improve 'go' with 'go to tunnel' for instance (filter out prepositions basically)
 # add 'forward(s), ahead' to 'go' command
 # add dialect processor to tritepool output?
-
-# add print which writes text letter by letter
 
 # add basic time cycling, and clock items which tell you the hour
 # add astronomical events based on the time cycling
