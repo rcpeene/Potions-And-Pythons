@@ -1848,7 +1848,7 @@ actions = {
 # sniff
 # grunt/moan/groan/roar/rawr/argh/snarl
 # squirm -> struggle
-# dive/jump
+# dive/jump/leap
 # untie
 # whip (attack)
 # dress/undress/strip
@@ -1861,7 +1861,6 @@ actions = {
 # mix/stir -> brew?
 # greet -> wave or talk?
 # scratch/itch
-# leap -> jump
 # knock/bang
 # switch
 # smoke
@@ -1876,7 +1875,7 @@ actions = {
 # pilfer -> steal
 # swing (an item)
 # ligma/sugma
-# buy/pay/purchase, sell?
+# buy/pay/purchase, sell, trade
 # embrace/hug
 # stab/slash
 # shave?
@@ -1886,7 +1885,7 @@ actions = {
 # hump -> fuck
 # curse/swear
 # squat - > crouch
-# pee/poop (soil your pants if they have them on)
+# pee/poop/shit on (soil your pants if they have them on)
 # caress -> pet
 # choke/strangle
 # paint/draw
@@ -1901,7 +1900,7 @@ actions = {
 # reload?
 # reel -> fish?
 # cook/brew
-# sweep? wipe?
+# clean/sweep/mop/wipe?
 # lay -> lay? (make own command?)
 # chop -> slash -> atk
 # chew -> eat
@@ -1917,3 +1916,7 @@ actions = {
 # backflip??
 # row/steer (if not mounted -> ride, else -> go)
 # stop, get off, dismount
+# blow/breath
+# clap
+# snap
+# observe/watch

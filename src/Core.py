@@ -820,11 +820,25 @@ class Game():
 	# passes time for each room, and each creature in each room
 	# important for decrementing the duration counter on all status conditions
 	def incrementTime(self):
+		prev_hour = self.hour()
 		self.time += 1
 		player.passTime(1)
 		for room in self.renderedRooms():
 			self.silent = room is not self.currentroom
 			room.passTime(1)
+		if prev_hour != self.hour():
+			self.checkDaytime()
+
+
+	def checkDaytime(self):
+		if self.hour() == 'stag':
+			self.print('It is morning.')
+		if self.hour() == 'bell':
+			self.print('It is day.')
+		if self.hour() == 'lily':
+			self.print('It is evening.')
+		if self.hour() == 'mouse':
+			self.print('It is night.')
 
 
 	def clearPronouns(self):
@@ -939,6 +953,11 @@ class Game():
 		return len(objects) > 0
 
 
+	def hour(self):
+		return Data.hours[int(self.time % 300)]
+
+
+
 	### User Output ###
 	
 	def input(self,text=""):
@@ -969,6 +988,7 @@ class Game():
 		player.printStats()
 		game.print()
 		self.currentroom.describe()
+		game.checkDaytime()
 
 
 	def describeRoom(self):
