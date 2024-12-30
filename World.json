@@ -294,11 +294,11 @@
 				"money": 0,
 				"inv": [],
 				"gear": {
-					"head":-1,
-					"body":-1,
-					"left":-1,
-					"right":-1,
-					"legs":-1
+					"head": null,
+					"body": null,
+					"left": null,
+					"right": null,
+					"legs": null
 				}
 			}
 		],
@@ -585,11 +585,11 @@
 				"money": 10,
 				"inv": [],
 				"gear": {
-					"head":-1,
-					"body":-1,
-					"left":-1,
-					"right":-1,
-					"legs":-1
+					"head": null,
+					"body": null,
+					"left": null,
+					"right": null,
+					"legs": null
 				},
 				"dlogtree":{
 					"surprise":{
@@ -674,9 +674,9 @@
 				"money": 0,
 				"inv": [],
 				"gear": {
-					"tail": -1,
-					"head": -1,
-					"mouth": -1
+					"tail": null,
+					"head": null,
+					"mouth": null
 				}
 			},
 			{
@@ -693,9 +693,9 @@
 				"money": 0,
 				"inv": [],
 				"gear": {
-					"tail": -1,
-					"head": -1,
-					"mouth": -1
+					"tail": null,
+					"head": null,
+					"mouth": null
 				}
 			}
 
