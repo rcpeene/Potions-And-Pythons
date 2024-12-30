@@ -59,6 +59,8 @@ def main(skipIntro=False):
 		Core.game.reapCreatures()
 		# sort the creatures in each rendered room by their MVMT attribute
 		Core.game.sortCreatures()
+		# save game every so often just in case
+		Menu.quicksave(Core.game.time)
 		if Core.game.quit: return
 
 
@@ -69,8 +71,6 @@ if __name__ == "__main__":
 ################################################################################
 
 # CURRENT TASKS
-	
-# replace Empty object? with none
 
 # add print which writes text letter by letter
 
