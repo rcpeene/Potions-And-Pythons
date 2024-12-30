@@ -715,7 +715,7 @@ class DialogueTree():
 
 
 # Empty is a class usually used as a placeholder for items. It serves to act as a dummy item which has mostly null values
-class Empty():
+class EmptyGear():
 	def __init__(self):
 		self.name = "[empty]"
 		self.aliases = []
@@ -1378,7 +1378,7 @@ class Item():
 # Creatures have 10 base stats, called traits
 # They also have abilities; stats which are derived from traits through formulas
 class Creature():
-	def __init__(self,name,desc,plural,weight,traits,hp,mp,money,inv,gear,status=[],aliases=[],descname=None,timeOfDeath=None,alert=False,seesPlayer=False,sawPlayer=False):
+	def __init__(self,name,desc,plural,weight,traits,hp,mp,money,inv,gear,status=[],aliases=[],descname=None,timeOfDeath=None,alert=False,seesPlayer=False,sawPlayer=-1):
 		self.name = name
 		if descname is None:
 			self.descname = name
@@ -1411,20 +1411,20 @@ class Creature():
 		self.inv = inv
 
 		# convert gear from its stored form in files to its runtime form
-		self.gear = {key: inv[idx] if idx != -1 else Empty() for key, idx in gear.items()}
+		self.gear = {key: inv[idx] if idx != None else EmptyGear() for key, idx in gear.items()}
 
 		self.parent = None
 
-		self.weapon = Empty()
-		self.weapon2 = Empty()
-		self.shield = Empty()
-		self.shield2 = Empty()
+		self.weapon = EmptyGear()
+		self.weapon2 = EmptyGear()
+		self.shield = EmptyGear()
+		self.shield2 = EmptyGear()
 
 		# these attributes remain unused in the Player subclass
-		self.timeOfDeath = None
-		self.alert = False
-		self.seesPlayer = False
-		self.sawPlayer = -1
+		self.timeOfDeath = timeOfDeath
+		self.alert = alert
+		self.seesPlayer = seesPlayer
+		self.sawPlayer = sawPlayer
 
 
 
@@ -1464,7 +1464,7 @@ class Creature():
 	# the index of the equipped object in the creature's inventory
 	# if the gear slot is empty, replaces it with -1
 	def compressGear(self):
-		return {key: (self.inv.index(item) if item != Empty() else -1) for key, item in self.gear.items()}
+		return {key: (self.inv.index(item) if item != EmptyGear() else None) for key, item in self.gear.items()}
 
 
 	# returns a dict which contains all the necessary information to store...
@@ -1560,16 +1560,16 @@ class Creature():
 	# specifically, weapon, weapon2, shield, shield2
 	def assignWeaponAndShield(self):
 		#if unassigned, attributes are empty, self.weapon is always assigned
-		self.weapon2 = Empty()
-		self.shield = Empty()
-		self.shield2 = Empty()
+		self.weapon2 = EmptyGear()
+		self.shield = EmptyGear()
+		self.shield2 = EmptyGear()
 
 		# assign weapon and weapon2 based on types of gear in left and right
 		if isinstance(self.gear["right"],Weapon) and isinstance(self.gear["left"],Weapon):
 			self.weapon2 = self.gear["left"]
 		elif isinstance(self.gear["left"],Weapon) and not isinstance(self.gear["right"],Weapon):
 			self.weapon = self.gear["left"]
-		elif isinstance(self.gear["left"],Item) and self.gear["right"] == Empty():
+		elif isinstance(self.gear["left"],Item) and self.gear["right"] == EmptyGear():
 			self.weapon = self.gear["left"]
 		else:
 			self.weapon = self.gear["right"]
@@ -1592,14 +1592,14 @@ class Creature():
 			self.shield = self.gear["left"]
 
 
-	# finds the slot in which item resides, sets it to Empty()
+	# finds the slot in which item resides, sets it to EmptyGear()
 	# calls the item's Unequip() method if it has one
 	def unequip(self,I,silent=True):
 		gearslots = list(self.gear.keys())
 		gearitems = list(self.gear.values())
 		# finds the slot whose value is I, sets it to empty
 		slot = gearslots[gearitems.index(I)]
-		self.gear[slot] = Empty()
+		self.gear[slot] = EmptyGear()
 		self.assignWeaponAndShield()
 		if not silent:
 			print(f"You unequip your {I.name}")
@@ -1619,7 +1619,7 @@ class Creature():
 
 	# unequips the lefthanded item, moves righthanded item to left,
 	# equips the new item in right hand
-	# if the new item is twohanded, set lefthand to Empty()
+	# if the new item is twohanded, set lefthand to EmptyGear()
 	# calls the new item's Equip() method if it has one
 	def equipInHand(self,I):
 		assert I in self.inv
@@ -1627,7 +1627,7 @@ class Creature():
 		self.gear["left"] = self.gear["right"]
 		self.gear["right"] = I
 		if (hasattr(I,"twohanded") and I.twohanded) or isinstance(I,Creature):
-			self.gear["left"] = Empty()
+			self.gear["left"] = EmptyGear()
 		self.assignWeaponAndShield()
 		if hasMethod(I,"Equip"): I.Equip(self)
 
@@ -1863,7 +1863,7 @@ class Creature():
 
 	def isNaked(self):
 		return False
-		if self.gear['legs'] == Empty() and self.gear['body'] == Empty():
+		if self.gear['legs'] == EmptyGear() and self.gear['body'] == EmptyGear():
 			return True
 
 
@@ -2106,7 +2106,7 @@ class Player(Creature):
 					return
 			else:
 				print("Aw it missed.")
-			if self.weapon2 != Empty():
+			if self.weapon2 != EmptyGear():
 				self.dualAttack(target)
 			if not target.isAlive():
 				return
@@ -2677,7 +2677,7 @@ class Monster(Creature):
 					return
 			else:
 				print("It missed!")
-			if self.weapon2 != Empty():
+			if self.weapon2 != EmptyGear():
 				self.dualAttack(target)
 			if not target.isAlive():
 				return
@@ -2688,7 +2688,7 @@ class Monster(Creature):
 	def describe(self):
 		print(f"It's {self.stringName()}.")
 		print(f"{self.desc}.")
-		gearitems = [item for item in self.gear.values() if item != Empty()]
+		gearitems = [item for item in self.gear.values() if item != EmptyGear()]
 		if len(gearitems) != 0:
 			print(f"It has {listObjects(gearitems)}.")
 

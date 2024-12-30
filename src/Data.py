@@ -68,7 +68,7 @@ directions = {"n":"north","ne":"northeast","e":"east","se":"southeast","s":"sout
 dmgtypes = {"a":"acid","b":"bludgeoning","c":"cold","e":"essential","f":"fire","i":"psychic","l":"lightning","n":"necrotic","p":"piercing","r":"radiant","s":"slashing","t":"thunder","v":"force","x":"poison"}
 
 # gear dict used to initialize the player object
-initgear = {"head":-1, "body":-1, "left":-1, "right":-1, "legs":-1}
+initgear = {"head":None, "body":None, "left":None, "right":None, "legs":None}
 
 # action verbs which should not take any in-game time to execute
 instantactions = {"describe","define","gear","help","hp","info","information","inventory","inv","level","lv","money","mp","quit","room","rp","save","status","time","traits","xp"}
