@@ -110,7 +110,6 @@ def waitKbInput(text):
 			sys.stdin.read(1)  # Wait for a single keypress
 		finally:
 			termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-	print()
 
 
 # prints a timed ellipsis, used for dramatic transitions
@@ -387,11 +386,11 @@ def ensureWorldIntegrity():
 # - responses is a list of potential dialogue responses that the user may choose during the dialogue
 # the child that is visited next can depend on the value of the corresponding case or the user-selected response
 
-# there are four branches from the root; surprise, quest, rapport, and chatter
+# there are four branches from the root; surprise, quest, colloquy, and chatter
 # the tree will try to traverse each branch in order until one produces dialogue output
 # 1. surprise is for dialogue which a character would prioritize before any other possibilities
 # 2. quest is for dialogue which indicates tasks for the player
-# 3. rapport is for more casual dialogue that is meant to give the character depth or individuality
+# 3. colloquy is for dialogue that is meant to give the character depth or individuality
 # 4. chatter is for when all other dialogue is exhausted, it is randomly sampled from specified tritesets 
 
 # a few additional features of dialogue trees:
@@ -399,22 +398,23 @@ def ensureWorldIntegrity():
 # a new parley occurs after a set period of time since the previous dialogue
 # it can store a node 'checkpoint' in case the user leaves and reenters the dialogue
 # nodes may have a 'visitLimit', to ensure dialogue is not repeated in one parley
-# nodes may have a 'rapportLevel' which requires the character has a certain 'rap' value to be visited
-# the characters's rap value is incremented as the user engages in more dialogue
-# rap is meant to give the dialogue a progression throughout the game
+# nodes may have a 'rapportReq' which requires the character has a certain 'rapport' value to be visited
+# the characters's rapport value is incremented as the user engages in more dialogue
+# rapport is meant to give the dialogue a progression throughout the game
 # reaching certain nodes can modify the character's love and fear for the player
 
 
 class DialogueNode():
-	def __init__(self,parent,root,nVisits=0,visitLimit=None,rapportLevel=None,isCheckpoint=False,loveBonus=0,fearBonus=0,remark=None,trites=[],cases=[],responses=[],children=[]):
+	def __init__(self,parent,root,nVisits=0,visitLimit=None,rapportReq=None,isCheckpoint=False,loveMod=0,fearMod=0,repMod=0,remark=None,trites=[],cases=[],responses=[],children=[]):
 		self.parent = parent
 		self.root = root
 		self.nVisits = nVisits
 		self.visitLimit = visitLimit
-		self.rapportLevel = rapportLevel
+		self.rapportReq = rapportReq
 		self.isCheckpoint = isCheckpoint
-		self.loveBonus=loveBonus
-		self.fearBonus=fearBonus
+		self.loveMod=loveMod
+		self.fearMod=fearMod
+		self.repMod=repMod
 		self.remark = remark
 		self.children = [DialogueNode(self,root,**child_json) for child_json in children]
 
@@ -445,7 +445,7 @@ class DialogueNode():
 		assert self.cases == [] or self.responses == []
 		
 		if hasattr(self.parent, 'responses'):
-			assert self.visitLimit == None and self.rapportLevel == None, 'child of response node must not have visitLimit or rapportLevel'
+			assert self.visitLimit == None and self.rapportReq == None, 'child of response node must not have visitLimit or rapportReq'
 
 
 	### File I/O ###
@@ -538,7 +538,7 @@ class DialogueNode():
 				return None
 
 			try:
-				# note that this does *not* hop(); it ignores child's visitLimit and rapportLevel
+				# note that this does *not* hop(); it ignores child's visitLimit and rapportReq
 				return self.children[int(choice)-1]
 			except:
 				print('That is not one of the options. Input a number or type "cancel"')
@@ -548,8 +548,8 @@ class DialogueNode():
 	def hop(self,speaker):
 		if self.visitLimit and self.nVisits >= self.visitLimit:
 			return False
-		if self.rapportLevel != None:
-			if speaker.rap != self.rapportLevel:
+		if self.rapportReq != None:
+			if speaker.rapport != self.rapportReq:
 				return False
 		return True
 
@@ -585,13 +585,15 @@ class DialogueNode():
 
 		# count this node as successfully visited
 		self.nVisits += 1
-		if self.rapportLevel != None:
-			print('incrementing rap')
-			speaker.rap += 1
+		if self.rapportReq != None:
+			speaker.rapport += 1
 		
 		# reaching a node can change the speaker's love or fear for the player
-		speaker.love += self.loveBonus
-		speaker.fear += self.fearBonus
+		speaker.love += self.loveMod
+		speaker.fear += self.fearMod
+		
+		# or the player's reputation
+		player.updateReputation(self.repMod)
 
 		# unmark checkpoint if this node was succesfully visited
 		if nextNode and self.root.checkpoint == self.id:
@@ -620,11 +622,11 @@ class DialogueTree():
 	def __init__(self,tree_json):
 		self.surprise = DialogueNode(self,self,**tree_json['surprise'])
 		self.quest = DialogueNode(self,self,**tree_json['quest'])
-		self.rapport = DialogueNode(self,self,**tree_json['rapport'])
+		self.colloquy = DialogueNode(self,self,**tree_json['colloquy'])
 		self.chatter = DialogueNode(self,self,**tree_json['chatter'])
 		self.checkpoint = tree_json.get('checkpoint',None)
 		self.id = []
-		self.children = [self.surprise, self.quest, self.rapport, self.chatter]
+		self.children = [self.surprise, self.quest, self.colloquy, self.chatter]
 
 
 	### File I/O ###
@@ -682,7 +684,7 @@ class DialogueTree():
 				if self.visitBranch(checkpointNode,speaker,player,game,world):
 					return True
 
-		for branch in self.quest,self.rapport,self.chatter:
+		for branch in self.quest,self.colloquy,self.chatter:
 			if branch.hop(speaker):
 				if self.visitBranch(branch,speaker,player,game,world):
 					return True
@@ -1964,6 +1966,10 @@ class Player(Creature):
 		input("You are done leveling up.\n")
 		clearScreen()
 		self.checkHindered()
+
+
+	def updateReputation(self,repMod):
+		self.RP = maxm(100, minm(-100, repMod))
 
 
 	# adds money
