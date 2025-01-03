@@ -67,7 +67,7 @@ def getRoomKey(room,world):
 			return key
 
 
-def clearScreen():
+def clearScreen(*args):
 	if os.name == "nt":
 		os.system("cls")
 	else:
@@ -96,7 +96,8 @@ def kbInput():
 
 
 # waits for any keyboard input
-def waitKbInput(text):
+def waitKbInput(text=""):
+	flushInput()
 	game.print(text)
 	if os.name == 'nt':  # For Windows
 		import msvcrt
@@ -1006,7 +1007,7 @@ class Game():
 		return input()
 
 
-	def print(self,*args,end="\n",delim='',delay=0.01):
+	def print(self,*args,end="\n",delim='',delay=0.005):
 		if self.mode == 1:
 			return print(*args,end=end)
 		if len(args) > 1:
@@ -2248,40 +2249,36 @@ class Player(Creature):
 		return "yourself"
 
 	# prints all 10 player traits
-	def printTraits(self):
-		for trait in Data.traits:
-			if trait in {"STR","CHA"}:
-				game.print()
-			else:
-				game.print("\t\t",end="")
-			game.print(f"{trait}: {getattr(self,trait)}",end="")
-		game.print()
+	def printTraits(self,trait=None):
+		if trait == None:
+			traits = [f"{t.upper()}: {getattr(self,t.upper())}" for t in Data.traits]
+			columnPrint(traits,5,10)
+			return	
+		game.print(f"{trait.upper()}: {getattr(self,trait.upper())}\n")
 
 
-	def printAbility(self,ability):
-		if ability == "ATCK":
-			game.print(f"ATCK: {self.STR} - {self.weapon.might*self.STR}")
-		elif ability == "BRDN":
-			game.print(f"BRDN: {self.invWeight()}/{self.BRDN()}")
-		else:
+	def printAbility(self,ability=None):
+		if ability == "atck":
+			game.print(f"atck: {self.STR} - {self.weapon.might*self.STR}")
+		elif ability == "brdn":
+			game.print(f"brdn: {self.invWeight()}/{self.BRDN()}")
+		elif ability is not None:
 			game.print(f"{ability}: {getattr(self,ability)()}")
-
-
-	def printAbilities(self):
-		for ability in Data.abilities:
-			self.printAbility(ability)
+		else:
+			for ability in Data.abilities:
+				self.printAbility(ability.upper())
 
 
 	# each prints a different player stat
-	def printMoney(self): game.print(f"$ {self.money}")
-	def printHP(self): game.print(f"HP: {self.hp}/{self.MXHP()}")
-	def printLV(self): game.print(f"LV: {self.level()}")
-	def printMP(self): game.print(f"MP: {self.mp}/{self.MXMP()}")
-	def printXP(self): game.print(f"XP: {self.xp}")
-	def printRP(self): game.print(f"RP: {self.rp}")
+	def printMoney(self, *args): game.print(f"$ {self.money}")
+	def printHP(self, *args): game.print(f"HP: {self.hp}/{self.MXHP()}")
+	def printLV(self, *args): game.print(f"LV: {self.level()}")
+	def printMP(self, *args): game.print(f"MP: {self.mp}/{self.MXMP()}")
+	def printXP(self, *args): game.print(f"XP: {self.xp}")
+	def printRP(self, *args): game.print(f"RP: {self.rp}")
 
 
-	def printSpells(self):
+	def printSpells(self, *args):
 		game.print(f"Spells: {len(self.spells)}/{self.SPLS()}")
 		if len(self.spells) == 0:
 			game.print("\nYou don't know any spells.")
@@ -2290,7 +2287,7 @@ class Player(Creature):
 
 
 	# prints player inventory
-	def printInv(self):
+	def printInv(self, *args):
 		game.print(f"Weight: {self.invWeight()}/{self.BRDN()}")
 		if len(self.inv) == 0:
 			game.print("\nYour Inventory is empty.")
@@ -2299,14 +2296,14 @@ class Player(Creature):
 
 
 	# print each player gear slot and the items equipped in them
-	def printGear(self):
+	def printGear(self, *args):
 		game.print()
 		for slot in self.gear:
 			game.print(slot + ":\t",end="")
 			game.print(self.gear[slot].name)
 
 
-	def printStatus(self):
+	def printStatus(self, *args):
 		if len(self.status) == 0:
 			game.print("None")
 			return
@@ -2342,7 +2339,7 @@ class Player(Creature):
 
 
 	# prints player level, money, hp, mp, rp, and status effects
-	def printStats(self):
+	def printStats(self, *args):
 		stats = [self.name, f"$ {self.money}", f"LV: {self.level()}", f"RP: {self.rp}", f"HP: {self.hp}/{self.MXHP()}", f"MP: {self.mp}/{self.MXMP()}"]
 		columnPrint(stats,2,16)
 		if len(self.status) != 0:
@@ -2350,7 +2347,7 @@ class Player(Creature):
 
 
 	# for every item in player inventory, if its a weapon, print it
-	def printWeapons(self):
+	def printWeapons(self, *args):
 		if len(self.weapons()) == 0:
 			game.print("You have no weapons.")
 		else:
@@ -2826,5 +2823,6 @@ class Monster(Creature):
 
 
 player = Player("","",[0]*10,0,0,0,[],{},0,0)
-game = Game(-1,-1,-1,-1,-1)
+defaultRoom = Room("","","",{},[],[],[],set())
+game = Game(-1,defaultRoom,defaultRoom,-1,-1)
 world = {}
