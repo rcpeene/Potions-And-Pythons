@@ -715,6 +715,29 @@ prosperity - raises LCK
 
 CONDITION IDEAS:
 
+some condition summaries:
+- frozen (can't move and also taking damage over time, negates burning)
+- paralyzed (just can't move)
+- poisoned (little damage, lasts a long time)
+- bleeding (medium damage, lasts medium amount)
+- burning (lost of damage, last short amount usually, negates frozen, ignite anything you touch)
+- wet (doubles lightning damage, negates burning)
+- cool (bonus to RP)
+- smelly (penalty to love?)
+- enchanted (huge bonus to love)
+- haunted (huge bonus to fear)
+- blind (can't see, not sure how to implement this??, just some descriptions go silent I guess)
+- asleep (can't do anything, will wake up if takes damage or becomes wet)
+- restrained (cant willingly move or do many actions?)
+- prone (penalty to EVSN and MVMT? bonus to SLTH)
+- crouched (like prone but less significant?)
+- invisible (huge bonus to SLTH, affects dialogue somehow)
+- petrified (immune to damage, but can't move, maybe just kills you and turns you to a statue)
+- lignified (perhaps same as petrified. would become more vulnerable to fire damage)
+- hindered (penalty to speed)
+- sanguine (overflow damage heals)
+
+
 'cool' with glasses or something so it says "you are cool"
 raising a base stat
 raising a derived stat
@@ -746,7 +769,7 @@ disguised - creature appears to be something/someone else (idk how to do this)
 polymorphed - creature has entirely different stats and abilities (maybe store all previous stats in a JSON string)
 invisible - creature is perfectly hidden
 flying - creature can move freely in any direction
-waterbreathing - cannot drown
+waterbreathing (amphibious?) - cannot drown
 feather fall - cannot take fall damage
 gaseous form - can fly and is intangible
 truesight - can see invisible things
@@ -754,7 +777,7 @@ darkvision - can get full descriptions in darkness
 opulence - double money recieved
 chefskiss - better at cooking
 greenthumb - good at planting or something
-in a sphere/bubble - immune to physical damage, can't attack, drop, take
+in a sphere/bubble (enbubbled) - immune to physical damage, can't attack, drop, take
 hunters mark - idk??? ....
 thornshield - (thornskin maybe), when taking physical melee damage, deal damage to damager
 
@@ -1163,7 +1186,8 @@ CHARACTER NAMES:
 	Glycon the false Serpent God (secretly a puppet?)
 	Leviathan
 	Galigantus the giant
-	Archons (regional rulers?)
+	Archons (regional rulers? maybe names for the giants)
+	Polemarch (archon of war)
 	The Benevolent Frog King (looking for his son the frog prince?)
 	a cobbler
 	one bbeg is the world serpent called Aeormungand (Leviathan?)
@@ -1295,7 +1319,7 @@ Lampoon, Lash, Lethargy, Levitate, Lignify, Limerence, Lure
 Maelstrom, Malaise, Manumit, Melancholy, Micturate, Mirage, Moonshot
 Nyctophobia
 Parley, Paroxysm, Parry, Penumbra, Petrify, Phantasm, Pilfer, Ponder, Prescience, Psychosis, Putrefaction
-Refection, Rend, Repast, Revelry, Riposte
+Refection, Rend, Repast, Resurrect, Revelry, Riposte
 Sanctuary, Scry, Serein, Shivaree, Simulacrum, Smite, Spangle, Squib, Sunder, Synpase
 Telekinesis, Tempest, Tether, Torrent
 Usurp

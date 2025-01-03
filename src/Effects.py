@@ -31,13 +31,12 @@ def spawnObject(room,obj):
 
 
 def destroyObject(obj):
-	parent = obj.parent
 	if isinstance(obj,Core.Creature):
-		parent.removeCreature(obj)
+		obj.parent.removeCreature(obj)
 	elif isinstance(obj,Core.Fixture):
-		parent.removeFixture(obj)
+		obj.parent.removeFixture(obj)
 	elif isinstance(obj,Core.Item):
-		parent.removeItem(obj)
+		obj.parent.removeItem(obj)
 	if not Core.game.silent:
 		Core.game.print(f"{obj.stringName(definite=True,cap=True,c=1)} was destroyed.")
 
@@ -50,7 +49,7 @@ def increment(obj,attribute,num):
         else:
             raise TypeError(f"The attribute '{attribute}' is not an integer.")
     else:
-        raise AttributeError(f"The object has no attribute '{attribute}'.")
+        raise AttributeError(f"The object {obj} has no attribute '{attribute}'.")
 
 
 
@@ -71,7 +70,6 @@ spells = {}
 # to simply give the player information
 
 
-#
 # SPELL EFFECTS:
 # Note: these are not specific spell ideas, but general things a spell could do, to outline ways to implement spells and what technical limitations there are
 #

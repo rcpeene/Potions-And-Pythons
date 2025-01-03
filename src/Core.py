@@ -802,6 +802,12 @@ class Game():
 		self.he = None
 		self.she = None
 
+		# 23 minutes in an hour
+		self.hourlength = 23
+		self.daylength = len(Data.hours) * self.hourlength
+		# 14 days in a month
+		self.monthlength = 14 * self.daylength
+
 
 
 	### Operation ###
@@ -819,15 +825,16 @@ class Game():
 
 	# passes time for each room, and each creature in each room
 	# important for decrementing the duration counter on all status conditions
-	def incrementTime(self):
+	def passTime(self, t=1):
 		prev_hour = self.hour()
-		self.time += 1
-		player.passTime(1)
+		self.time += t
+		player.passTime(t)
 		for room in self.renderedRooms():
 			self.silent = room is not self.currentroom
-			room.passTime(1)
+			room.passTime(t)
 		if prev_hour != self.hour():
 			self.checkDaytime()
+		self.checkAstrology()
 
 
 	def clearPronouns(self):
@@ -943,9 +950,51 @@ class Game():
 
 
 	def hour(self):
-		# hour changes every 23 time units
-		# with 13 hours in a day, a day lasts 299 time units
-		return Data.hours[(self.time % 299) // 23]
+		return Data.hours[(self.time % self.daylength) // self.hourlength]
+
+
+	def checkMoon(self):
+		mooncycle = (self.time % self.monthlength) // self.daylength
+		if mooncycle() == 0:
+			self.print("It is a new moon.")
+			self.events.add("new moon")
+		elif mooncycle() == 7:
+			self.print("It is a full moon.")
+			self.events.add("full moon")
+		else:
+			self.events.remove("new moon")
+			self.events.remove("full moon")
+
+
+	def checkAstrology(self, startUp=False):
+		darkhours = ("cat","mouse","owl","serpent","wolf")
+		aurora_cycle = self.time % 2000
+		if aurora_cycle >= 0 and aurora_cycle < 100 and self.hour() in darkhours:
+			if "aurora" not in self.events or startUp:
+				self.print("There is an aurora in the sky!")			
+			self.events.add("aurora")
+		elif "aurora" in self.events:
+			self.events.remove("aurora")
+			self.print("The aurora is over.")
+
+		meteor_cycle = self.time % 3500
+		if meteor_cycle >= 0 and meteor_cycle < 300 and self.hour() in darkhours:
+			if "meteor shower" not in self.events or startUp:
+				self.print("There is a meteor shower in the sky!")
+			self.events.add("meteor shower")
+		elif "meteor shower" in self.events:
+			self.events.remove("meteor shower")
+			self.print("The meteor shower is over.")
+
+		lighthours = ("rooster","juniper","bell","sword","willow","lily")
+		eclipse_cycle = (self.time % (self.monthlength*3+100))
+		if eclipse_cycle > 0 and eclipse_cycle < 30 and self.hour() in lighthours:
+			if "eclipse" not in self.events or startUp:
+				self.print("There is a solar eclipse in the sky!")
+			self.events.add("eclipse")
+		elif "eclipse" in self.events:
+			self.events.remove("eclipse")
+			self.print("The solar eclipse is over.")
 
 
 
@@ -957,8 +1006,7 @@ class Game():
 		return input()
 
 
-	def print(self,*args,end="\n",delim=''):
-		delay = 0.01
+	def print(self,*args,end="\n",delim='',delay=0.01):
 		if self.mode == 1:
 			return print(*args,end=end)
 		if len(args) > 1:
@@ -980,6 +1028,7 @@ class Game():
 		game.print()
 		self.currentroom.describe()
 		game.checkDaytime()
+		game.checkAstrology(startUp=True)
 
 
 	def describeRoom(self):
@@ -987,15 +1036,15 @@ class Game():
 
 
 	def checkDaytime(self):
-		if self.hour() == 'stag':
+		if self.hour() in ('stag','rooster','juniper'):
 			self.print('It is morning.')
-		if self.hour() == 'bell':
+		if self.hour() in ('bell','sword','willow','lily'):
 			self.print('It is day.')
-		if self.hour() == 'hearth':
+		if self.hour() in ('hearth','cat','mouse'):
 			self.print('It is evening.')
-		if self.hour() == 'owl':
+		if self.hour() in ('owl','serpent','wolf'):
 			self.print('It is night.')
-
+			self.checkMoon()
 
 
 
@@ -1834,7 +1883,7 @@ class Creature():
 		return ancs
 
 
-	def room(self):
+	def root(self):
 		return self.ancestors()[-1]
 
 
@@ -2083,7 +2132,10 @@ class Player(Creature):
 		pair = [name,dur]
 		insort(self.status,pair)
 		if not silent:
-			game.print(f"You are {name}.")
+			if name in Data.curses or name in Data.blessings:
+				game.print(f"You have {name}.")
+			else:
+				game.print(f"You are {name}.")
 		return True
 
 

@@ -54,7 +54,7 @@ def main(skipIntro=False):
 		# cleanup before looping
 		Core.game.whoseturn = None
 		# pass the time for all rooms and creatures
-		Core.game.incrementTime()
+		Core.game.passTime()
 		# remove dead creatures from room creatures
 		Core.game.reapCreatures()
 		# sort the creatures in each rendered room by their MVMT attribute
@@ -73,11 +73,16 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# add basic time cycling, and clock items which tell you the hour
 # add astronomical events based on the time cycling
+# refactor verb and shortvrb sets in data (can probably be removed)
+
+# add an animal and mounting/riding
 
 # add basic equipment and clothing items
 # fix/add Creature.isNaked or Player.isNaked
+# add link nodes and effect nodes to dialogue after all
+	# for instance, continue conversation if a truesight person speaks to invisible player, or if a goddess spirit gives you blessing
+	# maybe blessings actually would be the course of action of the NPC with which you speak... I guess, find a way to do that
 
 # restructure map and revise tests
 	# add magic beans or food to pour stuff on

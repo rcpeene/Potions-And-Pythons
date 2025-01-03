@@ -73,9 +73,13 @@ initgear = {"head":None, "body":None, "left":None, "right":None, "legs":None}
 # action verbs which should not take any in-game time to execute
 instantactions = {"describe","define","gear","help","hp","info","information","inventory","inv","level","lv","money","mp","quit","room","rp","save","status","time","traits","xp"}
 
+curses = {"weakness","slowness","clumsiness","tiredness","illness","timidity","stupidity","insanity","apathy","calamity"}
+
+blessings = {"brawniness","swiftness","prowess","liveliness","toughness","felicity","sagacity","lucidity","fidelity","prosperity"}
+
+
 
 # the following are tuples because their order should be preserved for printing
-
 
 # base Creature stats
 traits = ("STR","SKL","SPD","STM","CON","CHA","INT","WIS","FTH","LCK")
@@ -88,9 +92,6 @@ shortverbs = ("back","clear","cry","dance","examples","hi","hello","help","here"
 
 # commands which just serve to print stats to the player
 statcommands = ("abilities","accu","atck","athl","atsp","brdn","cast","crit","cssp","dcpt","dfns","endr","evsn","gear","hp","inventory","inv","invs","knwl","level","loot","lv","money","mp","mvmt","mxhp","mxmp","prsd","rstn","ritl","rp","slth","spells","spls","stats","status","tnkr","traits","weapons","xp")
-
-# all valid verbs which are not a shortverb or a statcommand
-verbs = ("attack","bite","break","build","carry","cast","catch","climb","close","craft","crawl","create","cross","crouch","cut","dash","define","describe","do","dodge","doff","don","drink","drop","duck","dump","eat","enter","equip","escape","examine","exit","feed","feel","fight","fill","find","fish","follow","fuck","get","give","go","grab","grapple","head","hear","hide","hit","ignite","insert","jump","kick","kill","lay","leave","lick","light","listen","lock","look","make","mount","move","obtain","open","pet","pick","pick up","place","play","point","pour","pray","pull","punch","push","put","put down","put on","quaff","read","release","remove","rest","restrain","return","ride","ring","rub","run","search","set","set down","shove","shut","slap","sleep","slice","smell","sneak","sniff","speak","steal","stomp","stow","strike","struggle","swim","take","take off","talk","taste","throw","tie","tinker","toss","touch","travel","trip","unequip","unlock","untie","use","view","wait","walk","wave","wear")
 
 # the sequence of hours in the daily calendar
 hours = ("stag","rooster","juniper","bell","sword","willow","lily","hearth","cat","mouse","owl","serpent","wolf")
