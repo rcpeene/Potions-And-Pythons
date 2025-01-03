@@ -290,8 +290,8 @@ def parse(n=0):
 	# this line calls the action function using the 'actions' dict
 	actionCompleted = actions[verb](dobj,iobj,prep)
 	# if action was instant, loop for another command
-	if verb in Data.instantactions:
-		return False
+	# if verb in Data.instantactions:
+	# 	return False
 	# if action was not completed for some reason, recur
 	if not actionCompleted:
 		return promptHelp("",n)
@@ -468,9 +468,10 @@ def Warp(command):
 		Core.game.print("Error: no warp value given")
 		return
 	try:
-		Core.game.time += int(command[1])
+		t = int(command[1])
 	except:
 		Core.game.print("Value not number")
+	Core.game.passTime(t)
 
 
 def Zap(command):
@@ -517,7 +518,7 @@ def Help():
 	Core.game.print("\nOther Single-Word Commands")
 	Core.columnPrint(Data.shortverbs,12,10)
 	Core.game.print("\nVerb Commands (Does not include cheat codes and secret commands)")
-	Core.columnPrint(Data.verbs,12,10)
+	Core.columnPrint(actions.keys(),12,10)
 	Core.game.print("\nDuring the game, type 'info' for information on the game and how to play.")
 	Core.game.input()
 	Core.clearScreen()

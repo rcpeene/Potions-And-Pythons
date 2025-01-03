@@ -316,7 +316,7 @@ def newGame():
 	# initializes from the character creation screen
 	Core.player = createCharacter()
 	# initializes the game at the "cave" room
-	Core.game = Core.Game(0,Core.world["cave"],Core.world["cave"],0,{})
+	Core.game = Core.Game(0,Core.world["cave"],Core.world["cave"],0,set())
 	# Core.ellipsis(3)
 	# enter the starting room
 	sleep(0.5)
