@@ -256,18 +256,18 @@ def parse(n=0):
 		return Hello()
 	elif verb in Data.goodbyes:
 		return Goodbye()
-	elif verb in Data.shortverbs or verb in Data.statcommands:
+	elif verb in shortactions or verb in Data.traits + Data.abilities:
 		# 'cast' may be a stat command or a regular action
 		if verb != "cast" or len(command) == 1:
 			if len(command) != 1:
 				return promptHelp(f"The '{verb}' command can only be one word.",n)
 			if verb == "here":
 				return Core.game.currentroom.describe()
-			if verb.upper() in Data.abilities:
+			if verb in Data.abilities:
 				return Core.player.printAbility(verb.upper())
-			if verb in Data.statcommands and verb != "cast":
-				return shortactions[verb](Core.player)
-			return shortactions[verb]()
+			if verb in Data.traits:
+				return Core.player.printTraits(verb.upper())
+			return shortactions[verb](Core.player)
 	elif verb not in actions:
 		return promptHelp(f"'{verb}' is not a valid verb",n)
 
@@ -289,12 +289,12 @@ def parse(n=0):
 
 	# this line calls the action function using the 'actions' dict
 	actionCompleted = actions[verb](dobj,iobj,prep)
-	# if action was instant, loop for another command
-	# if verb in Data.instantactions:
-	# 	return False
 	# if action was not completed for some reason, recur
-	if not actionCompleted:
+	if actionCompleted == False:
 		return promptHelp("",n)
+	# if action didn't take any time, return False
+	if actionCompleted == None:
+		return False
 	return True
 
 
@@ -498,55 +498,53 @@ def Zap(command):
 #######################################
 
 
-def Cry(): Core.game.print("A single tear sheds from your eye.")
-def Dance(): Core.game.print("You bust down a boogie.")
+def Cry(*args): Core.game.print("A single tear sheds from your eye.")
+def Dance(*args): Core.game.print("You bust down a boogie.")
 
-def Examples():
+def Examples(*args):
 	Core.clearScreen()
 	Core.game.print(Data.examples)
 	Core.game.input()
+	Core.waitKbInput()
 	Core.clearScreen()
 
-def Goodbye(): Core.game.print(Core.capWords(choice(list(Data.goodbyes)),c=1))
+def Goodbye(*args): Core.game.print(Core.capWords(choice(list(Data.goodbyes)),c=1))
 
-def Hello(): Core.game.print(Core.capWords(choice(list(Data.hellos)),c=1))
+def Hello(*args): Core.game.print(Core.capWords(choice(list(Data.hellos)),c=1))
 
-def Help():
+def Help(*args):
 	Core.clearScreen()
-	Core.game.print("\nPlayer Statistics Commands")
-	Core.columnPrint(Data.statcommands,12,10)
-	Core.game.print("\nOther Single-Word Commands")
-	Core.columnPrint(Data.shortverbs,12,10)
+	Core.game.print("\nSingle-Word Commands")
+	shortcommands = sorted(tuple(shortactions.keys()) + Data.traits + Data.abilities)
+	Core.columnPrint(shortcommands,12,10)
 	Core.game.print("\nVerb Commands (Does not include cheat codes and secret commands)")
 	Core.columnPrint(actions.keys(),12,10)
 	Core.game.print("\nDuring the game, type 'info' for information on the game and how to play.")
-	Core.game.input()
+	Core.waitKbInput()
 	Core.clearScreen()
 
 
-def Info():
+def Info(*args):
 	Core.clearScreen()
 	Core.game.print(Data.gameinfo)
 	Core.game.input()
+	Core.waitKbInput()
 	Core.clearScreen()
 
 
-def Laugh(): Core.game.print('"HAHAHAHAHA!"')
+def Laugh(*args): Core.game.print('"HAHAHAHAHA!"')
 
 
-def Quit():
+def Quit(*args):
 	if Core.yesno("Are you sure you want to quit? (Anything unsaved will be lost)"):
 		Core.game.quit = True
 		return True
 
-
-#go to previous room
-def Return(): return Go(None, Core.game.prevroom.name.lower(), None)
-def Save(): Menu.saveGame()
-def Shout(): Core.game.print('"AHHHHHHHHHH"')
-def Sing(): Core.game.print('"Falalalaaaa"')
-def Time(): Core.game.print("Time:", Core.game.time)
-def Yawn(): Core.game.print("This is no time for slumber!")
+def Save(*args): Menu.saveGame()
+def Shout(*args): Core.game.print('"AHHHHHHHHHH"')
+def Sing(*args): Core.game.print('"Falalalaaaa"')
+def Time(*args): Core.game.print("Time:", Core.game.time)
+def Yawn(*args): Core.game.print("This is no time for slumber!")
 
 
 
@@ -1412,6 +1410,10 @@ def Restrain(dobj,iobj,prep):
 	return True
 
 
+def Return(*args): 
+	return Go(None, Core.game.prevroom.name.lower(), None)
+
+
 def Ring(dobj,iobj,prep):
 	Core.game.print("ringing")
 
@@ -1658,35 +1660,30 @@ cheatcodes = {
 	"\\zap":Zap
 }
 
-# contains corresponding functions for all items in Data.shortverbs and Data.statcommands
+# contains corresponding functions for all items in Data.shortverbs or stat commands
 shortactions = {
-"abilities":Core.Player.printAbilities,
+"abilities":Core.Player.printAbility,
 "back":Return,
+"back up":Return,
 "clear":Core.clearScreen,
-"cry":Cry,
-"dance":Dance,
 "examples":Examples,
 "gear":Core.Player.printGear,
-"hi":Hello,
-"hello":Hello,
 "help":Help,
+"hello":Hello,
+"here":Core.game.currentroom.describe,
+"hi":Hello,
 "hp":Core.Player.printHP,
 "info": Info,
 "information": Info,
 "inventory":Core.Player.printInv,
 "inv":Core.Player.printInv,
-"laugh":Laugh,
 "level":Core.Player.printLV,
 "lv":Core.Player.printLV,
 "money":Core.Player.printMoney,
 "mp":Core.Player.printMP,
 "quit":Quit,
-"return":Return,
 "rp":Core.Player.printRP,
 "save":Save,
-"scream":Shout,
-"shout":Shout,
-"sing":Sing,
 "spells":Core.Player.printSpells,
 "stats":Core.Player.printStats,
 "status":Core.Player.printStatus,
@@ -1694,7 +1691,6 @@ shortactions = {
 "traits":Core.Player.printTraits,
 "weapons":Core.Player.printWeapons,
 "xp":Core.Player.printXP,
-"yell":Shout,
 "yawn":Yawn
 }
 
@@ -1714,6 +1710,8 @@ actions = {
 "cross":Cross,
 "crouch":Crouch,
 "cut":Cut,
+"cry":Cry,
+"dance":Dance,
 "define":Define,
 "describe":Describe,
 "do":Do,
@@ -1754,6 +1752,7 @@ actions = {
 "jump":Jump,
 "kick":Kick,
 "kill":Kill,
+"laugh":Laugh,
 "lay":Crouch,
 "leave":Exit,
 "lick":Lick,
@@ -1789,16 +1788,20 @@ actions = {
 "remove":Unequip,
 "rest":Rest,
 "restrain":Restrain,
+"return":Return,
 "ride":Mount,
 "ring":Ring,
 "rub":Rub,
 "run":Go,
+"scream":Shout,
 "search":Search,
 "set":Put,
 "set down":Drop,
 "shoot":Shoot,
+"shout":Shout,
 "shove":Shove,
 "shut":Close,
+"sing":Sing,
 "slap":Punch,
 "sleep":Rest,
 "slice":Cut,
@@ -1831,7 +1834,8 @@ actions = {
 "wait":Wait,
 "walk":Go,
 "wave":Wave,
-"wear":Don
+"wear":Don,
+"yell":Shout
 }
 
 
@@ -1855,6 +1859,7 @@ actions = {
 # dress/undress/strip
 # spit
 # converse/communicate/discuss
+# say hello -> hello
 # sprint/run
 # flick?
 # insert (key) -> unlock

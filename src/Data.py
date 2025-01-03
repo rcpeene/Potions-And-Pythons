@@ -70,9 +70,6 @@ dmgtypes = {"a":"acid","b":"bludgeoning","c":"cold","e":"essential","f":"fire","
 # gear dict used to initialize the player object
 initgear = {"head":None, "body":None, "left":None, "right":None, "legs":None}
 
-# action verbs which should not take any in-game time to execute
-instantactions = {"describe","define","gear","help","hp","info","information","inventory","inv","level","lv","money","mp","quit","room","rp","save","status","time","traits","xp"}
-
 curses = {"weakness","slowness","clumsiness","tiredness","illness","timidity","stupidity","insanity","apathy","calamity"}
 
 blessings = {"brawniness","swiftness","prowess","liveliness","toughness","felicity","sagacity","lucidity","fidelity","prosperity"}
@@ -82,16 +79,10 @@ blessings = {"brawniness","swiftness","prowess","liveliness","toughness","felici
 # the following are tuples because their order should be preserved for printing
 
 # base Creature stats
-traits = ("STR","SKL","SPD","STM","CON","CHA","INT","WIS","FTH","LCK")
+traits = ("str","skl","spd","stm","con","cha","int","wis","fth","lck")
 
 # derived creature stats. they can be found as Creature methods
-abilities = ("ACCU","ATCK","ATHL","ATSP","BRDN","CAST","CRIT","CSSP","DCPT","DFNS","ENDR","EVSN","INVS","KNWL","LOOT","MVMT","MXHP","MXMP","PRSD","RSTN","RITL","SLTH","SPLS","TNKR")
-
-# verb commands which may only be entered as single, lonesome words
-shortverbs = ("back","clear","cry","dance","examples","hi","hello","help","here","info","information","laugh","quit","return","save","scream","shout","sing","time","yawn","yell")
-
-# commands which just serve to print stats to the player
-statcommands = ("abilities","accu","atck","athl","atsp","brdn","cast","crit","cssp","dcpt","dfns","endr","evsn","gear","hp","inventory","inv","invs","knwl","level","loot","lv","money","mp","mvmt","mxhp","mxmp","prsd","rstn","ritl","rp","slth","spells","spls","stats","status","tnkr","traits","weapons","xp")
+abilities = ("accu","atck","athl","atsp","brdn","cast","crit","cssp","dcpt","dfns","endr","evsn","invs","knwl","loot","mvmt","mxhp","mxmp","prsd","rstn","ritl","slth","spls","tnkr")
 
 # the sequence of hours in the daily calendar
 hours = ("stag","rooster","juniper","bell","sword","willow","lily","hearth","cat","mouse","owl","serpent","wolf")
