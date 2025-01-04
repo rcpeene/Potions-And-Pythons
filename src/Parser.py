@@ -382,21 +382,30 @@ def Imbue(command):
 
 
 def Learn(command):
+	if len(command) < 2:
+		Core.game.print("Error: No xp value given")
+		return
 	try:
 		Core.player.gainxp(int(command[1]))
 	except:
-		Core.game.print("Error: Value not number")
+		Core.game.print(f"Error: Value not number {command[1]}")
 
 
 def Mode(command):
+	if len(command) < 2:
+		Core.game.print("Error: No mode value given")
+		return
 	try:
 		Core.game.mode = int(command[1])
 		Core.game.print("Mode set to " + str(Core.game.mode))
 	except:
-		Core.game.print("Error: Value not number")
+		Core.game.print(f"Error: Value not number {command[1]}")
 
 
 def Pypot(command):
+	if len(command) < 2:
+		Core.game.print("Error: No money value given")
+		return
 	try:
 		money = int(command[1])
 		Core.player.money = Core.player.money + money
@@ -471,6 +480,7 @@ def Warp(command):
 		t = int(command[1])
 	except:
 		Core.game.print("Value not number")
+		return
 	Core.game.passTime(t)
 
 

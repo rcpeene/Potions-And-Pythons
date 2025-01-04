@@ -10,6 +10,7 @@ cry
 dance
 examples
 
+
 gear
 hello
 hi
@@ -18,7 +19,9 @@ help
 hp
 info
 
+
 information
+
 
 inventory
 inv
