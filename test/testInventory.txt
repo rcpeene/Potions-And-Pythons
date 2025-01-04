@@ -13,7 +13,6 @@ take
 the amulet of swords
 i will take the potion
 i will take the red potion
-take compass
 go n
 take all
 go n

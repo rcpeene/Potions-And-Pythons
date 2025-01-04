@@ -34,37 +34,39 @@ def chooseObject(name,objects):
 	if len(objects) == 1:
 		return objects[0]
 	Core.game.print()
-	while True:
-		for n,object in enumerate(objects):
-			strname = object.stringName(det=False)
-			label = ""
-			if isinstance(object,Core.Creature):
-				if not object.isAlive():
-					label += f" (dead)"
-				else:
-					label += f" ({object.hp} hp)"
-			if not isinstance(object.parent,(Core.Room,Core.Player)):
-				label += f" ({object.parent.name})"
-			if object in Core.player.gear.values():
-				label += " (equipped)"
-			elif object in Core.player.invSet():
-				label += " (Inventory)"
-			Core.game.print(f"{n+1}. {strname}{label}")
+	for n,object in enumerate(objects):
+		strname = object.stringName(det=False)
+		label = ""
+		if isinstance(object,Core.Creature):
+			if not object.isAlive():
+				label += f" (dead)"
+			else:
+				label += f" ({object.hp} hp)"
+		if not isinstance(object.parent,(Core.Room,Core.Player)):
+			label += f" ({object.parent.name})"
+		if object in Core.player.gear.values():
+			label += " (equipped)"
+		elif object in Core.player.invSet():
+			label += " (Inventory)"
+		Core.game.print(f"{n+1}. {strname}{label}")
+	Core.game.print(f"\nWhich {name}?")
 
-		Core.game.print(f"\nWhich {name}?")
+	invalid_count = 0
+	while True:
 		choice = Core.game.input("> ").lower()
 		if choice == "": continue
 		if choice in Data.cancels: return None
-		break
 
-	try:
-		return objects[int(choice)-1]
-	except:
-		for obj in objects:
-			if choice == obj.stringName(det=False).lower():
-				return obj
-	Core.game.print("That is not one of the options.")
-	return None
+		try:
+			return objects[int(choice)-1]
+		except:
+			for obj in objects:
+				if choice == obj.stringName(det=False).lower():
+					return obj
+		Core.game.print("That is not one of the options.")
+		if invalid_count >= 3:
+			Core.game.print("Type 'cancel' to undo this action.")
+		invalid_count += 1
 
 
 # return an object in player inv or room based on player input
@@ -1076,6 +1078,8 @@ def assignGoTerms(dobj,iobj,prep):
 # passage. Then calls either traverse or changeroom accordingly
 def Go(dobj,iobj,prep):
 	preps = {"down","through","to","toward","up","in","inside","into","on","onto","out",None}
+	if prep in ("to", "toward"):
+		prep = None
 	if (dobj,iobj,prep) == (None,None,None):
 		dobj,iobj,prep = parseWithoutVerb("Where will you go?",preps)
 	if dobj in Data.cancels: return False
@@ -1085,7 +1089,7 @@ def Go(dobj,iobj,prep):
 
 	# if any terms are abbreviations for a direction, expand them
 	dobj,iobj,prep = map(Core.expandDir,[dobj,iobj,prep])
-	if prep not in preps:
+	if prep not in preps or (dobj,iobj,prep) == (None,None,None):
 		Core.game.print("Command not understood.")
 		return False
 
