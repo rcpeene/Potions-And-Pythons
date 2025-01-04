@@ -11,13 +11,13 @@ import Parser
 
 
 
-def main(skipIntro=False):
+def main(testing=False):
 	# formatting the prompt window
 	os.system("mode con: lines=9999")
 	os.system("title Potions ^& Pythons")
 
 	# run intro logo animation
-	if not skipIntro: Menu.gameIntro()
+	if not testing: Menu.gameIntro()
 	# instantiate global objects Player, World, Game
 	Menu.mainMenu()
 	if Core.game.quit: return

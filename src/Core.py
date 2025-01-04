@@ -332,6 +332,7 @@ def objQueryRecur(node,matches,key,d):
 def assignParents():
 	for room in world.values():
 		assignParentsRecur(room)
+	player.parent = game.currentroom
 	assignParentsRecur(player)
 
 
@@ -1102,8 +1103,8 @@ class Room():
 		if isinstance(I,Serpens):
 			for item in self.items:
 				if isinstance(item,Serpens):
-					I = item.merge(I)
-
+					item.merge(I)
+					return
 		insort(self.items,I)
 		I.parent = self
 
@@ -1887,7 +1888,7 @@ class Creature():
 		return ancs
 
 
-	def progenitor(self):
+	def room(self):
 		return self.ancestors()[-1]
 
 
@@ -2748,7 +2749,7 @@ class Monster(Creature):
 
 	def attack(self):
 		# if creature is not in same room as player
-		if game.currentroom != self.progenitor():
+		if game.currentroom != self.room():
 			return
 		else:
 			self.attackCreature(player)

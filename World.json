@@ -662,28 +662,9 @@
 		"creatures": [
 			{
 				"__class__": "Animal",
-				"name": "red python",
-				"desc": "A small brown and green spotted snake",
-				"aliases": ["snake"],
-				"plural": "pythons",
-				"weight": 3,
-				"traits": [1,1,1,1,1,1,1,1,1,1],
-				"status": [],
-				"hp": 2,
-				"mp": 0,
-				"money": 0,
-				"inv": [],
-				"gear": {
-					"tail": null,
-					"head": null,
-					"mouth": null
-				}
-			},
-			{
-				"__class__": "Animal",
 				"name": "green python",
 				"desc": "A small brown and green spotted snake",
-				"aliases": ["snake"],
+				"aliases": ["snake","python"],
 				"plural": "pythons",
 				"weight": 3,
 				"traits": [1,1,1,1,1,1,1,1,1,1],
@@ -698,7 +679,6 @@
 					"mouth": null
 				}
 			}
-
 		],
 		"status": []
 	}
