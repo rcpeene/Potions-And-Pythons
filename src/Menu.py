@@ -332,7 +332,7 @@ def testGame():
 	status = [["fireproof",-1], ["poisoned",5], ["cursed",-2], ["immortal",-1],
 	["sharpshooter",50], ["invisible",15], ["poisoned",-1], ["flying",5]]
 	Core.player = Core.Player("Norman","a hero",[4]*10,24,24,1000,inv,Data.initgear,1585,100,[],[])
-	Core.game = Core.Game(0,Core.world["cave"],Core.world["tunnel"],0,{})
+	Core.game = Core.Game(0,Core.world["cave"],Core.world["tunnel"],0,set())
 
 	Core.clearScreen()
 	Core.game.mode = 1

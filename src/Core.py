@@ -97,6 +97,9 @@ def kbInput():
 
 # waits for any keyboard input
 def waitKbInput(text=""):
+	# just pass if in test mode
+	if game.mode == 1:
+		return True
 	flushInput()
 	game.print(text)
 	if os.name == 'nt':  # For Windows
@@ -1007,11 +1010,11 @@ class Game():
 		return input()
 
 
-	def print(self,*args,end="\n",delim='',delay=0.005):
+	def print(self,*args,end="\n",sep='',delay=0.005):
 		if self.mode == 1:
-			return print(*args,end=end)
+			return print(*args,end=end,sep=sep)
 		if len(args) > 1:
-			delim=' '
+			sep=' '
 		for arg in args:
 			for char in str(arg):
 				if kbInput():
@@ -1019,7 +1022,7 @@ class Game():
 				sys.stdout.write(char)
 				sys.stdout.flush()
 				sleep(delay)
-			sys.stdout.write(delim)
+			sys.stdout.write(sep)
 			sys.stdout.flush()
 		sys.stdout.write(end)
 		
@@ -1578,7 +1581,7 @@ class Creature():
 		dictkeys = list(d.keys())
 		# these attributes do not get stored between saves (except gear)
 		for key in dictkeys:
-			if key in Data.traits or key in {"gear","weapon","weapon2","shield","shield2"}:
+			if key.lower() in Data.traits or key in {"gear","weapon","weapon2","shield","shield2"}:
 				del d[key]
 		d["gear"] = compressedGear
 		# convert traits to a form more easily writable in a JSON object
@@ -1884,7 +1887,7 @@ class Creature():
 		return ancs
 
 
-	def root(self):
+	def progenitor(self):
 		return self.ancestors()[-1]
 
 
@@ -2072,7 +2075,7 @@ class Player(Creature):
 			clearScreen()
 			self.printTraits()
 			game.print(f"\nQuality Points:	{QP}")
-			trait = input("What trait will you improve?\n> ").upper()
+			trait = input("What trait will you improve?\n> ").lower()
 			if trait not in Data.traits:
 				continue
 			# increment corresponding player trait
@@ -2745,7 +2748,7 @@ class Monster(Creature):
 
 	def attack(self):
 		# if creature is not in same room as player
-		if game.currentroom != self.room():
+		if game.currentroom != self.progenitor():
 			return
 		else:
 			self.attackCreature(player)
