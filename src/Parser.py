@@ -694,7 +694,6 @@ def CarryCreature(creature):
 	# 	Core.game.print(f"You fail to restrain {creature.stringName(definite=True)}!")
 
 	if not creature.Carry(Core.player):
-		Core.game.print(f"You fail to restrain {creature.stringName(definite=True)}!")
 		return False
 	Core.game.print(f"You are carrying {creature.stringName(definite=True)}.")
 	Core.player.carrying = creature

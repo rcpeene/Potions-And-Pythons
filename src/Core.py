@@ -1450,8 +1450,7 @@ class Item():
 	# Used to create a generic Weapon() if this item is used to attack something
 	def improviseWeapon(self):
 		#TODO: if item is too large/heavy, make it two-handed
-		return Weapon(self.name,self.desc,self.aliases,self.weight,self.durability,[],min1(self.weight//4),0,0,0,False,"b",plural=self.plural)
-
+		return Weapon(self.name,self.desc,self.weight,self.durability,min1(self.weight//4),0,0,0,"b")
 
 
 	### User Output ###
@@ -1811,7 +1810,7 @@ class Creature():
 
 	def Carry(self,carrier):
 		if self.Weight() > carrier.BRDN():
-			game.print(f"{self.stringName(definite=True)} is too heavy to carry.")
+			game.print(f"{self.stringName(definite=True,cap=True)} is too heavy to carry.")
 			return False
 		if not self.Restrain(carrier):
 			return False
@@ -1820,15 +1819,18 @@ class Creature():
 
 
 	def Restrain(self,restrainer,item=None):
-		if self.isFriendly() or not self.canMove():
+		if not self.isAlive():
+			return True
+		if not self.isFriendly() and self.canMove():
 			if item != None:
 				#TODO: add restraining with items? like rope??
 				pass
-			print(self.ATHL(), self.EVSN(), restrainer.ATHL())
 			if self.ATHL() > restrainer.ATHL() or self.EVSN() > restrainer.ATHL():
+				game.print(f"You fail to restrain {self.stringName(definite=True)}!")
 				return False
 		restrainer.addCondition("restraining",-3,silent=True)
 		self.addCondition("restrained",-3)
+		game.print(f"You restrain {self.stringName(definite=True)}!")
 		return True
 
 
@@ -2045,7 +2047,7 @@ class Creature():
 
 	def isFriendly(self):
 		return self.inStatus("tamed")
-	
+
 
 	def canMove(self):
 		conditions = ("restrained","paralyzed","frozen","unconscious")
