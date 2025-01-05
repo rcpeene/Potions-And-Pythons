@@ -109,6 +109,7 @@ def findObjFromTerm(term,queryType="both",filter=None,roomD=1,playerD=2,reqParen
 def isMeaningful(noun):
 	if noun in Core.world or \
 	noun in actions or \
+	noun in shortactions or \
 	noun in Data.definitions or \
 	noun in Data.miscexpressions or \
 	noun in Data.hellos or \
@@ -1748,8 +1749,8 @@ shortactions = {
 "hp":Core.Player.printHP,
 "info": Info,
 "information": Info,
-"inventory":Core.Player.printInv,
 "inv":Core.Player.printInv,
+"inventory":Core.Player.printInv,
 "level":Core.Player.printLV,
 "lv":Core.Player.printLV,
 "money":Core.Player.printMoney,
