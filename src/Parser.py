@@ -160,11 +160,11 @@ def replacePronoun(term):
 	obj = None
 	if term == "it":
 		obj = Core.game.it
-	elif term in {"she","her"}:
+	elif term in ("she","her"):
 		obj = Core.game.she
-	elif term in {"he","him"}:
+	elif term in ("he","him"):
 		obj = Core.game.he
-	elif term in {"they","them"}:
+	elif term in ("they","them"):
 		obj = Core.game.they
 	if obj == None:
 		return term
@@ -344,10 +344,10 @@ def Get(command):
 	objname = command[1].lower()
 	attrname = command[2]
 
-	if objname in {"p","player","my"}: obj = Core.player
-	elif objname in {"g","game"}: obj = Core.game
-	elif objname in {"here","room"}: obj = Core.game.currentroom
-	elif objname in {"w","world"}: obj = Core.world
+	if objname in ("p","player","my"): obj = Core.player
+	elif objname in ("g","game"): obj = Core.game
+	elif objname in ("here","room"): obj = Core.game.currentroom
+	elif objname in ("w","world"): obj = Core.world
 	elif objname in Core.world: obj = Core.world[objname]
 	else: obj = findObjFromTerm(objname,playerD=3,roomD=3)
 	if obj == None:
@@ -434,10 +434,10 @@ def Set(command):
 	try: value = int(value)
 	except: pass
 
-	if objname in {"p","player","my"}: obj = Core.player
-	elif objname in {"g","game"}: obj = Core.game
-	elif objname in {"here","room"}: obj = Core.game.currentroom
-	elif objname in {"w","world"}: obj = Core.world
+	if objname in ("p","player","my"): obj = Core.player
+	elif objname in ("g","game"): obj = Core.game
+	elif objname in ("here","room"): obj = Core.game.currentroom
+	elif objname in ("w","world"): obj = Core.world
 	else: obj = findObjFromTerm(command[1],playerD=3,roomD=3)
 
 	try:
@@ -571,7 +571,7 @@ def Yawn(*args): Core.game.print("This is no time for slumber!")
 
 
 def Attack(dobj,iobj,prep,target=None,weapon=None,weapon2=None):
-	if prep not in {"using","with",None}:
+	if prep not in ("using","with",None):
 		Core.game.print("Command not understood.")
 		return False
 
@@ -585,12 +585,12 @@ def Attack(dobj,iobj,prep,target=None,weapon=None,weapon2=None):
 	# assigning weapons based on input and what is in player's hand
 	if weapon == None and weapon2 != None:
 		weapon, weapon2 = weapon2, None
-	if iobj in {"fist","hand"}:
+	if iobj in ("fist","hand"):
 		Core.player.unequip(Core.player.gear["right"])
 		weapon = Items.Hand("your hand","",4,-1)
-	if iobj in {"foot","leg"}:
+	if iobj in ("foot","leg"):
 		weapon = Items.Foot("your foot","",6,-1)
-	if iobj in {"mouth","teeth"}:
+	if iobj in ("mouth","teeth"):
 		weapon = Items.Mouth("your mouth","",4,-1)
 	if iobj != None:
 		if weapon == None:
@@ -610,7 +610,7 @@ def Attack(dobj,iobj,prep,target=None,weapon=None,weapon2=None):
 	if target == None:
 		if dobj == None: dobj = getNoun("What will you attack?")
 		if dobj in Data.cancels: return False
-		if dobj in {"myself","me"}: target = Core.player
+		if dobj in ("myself","me"): target = Core.player
 		else: target = findObjFromTerm(dobj,"room")
 		if target == None: return False
 	Core.game.setPronouns(target)
@@ -653,7 +653,7 @@ def Bite(dobj,iobj,prep):
 
 def Break(dobj,iobj,prep):
 	# TODO: potentially just redirect this func to attack, idk
-	if prep not in {"using","with",None}:
+	if prep not in ("using","with",None):
 		Core.game.print("Command not understood.")
 		return False
 	if dobj == None:
@@ -701,7 +701,7 @@ def CarryCreature(creature):
 
 
 def Cast(dobj,iobj,prep):
-	if prep not in {"at","on","onto","upon",None}:
+	if prep not in ("at","on","onto","upon",None):
 		Core.game.print("Command not understood.")
 		return False
 	if dobj == None:
@@ -765,9 +765,9 @@ def Craft(dobj,iobj,prep):
 
 
 def Crawl(dobj,iobj,prep):
-	if prep in {"behind","below","beneath","under",None}:
+	if prep in ("behind","below","beneath","under",None):
 		return Crouch(dobj,iobj,prep)
-	if prep in {"in","inside","into","through"}:
+	if prep in ("in","inside","into","through"):
 		Crouch(None,None,None)
 		return Go(dobj,iobj,prep)
 
@@ -777,7 +777,7 @@ def Cross(dobj,iobj,prep):
 
 
 def Crouch(dobj,iobj,prep):
-	if prep not in {"behind","below","beneath","inside","under",None}:
+	if prep not in ("behind","below","beneath","inside","under",None):
 		Core.game.print("Command not understood.")
 		return False
 
@@ -822,7 +822,7 @@ def Describe(dobj,iobj,prep):
 		dobj = getNoun("What do you want to be described?")
 		if dobj in Data.cancels: return False
 
-	if dobj == Core.game.currentroom.name or dobj in {"room","here"}:
+	if dobj == Core.game.currentroom.name or dobj in ("room","here"):
 		D = Core.game.currentroom
 	else:
 		D = findObjFromTerm(dobj)
@@ -834,7 +834,7 @@ def Describe(dobj,iobj,prep):
 
 
 def Dismount(dobj,iobj,prep):
-	if prep not in {"from","of","off","out","out of",None}:
+	if prep not in ("from","of","off","out","out of",None):
 		Core.game.print("Command not understood.")
 		return False
 	
@@ -884,7 +884,7 @@ def Doff(dobj,iobj,prep):
 
 
 def Don(dobj,iobj,prep):
-	if prep != None:
+	if prep not in ("on","onto","over","to",None):
 		Core.game.print("Command not understood.")
 		return False
 	if dobj == None:
@@ -901,15 +901,20 @@ def Don(dobj,iobj,prep):
 	if I in Core.player.gear.values():
 		Core.game.print(f"You are already wearing your {I.name}.")
 		return False
-
-	if not Core.player.equipArmor(I):
+	if iobj and iobj not in Core.player.gear: 
+		Core.game.print(f"You aren't able to equip to '{iobj}'.")
+		return False
+	if iobj not in I.slots:
+		Core.game.print(f"You cannot wear {I.stringName(definite=True)} {prep} your {iobj}.")
+		return False
+	if not Core.player.equipArmor(I,iobj):
 		return False
 	Core.game.print(f"You don your {I.name}.")
 	return True
 
 
 def Drink(dobj,iobj,prep):
-	if prep not in {"using","with",None}:
+	if prep not in ("using","with",None):
 		Core.game.print("Command not understood.")
 		return False
 	if dobj == None:
@@ -928,7 +933,7 @@ def Drink(dobj,iobj,prep):
 
 
 def Drop(dobj,iobj,prep,I=None,R=None):
-	if prep not in {"down",None}:
+	if prep not in ("down",None):
 		return Put(dobj,iobj,prep)
 	if dobj == None and I == None:
 		dobj = getNoun("What will you drop?.")
@@ -954,7 +959,7 @@ def Drop(dobj,iobj,prep,I=None,R=None):
 
 
 def Dump(dobj,iobj,prep):
-	if prep not in {"in","into","inside","on","onto","out","upon",None}:
+	if prep not in ("in","into","inside","on","onto","out","upon",None):
 		Core.game.print("Command not understood.")
 		return False
 	if dobj == None:
@@ -972,7 +977,7 @@ def Dump(dobj,iobj,prep):
 
 
 def Eat(dobj,iobj,prep):
-	if prep not in {"using","with",None}:
+	if prep not in ("using","with",None):
 		Core.game.print("Command not understood.")
 		return False
 	if dobj == None:
@@ -1109,7 +1114,7 @@ def assignGoTerms(dobj,iobj,prep):
 # parses user input to determine the intended direction, destination, and/or
 # passage. Then calls either traverse or changeroom accordingly
 def Go(dobj,iobj,prep):
-	preps = {"down","through","to","toward","up","in","inside","into","on","onto","out",None}
+	preps = ("down","through","to","toward","up","in","inside","into","on","onto","out",None)
 	if prep in ("to", "toward"):
 		prep = None
 	if (dobj,iobj,prep) == (None,None,None):
@@ -1163,7 +1168,7 @@ def Go(dobj,iobj,prep):
 
 
 def Hide(dobj,iobj,prep):
-	if prep not in {"behind","below","beneath","inside","under",None}:
+	if prep not in ("behind","below","beneath","inside","under",None):
 		Core.game.print("Command not understood.")
 		return False
 
@@ -1204,10 +1209,10 @@ def Kick(dobj,iobj,prep):
 
 
 def Kill(dobj,iobj,prep):
-	if prep not in {"using","with",None}:
+	if prep not in ("using","with",None):
 		Core.game.print("Command not understood.")
 		return False
-	if dobj in {"myself","me"}:
+	if dobj in ("myself","me"):
 		if Core.yesno("Are you sure you want to kill yourself?"):
 			Core.player.death()
 			return True
@@ -1229,7 +1234,7 @@ def Listen(dobj,iobj,prep):
 
 
 def Lock(dobj,iobj,prep):
-	if prep not in {"using","with",None}:
+	if prep not in ("using","with",None):
 		Core.game.print("Command not understood.")
 		return False
 
@@ -1258,7 +1263,7 @@ def Lock(dobj,iobj,prep):
 
 
 def Look(dobj,iobj,prep):
-	if prep not in {"at","in","inside","into","on","through",None}:
+	if prep not in ("at","in","inside","into","on","through",None):
 		Core.game.print("Command not understood.")
 		return False
 	if dobj == None: dobj = iobj
@@ -1266,10 +1271,10 @@ def Look(dobj,iobj,prep):
 		dobj = getNoun("What will you look at?")
 		if dobj in Data.cancels: return False
 
-	if dobj in {"around","here","room"} or dobj == Core.game.currentroom.name.lower():
+	if dobj in ("around","here","room") or dobj == Core.game.currentroom.name.lower():
 		Core.game.currentroom.describe()
 		return True
-	if dobj in {"me","myself",Core.player.name}:
+	if dobj in ("me","myself",Core.player.name):
 		Core.game.print(f"You are {Core.player.desc}")
 		return True
 
@@ -1284,7 +1289,7 @@ def Look(dobj,iobj,prep):
 
 
 def Mount(dobj,iobj,prep):
-	if prep not in {"in","into","inside","on","onto","upon",None}:
+	if prep not in ("in","into","inside","on","onto","upon",None):
 		Core.game.print("Command not understood.")
 		return False
 	
@@ -1312,7 +1317,7 @@ def Move(dobj,iobj,prep):
 
 
 def Open(dobj,iobj,prep):
-	if prep not in {"using","with",None}:
+	if prep not in ("using","with",None):
 		Core.game.print("Command not understood.")
 		return False
 	if dobj == None:
@@ -1346,7 +1351,7 @@ def Point(dobj,iobj,prep):
 
 
 def Pour(dobj,iobj,prep,I=None):
-	if prep not in {"in","into","inside","on","onto","out","upon",None}:
+	if prep not in ("in","into","inside","on","onto","out","upon",None):
 		Core.game.print("Command not understood.")
 		return False
 	if dobj == None:
@@ -1362,7 +1367,7 @@ def Pour(dobj,iobj,prep,I=None):
 		return False
 
 	R = None
-	if iobj != None and iobj not in {"floor","ground"}:
+	if iobj != None and iobj not in ("floor","ground"):
 		R = findObjFromTerm(iobj)
 		if R == None: return False
 
@@ -1397,7 +1402,7 @@ def Push(dobj,iobj,prep):
 
 
 def Put(dobj,iobj,prep):
-	if prep not in {"in","into","inside","on","onto","upon","down",None}:
+	if prep not in ("in","into","inside","on","onto","upon","down",None):
 		Core.game.print("Command not understood.")
 		return False
 	if dobj == None:
@@ -1412,7 +1417,7 @@ def Put(dobj,iobj,prep):
 		iobj = getNoun(f"What will you put your {dobj} in?")
 		if iobj in Data.cancels: return False
 
-	if iobj in {"floor","ground","here"}:
+	if iobj in ("floor","ground","here"):
 		return Drop(dobj,iobj,prep,I=I)
 	R = findObjFromTerm(iobj)
 	if R == None: return False
@@ -1445,7 +1450,7 @@ def Rest(dobj,iobj,prep):
 
 
 def Restrain(dobj,iobj,prep):
-	if prep not in {"using","with",None}:
+	if prep not in ("using","with",None):
 		Core.game.print("Command not understood.")
 		return False
 
@@ -1519,7 +1524,7 @@ def Swim(dobj,iobj,prep):
 
 
 def Talk(dobj,iobj,prep):
-	if prep not in {"at","into","to","toward","with",None}:
+	if prep not in ("at","into","to","toward","with",None):
 		Core.game.print("Command not understood.")
 		return False
 
@@ -1583,14 +1588,14 @@ def TakeAll():
 
 
 def Take(dobj,iobj,prep):
-	if prep not in {"from","in","inside","out","out of","up",None}:
+	if prep not in ("from","in","inside","out","out of","up",None):
 		Core.game.print("Command not understood.")
 		return False
 	if dobj == None:
 		dobj = getNoun("What will you take?")
 		if dobj in Data.cancels: return False
 
-	if dobj in {"all","everything","it all"}: return TakeAll()
+	if dobj in ("all","everything","it all"): return TakeAll()
 
 	filt = lambda x: x.parent is not Core.player
 	if iobj in ("here", "room"):
@@ -1649,7 +1654,7 @@ def Unequip(dobj,iobj,prep):
 
 
 def Unlock(dobj,iobj,prep):
-	if prep not in {"using","with",None}:
+	if prep not in ("using","with",None):
 		Core.game.print("Command not understood.")
 		return False
 	if dobj == None:

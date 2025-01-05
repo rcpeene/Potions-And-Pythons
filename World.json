@@ -119,9 +119,9 @@
 				"name": "broken helm",
 				"desc": "An old iron soldier's helmet with a hole on the left side.",
 				"aliases": ["helm","iron helm"],
+				"slots": "head",
 				"weight": 4,
 				"durability": 5,
-				"status": [],
 				"prot": 3
 			}
 		],
@@ -280,7 +280,7 @@
 				"inv": [],
 				"gear": {
 					"head": null,
-					"body": null,
+					"torso": null,
 					"left": null,
 					"right": null,
 					"legs": null
@@ -431,7 +431,7 @@
 				"gear": {
 					"mouth": null,
 					"head": null,
-					"body": null,
+					"torso": null,
 					"tail": null
 				}
 			},
@@ -450,7 +450,7 @@
 				"gear": {
 					"mouth": null,
 					"head": null,
-					"body": null,
+					"torso": null,
 					"tail": null
 				}
 			}
@@ -602,7 +602,7 @@
 				"inv": [],
 				"gear": {
 					"head": null,
-					"body": null,
+					"torso": null,
 					"left": null,
 					"right": null,
 					"legs": null
