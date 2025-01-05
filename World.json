@@ -423,7 +423,7 @@
 				"aliases": ["mustang"],
 				"weight": 300,
 				"traits": [8,10,3,12,12,3,1,2,2,5],
-				"status": [],
+				"status": [["tamed",-4]],
 				"hp": 100,
 				"mp": 0,
 				"money": 0,
