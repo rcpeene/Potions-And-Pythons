@@ -1871,7 +1871,7 @@ class Creature():
 	def ATCK(self): return diceRoll(self.STR, self.weapon.might, self.atkmod())
 	def ATHL(self): return self.STR + self.SKL + self.STM
 	def ATSP(self): return self.SPD - min0(self.handheldWeight()//4 - self.CON)
-	def BRDN(self): return self.CON * self.STR * 4 + self.FTH + self.weight
+	def BRDN(self): return 20*self.CON + 10*self.STR + 5*self.FTH + self.weight
 	def CAST(self): return self.WIS + self.FTH + self.INT - min0(self.gearWeight()//4 - self.CON)
 	def CRIT(self): return self.SKL + self.LCK + self.weapon.sharpness
 	def CSSP(self): return self.WIS - min0(self.invWeight() - self.BRDN()) - min0(self.gearWeight()//4 - self.CON)
@@ -1895,18 +1895,8 @@ class Creature():
 
 	def Weight(self):
 		riderWeight = 0 if self.rider is None else self.rider.Weight()
-		return self.weight + self.invWeight() + riderWeight
-
-
-	def inStatus(self,*args):
-		if type(args[0]) == list:
-			condnames = args[0]
-		else:
-			condnames = args
-		for condname in condnames:
-			for cond, dur in self.status:
-				if condname == cond:
-					return True
+		carryingWeight = 0 if self.carrying is None else self.carrying.Weight()
+		return self.weight + self.invWeight() + riderWeight + carryingWeight
 
 
 	def contents(self):
@@ -2049,12 +2039,12 @@ class Creature():
 
 
 	def isFriendly(self):
-		return self.inStatus("tamed")
+		return self.hasCondition("tamed")
 
 
 	def canMove(self):
-		conditions = ("restrained","paralyzed","frozen","unconscious")
-		return self.isAlive() and not self.inStatus(conditions)
+		conds = ("restrained","paralyzed","frozen","unconscious")
+		return self.isAlive() and not any(self.hasCondition(c) for c in conds)
 
 
 	### User Output ###
@@ -2199,16 +2189,16 @@ class Player(Creature):
 			self.levelUp(oldlv,newlv)
 
 
-	def addCondition(self,name,dur,stackable=False,silent=False):
+	def addCondition(self,name,dur,stackable=False):
 		if self.hasCondition(name) and not stackable:
 			return False
 		pair = [name,dur]
-		insort(self.status,pair)
-		if not silent:
+		if not self.hasCondition(name):
 			if name in Data.curses or name in Data.blessings:
 				game.print(f"You have {name}.")
 			else:
 				game.print(f"You are {name}.")
+		insort(self.status,pair)
 		return True
 
 
@@ -2414,6 +2404,10 @@ class Player(Creature):
 	def printStats(self, *args):
 		stats = [self.name, f"$ {self.money}", f"LV: {self.level()}", f"RP: {self.rp}", f"HP: {self.hp}/{self.MXHP()}", f"MP: {self.mp}/{self.MXMP()}"]
 		columnPrint(stats,2,16)
+		if self.carrying is not None:
+			game.print(f"Carrying {self.carrying.stringName()}")
+		if self.riding is not None:
+			game.print(f"Riding {self.riding.stringName()}")
 		if len(self.status) != 0:
 			self.printStatus()
 
