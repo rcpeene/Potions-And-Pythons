@@ -7,7 +7,6 @@
 # 2. Action functions	(action, shortaction, cheat functions called by parse())
 # 3. Action dicts		(dictionaries used to call action functions from)
 
-import sys
 from random import choice
 
 import Data
@@ -525,6 +524,7 @@ def Goodbye(*args): Core.game.print(Core.capWords(choice(list(Data.goodbyes)),c=
 def Hello(*args): Core.game.print(Core.capWords(choice(list(Data.hellos)),c=1))
 
 def Help(*args):
+	Core.flushInput()
 	Core.clearScreen()
 	Core.game.print("\nSingle-Word Commands")
 	shortcommands = sorted(tuple(shortactions.keys()) + Data.traits + Data.abilities)
@@ -539,7 +539,6 @@ def Help(*args):
 def Info(*args):
 	Core.clearScreen()
 	Core.game.print(Data.gameinfo)
-	Core.game.input()
 	Core.waitKbInput()
 	Core.clearScreen()
 
@@ -583,11 +582,11 @@ def Attack(dobj,iobj,prep,target=None,weapon=None,weapon2=None):
 		weapon, weapon2 = weapon2, None
 	if iobj in {"fist","hand"}:
 		Core.player.unequip(Core.player.gear["right"])
-		weapon = Items.Hand("your hand","",[],"",4,-1,[])
+		weapon = Items.Hand("your hand","",4,-1)
 	if iobj in {"foot","leg"}:
-		weapon = Items.Foot("your foot","",[],"",6,-1,[])
+		weapon = Items.Foot("your foot","",6,-1)
 	if iobj in {"mouth","teeth"}:
-		weapon = Items.Mouth("your mouth","",[],"",4,-1,[])
+		weapon = Items.Mouth("your mouth","",4,-1)
 	if iobj != None:
 		if weapon == None:
 			weapon = Core.player.inGear(iobj)
@@ -822,6 +821,29 @@ def Describe(dobj,iobj,prep):
 
 	D.describe()
 	return True
+
+
+def Dismount(dobj,iobj,prep):
+	if prep not in {"from","of","off","out","out of",None}:
+		Core.game.print("Command not understood.")
+		return False
+	
+	if Core.player.riding is None:
+		print(f"You're not riding anything")
+		return False
+
+	if iobj != None:
+		dobj = iobj
+	if dobj != None:
+		matches = Core.game.nameQueryRoom(dobj)
+		if Core.player.riding not in matches:
+			print(f"You're not riding a '{dobj}'")
+			return False
+	Core.game.setPronouns(Core.player.riding)	
+	Core.player.riding.rider = None
+	Core.player.riding = None	
+
+	
 
 
 def Do(dobj,iobj,prep):
@@ -1252,8 +1274,25 @@ def Look(dobj,iobj,prep):
 
 
 def Mount(dobj,iobj,prep):
-	Core.game.print("mounting")
+	if prep not in {"in","into","inside","on","onto","upon",None}:
+		Core.game.print("Command not understood.")
+		return False
+	
+	if Core.player.riding is not None:
+		print(f"You're already riding {Core.player.riding.stringName()}")
+		return False
 
+	if dobj == None: dobj = iobj
+	if dobj == None:
+		dobj = getNoun("What will you mount?")
+		if dobj in Data.cancels: return False
+
+	C = findObjFromTerm(dobj,"room")
+	if C == None: return False
+	Core.game.setPronouns(C)
+	
+	return C.Ride(Core.player)
+	
 
 def Move(dobj,iobj,prep):
 	Core.game.print("moveing")
@@ -1310,7 +1349,7 @@ def Pour(dobj,iobj,prep,I=None):
 		return False
 
 	R = None
-	if iobj != None and iobj not in {"floor","ground","here"}:
+	if iobj != None and iobj not in {"floor","ground"}:
 		R = findObjFromTerm(iobj)
 		if R == None: return False
 
@@ -1728,6 +1767,7 @@ actions = {
 "dance":Dance,
 "define":Define,
 "describe":Describe,
+"dismount":Dismount,
 "do":Do,
 "dodge":Dodge,
 "doff":Doff,
@@ -1753,6 +1793,10 @@ actions = {
 "follow":Follow,
 "fuck":Fuck,
 "get":Take,
+"get down":Dismount,
+"get off":Dismount,
+"get on":Mount,
+"get up":Mount,
 "give":Give,
 "go":Go,
 "grab":Take,
@@ -1819,6 +1863,7 @@ actions = {
 "slap":Punch,
 "sleep":Rest,
 "slice":Cut,
+"slumber":Rest,
 "smell":Smell,
 "sneak":Crouch,
 "sniff":Smell,
@@ -1872,10 +1917,12 @@ actions = {
 # whip (attack)
 # dress/undress/strip
 # spit
+# douse -> reverse of pour on?
 # converse/communicate/discuss
 # say hello -> hello
 # sprint/run
 # flick?
+# sip -> drink or lick?
 # insert (key) -> unlock
 # lift -> carry
 # mix/stir -> brew?
@@ -1935,8 +1982,9 @@ actions = {
 # stand
 # backflip??
 # row/steer (if not mounted -> ride, else -> go)
-# stop, get off, dismount
+# stop
 # blow/breath
 # clap
 # snap
 # observe/watch
+# capture (with a net?) -> take?

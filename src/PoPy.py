@@ -13,7 +13,7 @@ import Parser
 
 def main(testing=False):
 	# formatting the prompt window
-	os.system("mode con: lines=9999")
+	os.system("mode con: lines=36")
 	os.system("title Potions ^& Pythons")
 
 	# run intro logo animation
@@ -72,11 +72,6 @@ if __name__ == "__main__":
 ################################################################################
 
 # CURRENT TASKS
-
-# add astronomical events based on the time cycling
-# refactor verb and shortvrb sets in data (can probably be removed)
-
-# add an animal and mounting/riding
 
 # add basic equipment and clothing items
 # fix/add Creature.isNaked or Player.isNaked

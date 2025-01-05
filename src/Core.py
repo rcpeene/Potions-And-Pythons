@@ -1008,10 +1008,12 @@ class Game():
 	def input(self,text=""):
 		self.print(text,end='')
 		flushInput()
-		return input()
+		return input().lower()
 
 
 	def print(self,*args,end="\n",sep='',delay=0.005):
+		if self.silent:
+			return
 		if self.mode == 1:
 			return print(*args,end=end,sep=sep)
 		if len(args) > 1:
@@ -1067,7 +1069,7 @@ class Game():
 # directed graph, facilitated by the world dict, where the exits dict specifies
 # the edges from a given node to its neighboring nodes.
 class Room():
-	def __init__(self,name,domain,desc,exits,fixtures,items,creatures,status):
+	def __init__(self,name,domain,desc,exits,fixtures,items,creatures,status=[]):
 		self.name = name
 		self.domain = domain
 		self.desc = desc
@@ -1191,16 +1193,15 @@ class Room():
 	# decrements the duration for each status condition applied to the room by t
 	# removes status conditions whose duration is lowered past 0
 	def passTime(self,t):
-		for condition in self.status:
+		for i, condition in self.status:
 			# if condition is has a special duration, ignore it
 			if condition[1] < 0:
 				continue
 			# subtract remaining duration on condition
 			elif condition[1] > 0:
-				condition[1] -= t
-			# if, after subtraction, condition is non-positive, remove it
-			if condition[1] <= 0:
-				self.removeCondition(condition[0],0)
+				condition[1] = min0(condition[1]-t)
+		# remove all condition with 0 duration
+		self.status = [(cond,dur) for cond,dur in self.status if dur != 0]
 
 		for obj in self.contents():
 			obj.passTime(t)
@@ -1329,14 +1330,17 @@ class Room():
 # Anything in a Room that is not a Creature will be an Item
 # All items come with a name, description, weight, and durability
 class Item():
-	def __init__(self,name,desc,aliases,plural,weight,durability,status):
+	def __init__(self,name,desc,weight,durability,status=[],aliases=[],plural=None):
 		self.name = name
 		self.desc = desc
-		self.aliases = aliases
-		self.plural = plural
 		self.weight = weight
 		self.durability = durability
 		self.status = status
+		self.aliases = aliases
+		if plural is None:
+			self.plural = self.name + 's'
+		else:
+			self.plural = plural
 		self.parent = None
 
 
@@ -1442,7 +1446,7 @@ class Item():
 	# Used to create a generic Weapon() if this item is used to attack something
 	def improviseWeapon(self):
 		#TODO: if item is too large/heavy, make it two-handed
-		return Weapon(self.name,self.desc,self.aliases,self.plural,self.weight,self.durability,[],min1(self.weight//4),0,0,0,False,"b")
+		return Weapon(self.name,self.desc,self.aliases,self.weight,self.durability,[],min1(self.weight//4),0,0,0,False,"b",plural=self.plural)
 
 
 
@@ -1484,13 +1488,13 @@ class Item():
 # Creatures have 10 base stats, called traits
 # They also have abilities; stats which are derived from traits through formulas
 class Creature():
-	def __init__(self,name,desc,plural,weight,traits,hp,mp,money,inv,gear,status=[],aliases=[],descname=None,timeOfDeath=None,alert=False,seesPlayer=False,sawPlayer=-1):
+	def __init__(self,name,desc,weight,traits,hp,mp,money,inv,gear,plural=None,riding=None,rider=None,status=[],aliases=[],descname=None,timeOfDeath=None,alert=False,seesPlayer=False,sawPlayer=-1):
 		self.name = name
 		if descname is None:
 			self.descname = name
 		self.desc = desc
 		self.aliases = aliases
-		if plural == None:
+		if plural is None:
 			self.plural = self.name + 's'
 		else:
 			self.plural = plural
@@ -1518,6 +1522,8 @@ class Creature():
 
 		# convert gear from its stored form in files to its runtime form
 		self.gear = {key: inv[idx] if idx != None else EmptyGear() for key, idx in gear.items()}
+		self.riding = riding
+		self.rider = rider
 
 		self.parent = None
 
@@ -1790,6 +1796,13 @@ class Creature():
 			player.gainxp(xp)
 
 
+
+	### Behavior ###
+			
+	def act(self):
+		pass
+
+
 	def Carry(self,creature):
 		self.addCondition("carrying",-3,silent=True)
 		creature.addCondition("carried",-3)
@@ -1817,6 +1830,17 @@ class Creature():
 			pass
 
 
+	def Ride(self,rider):
+		print(self.BRDN())
+		if rider.Weight() > self.BRDN():
+			game.print(f"You are too heavy to ride {self.stringName(definite=True)}")
+			return False
+		self.rider = rider
+		rider.riding = self
+		game.print(f"You ride {self.stringName(definite=True)}")
+		return True
+
+
 
 	### Getters ###
 
@@ -1826,7 +1850,7 @@ class Creature():
 	def ATCK(self): return diceRoll(self.STR, self.weapon.might, self.atkmod())
 	def ATHL(self): return self.STR + self.SKL + self.STM
 	def ATSP(self): return self.SPD - min0(self.handheldWeight()//4 - self.CON)
-	def BRDN(self): return self.CON * self.STR * 4 + self.FTH + 45
+	def BRDN(self): return self.CON * self.STR * 4 + self.FTH + self.weight
 	def CAST(self): return self.WIS + self.FTH + self.INT - min0(self.gearWeight()//4 - self.CON)
 	def CRIT(self): return self.SKL + self.LCK + self.weapon.sharpness
 	def CSSP(self): return self.WIS - min0(self.invWeight() - self.BRDN()) - min0(self.gearWeight()//4 - self.CON)
@@ -1849,7 +1873,8 @@ class Creature():
 
 
 	def Weight(self):
-		return self.weight + self.invWeight()
+		riderWeight = 0 if self.rider is None else self.rider.Weight()
+		return self.weight + self.invWeight() + riderWeight
 
 
 	def isAlive(self):
@@ -1907,9 +1932,7 @@ class Creature():
 
 	# returns sum of the weight of all items in the inventory
 	def invWeight(self):
-		weight = 0
-		for item in self.inv: weight += item.Weight()
-		return weight
+		return sum(item.Weight() for item in self.inv)
 
 
 	# returns a list of names of all items in player inventory
@@ -2029,8 +2052,8 @@ class Creature():
 
 # the class representing the player, contains all player stats
 class Player(Creature):
-	def __init__(self,name,desc,traits,hp,mp,money,inv,gear,xp,rp,status=[],spells=[],descname=None,aliases=None,plural=None,**kwargs):
-		Creature.__init__(self,name,desc,None,0,traits,hp,mp,money,inv,gear,status=status,descname=descname)
+	def __init__(self,name,desc,weight,traits,hp,mp,money,inv,gear,xp,rp,status=[],spells=[],descname=None,aliases=None,plural=None,**kwargs):
+		Creature.__init__(self,name,desc,weight,traits,hp,mp,money,inv,gear,status=status,descname=descname,aliases=aliases,plural=plural)
 		self.xp = xp
 		self.rp = rp
 		self.spells = spells
@@ -2070,27 +2093,26 @@ class Player(Creature):
 
 	# player gets 3 QPs for each level gained, can dispense them into any trait
 	def levelUp(self,oldlv,newlv):
-		input(f"You leveled up to level {newlv}!\n")
+		game.print(f"You leveled up to level {newlv}!\n")
+		waitKbInput()
 		QP = 3*(newlv-oldlv)
 		while QP > 0:
-			clearScreen()
 			self.printTraits()
 			game.print(f"\nQuality Points:	{QP}")
-			trait = input("What trait will you improve?\n> ").lower()
+			trait = game.input("What trait will you improve?\n> ")
 			if trait not in Data.traits:
 				continue
 			# increment corresponding player trait
-			traitval = getattr(self,trait)
+			traitval = getattr(self,trait.upper())
 			if traitval >= 20:
-				input(f"Your {trait} cannot be raised any higher.\n")
+				game.print(f"Your {trait} cannot be raised any higher.\n")
+				waitKbInput()
 				continue
 			setattr(self,trait.upper(),traitval+1)
 			QP -= 1
-		clearScreen()
 		self.printTraits()
 		game.print(f"\nQuality Points:	{QP}")
 		input("You are done leveling up.\n")
-		clearScreen()
 		self.checkHindered()
 
 
@@ -2369,7 +2391,7 @@ class Person(Creature):
 	def __init__(self,name,descname,gender,weight,traits,hp,mp,money,inv,gear,dlogtree,desc=None,love=0,fear=0,rapport=0,status=[],spells=[],aliases=[],lastParley=None,memories=set(),appraisal=set(),**kwargs):
 		if desc == None:
 			desc = f"A {descname}"
-		Creature.__init__(self,name,desc,None,weight,traits,hp,mp,money,inv,gear,status=status,aliases=aliases,descname=descname)
+		Creature.__init__(self,name,desc,weight,traits,hp,mp,money,inv,gear,status=status,aliases=aliases,descname=descname)
 		self.descname = descname
 		self.gender = gender
 		self.spells = spells
@@ -2491,6 +2513,7 @@ class Animal(Creature):
 		pass
 
 
+
 notes = '''
 self.alive = True
 self.seesPlayer = False
@@ -2553,8 +2576,8 @@ Set status
 
 # almost identical to the item class, but fixtures may not be removed from their initial location.
 class Fixture(Item):
-	def __init__(self,name,desc,aliases,plural,weight,durability,status,mention):
-		Item.__init__(self,name,desc,aliases,plural,weight,durability,status)
+	def __init__(self,name,desc,mention,weight=-1,durability=-1,status=[],aliases=[],plural=None):
+		Item.__init__(self,name,desc,weight=weight,durability=durability,status=status,aliases=aliases,plural=plural)
 		self.mention = mention
 		self.parent = None
 
@@ -2574,8 +2597,8 @@ class Fixture(Item):
 
 
 class Passage(Fixture):
-	def __init__(self,name,desc,aliases,plural,weight,durability,status,mention,connections,descname,passprep):
-		Fixture.__init__(self,name,desc,aliases,plural,weight,durability,status,mention)
+	def __init__(self,name,desc,mention,connections,descname,passprep,weight=-1,durability=-1,status=[],aliases=[],plural=None):
+		Fixture.__init__(self,name,desc,mention,weight=weight,durability=durability,status=status,aliases=aliases,plural=plural)
 		self.connections = connections
 		self.descname = descname
 		self.passprep = passprep
@@ -2610,14 +2633,14 @@ class Passage(Fixture):
 
 
 class Serpens(Item):
-	def __init__(self,value,status):
+	def __init__(self,value,status=[]):
 		self.name = "Gold"
 		self.desc = f"{str(value)} glistening coins made of an ancient metal"
 		self.aliases = ["coin","coins","money","serpen","serpens"]
 		self.plural = "gold"
 		self.weight = value
 		self.durability = -1
-		self.status = []
+		self.status = status
 		self.descname = str(value) + " Gold"
 		self.value = value
 
@@ -2631,7 +2654,7 @@ class Serpens(Item):
 		return {
 			"__class__": self.__class__.__name__,
 			"value": self.value,
-			"status": []
+			"status": {}
 		}
 
 
@@ -2667,13 +2690,13 @@ class Serpens(Item):
 
 
 class Weapon(Item):
-	def __init__(self,name,desc,aliases,plural,weight,durability,status,might,sleight,sharpness,range,twohanded,type):
-		Item.__init__(self,name,desc,aliases,plural,weight,durability,status)
+	def __init__(self,name,desc,weight,durability,might,sleight,sharpness,range,type,twohanded=False,status=[],aliases=[],plural=None):
+		Item.__init__(self,name,desc,weight,durability,status=status,aliases=aliases,plural=plural)
 		self.might = might
 		self.sleight = sleight
 		self.sharpness = sharpness
 		self.range = range
-		self.twohanded = bool(twohanded)
+		self.twohanded = twohanded
 		self.type = type
 
 
@@ -2685,16 +2708,16 @@ class Weapon(Item):
 
 
 class Shield(Item):
-	def __init__(self,name,desc,aliases,plural,weight,durability,status,prot):
-		Item.__init__(self,name,desc,aliases,plural,weight,durability,status)
+	def __init__(self,name,desc,weight,durability,prot,status=[],aliases=[],plural=None):
+		Item.__init__(self,name,desc,weight,durability,status=status,aliases=aliases,plural=plural)
 		self.prot = prot
 
 
 
 
 class Armor(Item):
-	def __init__(self,name,desc,aliases,plural,weight,durability,status,prot):
-		Item.__init__(self,name,desc,aliases,plural,weight,durability,status)
+	def __init__(self,name,desc,weight,durability,prot,status=[],aliases=[],plural=None):
+		Item.__init__(self,name,desc,weight,durability,status=status,aliases=aliases,plural=plural)
 		self.prot = prot
 
 
@@ -2704,28 +2727,6 @@ class Armor(Item):
 
 	def Unequip(self):
 		pass
-
-
-
-
-class Helm(Armor):
-	def __init__(self,name,desc,aliases,plural,weight,durability,status,prot):
-		Armor.__init__(self,name,desc,aliases,plural,weight,durability,status,prot)
-
-
-
-
-class Tunic(Armor):
-	def __init__(self,name,desc,aliases,plural,weight,durability,status,prot):
-		Armor.__init__(self,name,desc,aliases,plural,weight,durability,status,prot)
-
-
-
-
-class Greaves(Armor):
-	def __init__(self,name,desc,aliases,plural,weight,durability,status,prot):
-		Armor.__init__(self,name,desc,aliases,plural,weight,durability,status,prot)
-
 
 
 
@@ -2826,7 +2827,7 @@ class Monster(Creature):
 
 
 
-player = Player("","",[0]*10,0,0,0,[],{},0,0)
+player = Player("","",0,[0]*10,0,0,0,[],{},0,0)
 defaultRoom = Room("","","",{},[],[],[],set())
 game = Game(-1,defaultRoom,defaultRoom,-1,-1)
 world = {}
