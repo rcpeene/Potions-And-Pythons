@@ -1128,7 +1128,7 @@ misc world ideas
 -pandora box "banishment box" which unleashes all creatures the player has ever banished with the banish spell
 -limericks/poems/poem book?
 -the mist
--a zoo in the big city
+-a zoo (royal menagerie?) in the big city
 -a jar that is REALLY hard to open
 -bottomless pit
 -the four humors
@@ -1181,6 +1181,7 @@ CHARACTER NAMES:
 	Beowin
 	Rook
 
+	Hazelnut farmer with children named, fil, bert, hazel, and pet nut
 	Yernagate the wise 
 	The Oracle
 	Glycon the false Serpent God (secretly a puppet?)
@@ -1304,9 +1305,9 @@ Goblinmite, Brainworm, Orc Beetle, Mimicbug, Waterbear
 
 
 
-SPELL IDEAS:
+SPELL NAME IDEAS:
 Abjure, Aliment, Amphibify, Anathema, Armistice, Aspersion, Asterism, Avulsion
-Bamboozle, Bang, Banquet, Beacon, Bellow, Bolster, Boogaloo, Boom, Busk
+Bamboozle, Bang, Banish, Banquet, Beacon, Bellow, Bolster, Boogaloo, Boom, Busk
 Cacophony, Catharsis, Chutzpah, Clemency, Collapse, Conjure
 Delirium, Deluge, Dessicate, Discord
 Effervesce, Eidolon, Enchant, Ennervation, Enthrall, Expectorate, Expell
@@ -1320,7 +1321,7 @@ Maelstrom, Malaise, Manumit, Melancholy, Micturate, Mirage, Moonshot
 Nyctophobia
 Parley, Paroxysm, Parry, Penumbra, Petrify, Phantasm, Pilfer, Ponder, Prescience, Psychosis, Putrefaction
 Refection, Rend, Repast, Resurrect, Revelry, Riposte
-Sanctuary, Scry, Serein, Shivaree, Simulacrum, Smite, Spangle, Squib, Sunder, Synpase
+Sanctuary, Scry, Serein, Shivaree, Simulacrum, Smite, Smithereens, Spangle, Squib, Sunder, Synpase
 Telekinesis, Tempest, Tether, Torrent
 Usurp
 Vamoose, Vendetta, Volley

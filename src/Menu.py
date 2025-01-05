@@ -264,7 +264,7 @@ def delete(filename):
 		# split save names into a list and display them
 		print("Save files: ")
 		saves = os.listdir()
-		Core.columnPrint(saves,10,10)
+		Core.columnPrint(saves,10,10,print)
 		savename = input("\nWhich save file will you delete?\n> ")
 	else:
 		savename = filename
@@ -306,7 +306,7 @@ def createCharacter():
 	desc = input("Describe yourself.\n> ")
 	while len(desc) == 0:
 		desc = input("> ")
-	return Core.Player(name,desc,[1]*10,1,1,0,[],Data.initgear,0,0)
+	return Core.Player(name,desc,45,[1]*10,1,1,0,[],Data.initgear,0,0)
 
 
 # starts a new game and returns player, world, and game objects
@@ -328,10 +328,10 @@ def newGame():
 def testGame():
 	Core.world = readJSON("World.json")
 
-	inv = [Core.Compass("compass","a plain steel compass with a red arrow",[],"compasses",2,10,[])]
+	inv = [Core.Compass("compass","a plain steel compass with a red arrow",2,10,plural="compasses")]
 	status = [["fireproof",-1], ["poisoned",5], ["cursed",-2], ["immortal",-1],
 	["sharpshooter",50], ["invisible",15], ["poisoned",-1], ["flying",5]]
-	Core.player = Core.Player("Norman","a hero",[4]*10,24,24,1000,inv,Data.initgear,1585,100,[],[])
+	Core.player = Core.Player("Norman","a hero",45,[4]*10,24,24,1000,inv,Data.initgear,1585,100,[],[])
 	Core.game = Core.Game(0,Core.world["cave"],Core.world["tunnel"],0,set())
 
 	Core.clearScreen()
