@@ -20,7 +20,6 @@ def main(testing=False):
 	if not testing: Menu.gameIntro()
 	# instantiate global objects Player, World, Game
 	Menu.mainMenu()
-	if Core.game.quit: return
 	# assign parents to objects, which specifies what they are contained in
 	Core.assignParents()
 	# eliminate any room connections which don't exist in the world dict
@@ -30,6 +29,10 @@ def main(testing=False):
 	Core.game.startUp()
 	# main input loop
 	while True:
+		if not Core.player.isAlive(): 
+			if not Menu.restart(): Menu.quit()
+			continue
+
 		Core.game.silent = False
 		Core.game.whoseturn = Core.player
 
@@ -41,7 +44,7 @@ def main(testing=False):
 		for creature in Core.game.currentroom.creatures:
 			Core.game.whoseturn = creature
 			creature.act()
-			if Core.game.quit: return
+			if not Core.player.isAlive(): continue
 
 		# creatures in nearby rooms' turn
 		Core.game.silent = True
@@ -49,8 +52,9 @@ def main(testing=False):
 			for creature in room.creatures:
 				Core.game.whoseturn = creature
 				creature.act()
-				if Core.game.quit: return
+				if not Core.player.isAlive(): continue
 
+		if not Core.player.isAlive(): continue
 		# cleanup before looping
 		Core.game.whoseturn = None
 		# pass the time for all rooms and creatures
@@ -60,7 +64,7 @@ def main(testing=False):
 		# sort the creatures in each rendered room by their MVMT attribute
 		Core.game.sortCreatures()
 
-		if Core.game.quit: return
+		# if not Core.player.isAlive(): continue
 		# save game every so often just in case
 		if Core.game.time % 10 == 0: Menu.quicksave()
 

@@ -10,7 +10,7 @@
 
 from time import sleep
 from random import randint, choice
-import os, json
+import os, json, sys
 
 import Data
 import Core
@@ -184,7 +184,7 @@ def saveGame():
 
 
 # load a game from a save directory
-def loadGame(filename):
+def loadGame(filename=None):
 	Core.clearScreen()
 	if not (os.path.exists("saves")) or len(os.listdir("./saves")) == 0:
 		print("\nThere are no save files.\n")
@@ -366,7 +366,7 @@ def mainMenu():
 			newGame()
 			return
 		elif g[0] == "load" and len(g) == 1:
-			if loadGame(None):
+			if loadGame():
 				return
 		elif g[0] == "load":
 			if loadGame(" ".join(g[1:])):
@@ -376,12 +376,31 @@ def mainMenu():
 		elif g[0] == "delete":
 			delete(" ".join(g[1:]))
 		elif g[0] == "quit" and len(g) == 1:
-			Core.game.quit = True
-			return
+			return quit()
 		elif g[0] == "test" and len(g) == 1:
 			testGame()
 			return
 
+
+def restart():
+	next = None
+	Core.flushInput()
+	while next is None:
+		if Core.yesno("Would you like to load from a save?",print,input):
+			next = "restart"
+		elif Core.yesno("Would you like to quit?",print,input):
+			next = "quit"
+		else:
+			print("You must choose! Don't be a sore loser.")
+	if next == "restart":
+		if loadGame():
+			return True
+	return False
+
+
+def quit():
+	Core.waitKbInput("Goodbye.")
+	sys.exit()
 
 
 

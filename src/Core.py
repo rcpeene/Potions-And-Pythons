@@ -101,7 +101,7 @@ def waitKbInput(text=""):
 	if game.mode == 1:
 		return True
 	flushInput()
-	game.print(text)
+	game.Print(text)
 	if os.name == 'nt':  # For Windows
 		import msvcrt
 		msvcrt.getch()
@@ -128,7 +128,7 @@ def ellipsis(n):
 # if an element is longer than one column, it takes up as many columns as needed
 def columnPrint(l,n,w,printf=None):
 	if printf is None:
-		printf = game.print
+		printf = game.Print
 	# k is the number of characters that have been printed in the current row
 	k = 0
 	# for each string element in l
@@ -242,9 +242,9 @@ def extractConditionInfo(roomCondition):
 # prints a question, gets a yes or no, returns True or False respectively
 def yesno(question,printf=None,inputf=None):
 	if printf is None:
-		printf = game.print
+		printf = game.Print
 	if inputf is None:
-		inputf = game.input
+		inputf = game.Input
 	while True:
 		command = inputf(question + "\n> ").lower()
 		if command in Data.yesses:
@@ -468,8 +468,8 @@ class DialogueNode():
 
 	@classmethod
 	def convertFromJSON(cls,d):
-		game.print('converting...')
-		game.print(d)
+		game.Print('converting...')
+		game.Print(d)
 		return cls(**d)
 
 
@@ -539,7 +539,7 @@ class DialogueNode():
 	# users can end the dialogue by inputting a cancel command
 	def responseHop(self,speaker):
 		for i, response in enumerate(self.responses):
-			game.print(f'{i+1}. {response}\n')
+			game.Print(f'{i+1}. {response}\n')
 
 		while True:
 			choice = input("\n> ").lower()
@@ -552,7 +552,7 @@ class DialogueNode():
 				# note that this does *not* hop(); it ignores child's visitLimit and rapportReq
 				return self.children[int(choice)-1]
 			except:
-				game.print('That is not one of the options. Input a number or type "cancel"')
+				game.Print('That is not one of the options. Input a number or type "cancel"')
 				continue
 
 
@@ -840,6 +840,7 @@ class Game():
 		if prev_hour != self.hour():
 			self.checkDaytime()
 		self.checkAstrology()
+		self.silent = False
 
 
 	def clearPronouns(self):
@@ -961,10 +962,10 @@ class Game():
 	def checkMoon(self):
 		mooncycle = (self.time % self.monthlength) // self.daylength
 		if mooncycle() == 0:
-			self.print("It is a new moon.")
+			self.Print("It is a new moon.")
 			self.events.add("new moon")
 		elif mooncycle() == 7:
-			self.print("It is a full moon.")
+			self.Print("It is a full moon.")
 			self.events.add("full moon")
 		else:
 			self.events.remove("new moon")
@@ -976,44 +977,46 @@ class Game():
 		aurora_cycle = self.time % 2000
 		if aurora_cycle >= 0 and aurora_cycle < 100 and self.hour() in darkhours:
 			if "aurora" not in self.events or startUp:
-				self.print("There is an aurora in the sky!")			
+				self.Print("There is an aurora in the sky!")			
 			self.events.add("aurora")
 		elif "aurora" in self.events:
 			self.events.remove("aurora")
-			self.print("The aurora is over.")
+			self.Print("The aurora is over.")
 
 		meteor_cycle = self.time % 3500
 		if meteor_cycle >= 0 and meteor_cycle < 300 and self.hour() in darkhours:
 			if "meteor shower" not in self.events or startUp:
-				self.print("There is a meteor shower in the sky!")
+				self.Print("There is a meteor shower in the sky!")
 			self.events.add("meteor shower")
 		elif "meteor shower" in self.events:
 			self.events.remove("meteor shower")
-			self.print("The meteor shower is over.")
+			self.Print("The meteor shower is over.")
 
 		lighthours = ("rooster","juniper","bell","sword","willow","lily")
 		eclipse_cycle = (self.time % (self.monthlength*3+100))
 		if eclipse_cycle > 0 and eclipse_cycle < 30 and self.hour() in lighthours:
 			if "eclipse" not in self.events or startUp:
-				self.print("There is a solar eclipse in the sky!")
+				self.Print("There is a solar eclipse in the sky!")
 			self.events.add("eclipse")
 		elif "eclipse" in self.events:
 			self.events.remove("eclipse")
-			self.print("The solar eclipse is over.")
+			self.Print("The solar eclipse is over.")
 
 
 
 	### User Output ###
 	
-	def input(self,text="",lower=True):
-		self.print(text,end='')
+	def Input(self,text="",low=True):
+		self.Print(text,end='')
 		flushInput()
-		if not lower:
-			return input()
-		return input().lower()
+		if not low:
+			ret = input()
+		else:
+			ret = input().lower()
+		return ret
 
 
-	def print(self,*args,end="\n",sep='',delay=0.005):
+	def Print(self,*args,end="\n",sep='',delay=0.005):
 		if self.silent:
 			return
 		if self.mode == 1:
@@ -1030,11 +1033,12 @@ class Game():
 			sys.stdout.write(sep)
 			sys.stdout.flush()
 		sys.stdout.write(end)
+		sys.stdout.flush()
 		
 
 	def startUp(self):
 		player.printStats()
-		game.print()
+		game.Print()
 		self.currentroom.describe()
 		game.checkDaytime()
 		game.checkAstrology(startUp=True)
@@ -1046,13 +1050,13 @@ class Game():
 
 	def checkDaytime(self):
 		if self.hour() in ('stag','rooster','juniper'):
-			self.print('It is morning.')
+			self.Print('It is morning.')
 		if self.hour() in ('bell','sword','willow','lily'):
-			self.print('It is day.')
+			self.Print('It is day.')
 		if self.hour() in ('hearth','cat','mouse'):
-			self.print('It is evening.')
+			self.Print('It is evening.')
 		if self.hour() in ('owl','serpent','wolf'):
-			self.print('It is night.')
+			self.Print('It is night.')
 			self.checkMoon()
 
 
@@ -1302,12 +1306,12 @@ class Room():
 
 	# prints room name, description, all its items and creatures
 	def describe(self):
-		game.print("\n" + self.domain)
-		game.print(self.name)
+		game.Print("\n" + self.domain)
+		game.Print(self.name)
 		# if player.countCompasses() == 0:
-		# 	game.print("\n" + ambiguateDirections(self.desc))
+		# 	game.Print("\n" + ambiguateDirections(self.desc))
 		# else:
-		game.print("\n" + self.desc)
+		game.Print("\n" + self.desc)
 		self.describeItems()
 		self.describeCreatures()
 
@@ -1316,7 +1320,7 @@ class Room():
 	def describeItems(self):
 		items = self.listableItems()
 		if len(items) != 0:
-			game.print(f"There is {listObjects(self.listableItems())}.")
+			game.Print(f"There is {listObjects(self.listableItems())}.")
 		if len(items) == 1:
 			game.setPronouns(items[0])
 
@@ -1324,7 +1328,7 @@ class Room():
 	# prints all the creatures in the room in sentence form
 	def describeCreatures(self):
 		if len(self.creatures) != 0:
-			game.print(f"There is {listObjects(self.creatures)}.")
+			game.Print(f"There is {listObjects(self.creatures)}.")
 		for creature in self.creatures:
 			game.setPronouns(creature)
 
@@ -1397,9 +1401,9 @@ class Item():
 	def Break(self):
 		if self.durability == -1:
 			if not game.silent:
-				game.print(f"The {self.name} cannot be broken.")
+				game.Print(f"The {self.name} cannot be broken.")
 			return False
-		game.print(f"The {self.name} breaks.")
+		game.Print(f"The {self.name} breaks.")
 		self.parent.removeItem(self)
 		return True
 
@@ -1456,8 +1460,8 @@ class Item():
 	### User Output ###
 
 	def describe(self):
-		game.print(f"It's {self.stringName()}.")
-		game.print(f"{self.desc}.")
+		game.Print(f"It's {self.stringName()}.")
+		game.Print(f"{self.desc}.")
 
 
 	def stringName(self,det=True,definite=False,n=1,plural=False,cap=False,c=1):
@@ -1618,7 +1622,7 @@ class Creature():
 		if(f"{type} vulnerability" in self.status): dmg *= 2
 		if(f"{type} resistance" in self.status): dmg //= 2
 		if(f"{type} immunity" in self.status): dmg = 0
-		game.print(f"Took {dmg} {Data.dmgtypes[type]} damage")
+		game.Print(f"Took {dmg} {Data.dmgtypes[type]} damage")
 		#player hp lowered to a minimum of 0
 		self.hp = min0(self.hp-dmg)
 		if self.hp == 0:
@@ -1666,7 +1670,7 @@ class Creature():
 		if self.addItem(I):
 			oldParent.removeItem(I)
 			if msg != None:
-				game.print(msg)
+				game.Print(msg)
 			I.Obtain(self)
 			self.checkHindered()
 			return True
@@ -1719,7 +1723,7 @@ class Creature():
 		self.gear[slot] = EmptyGear()
 		self.assignWeaponAndShield()
 		if not silent:
-			game.print(f"You unequip your {I.name}")
+			game.Print(f"You unequip your {I.name}")
 		if hasMethod(I,"Unequip"): I.Unequip()
 
 
@@ -1791,12 +1795,12 @@ class Creature():
 	# called when a creature's hp hits 0
 	def death(self):
 		self.timeOfDeath = game.time
-		game.print("\n" + f"{self.stringName(definite=True,cap=True,c=1)} died.")
+		game.Print("\n" + f"{self.stringName(definite=True,cap=True,c=1)} died.")
 		self.descname = f"dead {self.descname}"
 		n = diceRoll(3,player.LOOT(),-2)
 		self.room().addItem(Serpens(n,[]))
 		if not game.silent:
-			game.print(f"Dropped $ {n}.")
+			game.Print(f"Dropped $ {n}.")
 		if game.whoseturn is player:
 			# TODO: verify that this is an acceptable formula
 			lv = player.level()
@@ -1813,7 +1817,7 @@ class Creature():
 
 	def Carry(self,carrier):
 		if self.Weight() > carrier.BRDN():
-			game.print(f"{self.stringName(definite=True,cap=True)} is too heavy to carry.")
+			game.Print(f"{self.stringName(definite=True,cap=True)} is too heavy to carry.")
 			return False
 		if not self.Restrain(carrier):
 			return False
@@ -1829,11 +1833,11 @@ class Creature():
 				#TODO: add restraining with items? like rope??
 				pass
 			if self.ATHL() > restrainer.ATHL() or self.EVSN() > restrainer.ATHL():
-				game.print(f"You fail to restrain {self.stringName(definite=True)}!")
+				game.Print(f"You fail to restrain {self.stringName(definite=True)}!")
 				return False
 		restrainer.addCondition("restraining",-3,silent=True)
 		self.addCondition("restrained",-3)
-		game.print(f"You restrain {self.stringName(definite=True)}!")
+		game.Print(f"You restrain {self.stringName(definite=True)}!")
 		return True
 
 
@@ -1846,19 +1850,19 @@ class Creature():
 
 	def Ride(self,rider):
 		if rider.Weight() > self.BRDN():
-			game.print(f"You are too heavy to ride {self.stringName(definite=True)}")
+			game.Print(f"You are too heavy to ride {self.stringName(definite=True)}")
 			return False
 		if not self.isFriendly() and self.canMove():
-			game.print(f"{self.stringName(definite=True,cap=True)} struggles.")
+			game.Print(f"{self.stringName(definite=True,cap=True)} struggles.")
 			athl_contest = self.ATHL() - rider.ATHL()
 			if athl_contest > 0:
-				game.print(f"{self.stringName(definite=True,cap=True)} shakes you off!")
+				game.Print(f"{self.stringName(definite=True,cap=True)} shakes you off!")
 				if athl_contest > rider.ATHL():
 					rider.takeDamage(athl_contest-rider.ATHL(),"b")
 				return False
 		self.rider = rider
 		rider.riding = self
-		game.print(f"You ride {self.stringName(definite=True)}.")
+		game.Print(f"You ride {self.stringName(definite=True)}.")
 		return True
 
 
@@ -2074,8 +2078,8 @@ class Creature():
 
 
 	def describe(self):
-		game.print(f"It's {self.stringName()}.")
-		game.print(f"{self.desc}.")
+		game.Print(f"It's {self.stringName()}.")
+		game.Print(f"{self.desc}.")
 
 
 
@@ -2113,7 +2117,7 @@ class Player(Creature):
 		else:
 			self.hp = min0(self.hp-dmg)
 		total_dmg = prevhp - self.hp
-		game.print(f"You took {total_dmg} {Data.dmgtypes[type]} damage.")
+		game.Print(f"You took {total_dmg} {Data.dmgtypes[type]} damage.")
 		if self.hp == 0:
 			self.death()
 
@@ -2123,31 +2127,31 @@ class Player(Creature):
 		if self.hp + heal > self.MXHP():
 			heal = self.MXHP() - self.hp
 		self.hp += heal
-		game.print(f"You healed {heal} HP.")
+		game.Print(f"You healed {heal} HP.")
 		return heal
 
 
 	# player gets 3 QPs for each level gained, can dispense them into any trait
 	def levelUp(self,oldlv,newlv):
-		game.print(f"You leveled up to level {newlv}!\n")
+		game.Print(f"You leveled up to level {newlv}!\n")
 		waitKbInput()
 		QP = 3*(newlv-oldlv)
 		while QP > 0:
 			self.printTraits()
-			game.print(f"\nQuality Points:	{QP}")
-			trait = game.input("What trait will you improve?\n> ")
+			game.Print(f"\nQuality Points:	{QP}")
+			trait = game.Input("What trait will you improve?\n> ")
 			if trait not in Data.traits:
 				continue
 			# increment corresponding player trait
 			traitval = getattr(self,trait.upper())
 			if traitval >= 20:
-				game.print(f"Your {trait} cannot be raised any higher.\n")
+				game.Print(f"Your {trait} cannot be raised any higher.\n")
 				waitKbInput()
 				continue
 			setattr(self,trait.upper(),traitval+1)
 			QP -= 1
 		self.printTraits()
-		game.print(f"\nQuality Points:	{QP}")
+		game.Print(f"\nQuality Points:	{QP}")
 		input("You are done leveling up.\n")
 		self.checkHindered()
 
@@ -2159,9 +2163,9 @@ class Player(Creature):
 	def updateMoney(self,money):
 		self.money += money
 		if money > 0:
-			game.print(f"\nYou have $ {self.money}!")
+			game.Print(f"\nYou have $ {self.money}!")
 		else:
-			game.print(f"\nYou have $ {self.money}.")
+			game.Print(f"\nYou have $ {self.money}.")
 
 
 	def obtainItem(self,I,tookMsg=None,failMsg=None):
@@ -2169,20 +2173,20 @@ class Player(Creature):
 		if self.addItem(I):
 			oldParent.removeItem(I)
 			if tookMsg != None:
-				game.print(tookMsg)
+				game.Print(tookMsg)
 			I.Obtain(self)
 			self.checkHindered()
 			return True
 		if failMsg != None:
-			game.print(failMsg)
+			game.Print(failMsg)
 		return False
 
 
 	# adds xp, checks for player level up
 	def gainxp(self,newxp):
 		oldlv = self.level()
-		game.print(f"\nYou gained {newxp} xp.")
-		game.print(f"{self.xp} + {newxp} = {self.xp+newxp}")
+		game.Print(f"\nYou gained {newxp} xp.")
+		game.Print(f"{self.xp} + {newxp} = {self.xp+newxp}")
 		self.xp += newxp
 		newlv = self.level()
 		if oldlv != newlv:
@@ -2195,9 +2199,9 @@ class Player(Creature):
 		pair = [name,dur]
 		if not self.hasCondition(name):
 			if name in Data.curses or name in Data.blessings:
-				game.print(f"You have {name}.")
+				game.Print(f"You have {name}.")
 			else:
-				game.print(f"You are {name}.")
+				game.Print(f"You are {name}.")
 		insort(self.status,pair)
 		return True
 
@@ -2210,69 +2214,70 @@ class Player(Creature):
 				if reqDuration == None or reqDuration == duration:
 					self.status.remove([condname,duration])
 					if not self.hasCondition(condname):
-						game.print(f"You are no longer {condname}.")
+						game.Print(f"You are no longer {condname}.")
 
 
 	def checkHindered(self):
 		if self.invWeight() > self.BRDN():
 			if not self.hasCondition("hindered"):
-				game.print("Your Inventory grows heavy.")
+				game.Print("Your Inventory grows heavy.")
 				self.addCondition("hindered",-3)
 		if self.invWeight() <= self.BRDN():
 			if self.hasCondition("hindered"):
-				game.print("Your Inventory feels lighter.")
+				game.Print("Your Inventory feels lighter.")
 				self.removeCondition("hindered",-3)
 
 
 	# called when player hp hits 0
 	def death(self):
-		game.print("You have died!")
-		game.quit = True
-		# TODO:
-		# check if there's any auto-resurrect features
-		# ask to continue from checkpoint (last save)
-		# or to load a different save
-		# or to quit game
+		game.Print("You have died!")
+		ellipsis(3)
+		if self.hasCondition("Anointed",reqDuration=-3):
+			game.Print("You reawaken!")
+			self.hp = 1
+		else:
+			self.timeOfDeath = game.time
+		return True
 
 
 	def dualAttack(self,target):
-		game.print("\nDual Attack!")
+		game.Print("\nDual Attack!")
 		hit = min1(maxm(99, self.ACCU() - target.EVSN()))
 		if diceRoll(1,100) <= hit:
 			crit = diceRoll(1,100) <= self.CRIT()
 			attack = self.ATCK()
 			if crit:
-				game.print("Critical hit!")
+				game.Print("Critical hit!")
 				attack *= 2
 			damage = min0( attack - target.DFNS() )
 			target.takeDamage(damage,self.weapon2.type)
 			if not target.isAlive():
 				return
 		else:
-			game.print("Aw it missed.")
+			game.Print("Aw it missed.")
 
 
 	def attackCreature(self,target):
 		n = min1( self.ATSP() // min1(target.ATSP()) )
 		if n > 1:
-			game.print(f"{n} attacks:")
+			game.Print(f"{n} attacks:")
 		for i in range(n):
 			if n > 1:
-				game.print(f"\n{ordinal(i+1)} attack:")
+				game.Print(f"\n{ordinal(i+1)} attack:")
 			# TODO: what about if weapon is ranged?
 			hit = min1(maxm(99, self.ACCU() - target.EVSN()))
 			if diceRoll(1,100) <= hit:
 				crit = diceRoll(1,100) <= self.CRIT()
 				attack = self.ATCK()
 				if crit:
-					game.print("Critical hit!")
+					game.Print("Critical hit!")
 					attack *= 2
 				damage = min0( attack - target.DFNS() )
 				target.takeDamage(damage,self.weapon.type)
 				if not target.isAlive():
 					return
 			else:
-				game.print("Aw it missed.")
+				game.Print("Aw it missed.")
 			if self.weapon2 != EmptyGear():
 				self.dualAttack(target)
 			if not target.isAlive():
@@ -2281,11 +2286,11 @@ class Player(Creature):
 
 	def attackItem(self,target):
 		attack = self.ATCK()
-		game.print(f"{attack} damage")
+		game.Print(f"{attack} damage")
 		if target.durability != -1 and attack > target.durability:
 			target.Break()
 		else:
-			game.print("Nothing happens.")
+			game.Print("Nothing happens.")
 			return
 
 
@@ -2316,58 +2321,58 @@ class Player(Creature):
 			traits = [f"{t.upper()}: {getattr(self,t.upper())}" for t in Data.traits]
 			columnPrint(traits,5,10)
 			return	
-		game.print(f"{trait.upper()}: {getattr(self,trait.upper())}\n")
+		game.Print(f"{trait.upper()}: {getattr(self,trait.upper())}\n")
 
 
 	def printAbility(self,ability=None):
 		if ability == "atck":
-			game.print(f"atck: {self.STR} - {self.weapon.might*self.STR}")
+			game.Print(f"atck: {self.STR} - {self.weapon.might*self.STR}")
 		elif ability == "brdn":
-			game.print(f"brdn: {self.invWeight()}/{self.BRDN()}")
+			game.Print(f"brdn: {self.invWeight()}/{self.BRDN()}")
 		elif ability is not None:
-			game.print(f"{ability}: {getattr(self,ability)()}")
+			game.Print(f"{ability}: {getattr(self,ability)()}")
 		else:
 			for ability in Data.abilities:
 				self.printAbility(ability.upper())
 
 
 	# each prints a different player stat
-	def printMoney(self, *args): game.print(f"$ {self.money}")
-	def printHP(self, *args): game.print(f"HP: {self.hp}/{self.MXHP()}")
-	def printLV(self, *args): game.print(f"LV: {self.level()}")
-	def printMP(self, *args): game.print(f"MP: {self.mp}/{self.MXMP()}")
-	def printXP(self, *args): game.print(f"XP: {self.xp}")
-	def printRP(self, *args): game.print(f"RP: {self.rp}")
+	def printMoney(self, *args): game.Print(f"$ {self.money}")
+	def printHP(self, *args): game.Print(f"HP: {self.hp}/{self.MXHP()}")
+	def printLV(self, *args): game.Print(f"LV: {self.level()}")
+	def printMP(self, *args): game.Print(f"MP: {self.mp}/{self.MXMP()}")
+	def printXP(self, *args): game.Print(f"XP: {self.xp}")
+	def printRP(self, *args): game.Print(f"RP: {self.rp}")
 
 
 	def printSpells(self, *args):
-		game.print(f"Spells: {len(self.spells)}/{self.SPLS()}")
+		game.Print(f"Spells: {len(self.spells)}/{self.SPLS()}")
 		if len(self.spells) == 0:
-			game.print("\nYou don't know any spells.")
+			game.Print("\nYou don't know any spells.")
 		else:
 			columnPrint(self.spells,8,12)
 
 
 	# prints player inventory
 	def printInv(self, *args):
-		game.print(f"Weight: {self.invWeight()}/{self.BRDN()}")
+		game.Print(f"Weight: {self.invWeight()}/{self.BRDN()}")
 		if len(self.inv) == 0:
-			game.print("\nYour Inventory is empty.")
+			game.Print("\nYour Inventory is empty.")
 		else:
 			columnPrint(self.invNames(),8,12)
 
 
 	# print each player gear slot and the items equipped in them
 	def printGear(self, *args):
-		game.print()
+		game.Print()
 		for slot in self.gear:
-			game.print(slot + ":\t",end="")
-			game.print(self.gear[slot].name)
+			game.Print(slot + ":\t",end="")
+			game.Print(self.gear[slot].name)
 
 
 	def printStatus(self, *args):
 		if len(self.status) == 0:
-			game.print("None")
+			game.Print("None")
 			return
 
 		conditions = []
@@ -2405,9 +2410,9 @@ class Player(Creature):
 		stats = [self.name, f"$ {self.money}", f"LV: {self.level()}", f"RP: {self.rp}", f"HP: {self.hp}/{self.MXHP()}", f"MP: {self.mp}/{self.MXMP()}"]
 		columnPrint(stats,2,16)
 		if self.carrying is not None:
-			game.print(f"Carrying {self.carrying.stringName()}")
+			game.Print(f"Carrying {self.carrying.stringName()}")
 		if self.riding is not None:
-			game.print(f"Riding {self.riding.stringName()}")
+			game.Print(f"Riding {self.riding.stringName()}")
 		if len(self.status) != 0:
 			self.printStatus()
 
@@ -2415,7 +2420,7 @@ class Player(Creature):
 	# for every item in player inventory, if its a weapon, print it
 	def printWeapons(self, *args):
 		if len(self.weapons()) == 0:
-			game.print("You have no weapons.")
+			game.Print("You have no weapons.")
 		else:
 			columnPrint(self.weapons(),12,12)
 
@@ -2487,7 +2492,7 @@ class Person(Creature):
 			self.firstImpression(player)
 		self.appraise(player,game)
 		if not self.dlogtree.visit(self,player,game,world):
-			game.print(f"{self.name} says nothing...")
+			game.Print(f"{self.name} says nothing...")
 
 
 	### User Output ###
@@ -2524,13 +2529,13 @@ class Animal(Creature):
 		if not self.timeOfDeath:
 			return
 		if not game.silent:
-			game.print(f"\n{self.name}'s turn!")
+			game.Print(f"\n{self.name}'s turn!")
 		self.attack()
 
 
 	def attack(self):
 		if not game.silent:
-			game.print("attack?")
+			game.Print("attack?")
 
 
 	def climb():
@@ -2628,9 +2633,9 @@ class Fixture(Item):
 	def Break(self):
 		if self.durability == -1:
 			if not game.silent:
-				game.print(f"The {self.name} cannot be broken.")
+				game.Print(f"The {self.name} cannot be broken.")
 			return False
-		game.print(f"The {self.name} breaks.")
+		game.Print(f"The {self.name} breaks.")
 		self.parent.removeFixture(self)
 		return True
 
@@ -2653,17 +2658,17 @@ class Passage(Fixture):
 				dir = list(self.connections.keys())[0]
 			else:
 				msg = f"Which direction will you go on the {self.name}?\n> "
-				dir = input(msg).lower()
+				dir = game.Input(msg)
 		if dir in Data.cancels:
 			return False
 		if dir not in self.connections:
-			game.print(f"The {self.name} does not go '{dir}'.")
+			game.Print(f"The {self.name} does not go '{dir}'.")
 			return False
 
 		if self.passprep != "":
-			game.print(f"You go {dir} {self.passprep} the {self.name}.")
+			game.Print(f"You go {dir} {self.passprep} the {self.name}.")
 		else:
-			game.print(f"You go {dir} the {self.name}.")
+			game.Print(f"You go {dir} the {self.name}.")
 
 		newroom = world[self.connections[dir]]
 		game.changeRoom(newroom)
@@ -2741,8 +2746,8 @@ class Weapon(Item):
 
 
 	def print(self):
-		game.print(f"{self.name} {self.might} {self.sleight}")
-		game.print(f"{self.sharpness} { self.twohanded} {self.range}")
+		game.Print(f"{self.name} {self.might} {self.sleight}")
+		game.Print(f"{self.sharpness} { self.twohanded} {self.range}")
 
 
 
@@ -2774,7 +2779,7 @@ class Armor(Item):
 
 class Compass(Item):
 	def Orient(self):
-		game.print("Orienting you northward!")
+		game.Print("Orienting you northward!")
 
 
 
@@ -2786,7 +2791,7 @@ class Monster(Creature):
 		if not self.isAlive():
 			return
 		if not game.silent:
-			game.print(f"\n{self.name}'s turn!")
+			game.Print(f"\n{self.name}'s turn!")
 		self.attack()
 
 
@@ -2803,28 +2808,28 @@ class Monster(Creature):
 			targetname = "you"
 		else:
 			targetname = target.stringName()
-		game.print(f"{self.stringName(definite=True, cap=True)} tries to attack {targetname}")
+		game.Print(f"{self.stringName(definite=True, cap=True)} tries to attack {targetname}")
 
 		n = min1( self.ATSP() // min1(target.ATSP()) )
 		if n > 1:
-			game.print(f"{n} attacks:")
+			game.Print(f"{n} attacks:")
 		for i in range(n):
 			if n > 1:
-				game.print(f"\n{ordinal(i+1)} attack:")
+				game.Print(f"\n{ordinal(i+1)} attack:")
 			# TODO: what about if weapon is ranged?
 			hit = min1(maxm(99, self.ACCU() - target.EVSN()))
 			if diceRoll(1,100) <= hit:
 				crit = diceRoll(1,100) <= self.CRIT()
 				attack = self.ATCK()
 				if crit:
-					game.print("Critical hit!")
+					game.Print("Critical hit!")
 					attack *= 2
 				damage = min0( attack - target.DFNS() )
 				target.takeDamage(damage,self.weapon.type)
 				if not target.isAlive():
 					return
 			else:
-				game.print("It missed!")
+				game.Print("It missed!")
 			if self.weapon2 != EmptyGear():
 				self.dualAttack(target)
 			if not target.isAlive():
@@ -2834,11 +2839,11 @@ class Monster(Creature):
 	### Getters ###
 
 	def describe(self):
-		game.print(f"It's {self.stringName()}.")
-		game.print(f"{self.desc}.")
+		game.Print(f"It's {self.stringName()}.")
+		game.Print(f"{self.desc}.")
 		gearitems = [item for item in self.gear.values() if item != EmptyGear()]
 		if len(gearitems) != 0:
-			game.print(f"It has {listObjects(gearitems)}.")
+			game.Print(f"It has {listObjects(gearitems)}.")
 
 
 	def level(self):
