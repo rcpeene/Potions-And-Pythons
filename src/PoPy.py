@@ -73,6 +73,7 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
+# determine how armor selectivity should work
 # add basic equipment and clothing items
 # fix/add Creature.isNaked or Player.isNaked
 # add link nodes and effect nodes to dialogue after all

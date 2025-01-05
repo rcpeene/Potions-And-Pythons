@@ -175,7 +175,7 @@ def replacePronoun(term):
 # namely, it returns a list of words without capitals, symbols, or articles
 # the last step, nounify(), joins words that may only be meaningful as one term
 def processCmd(prompt,storeRawCmd=False):
-	rawcommand = Core.game.input(prompt + "\n> ")
+	rawcommand = Core.game.input(prompt + "\n> ",lower=False)
 	# take input until input has any non-whitespace characters in it
 	while not any(i not in "\t " for i in rawcommand):
 		rawcommand = Core.game.input("> ")
@@ -342,7 +342,7 @@ def Get(command):
 		Core.game.print("Error: No object name given")
 		return
 	objname = command[1].lower()
-	attrname = ( " ".join(command[2:]) ).lower()
+	attrname = command[2]
 
 	if objname in {"p","player","my"}: obj = Core.player
 	elif objname in {"g","game"}: obj = Core.game
@@ -353,7 +353,7 @@ def Get(command):
 	if obj == None:
 		Core.game.print("Error: Object not found")
 		return
-
+	
 	if len(command) < 3:
 		Core.game.print(obj)
 	else:
@@ -440,6 +440,11 @@ def Set(command):
 	elif objname in {"w","world"}: obj = Core.world
 	else: obj = findObjFromTerm(command[1],playerD=3,roomD=3)
 
+	try:
+		getattr(obj,attrname)
+	except:
+		Core.game.print("")
+	print(f"Setting {obj}.{attrname} to {value}")
 	setattr(obj,attrname,value)
 
 
@@ -671,22 +676,28 @@ def Break(dobj,iobj,prep):
 # this is not intended to be called directly from Parse
 # but rather from the Take action function
 def CarryCreature(creature):
-	# TODO: identify a way to link carrier to carried without remove carried creature from Room.creatures
+	carrying = Core.player.carrying
+	if carrying:
+		Core.game.print(f"You're already carrying {carrying.stringName(definite=True)}")
 	if not isinstance(creature,Core.Creature):
-		Core.game.print(f"You can't carry the {creature.name}")
+		Core.game.print(f"You can't carry {creature.stringName(definite=True)}")
 		return False
 
 	Core.game.print(f"You try to pick up {creature.stringName(definite=True)}.")
 	
-	if not creature.isAlive():
-		Core.player.Carry(creature)
-	elif creature.Restrain(Core.player):
-		Core.game.print(f"You succesfully restrain {creature.stringName(definite=True)}!")
-		Core.player.Carry(creature)
-	else:
+	# if not creature.isAlive():
+	# 	Core.player.Carry(creature)
+	# elif creature.Restrain(Core.player):
+	# 	Core.game.print(f"You succesfully restrain {creature.stringName(definite=True)}!")
+	# 	Core.player.Carry(creature)
+	# else:
+	# 	Core.game.print(f"You fail to restrain {creature.stringName(definite=True)}!")
+
+	if not creature.Carry(Core.player):
 		Core.game.print(f"You fail to restrain {creature.stringName(definite=True)}!")
-		return True
+		return False
 	Core.game.print(f"You are carrying {creature.stringName(definite=True)}.")
+	Core.player.carrying = creature
 	return True
 
 
@@ -1291,6 +1302,9 @@ def Mount(dobj,iobj,prep):
 	if C == None: return False
 	Core.game.setPronouns(C)
 	
+	if Core.player.Weight() > C.BRDN():
+		Core.game.print(f"You are too heavy to ride {C.stringName(definite=True)}")
+		return False
 	return C.Ride(Core.player)
 	
 
@@ -1456,6 +1470,8 @@ def Restrain(dobj,iobj,prep):
 			Core.game.print(f"You can't restrain with the {I.name}.")
 			return False
 
+	if "restrained" in C.status:
+		Core.game.print(f"{C.stringName(definite=True)} is already restrained.")
 	if not C.Restrain(Core.player,I):
 		Core.game.print(f"You fail to restrain the {C.name}.")
 		return False
@@ -1590,7 +1606,7 @@ def Take(dobj,iobj,prep):
 		Core.game.print(f"You can't take the {dobj}.")
 		return False
 
-	parent = obj.parent	
+	parent = obj.parent
 	# if it is in a non-player inventory, it will have to be stolen
 	if any(isinstance(anc,Core.Creature) for anc in obj.ancestors()) and obj not in Core.player.invSet():
 		return Steal(dobj,iobj,prep,I=obj)

@@ -1005,9 +1005,11 @@ class Game():
 
 	### User Output ###
 	
-	def input(self,text=""):
+	def input(self,text="",lower=True):
 		self.print(text,end='')
 		flushInput()
+		if not lower:
+			return input()
 		return input().lower()
 
 
@@ -1212,6 +1214,11 @@ class Room():
 		# if the player is entering the room, describe the room
 		if creature is player:
 			self.describe()
+		condsToRemove = [pair for pair in creature.status if pair[1] == -1]
+		# remove status conditions from previous room
+		for cond,dur in condsToRemove:
+			creature.removeCondition(cond,-1)
+		# add status conditions from this room
 		for cond,dur in self.status:
 			if cond.startswith("AREA"):
 				[name,dur] = extractConditionInfo(cond)
@@ -1220,10 +1227,7 @@ class Room():
 
 	# remove any room effects from the creature exiting
 	def exit(self,creature):
-		condsToRemove = [pair for pair in creature.status if pair[1] == -1]
-		for cond,dur in condsToRemove:
-			creature.removeCondition(cond,-1)
-
+		pass
 
 
 	### Getters ###
@@ -1488,7 +1492,7 @@ class Item():
 # Creatures have 10 base stats, called traits
 # They also have abilities; stats which are derived from traits through formulas
 class Creature():
-	def __init__(self,name,desc,weight,traits,hp,mp,money,inv,gear,plural=None,riding=None,rider=None,status=[],aliases=[],descname=None,timeOfDeath=None,alert=False,seesPlayer=False,sawPlayer=-1):
+	def __init__(self,name,desc,weight,traits,hp,mp,money,inv,gear,plural=None,carrying=None,carrier=None,riding=None,rider=None,status=[],aliases=[],descname=None,timeOfDeath=None,alert=False,seesPlayer=False,sawPlayer=-1):
 		self.name = name
 		if descname is None:
 			self.descname = name
@@ -1524,6 +1528,8 @@ class Creature():
 		self.gear = {key: inv[idx] if idx != None else EmptyGear() for key, idx in gear.items()}
 		self.riding = riding
 		self.rider = rider
+		self.carrying = carrying
+		self.carrier = carrier
 
 		self.parent = None
 
@@ -1803,21 +1809,24 @@ class Creature():
 		pass
 
 
-	def Carry(self,creature):
-		self.addCondition("carrying",-3,silent=True)
-		creature.addCondition("carried",-3)
-		creature.parent.removeCreature(creature)
-		self.addItem(creature)
-		# self.equipInHand(creature)
+	def Carry(self,carrier):
+		if self.Weight() > carrier.BRDN():
+			game.print(f"{self.stringName(definite=True)} is too heavy to carry.")
+			return False
+		if not self.Restrain(carrier):
+			return False
+		self.carrier = carrier
 		return True
 
 
 	def Restrain(self,restrainer,item=None):
-		if item != None:
-			#TODO: add restraining with items? like rope??
-			pass
-		if self.ATHL() > restrainer.ATHL() or self.EVSN() > restrainer.ATHL():
-			return False
+		if self.isFriendly() or not self.canMove():
+			if item != None:
+				#TODO: add restraining with items? like rope??
+				pass
+			print(self.ATHL(), self.EVSN(), restrainer.ATHL())
+			if self.ATHL() > restrainer.ATHL() or self.EVSN() > restrainer.ATHL():
+				return False
 		restrainer.addCondition("restraining",-3,silent=True)
 		self.addCondition("restrained",-3)
 		return True
@@ -1831,13 +1840,20 @@ class Creature():
 
 
 	def Ride(self,rider):
-		print(self.BRDN())
 		if rider.Weight() > self.BRDN():
 			game.print(f"You are too heavy to ride {self.stringName(definite=True)}")
 			return False
+		if not self.isFriendly() and self.canMove():
+			game.print(f"{self.stringName(definite=True,cap=True)} struggles.")
+			athl_contest = self.ATHL() - rider.ATHL()
+			if athl_contest > 0:
+				game.print(f"{self.stringName(definite=True,cap=True)} shakes you off!")
+				if athl_contest > rider.ATHL():
+					rider.takeDamage(athl_contest-rider.ATHL(),"b")
+				return False
 		self.rider = rider
 		rider.riding = self
-		game.print(f"You ride {self.stringName(definite=True)}")
+		game.print(f"You ride {self.stringName(definite=True)}.")
 		return True
 
 
@@ -1877,8 +1893,15 @@ class Creature():
 		return self.weight + self.invWeight() + riderWeight
 
 
-	def isAlive(self):
-		return self.timeOfDeath is None
+	def inStatus(self,*args):
+		if type(args[0]) == list:
+			condnames = args[0]
+		else:
+			condnames = args
+		for condname in condnames:
+			for cond, dur in self.status:
+				if condname == cond:
+					return True
 
 
 	def contents(self):
@@ -2001,6 +2024,10 @@ class Creature():
 			return True
 
 
+	def isAlive(self):
+		return self.timeOfDeath is None
+
+
 	def isBloodied(self):
 		# returns true is creature has less than half health
 		pass
@@ -2015,6 +2042,14 @@ class Creature():
 		# returns number of enemies creature can see
 		pass
 
+
+	def isFriendly(self):
+		return self.inStatus("tamed")
+	
+
+	def canMove(self):
+		conditions = ("restrained","paralyzed","frozen","unconscious")
+		return self.isAlive() and not self.inStatus(conditions)
 
 
 	### User Output ###
@@ -2072,13 +2107,19 @@ class Player(Creature):
 
 	# takes incoming damage, accounts for damage vulnerability or resistance
 	def takeDamage(self,dmg,type):
+		prevhp = self.hp
 		if(f"{type} vulnerability" in self.status): dmg *= 2
 		if(f"{type} resistance" in self.status): dmg /= 2
 		if(f"{type} immunity" in self.status): dmg = 0
-		game.print(f"You took {dmg} {Data.dmgtypes[type]} damage.")
+		# bludgeoning damage can't kill you in one hit
+		if type == "b" and self.hp > 1:
+			self.hp = minm(1,self.hp-dmg)			
 		# player hp lowered to a minimum of 0
-		self.hp = min0(self.hp-dmg)
-		if(self.hp == 0):
+		else:
+			self.hp = min0(self.hp-dmg)
+		total_dmg = prevhp - self.hp
+		game.print(f"You took {total_dmg} {Data.dmgtypes[type]} damage.")
+		if self.hp == 0:
 			self.death()
 
 
