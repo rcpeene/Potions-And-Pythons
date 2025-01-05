@@ -1724,12 +1724,15 @@ class Creature():
 
 
 	# if the item is armor, equip it, otherwise return False
-	def equipArmor(self,I):
+	def equipArmor(self,I,slot=None):
 		assert I in self.inv
-		if isinstance(I,Helm): self.gear["head"] = I
-		elif isinstance(I,Tunic): self.gear["body"] = I
-		elif isinstance(I,Greaves): self.gear["legs"] = I
-		else: return False
+		if slot == None:
+			slot = I.slots[0]
+		if slot not in I.slots:
+			return False
+		if slot not in self.gear.keys():
+			return False
+		self.gear[slot] = I
 		I.Equip()
 		return True
 
@@ -2017,7 +2020,7 @@ class Creature():
 
 	def isNaked(self):
 		return False
-		if self.gear['legs'] == EmptyGear() and self.gear['body'] == EmptyGear():
+		if self.gear['legs'] == EmptyGear() and self.gear['torso'] == EmptyGear():
 			return True
 
 
@@ -2759,9 +2762,11 @@ class Shield(Item):
 
 
 class Armor(Item):
-	def __init__(self,name,desc,weight,durability,prot,status=[],aliases=[],plural=None):
+	def __init__(self,name,desc,weight,durability,prot,slots,status=[],aliases=[],plural=None):
 		Item.__init__(self,name,desc,weight,durability,status=status,aliases=aliases,plural=plural)
 		self.prot = prot
+		if type(slots) is not list:
+			self.slots = [slots]
 
 
 	def Equip(self):

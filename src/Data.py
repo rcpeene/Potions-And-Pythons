@@ -68,7 +68,7 @@ directions = {"n":"north","ne":"northeast","e":"east","se":"southeast","s":"sout
 dmgtypes = {"a":"acid","b":"bludgeoning","c":"cold","e":"essential","f":"fire","i":"psychic","l":"lightning","n":"necrotic","p":"piercing","r":"radiant","s":"slashing","t":"thunder","v":"force","x":"poison"}
 
 # gear dict used to initialize the player object
-initgear = {"head":None, "body":None, "left":None, "right":None, "legs":None}
+initgear = {"head":None, "torso":None, "left":None, "right":None, "legs":None}
 
 curses = {"weakness","slowness","clumsiness","tiredness","illness","timidity","stupidity","insanity","apathy","calamity"}
 
