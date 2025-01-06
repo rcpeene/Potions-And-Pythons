@@ -83,8 +83,13 @@ def chooseObject(name,objects):
 # roomD and playerD are the 'degree' of the query.
 # Look at Core.py objQuery for details on query degree
 def findObjFromTerm(term,queryType="both",filter=None,roomD=1,playerD=2,reqParent=None,silent=False):
-	matches = []
+	# allows for users to describe objects they possess
+	my = False
+	if term.startswith("my "):
+		term = term[3:]
+		my = True
 
+	matches = []
 	if queryType == "player" or queryType == "both":
 		matches += Core.player.nameQuery(term,d=playerD)
 	if queryType == "room" or queryType == "both":
@@ -94,6 +99,8 @@ def findObjFromTerm(term,queryType="both",filter=None,roomD=1,playerD=2,reqParen
 		matches = [match for match in matches if filter(match)]
 	if reqParent:
 		matches = [match for match in matches if Core.nameMatch(reqParent, match.parent)]
+	if my:
+		matches = [match for match in matches if Core.player in match.ancestors() or match.determiner == "your"]
 
 	if len(matches) == 0:
 		suffix = ""
@@ -101,7 +108,7 @@ def findObjFromTerm(term,queryType="both",filter=None,roomD=1,playerD=2,reqParen
 			if reqParent:
 				det = "an" if reqParent[0] in Data.vowels else 'a'
 				suffix += f" in {det} '{reqParent}'"
-			if queryType == "player":
+			if queryType == "player" or my:
 				suffix += " in your Inventory"
 			elif queryType == "room":
 				suffix += " here"
@@ -143,7 +150,7 @@ def nounify(command):
 		j = i+1
 		while j < len(command):
 			possibleNoun = " ".join(command[i:j+1])
-			if isMeaningful(possibleNoun):
+			if isMeaningful(possibleNoun) or command[i] == "my":
 				# replace elements with joined term element
 				command[i:j+1] = [possibleNoun]
 			else:
@@ -351,11 +358,14 @@ def Expell(command):
 
 
 def Get(command):
+	print(len(command))
 	if len(command) < 2:
 		Core.game.Print("Error: No object name given")
 		return
+
 	objname = command[1].lower()
-	attrname = command[2]
+	if len(command) == 3:
+		attrname = command[2]
 
 	if objname in ("p","player","my"): obj = Core.player
 	elif objname in ("g","game"): obj = Core.game
@@ -602,6 +612,8 @@ def Attack(dobj,iobj,prep,target=None,weapon=None,weapon2=None):
 		elif Core.player.gear["right"] == Core.EmptyGear() and Core.player.gear["left"] == Core.EmptyGear():
 			iobj = getNoun("What will you attack with?")
 			if iobj in Data.cancels: return False
+	if iobj.startswith("my "):
+		iobj = iobj[3:]
 
 	# assigning weapons based on input and what is in player's hand
 	if weapon == None and weapon2 != None:
@@ -912,6 +924,8 @@ def Don(dobj,iobj,prep):
 	if prep not in ("on","onto","over","to",None):
 		Core.game.Print("Command not understood.")
 		return False
+	if prep == None:
+		prep = "on"
 	if dobj == None:
 		dobj = getNoun("What do you want to don?")
 		if dobj in Data.cancels: return False
@@ -929,7 +943,7 @@ def Don(dobj,iobj,prep):
 	if iobj and iobj not in Core.player.gear: 
 		Core.game.Print(f"You aren't able to equip to '{iobj}'.")
 		return False
-	if iobj not in I.slots:
+	if iobj not in I.slots and iobj != None:
 		Core.game.Print(f"You cannot wear {I.stringName(det='the')} {prep} your {iobj}.")
 		return False
 	if not Core.player.equipArmor(I,iobj):
@@ -1034,10 +1048,13 @@ def Equip(dobj,iobj,prep):
 		dobj = getNoun("What would you like to equip?")
 		if dobj in Data.cancels:
 			return False
+	if dobj.startswith("my "):
+		dobj = dobj[3:]
+
 
 	matches = Core.player.inInv(dobj)
 	if len(matches) == 0:
-		Core.game.Print(f"There is no {dobj} in your Inventory")
+		Core.game.Print(f"There is no '{dobj}' in your Inventory")
 	I = chooseObject(dobj,matches)
 	if I == None: 
 		return False
@@ -1624,12 +1641,16 @@ def Take(dobj,iobj,prep):
 
 	if dobj in ("all","everything","it all"): return TakeAll()
 
-	filt = lambda x: x.parent is not Core.player
+	print(dobj,iobj,prep)
 	if iobj in ("here", "room"):
-		obj = findObjFromTerm(dobj,"room",roomD=2,filter=filt)
+		obj = findObjFromTerm(dobj,"room",roomD=2)
 	else:
-		obj = findObjFromTerm(dobj,roomD=2,filter=filt,reqParent=iobj)
-	if obj == None: return False
+		obj = findObjFromTerm(dobj,roomD=2,reqParent=iobj)
+	if obj is None:
+		return False
+	if obj.parent is Core.player:
+		Core.game.Print(f"You can't take from your own Inventory.")
+		return False
 	Core.game.setPronouns(obj)
 
 	if isinstance(obj,Core.Creature): return CarryCreature(obj)
@@ -1881,6 +1902,7 @@ actions = {
 "pour out":Pour,
 "pray":Pray,
 "press":Press,
+"proceed":Go,
 "pull":Pull,
 "punch":Punch,
 "push":Push,
@@ -2001,7 +2023,7 @@ actions = {
 # curse/swear
 # squat - > crouch
 # pee/poop/shit on (soil your pants if they have them on)
-# caress -> pet
+# caress, stroke -> pet
 # choke/strangle
 # paint/draw
 # carve/whittle
