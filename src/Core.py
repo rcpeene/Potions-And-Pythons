@@ -416,7 +416,7 @@ def ensureWorldIntegrity():
 
 
 class DialogueNode():
-	def __init__(self,parent,root,nVisits=0,visitLimit=None,rapportReq=None,isCheckpoint=False,loveMod=0,fearMod=0,repMod=0,remark=None,trites=None,cases=None,responses=None,children=None):
+	def __init__(self,parent,root,nVisits=0,visitLimit=None,rapportReq=None,isCheckpoint=False,loveMod=0,fearMod=0,repMod=0,remark=None,trites=None,cases=None,responses=None,children=[]):
 		self.parent = parent
 		self.root = root
 		self.nVisits = nVisits
@@ -1413,6 +1413,7 @@ class Item():
 		if user not in self.ancestors():
 			game.Print(f"{self.stringName(det='the',cap=True)} is not in your inventory.")
 			return False
+		print(f"You use {self.name}")
 
 
 	def takeDamage(self,dmg):
@@ -1491,8 +1492,9 @@ class Item():
 			else:
 				strname = det + " " + strname
 		if cap:
-			strname = capWords(strname,c=c)
-		return strname
+			return capWords(strname,c=c)
+		else:
+			return strname.lower()
 	
 
 	def describe(self):
@@ -1509,9 +1511,10 @@ class Item():
 # Creatures have 10 base stats, called traits
 # They also have abilities; stats which are derived from traits through formulas
 class Creature():
-	def __init__(self,name,desc,weight,traits,hp,mp,money,inv,gear,carrying=None,carrier=None,riding=None,rider=None,status=None,aliases=None,plural=None,determiner=None,timeOfDeath=None,alert=False,seesPlayer=False,sawPlayer=-1):
+	def __init__(self,name,desc,weight,traits,hp,mp,money,inv,gear,carrying=None,carrier=None,riding=None,rider=None,status=None,descname=None,aliases=None,plural=None,determiner=None,timeOfDeath=None,alert=False,seesPlayer=False,sawPlayer=-1):
 		self.name = name
 		self.desc = desc
+		self.descname = descname if descname else name
 		self.aliases = aliases if aliases else []
 		self.determiner = determiner
 		if plural is None:
@@ -2004,6 +2007,8 @@ class Creature():
 
 	# return all items in inv whose name matches term, otherwise return None
 	def inInv(self,term):
+		if term.startswith("my "):
+			term = term[3:]
 		return [obj for obj in self.inv if nameMatch(term,obj)]
 
 
@@ -2076,7 +2081,7 @@ class Creature():
 			strname = self.plural
 		if n > 1:
 			strname = str(n) + " " + strname
-		if self.determiner is not None:
+		if det == "" and self.determiner is not None:
 			det = self.determiner
 		if det == "" and n == 1:
 			det = "a"
@@ -2463,7 +2468,6 @@ class Person(Creature):
 		self.lastParley = lastParley
 		self.appraisal = appraisal if appraisal else set()
 		self.memories = memories if memories else set()
-		
 		if desc:
 			self.desc = desc
 		else:
@@ -2795,9 +2799,10 @@ class Shield(Item):
 
 
 class Armor(Item):
-	def __init__(self,name,desc,weight,durability,prot,slots,**kwargs):
+	def __init__(self,name,desc,weight,durability,prot,slots=None,**kwargs):
 		Item.__init__(self,name,desc,weight,durability,**kwargs)
 		self.prot = prot
+		self.slots = slots if slots else []
 		if type(slots) is not list:
 			self.slots = [slots]
 

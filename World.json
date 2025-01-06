@@ -400,7 +400,8 @@
 			"north": "mound",
 			"east": "brook",
 			"south": "big stump",
-			"in": "cabin hallway"
+			"in": "cabin hallway",
+			"cabin": "cabin hallway"
 		},
 		"fixtures": [],
 		"items": [],
@@ -598,7 +599,6 @@
 				"gender": "m",
 				"weight": 15,
 				"traits": [1,1,1,1,1,1,1,1,1,1],
-				"status": [],
 				"hp": 10,
 				"mp": 0,
 				"money": 10,
