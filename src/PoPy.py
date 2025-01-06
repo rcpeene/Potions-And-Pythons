@@ -29,12 +29,11 @@ def main(testing=False):
 	Core.game.startUp()
 	# main input loop
 	while True:
+		Core.game.silent = False
+		Core.game.whoseturn = Core.player
 		if not Core.player.isAlive(): 
 			if not Menu.restart(): Menu.quit()
 			continue
-
-		Core.game.silent = False
-		Core.game.whoseturn = Core.player
 
 		# take user input until player successfully performs an action
 		while not Parser.parse(): continue

@@ -40,8 +40,8 @@ class Bottle(Core.Item):
 
 
 class Box(Core.Item):
-	def __init__(self,name,desc,weight,durability,open,items=[],status=[],aliases=[],plural=None):
-		Core.Item.__init__(self,name,desc,weight,durability,status=status,aliases=aliases,plural=plural)
+	def __init__(self,name,desc,weight,durability,open,items=items,**kwargs):
+		Core.Item.__init__(self,name,desc,weight,durability,**kwargs)
 		self.open = open
 		self.items = items
 
@@ -123,8 +123,8 @@ class Box(Core.Item):
 
 
 class Controller(Core.Item):
-	def __init__(self,name,desc,weight,durability,effect,status=[],aliases=[],plural=None):
-		Core.Item.__init__(self,name,desc,weight,durability,status=status,aliases=aliases,plural=plural)
+	def __init__(self,name,desc,weight,durability,effect,**kwargs):
+		Core.Item.__init__(self,name,desc,weight,durability,**kwargs)
 		self.effect = effect
 
 
@@ -141,8 +141,8 @@ class Controller(Core.Item):
 
 
 class Door(Core.Fixture):
-	def __init__(self,name,desc,weight,durability,mention,open,connections,status=[],aliases=[],plural=None):
-		Core.Fixture.__init__(self,name,desc,weight,durability,mention,status=status,aliases=aliases,plural=plural)
+	def __init__(self,name,desc,weight,durability,mention,open,connections,**kwargs):
+		Core.Fixture.__init__(self,name,desc,weight,durability,mention,**kwargs)
 		self.open = open
 		# connection is a 4-tuple of the form:
 		# (outDirection, outLocation, inDirection, inLocation)
@@ -168,8 +168,8 @@ class Door(Core.Fixture):
 
 
 class Food(Core.Item):
-	def __init__(self,name,desc,weight,durability,heal,status=[],aliases=[],plural=None):
-		Core.Item.__init__(self,name,desc,weight,durability,status=status,aliases=aliases,plural=plural)
+	def __init__(self,name,desc,weight,durability,heal,**kwargs):
+		Core.Item.__init__(self,name,desc,weight,durability,**kwargs)
 		self.heal = heal
 
 	# heals 'heal' hp to the player, removes food from inventory
@@ -202,8 +202,8 @@ class Fountain(Core.Fixture):
 
 
 class Generator(Controller):
-	def __init__(self,name,desc,weight,durability,effect,charge,capacity,rate,cost,status=[],aliases=[],plural=None):
-		Core.Controller.__init__(self,name,desc,weight,durability,effect,status=status,aliases=aliases,plural=plural)
+	def __init__(self,name,desc,weight,durability,effect,charge,capacity,rate,cost,**kwargs):
+		Core.Controller.__init__(self,name,desc,weight,durability,effect,**kwargs)
 		self.charge = charge
 		self.capacity = capacity
 		self.rate = rate
@@ -235,8 +235,8 @@ class Hand(Core.Item):
 
 
 class Key(Core.Item):
-	def __init__(self,name,desc,weight,durability,id,status=[],aliases=[],plural=None):
-		Core.Item.__init__(self,name,desc,weight,durability,status=status,aliases=aliases,plural=plural)
+	def __init__(self,name,desc,weight,durability,id,**kwargs):
+		Core.Item.__init__(self,name,desc,weight,durability,**kwargs)
 		self.id = id
 
 
@@ -251,8 +251,8 @@ class Key(Core.Item):
 
 
 class Lockbox(Box):
-	def __init__(self,name,desc,weight,durability,open,items,keyids,locked,status=[],aliases=[],plural=None):
-		Box.__init__(self,name,desc,weight,durability,open,items,status=status,aliases=aliases,plural=plural)
+	def __init__(self,name,desc,weight,durability,open,items,keyids,locked,**kwargs):
+		Box.__init__(self,name,desc,weight,durability,open,items,**kwargs)
 		self.keyids = keyids
 		self.locked = locked
 
@@ -351,8 +351,8 @@ class Shard(Core.Item):
 
 
 class Sign(Core.Item):
-	def __init__(self,name,desc,weight,durability,text,status=[],aliases=[],plural=None):
-		Core.Item.__init__(self,name,desc,weight,durability,status=status,aliases=aliases,plural=plural)
+	def __init__(self,name,desc,weight,durability,text,**kwargs):
+		Core.Item.__init__(self,name,desc,weight,durability,**kwargs)
 		self.text = text
 
 
@@ -364,8 +364,8 @@ class Sign(Core.Item):
 
 
 class Switch(Core.Fixture):
-	def __init__(self,name,desc,weight,durability,mention,effect,status=[],aliases=[],plural=None):
-		Core.Fixture.__init__(self,name,desc,weight,durability,mention,status=status,aliases=aliases,plural=plural)
+	def __init__(self,name,desc,weight,durability,mention,effect,**kwargs):
+		Core.Fixture.__init__(self,name,desc,weight,durability,mention,**kwargs)
 		self.effect = effect
 
 
@@ -389,8 +389,8 @@ class Sword(Core.Weapon):
 
 
 class Table(Core.Item):
-	def __init__(self,name,desc,weight,durability,items,descname,status=[],aliases=[],plural=None):
-		Core.Item.__init__(self,name,desc,weight,durability,status=status,aliases=aliases,plural=plural)
+	def __init__(self,name,desc,weight,durability,items,descname,**kwargs):
+		Core.Item.__init__(self,name,desc,weight,durability,**kwargs)
 		self.items = items
 		self.descname = descname
 
@@ -424,7 +424,7 @@ class Table(Core.Item):
 		insort(self.items,I)
 		I.parent = self
 		if len(self.items) == 1:
-			itemName = self.items[0].stringName()
+			itemName = self.items[0].stringName(det='a')
 			self.descname = f"{self.name} with {itemName} on it"
 		elif len(self.items) > 1:
 			self.descname = f"{self.name} with things on it"
@@ -433,7 +433,7 @@ class Table(Core.Item):
 	def removeItem(self,I):
 		self.items.remove(I)
 		if len(self.items) == 1:
-			itemName = self.items[0].stringName()
+			itemName = self.items[0].stringName(det='a')
 			self.descname = f"{self.name} with {itemName} on it"
 		elif len(self.items) == 0:
 			self.descname = f"{self.name}"
@@ -463,7 +463,7 @@ class Table(Core.Item):
 	### User Output ###
 
 	def describe(self):
-		Core.game.Print(f"It's {self.stringName()}.")
+		Core.game.Print(f"It's {self.stringName(det='a')}.")
 		if len(self.items) != 0:
 			Core.game.Print(f"On it is {Core.listObjects(self.items)}.")
 		else:
@@ -473,8 +473,8 @@ class Table(Core.Item):
 
 
 class Wall(Core.Passage):
-	def __init__(self,name,desc,weight,durability,connections,descname,passprep,cr,status=[],aliases=[],plural=None):
-		Core.Passage.__init__(self,name,desc,weight,durability,connections,descname,passprep,status=status,aliases=aliases,plural=plural)
+	def __init__(self,name,desc,weight,durability,connections,descname,passprep,cr,**kwargs):
+		Core.Passage.__init__(self,name,desc,weight,durability,connections,descname,passprep,**kwargs)
 		self.cr = cr
 
 

@@ -35,7 +35,7 @@ def nameMatch(term,obj):
 	term = term.lower()
 	if isinstance(obj, Room):
 		return term == obj.name.lower() or term in ["here", "room"]
-	return term == obj.name.lower() or term == obj.stringName(det=False).lower() or term in obj.aliases
+	return term == obj.name.lower() or term == obj.stringName().lower() or term in obj.aliases
 
 
 # retrieves a class object with className from the modules list
@@ -416,7 +416,7 @@ def ensureWorldIntegrity():
 
 
 class DialogueNode():
-	def __init__(self,parent,root,nVisits=0,visitLimit=None,rapportReq=None,isCheckpoint=False,loveMod=0,fearMod=0,repMod=0,remark=None,trites=[],cases=[],responses=[],children=[]):
+	def __init__(self,parent,root,nVisits=0,visitLimit=None,rapportReq=None,isCheckpoint=False,loveMod=0,fearMod=0,repMod=0,remark=None,trites=None,cases=None,responses=None,children=None):
 		self.parent = parent
 		self.root = root
 		self.nVisits = nVisits
@@ -430,13 +430,13 @@ class DialogueNode():
 		self.children = [DialogueNode(self,root,**child_json) for child_json in children]
 
 		# these are names of sets of strings in Data.py, representing 'canned' dialogue
-		self.trites = trites
+		self.trites = trites if trites else []
 		if type(self.trites) != list:
 			self.trites = [trites]
 		# these are strings of python code which should evaluate to a bool or int
-		self.cases = cases
+		self.cases = cases if cases else []
 		# these are the optional Player responses to the dialogue
-		self.responses = responses
+		self.responses = responses if responses else []
 
 		# cases or responses correspond to child nodes and are used to determine where to visit next
 		# ensure the number of child nodes matches the cases or responses
@@ -759,7 +759,7 @@ class EmptyGear():
 
 	### Getters ###
 
-	def stringName(self,det=True,definite=False,n=1,plural=False,cap=False,c=1):
+	def stringName(self,det="",n=-1,plural=False,cap=False,c=1):
 		return ""
 
 
@@ -1075,7 +1075,7 @@ class Game():
 # directed graph, facilitated by the world dict, where the exits dict specifies
 # the edges from a given node to its neighboring nodes.
 class Room():
-	def __init__(self,name,domain,desc,exits,fixtures,items,creatures,status=[]):
+	def __init__(self,name,domain,desc,exits,fixtures,items,creatures,status=None):
 		self.name = name
 		self.domain = domain
 		self.desc = desc
@@ -1083,7 +1083,7 @@ class Room():
 		self.fixtures = fixtures
 		self.items = items
 		self.creatures = creatures
-		self.status = status
+		self.status=status if status else []
 
 
 	### Dunder Methods ###
@@ -1338,17 +1338,18 @@ class Room():
 # Anything in a Room that is not a Creature will be an Item
 # All items come with a name, description, weight, and durability
 class Item():
-	def __init__(self,name,desc,weight,durability,status=[],aliases=[],plural=None):
+	def __init__(self,name,desc,weight,durability,status=None,aliases=None,plural=None,determiner=None):
 		self.name = name
 		self.desc = desc
 		self.weight = weight
 		self.durability = durability
-		self.status = status
-		self.aliases = aliases
+		self.status = status if status else []
+		self.aliases = aliases if aliases else []
 		if plural is None:
 			self.plural = self.name + 's'
 		else:
 			self.plural = plural
+		self.determiner=determiner
 		self.parent = None
 
 
@@ -1408,6 +1409,12 @@ class Item():
 		return True
 
 
+	def Use(self,user):
+		if user not in self.ancestors():
+			game.Print(f"{self.stringName(det='the',cap=True)} is not in your inventory.")
+			return False
+
+
 	def takeDamage(self,dmg):
 		if dmg > self.durability:
 			return self.Break()
@@ -1459,12 +1466,7 @@ class Item():
 
 	### User Output ###
 
-	def describe(self):
-		game.Print(f"It's {self.stringName()}.")
-		game.Print(f"{self.desc}.")
-
-
-	def stringName(self,det=True,definite=False,n=1,plural=False,cap=False,c=1):
+	def stringName(self,det="",n=-1,plural=False,cap=False,c=1):
 		strname = getattr(self,"descname",self.name)
 		if len(strname) == 0:
 			return ""
@@ -1474,17 +1476,29 @@ class Item():
 			strname = self.plural
 		if n > 1:
 			strname = str(n) + " " + strname
+		if self.determiner is not None and det == "":
+			det = self.determiner
+		if det == "" and n == 1:
+			det = "a"
+
 		if det:
-			if definite:
-				strname = "the " + strname
-			elif not plural:
-				if strname[0] in Data.vowels:
-					strname = "an " + strname
-				else:
-					strname = "a " + strname
+			if det == "a":
+				if not plural:
+					if strname[0] in Data.vowels:
+						strname = "an " + strname
+					else:
+						strname = "a " + strname
+			else:
+				strname = det + " " + strname
 		if cap:
 			strname = capWords(strname,c=c)
 		return strname
+	
+
+	def describe(self):
+		game.Print(f"It's {self.stringName()}.")
+		game.Print(f"{self.desc}.")
+
 
 
 
@@ -1495,12 +1509,11 @@ class Item():
 # Creatures have 10 base stats, called traits
 # They also have abilities; stats which are derived from traits through formulas
 class Creature():
-	def __init__(self,name,desc,weight,traits,hp,mp,money,inv,gear,plural=None,carrying=None,carrier=None,riding=None,rider=None,status=[],aliases=[],descname=None,timeOfDeath=None,alert=False,seesPlayer=False,sawPlayer=-1):
+	def __init__(self,name,desc,weight,traits,hp,mp,money,inv,gear,carrying=None,carrier=None,riding=None,rider=None,status=None,aliases=None,plural=None,determiner=None,timeOfDeath=None,alert=False,seesPlayer=False,sawPlayer=-1):
 		self.name = name
-		if descname is None:
-			self.descname = name
 		self.desc = desc
-		self.aliases = aliases
+		self.aliases = aliases if aliases else []
+		self.determiner = determiner
 		if plural is None:
 			self.plural = self.name + 's'
 		else:
@@ -1518,7 +1531,7 @@ class Creature():
 		self.FTH = traits[8]
 		self.LCK = traits[9]
 
-		self.status = status
+		self.status = status if status else []
 		# sort status effects by duration; change '1' to '0' to sort by name
 		self.status.sort(key=lambda x: x[1])
 
@@ -1795,7 +1808,7 @@ class Creature():
 	# called when a creature's hp hits 0
 	def death(self):
 		self.timeOfDeath = game.time
-		game.Print("\n" + f"{self.stringName(definite=True,cap=True,c=1)} died.")
+		game.Print("\n" + f"{self.stringName(det='the',cap=True,c=1)} died.")
 		self.descname = f"dead {self.descname}"
 		n = diceRoll(3,player.LOOT(),-2)
 		self.room().addItem(Serpens(n,[]))
@@ -1817,7 +1830,7 @@ class Creature():
 
 	def Carry(self,carrier):
 		if self.Weight() > carrier.BRDN():
-			game.Print(f"{self.stringName(definite=True,cap=True)} is too heavy to carry.")
+			game.Print(f"{self.stringName(det='the',cap=True)} is too heavy to carry.")
 			return False
 		if not self.Restrain(carrier):
 			return False
@@ -1833,11 +1846,11 @@ class Creature():
 				#TODO: add restraining with items? like rope??
 				pass
 			if self.ATHL() > restrainer.ATHL() or self.EVSN() > restrainer.ATHL():
-				game.Print(f"You fail to restrain {self.stringName(definite=True)}!")
+				game.Print(f"You fail to restrain {self.stringName(det='the')}!")
 				return False
 		restrainer.addCondition("restraining",-3,silent=True)
 		self.addCondition("restrained",-3)
-		game.Print(f"You restrain {self.stringName(definite=True)}!")
+		game.Print(f"You restrain {self.stringName(det='the')}!")
 		return True
 
 
@@ -1850,19 +1863,19 @@ class Creature():
 
 	def Ride(self,rider):
 		if rider.Weight() > self.BRDN():
-			game.Print(f"You are too heavy to ride {self.stringName(definite=True)}")
+			game.Print(f"You are too heavy to ride {self.stringName(det='the')}")
 			return False
 		if not self.isFriendly() and self.canMove():
-			game.Print(f"{self.stringName(definite=True,cap=True)} struggles.")
+			game.Print(f"{self.stringName(det='the',cap=True)} struggles.")
 			athl_contest = self.ATHL() - rider.ATHL()
 			if athl_contest > 0:
-				game.Print(f"{self.stringName(definite=True,cap=True)} shakes you off!")
+				game.Print(f"{self.stringName(det='the',cap=True)} shakes you off!")
 				if athl_contest > rider.ATHL():
 					rider.takeDamage(athl_contest-rider.ATHL(),"b")
 				return False
 		self.rider = rider
 		rider.riding = self
-		game.Print(f"You ride {self.stringName(definite=True)}.")
+		game.Print(f"You ride {self.stringName(det='the')}.")
 		return True
 
 
@@ -2053,7 +2066,7 @@ class Creature():
 
 	### User Output ###
 
-	def stringName(self,det=True,definite=False,n=1,plural=False,cap=False,c=1):
+	def stringName(self,det="",n=-1,plural=False,cap=False,c=1):
 		strname = getattr(self,"descname",self.name)
 		if len(strname) == 0:
 			return ""
@@ -2063,18 +2076,23 @@ class Creature():
 			strname = self.plural
 		if n > 1:
 			strname = str(n) + " " + strname
+		if self.determiner is not None:
+			det = self.determiner
+		if det == "" and n == 1:
+			det = "a"
+
 		if det:
-			if definite:
-				strname = "the " + strname
-			elif not plural:
-				if strname[0] in Data.vowels:
-					strname = "an " + strname
-				else:
-					strname = "a " + strname
+			if det == "a":
+				if not plural:
+					if strname[0] in Data.vowels:
+						strname = "an " + strname
+					else:
+						strname = "a " + strname
+			else:
+				strname = det + " " + strname
 		if cap:
 			strname = capWords(strname,c=c)
 		return strname
-
 
 
 	def describe(self):
@@ -2086,11 +2104,11 @@ class Creature():
 
 # the class representing the player, contains all player stats
 class Player(Creature):
-	def __init__(self,name,desc,weight,traits,hp,mp,money,inv,gear,xp,rp,status=[],spells=[],descname=None,aliases=None,plural=None,**kwargs):
-		Creature.__init__(self,name,desc,weight,traits,hp,mp,money,inv,gear,status=status,descname=descname,aliases=aliases,plural=plural)
+	def __init__(self,name,desc,weight,traits,hp,mp,money,inv,gear,xp,rp,spells=None,**kwargs):
+		Creature.__init__(self,name,desc,weight,traits,hp,mp,money,inv,gear,**kwargs)
 		self.xp = xp
 		self.rp = rp
-		self.spells = spells
+		self.spells = spells if spells else []
 
 
 
@@ -2312,7 +2330,7 @@ class Player(Creature):
 
 	### User Output ###
 
-	def stringName(self,det=True,definite=False,n=1,plural=False,cap=False,c=1):
+	def stringName(self,det="",n=-1,plural=False,cap=False,c=1):
 		return "yourself"
 
 	# prints all 10 player traits
@@ -2433,20 +2451,31 @@ class Player(Creature):
 
 
 class Person(Creature):
-	def __init__(self,name,descname,gender,weight,traits,hp,mp,money,inv,gear,dlogtree,desc=None,love=0,fear=0,rapport=0,status=[],spells=[],aliases=[],lastParley=None,memories=set(),appraisal=set(),**kwargs):
-		if desc == None:
-			desc = f"A {descname}"
-		Creature.__init__(self,name,desc,weight,traits,hp,mp,money,inv,gear,status=status,aliases=aliases,descname=descname)
+	def __init__(self,name,descname,gender,weight,traits,hp,mp,money,inv,gear,dlogtree,love=0,fear=0,rapport=0,lastParley=None,spells=None,memories=None,appraisal=None,desc=None,**kwargs):
+		Creature.__init__(self,name,"",weight,traits,hp,mp,money,inv,gear,**kwargs)
 		self.descname = descname
 		self.gender = gender
-		self.spells = spells
+		self.spells = spells if spells else []
 		self.love = love
 		self.fear = fear
 		self.dlogtree = DialogueTree(dlogtree)
 		self.rapport = rapport
 		self.lastParley = lastParley
-		self.appraisal = appraisal
-		self.memories = memories
+		self.appraisal = appraisal if appraisal else set()
+		self.memories = memories if memories else set()
+		
+		if desc:
+			self.desc = desc
+		else:
+			prefix = "An " if self.descname[0] in Data.vowels else "A "
+			self.desc = prefix + self.descname
+
+		if gender == "m":
+			self.aliases.extend(("man","guy","dude","male"))
+		if gender == "f":
+			self.aliases.extend(("woman","lady","dudette","female"))
+		self.aliases.append("person")
+	
 
 
 	### File I/O ###
@@ -2469,6 +2498,7 @@ class Person(Creature):
 
 	
 	def firstImpression(self,player):
+		print(self.name, "impression")
 		# adjust love, fear from person baselines
 		self.memories.add("met")
 		self.love += player.rp
@@ -2476,8 +2506,6 @@ class Person(Creature):
 
 
 	def appraise(self,player,game):
-		self.appraisal = set()
-
 		if self.lastParley is None:
 			self.lastParley = game.time
 		elif game.time - self.lastParley > 100:
@@ -2497,10 +2525,10 @@ class Person(Creature):
 
 	### User Output ###
 
-	def stringName(self,det=True,definite=False,n=1,plural=False,cap=False,c=1):
+	def stringName(self,det="",n=-1,plural=False,cap=False,c=1):
 		if "met" in self.memories:
 			return self.name
-		strname = self.descname			
+		strname = self.descname
 		if len(strname) == 0:
 			return ""
 		if n > 1:
@@ -2509,14 +2537,20 @@ class Person(Creature):
 			strname = self.plural
 		if n > 1:
 			strname = str(n) + " " + strname
+		if self.determiner is not None and det == "":
+			det = self.determiner
+		if det == "" and n == 1:
+			det = "a"
+
 		if det:
-			if definite:
-				strname = "the " + strname
-			elif not plural:
-				if strname[0] in Data.vowels:
-					strname = "an " + strname
-				else:
-					strname = "a " + strname
+			if det == "a":
+				if not plural:
+					if strname[0] in Data.vowels:
+						strname = "an " + strname
+					else:
+						strname = "a " + strname
+			else:
+				strname = det + " " + strname
 		if cap:
 			strname = capWords(strname,c=c)
 		return strname
@@ -2621,8 +2655,8 @@ Set status
 
 # almost identical to the item class, but fixtures may not be removed from their initial location.
 class Fixture(Item):
-	def __init__(self,name,desc,mention,weight=-1,durability=-1,status=[],aliases=[],plural=None):
-		Item.__init__(self,name,desc,weight=weight,durability=durability,status=status,aliases=aliases,plural=plural)
+	def __init__(self,name,desc,mention,weight=-1,**kwargs):
+		Item.__init__(self,name,desc,weight=weight,**kwargs)
 		self.mention = mention
 		self.parent = None
 
@@ -2642,8 +2676,8 @@ class Fixture(Item):
 
 
 class Passage(Fixture):
-	def __init__(self,name,desc,mention,connections,descname,passprep,weight=-1,durability=-1,status=[],aliases=[],plural=None):
-		Fixture.__init__(self,name,desc,mention,weight=weight,durability=durability,status=status,aliases=aliases,plural=plural)
+	def __init__(self,name,desc,mention,connections,descname,passprep,weight=-1,durability=-1,**kwargs):
+		Fixture.__init__(self,name,desc,mention,weight=weight,durability=durability,**kwargs)
 		self.connections = connections
 		self.descname = descname
 		self.passprep = passprep
@@ -2678,14 +2712,14 @@ class Passage(Fixture):
 
 
 class Serpens(Item):
-	def __init__(self,value,status=[]):
+	def __init__(self,value,status=None):
 		self.name = "Gold"
 		self.desc = f"{str(value)} glistening coins made of an ancient metal"
 		self.aliases = ["coin","coins","money","serpen","serpens"]
 		self.plural = "gold"
 		self.weight = value
 		self.durability = -1
-		self.status = status
+		self.status = status if status else []
 		self.descname = str(value) + " Gold"
 		self.value = value
 
@@ -2722,11 +2756,11 @@ class Serpens(Item):
 
 	### User Output ###
 
-	def stringName(self,det=True,definite=False,n=1,plural=False,cap=False,c=1):
+	def stringName(self,det="",n=-1,plural=False,cap=False,c=1):
 		strname = "Gold"
 		strname = str(self.value) + " " + strname
-		if definite:
-			strname = "the " + strname
+		if det:
+			strname = det + " " + strname
 		if cap:
 			strname = capWords(strname,c=c)
 		return strname
@@ -2735,8 +2769,8 @@ class Serpens(Item):
 
 
 class Weapon(Item):
-	def __init__(self,name,desc,weight,durability,might,sleight,sharpness,range,type,twohanded=False,status=[],aliases=[],plural=None):
-		Item.__init__(self,name,desc,weight,durability,status=status,aliases=aliases,plural=plural)
+	def __init__(self,name,desc,weight,durability,might,sleight,sharpness,range,type,twohanded=False,**kwargs):
+		Item.__init__(self,name,desc,weight,durability,**kwargs)
 		self.might = might
 		self.sleight = sleight
 		self.sharpness = sharpness
@@ -2753,16 +2787,16 @@ class Weapon(Item):
 
 
 class Shield(Item):
-	def __init__(self,name,desc,weight,durability,prot,status=[],aliases=[],plural=None):
-		Item.__init__(self,name,desc,weight,durability,status=status,aliases=aliases,plural=plural)
+	def __init__(self,name,desc,weight,durability,prot,**kwargs):
+		Item.__init__(self,name,desc,weight,durability,**kwargs)
 		self.prot = prot
 
 
 
 
 class Armor(Item):
-	def __init__(self,name,desc,weight,durability,prot,slots,status=[],aliases=[],plural=None):
-		Item.__init__(self,name,desc,weight,durability,status=status,aliases=aliases,plural=plural)
+	def __init__(self,name,desc,weight,durability,prot,slots,**kwargs):
+		Item.__init__(self,name,desc,weight,durability,**kwargs)
 		self.prot = prot
 		if type(slots) is not list:
 			self.slots = [slots]
@@ -2808,7 +2842,7 @@ class Monster(Creature):
 			targetname = "you"
 		else:
 			targetname = target.stringName()
-		game.Print(f"{self.stringName(definite=True, cap=True)} tries to attack {targetname}")
+		game.Print(f"{self.stringName(det='the', cap=True)} tries to attack {targetname}")
 
 		n = min1( self.ATSP() // min1(target.ATSP()) )
 		if n > 1:
