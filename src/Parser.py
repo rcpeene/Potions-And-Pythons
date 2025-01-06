@@ -34,20 +34,29 @@ def chooseObject(name,objects):
 		return objects[0]
 	Core.game.Print()
 	for n,object in enumerate(objects):
-		strname = object.stringName(det=False)
-		label = ""
+		strname = object.stringName()
+		labels = []
 		if isinstance(object,Core.Creature):
 			if not object.isAlive():
-				label += f" (dead)"
+				labels.append("dead")
 			else:
-				label += f" ({object.hp} hp)"
+				labels.append(f"{object.hp} hp")
 		if not isinstance(object.parent,(Core.Room,Core.Player)):
-			label += f" ({object.parent.name})"
+			labels.append(object.parent.name)
 		if object in Core.player.gear.values():
-			label += " (equipped)"
+			labels.append("equipped")
 		elif object in Core.player.invSet():
-			label += " (Inventory)"
-		Core.game.Print(f"{n+1}. {strname}{label}")
+			labels.append("Inventory")
+		elif object.determiner:
+			labels.append(object.determiner)
+		
+		strLabel = ""
+		if len(labels) >= 1:
+			for label in labels[:-1]:
+				strLabel += label + ","
+			strLabel = " (" + strLabel + labels[-1] + ")"
+
+		Core.game.Print(f"{n+1}. {strname}{strLabel}")
 	Core.game.Print(f"\nWhich {name}?")
 
 	invalid_count = 0
@@ -60,7 +69,7 @@ def chooseObject(name,objects):
 			return objects[int(choice)-1]
 		except:
 			for obj in objects:
-				if choice == obj.stringName(det=False).lower():
+				if choice == obj.stringName().lower():
 					return obj
 		Core.game.Print("That is not one of the options.")
 		if invalid_count >= 3:
@@ -90,7 +99,7 @@ def findObjFromTerm(term,queryType="both",filter=None,roomD=1,playerD=2,reqParen
 		suffix = ""
 		if not silent:
 			if reqParent:
-				det = "an" if reqParent[0] in Data.vowels else "a"
+				det = "an" if reqParent[0] in Data.vowels else 'a'
 				suffix += f" in {det} '{reqParent}'"
 			if queryType == "player":
 				suffix += " in your Inventory"
@@ -115,8 +124,9 @@ def isMeaningful(noun):
 	noun in Data.hellos or \
 	noun in Data.goodbyes or \
 	noun in Data.prepositions or \
-	Core.player.nameQuery(noun) or \
-	Core.game.inWorld(noun):
+	noun in Core.game.currentroom.exits.keys() or \
+	Core.game.inWorld(noun) or \
+	Core.player.nameQuery(noun):
 		return True
 	return False
 
@@ -169,7 +179,7 @@ def replacePronoun(term):
 		obj = Core.game.they
 	if obj == None:
 		return term
-	return obj.stringName(det=False)
+	return obj.stringName()
 
 
 # validates user input and processes into into a command form usable by parse(),
@@ -528,6 +538,12 @@ def Examples(*args):
 	Core.game.Input()
 	Core.waitKbInput()
 	Core.clearScreen()
+	
+def Exits(*args):
+	exitText = []
+	for key, val in Core.game.currentroom.allExits().items():
+		Core.game.Print(f"{key}:	{val}")
+
 
 def Goodbye(*args): Core.game.Print(Core.capWords(choice(list(Data.goodbyes)),c=1))
 
@@ -583,7 +599,7 @@ def Attack(dobj,iobj,prep,target=None,weapon=None,weapon2=None):
 	if iobj == None:
 		if len(Core.player.weapons()) == 0:
 			iobj = "fist"
-		elif Core.player.gear["right"] == Core.Empty() and Core.player.gear["left"] == Core.Empty():
+		elif Core.player.gear["right"] == Core.EmptyGear() and Core.player.gear["left"] == Core.EmptyGear():
 			iobj = getNoun("What will you attack with?")
 			if iobj in Data.cancels: return False
 
@@ -628,7 +644,7 @@ def Attack(dobj,iobj,prep,target=None,weapon=None,weapon2=None):
 		weapon = weapon.improviseWeapon()
 	Core.player.weapon = weapon
 
-	Core.game.Print(f"\nYou attack {target.stringName(definite=True)} with {Core.player.weapon.name}.")
+	Core.game.Print(f"\nYou attack {target.stringName(det='the')} with {Core.player.weapon.name}.")
 	if isinstance(target,Core.Creature): Core.player.attackCreature(target)
 	elif isinstance(target,Core.Item): Core.player.attackItem(target)
 	if stowed: Core.player.weapon,Core.player.weapon2 = stowedweapons
@@ -685,24 +701,24 @@ def CarryCreature(creature):
 	carrying = Core.player.carrying
 	
 	if carrying:
-		Core.game.Print(f"You're already carrying {carrying.stringName(definite=True)}")
+		Core.game.Print(f"You're already carrying {carrying.stringName(det='the')}")
 	if not isinstance(creature,Core.Creature):
-		Core.game.Print(f"You can't carry {creature.stringName(definite=True)}")
+		Core.game.Print(f"You can't carry {creature.stringName(det='the')}")
 		return False
 
-	Core.game.Print(f"You try to pick up {creature.stringName(definite=True)}.")
+	Core.game.Print(f"You try to pick up {creature.stringName(det='the')}.")
 	
 	# if not creature.isAlive():
 	# 	Core.player.Carry(creature)
 	# elif creature.Restrain(Core.player):
-	# 	Core.game.Print(f"You succesfully restrain {creature.stringName(definite=True)}!")
+	# 	Core.game.Print(f"You succesfully restrain {creature.stringName(det='the')}!")
 	# 	Core.player.Carry(creature)
 	# else:
-	# 	Core.game.Print(f"You fail to restrain {creature.stringName(definite=True)}!")
+	# 	Core.game.Print(f"You fail to restrain {creature.stringName(det='the')}!")
 
 	if not creature.Carry(Core.player):
 		return False
-	Core.game.Print(f"You are carrying {creature.stringName(definite=True)}.")
+	Core.game.Print(f"You are carrying {creature.stringName(det='the')}.")
 	Core.player.carrying = creature
 	return True
 
@@ -859,7 +875,7 @@ def Dismount(dobj,iobj,prep):
 	
 	riding = Core.player.riding
 	Core.game.setPronouns(riding)
-	Core.game.Print(f"You dismount {riding.stringName(definite=True)}.")	
+	Core.game.Print(f"You dismount {riding.stringName(det='the')}.")	
 	riding.rider = None
 	Core.player.riding = None	
 	return True
@@ -914,7 +930,7 @@ def Don(dobj,iobj,prep):
 		Core.game.Print(f"You aren't able to equip to '{iobj}'.")
 		return False
 	if iobj not in I.slots:
-		Core.game.Print(f"You cannot wear {I.stringName(definite=True)} {prep} your {iobj}.")
+		Core.game.Print(f"You cannot wear {I.stringName(det='the')} {prep} your {iobj}.")
 		return False
 	if not Core.player.equipArmor(I,iobj):
 		return False
@@ -959,7 +975,7 @@ def Drop(dobj,iobj,prep,I=None,R=None):
 
 	I.parent.removeItem(I)
 	if isinstance(I, Core.Creature):
-		Core.game.Print(f"You drop {I.stringName(definite=True)}")
+		Core.game.Print(f"You drop {I.stringName(det='the')}")
 		Core.game.currentroom.addCreature(I)
 	else:
 		Core.game.Print(f"You drop your {I.name}")
@@ -1102,16 +1118,18 @@ def GoVertical(dir,passage=None,dobj=None):
 def assignGoTerms(dobj,iobj,prep):
 	dir,dest,passage = None,None,None
 
-	# assign dir
-	if dobj in Data.directions.values(): dir = dobj
-	elif iobj in Data.directions.values(): dir = iobj
-	else: dir = prep
-
 	# assign dest
 	if dobj in Core.game.currentroom.allExits().values(): dest = dobj
 	elif Core.nameMatch(dobj,Core.game.currentroom): dest = dobj
 	if iobj in Core.game.currentroom.allExits().values(): dest = iobj
 	elif Core.nameMatch(iobj,Core.game.currentroom): dest = iobj
+
+	# assign dir
+	if dobj in Data.directions.values(): dir = dobj
+	elif iobj in Data.directions.values(): dir = iobj
+	elif dobj in Core.game.currentroom.allExits().keys(): dir = dobj
+	elif iobj in Core.game.currentroom.allExits().keys(): dir = dobj
+	elif dir == None: dir = prep
 
 	# assign passage
 	if dobj != None: passage = findObjFromTerm(dobj,"room",silent=True)
@@ -1123,8 +1141,9 @@ def assignGoTerms(dobj,iobj,prep):
 # parses user input to determine the intended direction, destination, and/or
 # passage. Then calls either traverse or changeroom accordingly
 def Go(dobj,iobj,prep):
-	preps = ("down","through","to","toward","up","in","inside","into","on","onto","out",None)
-	if prep in ("to", "toward"):
+	# print(dobj,iobj,prep)
+	preps = ("away","away from","down","through","to","toward","up","in","inside","into","on","onto","out",None)
+	if prep in ("to", "toward", "away", "away from"):
 		prep = None
 	if (dobj,iobj,prep) == (None,None,None):
 		dobj,iobj,prep = parseWithoutVerb("Where will you go?",preps)
@@ -1141,6 +1160,7 @@ def Go(dobj,iobj,prep):
 
 	# get dir, dest, and passage and validate them
 	dir,dest,passage = assignGoTerms(dobj,iobj,prep)
+	# print(dir,dest,passage)
 	if (dir,dest,passage) == (None,None,None):
 		Core.game.Print(f"There is no exit leading to a '{dobj}' here.")
 		return False
@@ -1161,7 +1181,7 @@ def Go(dobj,iobj,prep):
 
 	# call one of three functions to actually change rooms
 	# depends if they go normally, traverse a passage, or go vertically
-	if dir == "up" or dir == "down":
+	if dest == None and dir in ("up","down"):
 		return GoVertical(dir,passage,dobj)
 	# if just passage is given
 	if passage != None:
@@ -1316,14 +1336,11 @@ def Mount(dobj,iobj,prep):
 	Core.game.setPronouns(C)
 	
 	if Core.player.Weight() > C.BRDN():
-		Core.game.Print(f"You are too heavy to ride {C.stringName(definite=True)}")
+		Core.game.Print(f"You are too heavy to ride {C.stringName(det='the')}")
 		return False
 	C.Ride(Core.player)
 	return True
-	
 
-def Move(dobj,iobj,prep):
-	Core.game.Print("moveing")
 
 
 def Open(dobj,iobj,prep):
@@ -1441,8 +1458,8 @@ def Put(dobj,iobj,prep):
 		Core.game.Print(f"You can't put the {I.name} {prep} the {R.name}.")
 		return False
 	
-	idet = "your" if Core.player in I.ancestors() else "the"
-	rdet = "your" if Core.player in R.ancestors() else "the"
+	idet = "your" if Core.player in I.ancestors() else 'the'
+	rdet = "your" if Core.player in R.ancestors() else 'the'
 	outprep = "on" if isinstance(R,Items.Table) else "in"
 	if iobj == "here": Core.game.Print(f"You put your {I.name} here.")
 	else: Core.game.Print(f"You put {idet} {I.name} {outprep} {rdet} {R.name}.")
@@ -1485,7 +1502,7 @@ def Restrain(dobj,iobj,prep):
 			return False
 
 	if "restrained" in C.status:
-		Core.game.Print(f"{C.stringName(definite=True)} is already restrained.")
+		Core.game.Print(f"{C.stringName(det='the')} is already restrained.")
 	if not C.Restrain(Core.player,I):
 		Core.game.Print(f"You fail to restrain the {C.name}.")
 		return False
@@ -1580,7 +1597,7 @@ def TakeAllRecur(objToTake):
 	if parent is Core.game.currentroom: suffix = ""
 	elif Core.player in objToTake.ancestors(): suffix = " from your " + parent.name
 	else: suffix = " from the " + parent.name
-	strname = objToTake.stringName(definite=(count==1))
+	strname = objToTake.stringName(det='the' if count==1 else 'a')
 	tookMsg = f"You take {strname}{suffix}."
 	failMsg = f"You can't take the {objToTake.name}, your Inventory is too full."
 
@@ -1629,7 +1646,7 @@ def Take(dobj,iobj,prep):
 	if parent is Core.game.currentroom: suffix = ""
 	elif Core.player in obj.ancestors(): suffix = " from your " + parent.name
 	else: suffix = " from the " + parent.name
-	strname = obj.stringName(definite=(count==1))
+	strname = obj.stringName(det='the' if count==1 else 'a')
 	tookMsg = f"You take {strname}{suffix}."
 	failMsg = f"You can't take the {obj.name}, your Inventory is too full."
 
@@ -1707,7 +1724,7 @@ def Use(dobj,iobj,prep):
 	if not Core.hasMethod(I,"Use"):
 		Core.game.Print(f"You can't use the {I.name}.")
 		return False
-	I.Use()
+	I.Use(Core.player)
 	return True
 
 
@@ -1750,6 +1767,7 @@ shortactions = {
 "back up":Return,
 "clear":Core.clearScreen,
 "examples":Examples,
+"exits":Exits,
 "gear":Core.Player.printGear,
 "help":Help,
 "hello":Hello,
@@ -1850,7 +1868,7 @@ actions = {
 "look":Look,
 "make":Craft,
 "mount":Mount,
-"move":Move,
+"move":Go,
 "obtain":Take,
 "open":Open,
 "pet":Pet,

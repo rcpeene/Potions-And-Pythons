@@ -421,6 +421,7 @@
 				"name": "horse",
 				"desc": "A strong dun mustang",
 				"aliases": ["mustang"],
+				"determiner": "your",
 				"weight": 300,
 				"traits": [8,10,3,12,12,3,1,2,2,5],
 				"status": [["tamed",-4]],
@@ -480,6 +481,8 @@
 		"exits": {
 			"north": "brook",
 			"east": "pit",
+			"rocky ridge": "pit",
+			"ridge": "pit",
 			"south": "tunnel",
 			"west": "big stump",
 			"up": "above the woods"
@@ -660,7 +663,37 @@
 						"trites": "basic_chatter"
 					}
 				}
+			},
+			{
+				"__class__": "Person",
+				"name": "The Earl of Chesterbrook",
+				"descname": "adorned man",
+				"aliases": ["earl","earl of chesterbrook"],
+				"gender": "m",
+				"weight": 15,
+				"traits": [1,1,1,1,1,1,1,1,1,1],
+				"status": [],
+				"hp": 10,
+				"mp": 0,
+				"money": 10,
+				"inv": [],
+				"gear": {
+					"head": null,
+					"torso": null,
+					"left": null,
+					"right": null,
+					"legs": null
+				},
+				"dlogtree":{
+					"surprise": {},
+					"quest": {},
+					"colloquy": {},
+					"chatter": {
+						"trites": "basic_chatter"
+					}
+				}
 			}
+
 		],
 		"status": []
 	},

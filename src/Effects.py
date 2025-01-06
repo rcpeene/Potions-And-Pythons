@@ -27,7 +27,7 @@ def spawnObject(room,obj):
 	elif isinstance(obj,Core.Item):
 		room.addItem(obj)
 	if not Core.game.silent:
-		Core.game.Print(f"{obj.stringName(cap=True,c=1)} appeared!")
+		Core.game.Print(f"{obj.stringName(det='a',cap=True)} appeared!")
 
 
 def destroyObject(obj):
@@ -38,7 +38,7 @@ def destroyObject(obj):
 	elif isinstance(obj,Core.Item):
 		obj.parent.removeItem(obj)
 	if not Core.game.silent:
-		Core.game.Print(f"{obj.stringName(definite=True,cap=True,c=1)} was destroyed.")
+		Core.game.Print(f"{obj.stringName(det='a',cap=True)} was destroyed.")
 
 
 def increment(obj,attribute,num):

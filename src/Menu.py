@@ -395,6 +395,7 @@ def restart():
 	if next == "restart":
 		if loadGame():
 			return True
+	quit()
 	return False
 
 
