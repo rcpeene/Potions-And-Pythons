@@ -40,7 +40,7 @@ class Bottle(Core.Item):
 
 
 class Box(Core.Item):
-	def __init__(self,name,desc,weight,durability,open,items=items,**kwargs):
+	def __init__(self,name,desc,weight,durability,open,items,**kwargs):
 		Core.Item.__init__(self,name,desc,weight,durability,**kwargs)
 		self.open = open
 		self.items = items
