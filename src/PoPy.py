@@ -77,6 +77,16 @@ if __name__ == "__main__":
 # CURRENT TASKS
 
 # consider ride and carry during "Go"
+# add other ways of describing room connections (from room descriptions?)
+# have carried and riding go with carrier/rider
+# create penalty for carrying (empty one arm or create BRDN if too heavy?)
+# ensure saving works for carrying and riding
+
+# fix problem with stringName at the moment
+
+
+# add error logging during test playing?
+
 # add basic equipment and clothing items
 # fix/add Creature.isNaked or Player.isNaked
 # add link nodes and effect nodes to dialogue after all

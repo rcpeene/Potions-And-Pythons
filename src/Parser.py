@@ -191,7 +191,7 @@ def replacePronoun(term):
 
 # validates user input and processes into into a command form usable by parse(),
 # namely, it returns a list of words without capitals, symbols, or articles
-# the last step, nounify(), joins words that may only be meaningful as one term
+# nounify() joins words that may only be meaningful as one term
 def processCmd(prompt,storeRawCmd=False):
 	Core.flushInput()
 	rawcommand = Core.game.Input(prompt + "\n> ",low=False)
@@ -204,13 +204,13 @@ def processCmd(prompt,storeRawCmd=False):
 		Core.game.lastRawCommand = rawcommand.split()
 
 	# lowercase-ify the sentence command, copy it excluding symbols
-	purecommand = "".join([i for i in rawcommand.lower() if i not in Data.symbols])
-	# copy command, delimited by spaces, into a list of words excluding articles
-	listcommand = [i for i in purecommand.split() if i not in Data.articles]
-	# combine certain words if they appear to make one noun term
-	finalcommand = nounify(listcommand)
+	purecommand = "".join([i for i in rawcommand if i not in Data.symbols]).lower()
+	# split command into list of words, but combine words that seem to be single terms
+	splitcommand = nounify(purecommand.split())	
 	# split compound words that ought to be two separate words for parsing
-	finalcommand = decompose(finalcommand)
+	splitcommand = decompose(splitcommand)
+	# remove articles and determiners (and other extraneous words)
+	finalcommand = [word for word in splitcommand if word not in Data.articles]
 	return finalcommand
 
 
