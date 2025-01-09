@@ -462,7 +462,7 @@ class Table(Core.Item):
 
 	### User Output ###
 
-	def describe(self):
+	def desdifficultyibe(self):
 		Core.game.Print(f"It's {self.stringName(det='a')}.")
 		if len(self.items) != 0:
 			Core.game.Print(f"On it is {Core.listObjects(self.items)}.")
@@ -473,12 +473,12 @@ class Table(Core.Item):
 
 
 class Wall(Core.Passage):
-	def __init__(self,name,desc,weight,durability,connections,descname,passprep,cr,**kwargs):
-		Core.Passage.__init__(self,name,desc,weight,durability,connections,descname,passprep,**kwargs)
-		self.cr = cr
+	def __init__(self,name,desc,weight,durability,connections,descname,difficulty,**kwargs):
+		Core.Passage.__init__(self,name,desc,weight,durability,connections,descname,**kwargs)
+		self.difficulty = difficulty
 
 
-	def Traverse(self,dir=None):
+	def Traverse(self,traverser,dir=None,verb="climb"):
 		if dir == None:
 			if len(set(self.connections.values())) == 1:
 				dir = list(self.connections.keys())[0]
@@ -491,14 +491,24 @@ class Wall(Core.Passage):
 			Core.game.Print(f"The {self.name} does not go '{dir}'.")
 			return False
 
-		if Core.player.ATHL() < self.cr:
-			Core.game.Print(f"You fall down the {self.name}!")
-			if dir == "down":
-				Core.game.changeRoom(Core.world[self.connections["down"]])
-			if not (Core.player.hasCondition("fly") or Core.player.hasCondition("feather fall")):
-				Core.player.takeDamage(self.cr-Core.player.ATHL(),"b")
+		if traverser.riding:
+			return self.Traverse(traverser.riding,dir=dir)
+		if traverser.carrying:
+			Core.game.Print(f"You can't climb, you are carrying {traverser.carrying.stringName(det='a')}")
+			return False
+
+		if traverser.hasCondition("clingfast"): verb = "crawl"
+		elif traverser.hasCondition("flying"): verb = "fly"
+		elif traverser is Core.player.riding: verb = "ride"
+		Core.game.Print(f"You {verb} {dir} {self.stringName(det='the')}.")
+
+		if traverser.ATHL() >= self.difficulty or traverser.hasAnyCondition("clingfast","flying"):
+			traverser.changeRoom(Core.world[self.connections[dir]])
 			return True
 
-		Core.game.Print(f"You climb {dir} the {self.name}.")
-		Core.game.changeRoom(Core.world[self.connections[dir]])
+		Core.game.Print(f"You fall!")
+		if "down" in self.connections:
+			traverser.changeRoom(Core.world[self.connections["down"]])
+		if not traverser.hasAnyCondition("fly","fleetfooted"):
+			traverser.takeDamage(self.difficulty-traverser.ATHL(),"b")
 		return True

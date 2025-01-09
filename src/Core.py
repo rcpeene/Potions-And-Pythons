@@ -30,7 +30,7 @@ import Data
 
 # Used to determine if a term has a match with any of an object's names
 def nameMatch(term,obj):
-	if term == None:
+	if term is None or obj is None:
 		return False
 	term = term.lower()
 	if isinstance(obj, Room):
@@ -67,9 +67,11 @@ def getRoomKey(room,world):
 			return key
 
 
-def clearScreen(*args):
+def clearScreen(delay=0.1):
 	if os.name == "nt":
 		os.system("cls")
+		# ensure screen isn't being cleared during subsequent output
+		sleep(delay)
 	else:
 		os.system("clear")
 
@@ -122,7 +124,7 @@ def ellipsis(n):
 	for i in range(n):
 		sleep(1)
 		print(".")
-
+	sleep(1)
 
 # prints a list of strings, l, into n columns of width w characters
 # if an element is longer than one column, it takes up as many columns as needed
@@ -332,7 +334,7 @@ def objQueryRecur(node,matches,key,d):
 def assignParents():
 	for room in world.values():
 		assignParentsRecur(room)
-	player.parent = game.currentroom
+	player.assignParent(game.currentroom)
 	assignParentsRecur(player)
 
 
@@ -343,7 +345,7 @@ def assignParentsRecur(parent):
 	if not hasMethod(parent,'contents'):
 		return
 	for obj in parent.contents():
-		obj.parent = parent
+		obj.assignParent(parent)
 		assignParentsRecur(obj)
 
 
@@ -726,20 +728,26 @@ class DialogueTree():
 
 
 # Empty is a class usually used as a placeholder for items. It serves to act as a dummy item which has mostly null values
-class EmptyGear():
-	def __init__(self):
-		self.name = "[empty]"
-		self.aliases = []
-		self.weight = 0
-		self.prot = 0
-		self.might = 1
-		self.sleight = 0
-		self.sharpness = 0
-		self.type = "e"
+class EmptyGear:
+	_instance = None
+	name = "[empty]"
+	aliases = []
+	weight = 0
+	prot = 0
+	might = 1
+	sleight = 0
+	sharpness = 0
+	type = "e"
 
 
 
 	### Dunder Methods ###
+
+	def __new__(cls):
+		if cls._instance is None:
+			cls._instance = super().__new__(cls)
+		return cls._instance
+
 
 	def __repr__(self):
 		return f"<empty>"
@@ -1007,7 +1015,8 @@ class Game():
 	### User Output ###
 	
 	def Input(self,text="",low=True):
-		self.Print(text,end='')
+		# should never be silent when asking for input
+		self.Print(text,end='',allowSilent=False)
 		flushInput()
 		if not low:
 			ret = input()
@@ -1016,8 +1025,9 @@ class Game():
 		return ret
 
 
-	def Print(self,*args,end="\n",sep='',delay=0.005):
-		if self.silent:
+	def Print(self,*args,end="\n",sep='',delay=0.005,allowSilent=True):
+		sys.stdout.flush()
+		if self.silent and allowSilent:
 			return
 		if self.mode == 1:
 			return print(*args,end=end,sep=sep)
@@ -1034,6 +1044,7 @@ class Game():
 			sys.stdout.flush()
 		sys.stdout.write(end)
 		sys.stdout.flush()
+		sleep(delay)
 		
 
 	def startUp(self):
@@ -1084,6 +1095,7 @@ class Room():
 		self.items = items
 		self.creatures = creatures
 		self.status=status if status else []
+		
 
 
 	### Dunder Methods ###
@@ -1128,8 +1140,7 @@ class Room():
 
 
 	def removeCreature(self,C):
-		if C in self.creatures:
-			self.creatures.remove(C)
+		self.creatures.remove(C)
 
 
 	# sort all Creatures occupying the room by their MVMT() value, descending
@@ -1187,27 +1198,29 @@ class Room():
 
 	# removes all conditions of the same name
 	# if reqDuration is given, only removes conditions with that duration
-	def removeCondition(self,name,reqDuration=None):
-		for condname,duration in self.status:
-			if condname == name:
-				if reqDuration == None or reqDuration == duration:
-					self.status.remove([condname,duration])
-					if condname.startswith("AREA"):
-						self.removeAreaCondition(condname)
+	def removeCondition(self,reqName=None,reqDuration=None):
+		# deep copy to prevent removing-while-iterating errors
+		for name,duration in [_ for _ in self.status]:
+			if name == reqName or reqName is None:
+				if duration == reqDuration or reqDuration is None:
+					self.status.remove([name,duration])
+					if name.startswith("AREA"):
+						self.removeAreaCondition(name)
 
 
 	# decrements the duration for each status condition applied to the room by t
 	# removes status conditions whose duration is lowered past 0
 	def passTime(self,t):
-		for i, condition in self.status:
+		for condition in self.status:
 			# if condition is has a special duration, ignore it
 			if condition[1] < 0:
 				continue
 			# subtract remaining duration on condition
 			elif condition[1] > 0:
-				condition[1] = min0(condition[1]-t)
-		# remove all condition with 0 duration
-		self.status = [(cond,dur) for cond,dur in self.status if dur != 0]
+				condition[1] = min0(condition[1] - t)
+		
+		# remove conditions with 0 duration left
+		self.removeCondition(reqDuration=0)
 
 		for obj in self.contents():
 			obj.passTime(t)
@@ -1306,8 +1319,7 @@ class Room():
 
 	# prints room name, description, all its items and creatures
 	def describe(self):
-		game.Print("\n" + self.domain)
-		game.Print(self.name)
+		game.Print("\n"+self.domain+"\n"+self.name)
 		# if player.countCompasses() == 0:
 		# 	game.Print("\n" + ambiguateDirections(self.desc))
 		# else:
@@ -1327,9 +1339,10 @@ class Room():
 
 	# prints all the creatures in the room in sentence form
 	def describeCreatures(self):
-		if len(self.creatures) != 0:
-			game.Print(f"There is {listObjects(self.creatures)}.")
-		for creature in self.creatures:
+		listCreatures = [creature for creature in self.creatures if creature is not player.riding and creature is not player.carrying]
+		if len(listCreatures) != 0:
+			game.Print(f"There is {listObjects(listCreatures)}.")
+		for creature in listCreatures:
 			game.setPronouns(creature)
 
 
@@ -1351,6 +1364,13 @@ class Item():
 			self.plural = plural
 		self.determiner=determiner
 		self.parent = None
+
+
+
+	### File I/O ###
+
+	def assignParent(self, parent):
+		self.parent = parent
 
 
 
@@ -1389,10 +1409,10 @@ class Item():
 				continue
 			# subtract remaining duration on condition
 			elif condition[1] > 0:
-				condition[1] -= t
-			# if, after subtraction, condition is non-positive, remove it
-			if condition[1] <= 0:
-				self.removeCondition(condition[0],0)
+				condition[1] = min0(condition[1] - t)
+
+		# remove conditions with 0 duration left
+		self.removeCondition(reqDuration=0)
 
 
 	def Obtain(self,creature):
@@ -1431,11 +1451,12 @@ class Item():
 
 	# removes all condition of the same name
 	# if reqDuration is given, only removes conditions with that duration
-	def removeCondition(self,name,reqDuration=None):
-		for condname,duration in self.status:
-			if condname == name:
-				if reqDuration == None or reqDuration == duration:
-					self.status.remove([condname,duration])
+	def removeCondition(self,reqName=None,reqDuration=None):
+		# deep copy to prevent removing-while-iterating errors
+		for name,duration in [_ for _ in self.status]:
+			if name == reqName or reqName is None:
+				if duration == reqDuration or reqDuration is None:
+					self.status.remove([name,duration])
 
 
 
@@ -1511,7 +1532,7 @@ class Item():
 # Creatures have 10 base stats, called traits
 # They also have abilities; stats which are derived from traits through formulas
 class Creature():
-	def __init__(self,name,desc,weight,traits,hp,mp,money,inv,gear,carrying=None,carrier=None,riding=None,rider=None,status=None,descname=None,aliases=None,plural=None,determiner=None,timeOfDeath=None,alert=False,seesPlayer=False,sawPlayer=-1):
+	def __init__(self,name,desc,weight,traits,hp,mp,inv,gear,money=0,carrying=None,carrier=None,riding=None,rider=None,status=None,descname=None,aliases=None,plural=None,determiner=None,pronoun="it",timeOfDeath=None,alert=False,seesPlayer=False,sawPlayer=-1):
 		self.name = name
 		self.desc = desc
 		self.descname = descname if descname else name
@@ -1522,6 +1543,7 @@ class Creature():
 		else:
 			self.plural = plural
 		self.weight = weight
+		self.pronoun = pronoun
 
 		self.STR = traits[0]
 		self.SPD = traits[1]
@@ -1542,15 +1564,14 @@ class Creature():
 		self.mp = mp
 		self.money = money
 		self.inv = inv
-
-		# convert gear from its stored form in files to its runtime form
-		self.gear = {key: inv[idx] if idx != None else EmptyGear() for key, idx in gear.items()}
+		
+		self.parent = None
 		self.riding = riding
 		self.rider = rider
 		self.carrying = carrying
 		self.carrier = carrier
+		self.gear = gear
 
-		self.parent = None
 
 		self.weapon = EmptyGear()
 		self.weapon2 = EmptyGear()
@@ -1595,32 +1616,87 @@ class Creature():
 
 
 	### File I/O ###
+	
+	def assignParent(self,parent):
+		self.parent = parent
+
+		def uncompressTether(idx):
+			if idx is None:
+				return None
+			elif idx == "player":
+				return player
+			else:
+				return self.parent.contents()[idx]
+
+		self.carrying = uncompressTether(self.carrying)
+		self.carrier = uncompressTether(self.carrier)
+		self.riding = uncompressTether(self.riding)
+		self.rider = uncompressTether(self.rider)
+
+		uncompGear = {}
+		for slot, idx in self.gear.items():
+			if idx == "carrying":
+				uncompGear[slot] = self.carrying
+			elif idx is None:
+				uncompGear[slot] = EmptyGear()
+			else:
+				uncompGear[slot] = self.inv[idx]
+		self.gear = uncompGear
+
 
 	# converts the gear dict to a form more easily writable to a save file
 	# replaces all objects in gear.values() with an integer which represents...
 	# the index of the equipped object in the creature's inventory
 	# if the gear slot is empty, replaces it with -1
 	def compressGear(self):
-		return {key: (self.inv.index(item) if item != EmptyGear() else None) for key, item in self.gear.items()}
+		cGear = {}
+		for slot, item in self.gear.items():			
+			if type(item) is Creature:
+				cGear[slot] = "carrying"
+			elif item is EmptyGear():
+				cGear[slot] = None
+			else:
+				cGear[slot] = item
+		return cGear			
 
+
+	def compressTethers(self):
+		def compressTether(obj):
+			if obj is None:
+				return None
+			elif obj is player:
+				return "player"
+			else:
+				return self.parent.contents().index(obj)
+
+		tethers = {
+			"carrying": compressTether(self.carrying),
+			"carrier": compressTether(self.carrier),
+			"riding": compressTether(self.riding),
+			"rider": compressTether(self.rider)
+		}
+		return tethers
 
 	# returns a dict which contains all the necessary information to store...
 	# this object instance as a JSON object when saving the game
 	def convertToJSON(self):
 		# convert the gear dict to a form more easily writable in a JSON object
 		compressedGear = self.compressGear()
+		tethers = self.compressTethers()
 		d = self.__dict__.copy()
 		dictkeys = list(d.keys())
 		# these attributes do not get stored between saves (except gear)
 		for key in dictkeys:
-			if key.lower() in Data.traits or key in {"gear","weapon","weapon2","shield","shield2"}:
+			if key.lower() in Data.traits or key in {"gear","carrying","riding","carrier","rider","weapon","weapon2","shield","shield2"}:
 				del d[key]
 		d["gear"] = compressedGear
 		# convert traits to a form more easily writable in a JSON object
 		d["traits"] = [self.STR,self.SKL,self.SPD,self.STM,self.CON,self.CHA,self.INT,self.WIS,self.FTH,self.LCK]
 		# TODO: swap the following lines for Python 3.9
 		# d = {"__class__":self.__class__.__name__} | d
+		d |= tethers
 		d = {"__class__":self.__class__.__name__, **d}
+		del d["parent"]
 		return d
 
 
@@ -1638,8 +1714,8 @@ class Creature():
 		if(f"{type} vulnerability" in self.status): dmg *= 2
 		if(f"{type} resistance" in self.status): dmg //= 2
 		if(f"{type} immunity" in self.status): dmg = 0
-		game.Print(f"Took {dmg} {Data.dmgtypes[type]} damage")
-		#player hp lowered to a minimum of 0
+		game.Print(f"{self.stringName(det='the',cap=True)} took {dmg} {Data.dmgtypes[type]} damage.")
+		# player hp lowered to a minimum of 0
 		self.hp = min0(self.hp-dmg)
 		if self.hp == 0:
 			self.death()
@@ -1731,7 +1807,11 @@ class Creature():
 
 	# finds the slot in which item resides, sets it to EmptyGear()
 	# calls the item's Unequip() method if it has one
-	def unequip(self,I,silent=True):
+	def unequip(self,I,silent=False):
+		if type(I) is str:
+			I = self.gear[I]
+		if I is EmptyGear():
+			return False
 		gearslots = list(self.gear.keys())
 		gearitems = list(self.gear.values())
 		# finds the slot whose value is I, sets it to empty
@@ -1739,7 +1819,7 @@ class Creature():
 		self.gear[slot] = EmptyGear()
 		self.assignWeaponAndShield()
 		if not silent:
-			game.Print(f"You unequip your {I.name}")
+			game.Print(f"You unequip your {I.name}.")
 		if hasMethod(I,"Unequip"): I.Unequip()
 
 
@@ -1772,6 +1852,21 @@ class Creature():
 		if hasMethod(I,"Equip"): I.Equip(self)
 
 
+	def addCarry(self,creature):
+		if self.gear["left"] is not EmptyGear():
+			self.gear.unequip("left")
+		self.carrying = creature
+		self.gear["left"] = creature
+		self.checkHindered()
+		
+
+	def removeCarry(self):
+		self.gear["left"] = EmptyGear()
+		self.carrying.carrier = None
+		self.carrying = None
+		self.checkHindered()
+
+
 	def addCondition(self,name,dur,stackable=False):
 		if self.hasCondition(name) and not stackable:
 			return False
@@ -1782,11 +1877,12 @@ class Creature():
 
 	# removes all condition of the same name
 	# if reqDuration is given, only removes conditions with that duration
-	def removeCondition(self,name,reqDuration=None):
-		for condname,duration in self.status:
-			if condname == name:
-				if reqDuration == None or reqDuration == duration:
-					self.status.remove([condname,duration])
+	def removeCondition(self,reqName=None,reqDuration=None):
+		# deep copy to prevent removing-while-iterating errors
+		for name,duration in [_ for _ in self.status]:
+			if name == reqName or reqName is None:
+				if duration == reqDuration or reqDuration is None:
+					self.status.remove([name,duration])
 
 
 	def passTime(self,t):
@@ -1796,14 +1892,15 @@ class Creature():
 				continue
 			# subtract remaining duration on condition
 			elif condition[1] > 0:
-				condition[1] -= t
-			# if, after subtraction, condition is non-positive, remove it
-			if condition[1] <= 0:
-				self.removeCondition(condition[0],0)
+				condition[1] = min0(condition[1] - t)
+
+		# remove conditions with 0 duration left
+		self.removeCondition(reqDuration=0)
 
 
 	def checkHindered(self):
-		if self.invWeight() > self.BRDN():
+		carryWeight = 0 if self.carrying is None else self.carrying.Weight()
+		if self.invWeight() + carryWeight > self.BRDN():
 			if not self.hasCondition("hindered"):
 				self.addCondition("hindered",-3)
 
@@ -1826,18 +1923,104 @@ class Creature():
 
 
 	### Behavior ###
+
+	def changeRoom(self,newroom):
+		# can only change rooms if not stuck inside some item
+		if type(self.parent) != Room:
+			return False
+		# shouldn't be changing rooms alone if being carried
+		if self.carrier and self.carrier.parent is not newroom:
+			return False
+
+		prevroom = self.parent
+		prevroom.exit(self)
+		prevroom.removeCreature(self)
+		self.parent = newroom
+		newroom.addCreature(self)		
+		newroom.enter(self)
+
+		if self.carrying and self.carrying.parent is not self.parent:
+			self.carrying.changeRoom(newroom)
+		if self.riding and self.riding.parent is not self.parent:
+			self.riding.changeRoom(newroom)
+		if self.rider and self.rider.parent is not self.parent:
+			self.rider.changeRoom(newroom)
+
+		assert self.carrying is None or self.carrying.parent is self.parent
+		return True
+
 			
+	def Teleport(self,newroom):
+		prevroom = self.parent
+		prevroom.exit(self)
+		prevroom.removeCreature(self)
+		self.parent = newroom
+		newroom.addCreature(self)		
+		newroom.enter(self)
+		if self.riding:
+			self.riding = None
+		if self.carrying:
+			self.carrying = None
+
+
 	def act(self):
 		pass
 
 
+	# since creatures can carry creatures while also being carried themselves,
+	# and same can happen for riding and riders, loops could form where
+	# a carrier is trying to carry the creature that is carrying them
+	# this must be prevented
+	def checkTetherLoop(self,actor,target,dverb):
+		assert dverb in ("carry","ride")
+		looplink = None		
+
+		iverb = "carrying"
+		carrier = actor
+		while carrier:
+			if carrier.carrier == target:
+				looplink = carrier
+			carrier = carrier.carrier
+
+		iverb = "being carried by"
+		carrying = actor
+		while carrying:
+			if carrying.carrying == target:
+				looplink = carrying
+			carrying = carrying.carrying
+
+		iverb = "riding"
+		rider = actor
+		while rider:
+			if rider.rider == target:
+				looplink = rider
+			rider = rider.rider
+
+		iverb = "being ridden by"
+		riding = actor
+		while riding:
+			if riding.riding == target:
+				looplink = riding
+			riding = riding.riding
+		
+		# if a creature is found creating a loop with the actor and attempted target,
+		# identify the culprit
+		if looplink:
+			game.Print(f"You can't {dverb} {target.stringName(det='the')}, {target.pronoun} is {iverb} {looplink}")
+			return True
+		return False
+
+
 	def Carry(self,carrier):
+		if self.checkTetherLoop(carrier,self,"carry"):
+			return False
 		if self.Weight() > carrier.BRDN():
 			game.Print(f"{self.stringName(det='the',cap=True)} is too heavy to carry.")
 			return False
 		if not self.Restrain(carrier):
 			return False
 		self.carrier = carrier
+		self.carrier.addCarry(self)
 		return True
 
 
@@ -1851,7 +2034,6 @@ class Creature():
 			if self.ATHL() > restrainer.ATHL() or self.EVSN() > restrainer.ATHL():
 				game.Print(f"You fail to restrain {self.stringName(det='the')}!")
 				return False
-		restrainer.addCondition("restraining",-3,silent=True)
 		self.addCondition("restrained",-3)
 		game.Print(f"You restrain {self.stringName(det='the')}!")
 		return True
@@ -1865,6 +2047,8 @@ class Creature():
 
 
 	def Ride(self,rider):
+		if self.checkTetherLoop(rider,self,"ride"):
+			return False
 		if rider.Weight() > self.BRDN():
 			game.Print(f"You are too heavy to ride {self.stringName(det='the')}")
 			return False
@@ -2025,9 +2209,20 @@ class Creature():
 		return False
 
 
+	def hasAnyCondition(self,*names):
+		if len(names) == 1:
+			names = names[0]
+		assert type(names) in (set, list, tuple)
+		for name in names:
+			if self.hasCondition(name):
+				return True
+
+
 	# returns the sum of the weight of all items being held
 	def handheldWeight(self):
-		return self.weapon.weight + self.weapon2.weight + self.shield.weight + self.shield2.weight
+		return 0
+		carryingWeight = 0 if self.carrying is None else self.carrying.Weight()
+		return self.gear["left"].Weight() + self.gear["right"].Weight() + carryingWeight
 
 
 	def isNaked(self):
@@ -2066,7 +2261,7 @@ class Creature():
 
 	def canMove(self):
 		conds = ("restrained","paralyzed","frozen","unconscious")
-		return self.isAlive() and not any(self.hasCondition(c) for c in conds)
+		return self.isAlive() and not self.hasAnyCondition(conds)
 
 
 	### User Output ###
@@ -2081,7 +2276,7 @@ class Creature():
 			strname = self.plural
 		if n > 1:
 			strname = str(n) + " " + strname
-		if det == "" and self.determiner is not None:
+		if self.determiner is not None:
 			det = self.determiner
 		if det == "" and n == 1:
 			det = "a"
@@ -2110,7 +2305,7 @@ class Creature():
 # the class representing the player, contains all player stats
 class Player(Creature):
 	def __init__(self,name,desc,weight,traits,hp,mp,money,inv,gear,xp,rp,spells=None,**kwargs):
-		Creature.__init__(self,name,desc,weight,traits,hp,mp,money,inv,gear,**kwargs)
+		Creature.__init__(self,name,desc,weight,traits,hp,mp,inv,gear,money=money,**kwargs)
 		self.xp = xp
 		self.rp = rp
 		self.spells = spells if spells else []
@@ -2126,6 +2321,33 @@ class Player(Creature):
 
 
 	### Operation ###
+
+
+	def changeRoom(self,newroom):
+		# can only change rooms if not stuck inside some item
+		if type(self.parent) != Room:
+			raise Exception(f"Can't change rooms. Stuck inside {self.parent}")
+		game.changeRoom(newroom)
+		if self.riding:
+			self.riding.changeRoom(newroom)
+		if self.carrying:
+			self.carrying.changeRoom(newroom)
+		
+		assert self.carrying is None or self.carrying.parent is self.parent
+		return True
+
+
+	def Teleport(self,newroom):
+		if type(self.parent) != Room:
+			raise Exception(f"Can't change rooms. Stuck inside {self.parent}")
+		game.changeRoom(newroom)
+		if self.riding:
+			game.Print(f"You are no longer riding {self.riding.stringName()}.")
+			self.riding = None
+		if self.carrying:
+			game.Print(f"You are no longer carrying {self.carrying.stringName()}.")
+			self.carrying = None
+
 
 	# takes incoming damage, accounts for damage vulnerability or resistance
 	def takeDamage(self,dmg,type):
@@ -2231,13 +2453,15 @@ class Player(Creature):
 
 	# removes all condition of the same name
 	# if reqDuration is given, only removes conditions with that duration
-	def removeCondition(self,name,reqDuration=None):
-		for condname,duration in self.status:
-			if condname == name:
-				if reqDuration == None or reqDuration == duration:
-					self.status.remove([condname,duration])
-					if not self.hasCondition(condname):
-						game.Print(f"You are no longer {condname}.")
+	def removeCondition(self,reqName=None,reqDuration=None):
+		# deep copy to prevent removing-while-iterating errors
+		for name,duration in [_ for _ in self.status]:
+			if name == reqName or reqName is None:
+				if duration == reqDuration or reqDuration is None:
+					self.status.remove([name,duration])
+
+					if not self.hasCondition(name):
+						game.Print(f"You are no longer {name}.",allowSilent=False)
 
 
 	def checkHindered(self):
@@ -2324,6 +2548,12 @@ class Player(Creature):
 		return len([item for item in self.inv if isinstance(item,Compass)])
 
 
+	# returns the sum of the weight of all items being held
+	def handheldWeight(self):
+		carryingWeight = 0 if self.carrying is None else self.carrying.Weight()
+		return self.gear["left"].Weight() + self.gear["right"].Weight() + carryingWeight
+
+
 	# weird formula right? returns a positive number rounded down to nearest int
 	# to see an approximate curve, graph y = 5*log10(x/10)
 	# note that a lower bound is set to level 1 when xp < 16
@@ -2389,8 +2619,18 @@ class Player(Creature):
 	def printGear(self, *args):
 		game.Print()
 		for slot in self.gear:
+			val = self.gear[slot].name
+			if slot == "left" and self.carrying:
+				val = self.carrying.name
 			game.Print(slot + ":\t",end="")
-			game.Print(self.gear[slot].name)
+			game.Print(val)
+
+
+	def printRiding(self, *args):
+		if self.riding:
+			game.Print(f"Riding {self.riding.stringName(det='a')}")
+		else:
+			game.Print("Riding nothing")
 
 
 	def printStatus(self, *args):
@@ -2437,6 +2677,7 @@ class Player(Creature):
 		if self.riding is not None:
 			game.Print(f"Riding {self.riding.stringName()}")
 		if len(self.status) != 0:
+			game.Print()
 			self.printStatus()
 
 
@@ -2456,8 +2697,8 @@ class Player(Creature):
 
 
 class Person(Creature):
-	def __init__(self,name,descname,gender,weight,traits,hp,mp,money,inv,gear,dlogtree,love=0,fear=0,rapport=0,lastParley=None,spells=None,memories=None,appraisal=None,desc=None,**kwargs):
-		Creature.__init__(self,name,"",weight,traits,hp,mp,money,inv,gear,**kwargs)
+	def __init__(self,name,descname,gender,dlogtree,love=0,fear=0,rapport=0,lastParley=None,spells=None,memories=None,appraisal=None,desc=None,**kwargs):
+		Creature.__init__(self,name,"",**kwargs)
 		self.descname = descname
 		self.gender = gender
 		self.spells = spells if spells else []
@@ -2475,9 +2716,13 @@ class Person(Creature):
 			self.desc = prefix + self.descname
 
 		if gender == "m":
+			self.pronoun = "he"
 			self.aliases.extend(("man","guy","dude","male"))
 		if gender == "f":
+			self.pronoun = "she"
 			self.aliases.extend(("woman","lady","dudette","female"))
+		else:
+			self.pronoun = "they"
 		self.aliases.append("person")
 	
 
@@ -2659,8 +2904,8 @@ Set status
 
 # almost identical to the item class, but fixtures may not be removed from their initial location.
 class Fixture(Item):
-	def __init__(self,name,desc,mention,weight=-1,**kwargs):
-		Item.__init__(self,name,desc,weight=weight,**kwargs)
+	def __init__(self,name,desc,weight=-1,durability=-1,mention=False,**kwargs):
+		Item.__init__(self,name,desc,weight=weight,durability=durability,**kwargs)
 		self.mention = mention
 		self.parent = None
 
@@ -2680,8 +2925,8 @@ class Fixture(Item):
 
 
 class Passage(Fixture):
-	def __init__(self,name,desc,mention,connections,descname,passprep,weight=-1,durability=-1,**kwargs):
-		Fixture.__init__(self,name,desc,mention,weight=weight,durability=durability,**kwargs)
+	def __init__(self,name,desc,weight,durability,connections,descname,passprep=None,mention=False,**kwargs):
+		Fixture.__init__(self,name,desc,weight=weight,durability=durability,mention=mention,**kwargs)
 		self.connections = connections
 		self.descname = descname
 		self.passprep = passprep
@@ -2690,7 +2935,7 @@ class Passage(Fixture):
 
 	### Operation ###
 
-	def Traverse(self,dir=None):
+	def Traverse(self,traverser,dir=None):
 		if dir == None or dir not in self.connections:
 			if len(set(self.connections.values())) == 1:
 				dir = list(self.connections.keys())[0]
@@ -2703,13 +2948,9 @@ class Passage(Fixture):
 			game.Print(f"The {self.name} does not go '{dir}'.")
 			return False
 
-		if self.passprep != "":
-			game.Print(f"You go {dir} {self.passprep} the {self.name}.")
-		else:
-			game.Print(f"You go {dir} the {self.name}.")
-
+		game.Print(f"You go {dir} the {self.name}.")
 		newroom = world[self.connections[dir]]
-		game.changeRoom(newroom)
+		traverser.changeRoom(newroom)
 		return True
 
 

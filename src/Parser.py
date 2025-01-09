@@ -193,7 +193,6 @@ def replacePronoun(term):
 # namely, it returns a list of words without capitals, symbols, or articles
 # nounify() joins words that may only be meaningful as one term
 def processCmd(prompt,storeRawCmd=False):
-	Core.flushInput()
 	rawcommand = Core.game.Input(prompt + "\n> ",low=False)
 	# take input until input has any non-whitespace characters in it
 	while not any(i not in "\t " for i in rawcommand):
@@ -358,7 +357,6 @@ def Expell(command):
 
 
 def Get(command):
-	print(len(command))
 	if len(command) < 2:
 		Core.game.Print("Error: No object name given")
 		return
@@ -367,7 +365,7 @@ def Get(command):
 	if len(command) == 3:
 		attrname = command[2]
 
-	if objname in ("p","player","my"): obj = Core.player
+	if objname in ("p","player","my","self"): obj = Core.player
 	elif objname in ("g","game"): obj = Core.game
 	elif objname in ("here","room"): obj = Core.game.currentroom
 	elif objname in ("w","world"): obj = Core.world
@@ -457,16 +455,20 @@ def Set(command):
 	try: value = int(value)
 	except: pass
 
-	if objname in ("p","player","my"): obj = Core.player
+	if objname in ("p","player","my","self"): obj = Core.player
 	elif objname in ("g","game"): obj = Core.game
 	elif objname in ("here","room"): obj = Core.game.currentroom
 	elif objname in ("w","world"): obj = Core.world
 	else: obj = findObjFromTerm(command[1],playerD=3,roomD=3)
 
+	if obj is None:
+		Core.game.print(f"There is no {obj}")
+		return False
 	try:
 		getattr(obj,attrname)
 	except:
-		Core.game.Print("")
+		Core.game.Print(f"{obj} has no attribute")
+		return False
 	print(f"Setting {obj}.{attrname} to {value}")
 	setattr(obj,attrname,value)
 
@@ -491,7 +493,7 @@ def Teleport(command):
 		return
 	location = " ".join(command[1:])
 	if location in Core.world:
-		Core.game.changeRoom(Core.world[location])
+		Core.player.changeRoom(Core.world[location])
 	else:
 		Core.game.Print("Location not in world")
 
@@ -587,7 +589,7 @@ def Quit(*args):
 		Core.game.quit = True
 		return True
 
-def Save(*args): Menu.saveGame()
+
 def Shout(*args): Core.game.Print('"AHHHHHHHHHH"')
 def Sing(*args): Core.game.Print('"Falalalaaaa"')
 def Time(*args): Core.game.Print("Time:", Core.game.time)
@@ -718,20 +720,11 @@ def CarryCreature(creature):
 		Core.game.Print(f"You can't carry {creature.stringName(det='the')}")
 		return False
 
+	Core.player.unequip(Core.player.gear["left"])
 	Core.game.Print(f"You try to pick up {creature.stringName(det='the')}.")
-	
-	# if not creature.isAlive():
-	# 	Core.player.Carry(creature)
-	# elif creature.Restrain(Core.player):
-	# 	Core.game.Print(f"You succesfully restrain {creature.stringName(det='the')}!")
-	# 	Core.player.Carry(creature)
-	# else:
-	# 	Core.game.Print(f"You fail to restrain {creature.stringName(det='the')}!")
-
 	if not creature.Carry(Core.player):
 		return False
 	Core.game.Print(f"You are carrying {creature.stringName(det='the')}.")
-	Core.player.carrying = creature
 	return True
 
 
@@ -971,13 +964,15 @@ def Drink(dobj,iobj,prep):
 	return True
 
 
-def Drop(dobj,iobj,prep,I=None,R=None):
+def Drop(dobj,iobj,prep,I=None):
 	if prep not in ("down",None):
 		return Put(dobj,iobj,prep)
 	if dobj == None and I == None:
 		dobj = getNoun("What will you drop?.")
 		if dobj in Data.cancels: return False
 
+	if I == None and Core.nameMatch(dobj, Core.player.carrying):
+		I = Core.player.carrying
 	if I == None: I = findObjFromTerm(dobj,"player")
 	if I == None: return False
 	Core.game.setPronouns(I)
@@ -987,11 +982,11 @@ def Drop(dobj,iobj,prep,I=None,R=None):
 		if not Core.yesno(q):
 			return False
 
-	I.parent.removeItem(I)
 	if isinstance(I, Core.Creature):
+		Core.player.removeCarry()
 		Core.game.Print(f"You drop {I.stringName(det='the')}")
-		Core.game.currentroom.addCreature(I)
 	else:
+		I.parent.removeItem(I)
 		Core.game.Print(f"You drop your {I.name}")
 		Core.game.currentroom.addItem(I)
 	return True
@@ -1113,10 +1108,10 @@ def Give(dobj,iobj,prep):
 # not called by Parse directly
 # called when the user wants to go "up" or "down"
 def GoVertical(dir,passage=None,dobj=None):
-	if Core.player.hasCondition("flying"):
-		newroom = Core.game.currentroom.allExits()[dir]
+	if Core.player.hasCondition("flying") and not Core.player.riding:
+		newroomname = Core.game.currentroom.allExits()[dir]
 		Core.game.Print(f"You fly {dir}!")
-		return Core.game.changeRoom(Core.world[newroom])
+		return Core.player.changeRoom(Core.world[newroomname])
 
 	if passage == None and dobj != None:
 		Core.game.Print(f"There is no '{dobj}' to go {dir} here.")
@@ -1127,8 +1122,9 @@ def GoVertical(dir,passage=None,dobj=None):
 	if passage == None:
 		Core.game.Print(f"There is no '{passagename}' to go {dir} here.")
 		return False
+	
 	if Core.hasMethod(passage,"Traverse"):
-		return passage.Traverse(dir)
+		return passage.Traverse(Core.player,dir)
 
 
 # infers direction, destination, and passage (if they exist) from input terms
@@ -1198,17 +1194,17 @@ def Go(dobj,iobj,prep):
 
 	# call one of three functions to actually change rooms
 	# depends if they go normally, traverse a passage, or go vertically
-	if dest == None and dir in ("up","down"):
+	if dir in ("up","down"):
 		return GoVertical(dir,passage,dobj)
 	# if just passage is given
 	if passage != None:
 		if not Core.hasMethod(passage,"Traverse"):
 			Core.game.Print(f"The {passage.name} cannot be traversed.")
 			return False
-		return passage.Traverse(dir)
+		return passage.Traverse(Core.player,dir)
 	# if just dest given
 	if dest != None:
-		return Core.game.changeRoom(Core.world[dest])
+		return Core.player.changeRoom(Core.world[dest])
 	Core.game.Print(f"There is no exit leading to a '{dobj}' here.")
 	return False
 
@@ -1357,7 +1353,6 @@ def Mount(dobj,iobj,prep):
 		return False
 	C.Ride(Core.player)
 	return True
-
 
 
 def Open(dobj,iobj,prep):
@@ -1539,6 +1534,11 @@ def Rub(dobj,iobj,prep):
 	Core.game.Print("rubbing")
 
 
+def Save(dobj,iobj,prep):
+	Menu.saveGame(dobj)
+	return parse()
+
+
 def Search(dobj,iobj,prep):
 	Core.game.Print("searching")
 
@@ -1641,7 +1641,6 @@ def Take(dobj,iobj,prep):
 
 	if dobj in ("all","everything","it all"): return TakeAll()
 
-	print(dobj,iobj,prep)
 	if iobj in ("here", "room"):
 		obj = findObjFromTerm(dobj,"room",roomD=2)
 	else:
@@ -1786,7 +1785,6 @@ shortactions = {
 "abilities":Core.Player.printAbility,
 "back":Return,
 "back up":Return,
-"clear":Core.clearScreen,
 "examples":Examples,
 "exits":Exits,
 "gear":Core.Player.printGear,
@@ -1804,8 +1802,8 @@ shortactions = {
 "money":Core.Player.printMoney,
 "mp":Core.Player.printMP,
 "quit":Quit,
+"riding":Core.Player.printRiding,
 "rp":Core.Player.printRP,
-"save":Save,
 "spells":Core.Player.printSpells,
 "stats":Core.Player.printStats,
 "status":Core.Player.printStatus,
@@ -1882,6 +1880,7 @@ actions = {
 "laugh":Laugh,
 "lay":Crouch,
 "leave":Exit,
+"let go": Drop,
 "lick":Lick,
 "light":Ignite,
 "listen":Listen,
@@ -1921,6 +1920,7 @@ actions = {
 "ring":Ring,
 "rub":Rub,
 "run":Go,
+"save":Save,
 "scream":Shout,
 "search":Search,
 "set":Put,

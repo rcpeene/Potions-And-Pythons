@@ -70,17 +70,15 @@
 				"__class__": "Passage",
 				"name": "stairway",
 				"desc": "creaky wooden stairway which leads up",
-				"aliases": ["stairs","staircase","stairwell"],
 				"weight": -1,
 				"durability": -1,
-				"status": [],
-				"mention": true,
 				"connections": {
 					"up": "cabin hallway",
 					"out": "cabin hallway"
 				},
+				"mention": true,
 				"descname": "stairway that goes up",
-				"passprep": ""
+				"aliases": ["stairs","staircase","stairwell"]
 			}
 		],
 		"items": [
@@ -91,12 +89,10 @@
 				"aliases": ["sword"],
 				"weight": 6,
 				"durability": 12,
-				"status": [],
 				"might": 3,
 				"sleight": 3,
 				"sharpness": 2,
 				"range": 0,
-				"twohanded": false,
 				"type": "p"
 			},
 			{
@@ -106,12 +102,10 @@
 				"aliases": ["sword"],
 				"weight": 11,
 				"durability": 10,
-				"status": [],
 				"might": 3,
 				"sleight": 2,
 				"sharpness": 0,
 				"range": 0,
-				"twohanded": false,
 				"type": "s"
 			},
 			{
@@ -144,18 +138,15 @@
 			{
 				"__class__": "Passage",
 				"name": "stairway",
-				"desc": "wooden stairs which leads up on the right, crosses the hallway, and leads down on the left",
-				"aliases": ["stairs","staircase","stiarwell"],
+				"desc": "wooden stairs which lead up on the right of the hall and down on the left of the hall",
 				"weight": -1,
 				"durability": -1,
-				"status": [],
-				"mention": false,
 				"connections": {
 					"up": "cabin quarters",
 					"down": "cabin basement"
 				},
-				"descname": "creaky stairway which leads both up and down",
-				"passprep": ""
+				"aliases": ["stairs","staircase","stairwell"],
+				"descname": "creaky stairway which leads both up and down"
 			}
 		],
 		"items": [],
@@ -177,21 +168,17 @@
 				"__class__": "Fixture",
 				"name": "hearth",
 				"desc": "A cold stone hearth embedded in the wall. It is blackened from soot and ash.",
-				"aliases": ["stone hearth","grey stone hearth"],
 				"weight": -1,
 				"durability": -1,
-				"status": [],
-				"mention": false
+				"aliases": ["stone hearth","grey stone hearth"]
 			},
 			{
 				"__class__": "Fixture",
 				"name": "window",
 				"desc": "A brittle, dusty window on the northern wall of this room. You can't see through it",
-				"aliases": ["northern window"],
-				"weight": -1,
+				"weight": 1,
 				"durability": 2,
-				"status": [],
-				"mention": false
+				"aliases": ["northern window"]
 			}
 		],
 		"items": [
@@ -202,7 +189,6 @@
 				"aliases": ["kitchen table"],
 				"weight": 1,
 				"durability": 1,
-				"status": [],
 				"items": [
 					{
 						"__class__": "Potion",
@@ -210,8 +196,7 @@
 						"desc": "A bubbling red liquid in a glass bottle",
 						"aliases": ["potion"],
 						"weight": 4,
-						"durability": 3,
-						"status": []
+						"durability": 3
 					},
 					{
 						"__class__": "Potion",
@@ -219,8 +204,7 @@
 						"desc": "A bubbling blue liquid in a glass bottle",
 						"aliases": ["potion"],
 						"weight": 4,
-						"durability": 3,
-						"status": []
+						"durability": 3
 					},
 					{
 						"__class__": "Potion",
@@ -228,8 +212,7 @@
 						"desc": "A bubbling green liquid in a glass bottle",
 						"aliases": ["potion"],
 						"weight": 4,
-						"durability": 3,
-						"status": []
+						"durability": 3
 					},
 					{
 						"__class__": "Food",
@@ -238,7 +221,6 @@
 						"aliases": ["bread","breadroll","roll","biscuit"],
 						"weight": 2,
 						"durability": 2,
-						"status": [],
 						"heal": 1
 					}
 				],
@@ -251,7 +233,6 @@
 				"aliases": ["kitchen table"],
 				"weight": 1,
 				"durability": 1,
-				"status": [],
 				"items": [],
 				"descname": "table"
 			},
@@ -261,8 +242,7 @@
 				"desc": "A bubbling red liquid in a glass bottle",
 				"aliases": ["potion"],
 				"weight": 4,
-				"durability": 3,
-				"status": []
+				"durability": 3
 			}
 		],
 		"creatures": [
@@ -270,10 +250,8 @@
 				"__class__": "Monster",
 				"name": "goblin",
 				"desc": "A small green person with long ears, a pointy nose, and a grimacing visage.",
-				"aliases": [],
 				"weight": 10,
 				"traits": [2,2,2,2,2,2,2,2,2,2],
-				"status": [],
 				"hp": 10,
 				"mp": 0,
 				"money": 0,
@@ -307,8 +285,7 @@
 				"desc": "a bronze capsule which is remarkably durable",
 				"aliases": ["bronze capsule"],
 				"weight": 1,
-				"durability": -1,
-				"status": [],
+				"durability": 100,
 				"open": false,
 				"items": [],
 				"keyids": [-1,1],
@@ -332,14 +309,12 @@
 				"aliases": ["stairs","staircase","stairway"],
 				"weight": -1,
 				"durability": -1,
-				"status": [],
 				"mention": true,
 				"connections": {
 					"down": "cabin hallway",
 					"out": "cabin hallway"
 				},
-				"descname": "creaky stairway which leads down",
-				"passprep": ""
+				"descname": "creaky stairway which leads down"
 			}
 		],
 		"items": [
@@ -350,7 +325,6 @@
 				"aliases": ["box","chest"],
 				"weight": 8,
 				"durability": 10,
-				"status": [],
 				"open": false,
 				"items": [
 					{
@@ -360,7 +334,6 @@
 						"aliases": ["key"],
 						"weight": 2,
 						"durability": 3,
-						"status": [],
 						"id": 1
 					}
 				]
@@ -403,7 +376,21 @@
 			"in": "cabin hallway",
 			"cabin": "cabin hallway"
 		},
-		"fixtures": [],
+		"fixtures": [
+			{
+				"__class__": "Wall",
+				"name": "Cliff",
+				"desc": "A mossy grey cliff",
+				"weight": -1,
+				"durability": -1,
+				"aliases": ["cliffside","pale cliff"],
+				"difficulty": 30,
+				"connections": {
+					"up": "clifftop"
+				},
+				"descname": "pale cliff"
+			}
+		],
 		"items": [],
 		"creatures": [],
 		"status": []
@@ -414,21 +401,34 @@
 		"domain": "Woodlands",
 		"desc": "Atop the edge of a rocky white cliff facing east. In the distance you can see plains stretching to the horizon past the forest below. At the base of this cliff is a brook flowing beside a cabin.",
 		"exits": {},
-		"fixtures": [],
+		"fixtures": [
+			{
+				"__class__": "Wall",
+				"name": "Cliff",
+				"desc": "A mossy grey cliff",
+				"weight": -1,
+				"durability": -1,
+				"aliases": ["cliffside","white cliff"],
+				"difficulty": 30,
+				"connections": {
+					"down": "cliffside"
+				},
+				"descname": "pale cliff"
+			}
+		],
 		"items": [],
 		"creatures": [
 			{
 				"__class__": "Animal",
 				"name": "horse",
 				"desc": "A strong dun mustang",
+				"weight": 300,
 				"aliases": ["mustang"],
 				"determiner": "your",
-				"weight": 300,
 				"traits": [8,10,3,12,12,3,1,2,2,5],
-				"status": [["tamed",-4]],
+				"status": [["tamed",-3]],
 				"hp": 100,
 				"mp": 0,
-				"money": 0,
 				"inv": [],
 				"gear": {
 					"mouth": null,
@@ -441,20 +441,19 @@
 				"__class__": "Animal",
 				"name": "dragon",
 				"desc": "A small golden dragon",
-				"aliases": ["drake"],
 				"weight": 600,
 				"traits": [10,14,6,12,15,3,7,11,1,1],
-				"status": [],
 				"hp": 100,
 				"mp": 0,
-				"money": 0,
 				"inv": [],
 				"gear": {
 					"mouth": null,
 					"head": null,
 					"torso": null,
 					"tail": null
-				}
+				},
+				"aliases": ["drake"],
+				"status": [["flying",-3]]
 			}
 		],
 		"status": []
@@ -471,8 +470,7 @@
 		"items": [
 
 		],
-		"creatures": [],
-		"status": []
+		"creatures": []
 	},
 	"glen": {
 		"__class__": "Room",
@@ -497,7 +495,6 @@
 				"aliases": ["wooden sign"],
 				"weight": 12,
 				"durability": 8,
-				"status": [],
 				"text": "Beware of snakes!"
 			}
 		],
@@ -516,8 +513,7 @@
 		},
 		"fixtures": [],
 		"items": [],
-		"creatures": [],
-		"status": []
+		"creatures": []
 	},
 	"pit": {
 		"__class__": "Room",
@@ -530,8 +526,7 @@
 		},
 		"fixtures": [],
 		"items": [],
-		"creatures": [],
-		"status": []
+		"creatures": []
 	},
 	"pond": {
 		"__class__": "Room",
@@ -545,8 +540,7 @@
 		},
 		"fixtures": [],
 		"items": [],
-		"creatures": [],
-		"status": []
+		"creatures": []
 	},
 	"big stump": {
 		"__class__": "Room",
@@ -566,17 +560,14 @@
 				"aliases": ["axe","hatchet"],
 				"weight": 4,
 				"durability": 10,
-				"status": [],
 				"might": 4,
 				"sleight": 0,
 				"sharpness": 1,
 				"range": 0,
-				"twohanded": false,
 				"type": "s"
 			}
 		],
-		"creatures": [],
-		"status": []
+		"creatures": []
 	},
 	"treeline": {
 		"__class__": "Room",
@@ -602,7 +593,6 @@
 				"hp": 10,
 				"mp": 0,
 				"money": 10,
-				"inv": [],
 				"gear": {
 					"head": null,
 					"torso": null,
@@ -610,6 +600,7 @@
 					"right": null,
 					"legs": null
 				},
+				"inv": [],
 				"dlogtree":{
 					"surprise":{
 						"cases": "'naked' in speaker.appraisal",
@@ -672,7 +663,6 @@
 				"gender": "m",
 				"weight": 15,
 				"traits": [1,1,1,1,1,1,1,1,1,1],
-				"status": [],
 				"hp": 10,
 				"mp": 0,
 				"money": 10,
@@ -716,7 +706,6 @@
 				"aliases": ["snake","python"],
 				"weight": 3,
 				"traits": [1,1,1,1,1,1,1,1,1,1],
-				"status": [],
 				"hp": 2,
 				"mp": 0,
 				"money": 0,
@@ -727,7 +716,6 @@
 					"mouth": null
 				}
 			}
-		],
-		"status": []
+		]
 	}
 }
