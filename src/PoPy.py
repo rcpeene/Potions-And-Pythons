@@ -13,7 +13,7 @@ import Parser
 
 def main(testing=False):
 	# formatting the prompt window
-	os.system("mode con: lines=36")
+	os.system("mode con: lines=999")
 	os.system("title Potions ^& Pythons")
 
 	# run intro logo animation
@@ -41,17 +41,17 @@ def main(testing=False):
 
 		# creatures in current room's turn
 		for creature in Core.game.currentroom.creatures:
+			if not Core.player.isAlive(): continue
 			Core.game.whoseturn = creature
 			creature.act()
-			if not Core.player.isAlive(): continue
 
 		# creatures in nearby rooms' turn
 		Core.game.silent = True
 		for room in Core.game.nearbyRooms():
 			for creature in room.creatures:
+				if not Core.player.isAlive(): continue
 				Core.game.whoseturn = creature
 				creature.act()
-				if not Core.player.isAlive(): continue
 
 		if not Core.player.isAlive(): continue
 		# cleanup before looping
@@ -76,12 +76,12 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# consider ride and carry during "Go"
-# add other ways of describing room connections (from room descriptions?)
-# have carried and riding go with carrier/rider
 # create penalty for carrying (empty one arm or create BRDN if too heavy?)
-# ensure saving works for carrying and riding
+	
+# ^^^ TEST THESE AND TETHERLOOPS AND TELEPORTING
 
+# add other ways of describing room connections (from room descriptions?)
+# catch and remove room-caused status conditions within changeRoom rather than room exit and enter, those should be reserved for other effects
 # fix problem with stringName at the moment
 
 
@@ -117,6 +117,7 @@ if __name__ == "__main__":
 	# add creatures with many limbs (or can equip more than 2 weapons/shields)
 	# figure out combat? attack items?
 
+# add portal object, which is basically a passage that isn't a fixture, (but still can't be taken?)
 # add dialect processor to tritepool output?
 # add possession? (so you can say 'break goblin's sword', 'take his food')... these could be easily restructured as "break sword from goblin", "take food from him"
 

@@ -36,8 +36,6 @@ def writeGame(filename,Game,World):
 class worldEncoder(json.JSONEncoder):
 	def default(self,objToWrite):
 		JSONprimitives = {dict,list,str,int,float,bool,None}
-		if hasattr(objToWrite,"parent"):
-			del objToWrite.parent
 		if hasattr(objToWrite,"root"):
 			del objToWrite.root
 		if type(objToWrite) == set:
@@ -45,13 +43,18 @@ class worldEncoder(json.JSONEncoder):
 		# elif type(objToWrite) == Room:
 		# 	return objToWrite.__dict__
 		elif Core.hasMethod(objToWrite,"convertToJSON"):
-			return objToWrite.convertToJSON()
+			jsonDict = objToWrite.convertToJSON()
+			if "parent" in jsonDict:
+				del jsonDict["parent"]
+			return jsonDict
 		elif type(objToWrite) not in JSONprimitives:
 			jsonDict = objToWrite.__dict__
 			# this is done so the class key appears first in the JSON object
 			# TODO: swap the following lines for Python 3.9
 			# jsonDict = {"__class__": objToWrite.__class__.__name__} | jsonDict
 			jsonDict = {"__class__": objToWrite.__class__.__name__, **jsonDict}
+			if "parent" in jsonDict:
+				del jsonDict["parent"]
 			return jsonDict
 		else:
 			return objToWrite
@@ -85,8 +88,6 @@ def default(jsonDict):
 		# print("========: " + jsonDict["name"] + " " + str(objAttributes))
 		if objClassname == "Room":
 			return Core.Room(**objAttributes)
-		elif objClassname == "Empty":
-			return Core.Empty()
 		elif objClass != None:
 			# if Core.hasMethod(objClass,"convertFromJSON"):
 			# 	return objClass.convertFromJSON(jsonDict)
@@ -140,7 +141,7 @@ def quicksave():
 
 
 # saves data from player, world, and game objects to respective text files
-def saveGame():
+def saveGame(savename=None):
 	# create save directory if it doesn't exist
 	if not os.path.exists("saves"):
 		os.mkdir("saves")
@@ -149,8 +150,9 @@ def saveGame():
 	# split existing save names into a list and display them
 	saves = os.listdir()
 	Core.columnPrint(saves,10,10)
-	# player names their save
-	savename = input("\nWhat name will you give this save file?\n> ").lower()
+	if savename is None:
+		# player names their save
+		savename = input("\nWhat name will you give this save file?\n> ").lower()
 	if savename in ("", "all", "quicksave"):
 		if savename == "":
 			print(f"Save name cannot be empty.")
@@ -182,7 +184,7 @@ def saveGame():
 	writeGame("game.txt", Core.game, Core.world)
 	os.chdir("../..")
 	sleep(1)
-	print("Game saved")
+	print(f"Game saved as {savename}")
 	sleep(1)
 
 
@@ -228,7 +230,7 @@ def loadGame(filename=None):
 	# 	return False
 
 	os.chdir("../..")
-	# Core.ellipsis(3)
+	Core.ellipsis(3)
 	Core.flushInput()
 	Core.clearScreen()
 	return True
@@ -309,7 +311,7 @@ def createCharacter():
 	desc = input("Describe yourself.\n> ")
 	while len(desc) == 0:
 		desc = input("> ")
-	return Core.Player(name,desc,50,[1]*10,1,1,0,[],Data.initgear,0,0)
+	return Core.Player(name,desc,50,[1]*10,2,2,0,[],Data.initgear,0,0)
 
 
 # starts a new game and returns player, world, and game objects
@@ -334,11 +336,12 @@ def testGame():
 	inv = [Core.Compass("compass","a plain steel compass with a red arrow",2,10,plural="compasses")]
 	status = [["fireproof",-1], ["poisoned",5], ["cursed",-2], ["immortal",-1],
 	["sharpshooter",50], ["invisible",15], ["poisoned",-1], ["flying",5]]
-	Core.player = Core.Player("Norman","a hero",50,[4]*10,24,24,1000,inv,Data.initgear,1585,100,status)
+	Core.player = Core.Player("Norman","a hero",50,[4]*10,24,24,1000,inv,Data.initgear,1585,100,spells=[],status=status)
 	Core.game = Core.Game(0,Core.world["cave"],Core.world["tunnel"],0,set())
 
 	Core.clearScreen()
 	Core.game.mode = 1
+	Core.game.silent = False
 
 
 def gameInfo():
@@ -359,7 +362,7 @@ def mainMenu():
 		Core.flushInput()
 		print(Data.logo)
 		print(Data.menuinstructions)
-		g = input("> ").lower().split()
+		g = Core.game.Input("> ").lower().split()
 
 		if len(g) == 0:
 			continue
@@ -578,7 +581,7 @@ def endIntro():
 # uses data from the bottom of Data.py
 def gameIntro():
 	tempLines = [line for line in Data.logoLines]
-	Core.clearScreen()
+	Core.clearScreen(delay=0)
 	# print logo crawling up
 	for line in tempLines:
 		# if user presses any key, skip animation
