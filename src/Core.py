@@ -380,6 +380,13 @@ def ensureWorldIntegrity():
 		del world[name]
 
 
+
+
+############
+## LOGGER ##
+############
+
+
 class TeeLogger:
 	def __init__(self,logFile,inputFile=None):
 		self.terminal = sys.stdout
@@ -417,6 +424,7 @@ class TeeLogger:
 		if self.stdin != self.originalStdin:
 			self.stdin.close()
 		self.stdin = open(inputFilename,"r")
+
 
 
 
