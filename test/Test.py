@@ -8,46 +8,7 @@ os.chdir(dname)
 sys.path.append("../src")
 
 import PoPy
-
-
-class TeeLogger:
-	def __init__(self,filename,inputFile=None):
-		self.terminal = sys.stdout
-		self.originalStdin = sys.stdin
-		self.errorTerminal = sys.stderr
-		os.makedirs(os.path.dirname(filename),exist_ok=True)
-		self.log = open(filename,"w")
-		self.stdin = open(inputFile,"r") if inputFile else self.originalStdin
-
-
-	def write(self, message):
-		self.terminal.write(message)
-		self.log.write(message)
-
-
-	def write_error(self,message):
-		self.errorTerminal.write(message)  # Print errors to stderr in terminal
-		self.log.write(message)  # Log errors in the same file
-		self.flush()
-
-
-	def readline(self):
-		input_text = self.stdin.readline()
-		self.log.write(input_text)
-		self.log.flush()
-		return input_text
-
-
-	def flush(self):
-		self.terminal.flush()
-		self.log.flush()
-
-
-	def setInputFile(self, inputFilename):
-		if self.stdin != self.originalStdin:
-			self.stdin.close()
-		self.stdin = open(inputFilename,"r")
-
+from Core import TeeLogger
 
 
 # test the main menu
@@ -126,7 +87,7 @@ def testSpells():
 
 if __name__ == "__main__":
 	os.chdir("..")
-	logger = TeeLogger("test/output.log")
+	logger = TeeLogger("test/test.log")
 	sys.stdout = logger
 	sys.stdin = logger
 	sys.stderr = logger

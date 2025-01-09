@@ -3,6 +3,7 @@
 # This file is dependent on Parser.py
 
 import os
+import sys
 
 import Core
 import Menu
@@ -15,6 +16,12 @@ def main(testing=False):
 	# formatting the prompt window
 	os.system("mode con: lines=999")
 	os.system("title Potions ^& Pythons")
+	
+	if not testing:
+		logger = Core.TeeLogger("./transcript.log")
+		sys.stdin = logger
+		sys.stdout = logger
+		sys.stderr = logger
 
 	# run intro logo animation
 	if not testing: Menu.gameIntro()
@@ -75,14 +82,6 @@ if __name__ == "__main__":
 ################################################################################
 
 # CURRENT TASKS
-
-# create penalty for carrying (empty one arm or create BRDN if too heavy?)
-	
-# ^^^ TEST THESE AND TETHERLOOPS AND TELEPORTING
-
-# add other ways of describing room connections (from room descriptions?)
-# catch and remove room-caused status conditions within changeRoom rather than room exit and enter, those should be reserved for other effects
-# fix problem with stringName at the moment
 
 
 # add error logging during test playing?
