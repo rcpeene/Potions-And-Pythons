@@ -88,8 +88,8 @@ def testSpells():
 if __name__ == "__main__":
 	os.chdir("..")
 	logger = TeeLogger("test/test.log")
-	sys.stdout = logger
 	sys.stdin = logger
+	sys.stdout = logger
 	sys.stderr = logger
 	testMenu()
 	testInfo()

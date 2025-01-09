@@ -70,9 +70,9 @@ def main(testing=False):
 		# sort the creatures in each rendered room by their MVMT attribute
 		Core.game.sortCreatures()
 
-		# if not Core.player.isAlive(): continue
+		if not Core.player.isAlive(): continue
 		# save game every so often just in case
-		if Core.game.time % 10 == 0: Menu.quicksave()
+		if Core.game.time >= Core.game.lastsave+10: Menu.quickSave("autosave")
 
 
 if __name__ == "__main__":
@@ -82,9 +82,6 @@ if __name__ == "__main__":
 ################################################################################
 
 # CURRENT TASKS
-
-
-# add error logging during test playing?
 
 # add basic equipment and clothing items
 # fix/add Creature.isNaked or Player.isNaked
@@ -97,16 +94,6 @@ if __name__ == "__main__":
 	# "drink from the fountain"
 	# make a list of all possible uses and inputs for each action and systematically test them. Revise the world to accomodate them
 
-# add some preliminary spells and add effects file
-	# reevaluate effect functions, is there a way to reference a function by string?
-	# how will amulet effects work??
-	# add spells functions and fill in spells dict
-	# added spell/effects tests
-
-# add resilient error handling, for file I/O, maybe in action loop
-
-# examine output grammar/statements for lower level actions (in case non-player creatures do actions, we dont want it to print the same msgs), alter print to use G.print which depends on silent
-
 # behavior
 	# design persons and person behavior all of the RP system?
 	# figure out animal behavior
@@ -115,6 +102,7 @@ if __name__ == "__main__":
 	# improve attack tests
 	# add creatures with many limbs (or can equip more than 2 weapons/shields)
 	# figure out combat? attack items?
+# examine output grammar/statements for lower level actions (in case non-player creatures do actions, we dont want it to print the same msgs), alter print to use G.print which depends on silent
 
 # add portal object, which is basically a passage that isn't a fixture, (but still can't be taken?)
 # add dialect processor to tritepool output?
@@ -135,6 +123,12 @@ if __name__ == "__main__":
 	# try "pick him up"
 	# add Steal
 	# determine what can be hid behind
+
+# add some preliminary spells and add effects file
+	# reevaluate effect functions, is there a way to reference a function by string?
+	# how will amulet effects work??
+	# add spells functions and fill in spells dict
+	# added spell/effects tests
 
 
 ################################################################################

@@ -130,13 +130,16 @@ def readGame(filename,World):
 ## MENU FUNCTIONS ##
 ####################
 
-def quicksave():
+
+def quickSave(savename):
+	assert savename not in ("", "all")
 	# create save directory if it doesn't exist
-	os.makedirs("saves/quicksave",exist_ok=True)
-	os.chdir("saves/quicksave")
+	os.makedirs(f"saves/{savename}",exist_ok=True)
+	os.chdir(f"saves/{savename}")
 	writeJSON("world.json", Core.world)
 	writeJSON("player.json", Core.player)
 	writeGame("game.txt", Core.game, Core.world)
+	Core.game.lastsave = Core.game.time
 	os.chdir("../..")
 
 
@@ -153,7 +156,7 @@ def saveGame(savename=None):
 	if savename is None:
 		# player names their save
 		savename = input("\nWhat name will you give this save file?\n> ").lower()
-	if savename in ("", "all", "quicksave"):
+	if savename in ("", "all", "autosave", "quicksave"):
 		if savename == "":
 			print(f"Save name cannot be empty.")
 		else:
@@ -185,6 +188,7 @@ def saveGame(savename=None):
 	os.chdir("../..")
 	sleep(1)
 	print(f"Game saved as {savename}")
+	Core.game.lastsave = Core.game.time
 	sleep(1)
 
 

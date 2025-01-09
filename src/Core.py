@@ -843,6 +843,8 @@ class Game():
 		self.prevroom = prevroom
 		# the number of game loops that have elapsed since the game's start
 		self.time = time
+		# the time of the last save made
+		self.lastsave = time
 		# set of important events that have transpired in the game's progression
 		self.events = events
 		# used to break out of the main input loop when the player wants to quit

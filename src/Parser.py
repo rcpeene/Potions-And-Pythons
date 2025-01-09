@@ -1480,6 +1480,11 @@ def Put(dobj,iobj,prep):
 	return True
 
 
+def Quicksave():
+	Menu.quickSave("quicksave")
+	return parse()
+
+
 def Release(dobj,iobj,prep):
 	Core.game.Print("releaseing")
 
