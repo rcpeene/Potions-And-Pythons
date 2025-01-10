@@ -36,8 +36,6 @@ def writeGame(filename,Game,World):
 class worldEncoder(json.JSONEncoder):
 	def default(self,objToWrite):
 		JSONprimitives = {dict,list,str,int,float,bool,None}
-		if hasattr(objToWrite,"root"):
-			del objToWrite.root
 		if type(objToWrite) == set:
 			return {"__class__":"set","setdata":list(objToWrite)}
 		# elif type(objToWrite) == Room:

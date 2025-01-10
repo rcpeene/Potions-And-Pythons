@@ -11,6 +11,7 @@ from time import sleep
 from random import randint,sample
 from math import floor, log10
 from bisect import insort
+from collections.abc import Iterable
 import sys, os
 
 try:
@@ -511,8 +512,10 @@ class DialogueNode():
 	### File I/O ###
 
 	def convertToJSON(self):
-		del self.id
-		return self.__dict__.copy()
+		jsonDict = self.__dict__.copy()
+		del jsonDict["root"]
+		del jsonDict["id"]
+		return jsonDict
 	
 
 	@classmethod
@@ -692,9 +695,10 @@ class DialogueTree():
 	### File I/O ###
 
 	def convertToJSON(self):
-		del self.id
-		del self.children
-		return self.__dict__.copy()
+		jsonDict = self.__dict__.copy()
+		del jsonDict["id"]
+		del jsonDict["children"]
+		return jsonDict
 	
 
 	@classmethod
@@ -887,17 +891,18 @@ class Game():
 
 	# passes time for each room, and each creature in each room
 	# important for decrementing the duration counter on all status conditions
-	def passTime(self, t=1):
+	def passTime(self,t=1):
 		prev_hour = self.hour()
 		self.time += t
+		self.silent = player.hasAnyCondition("asleep","dead")
 		player.passTime(t)
 		for room in self.renderedRooms():
-			self.silent = room is not self.currentroom
+			self.silent = room is not self.currentroom or player.hasAnyCondition("asleep","dead")
 			room.passTime(t)
+		self.silent = player.hasAnyCondition("asleep","dead")
 		if prev_hour != self.hour():
 			self.checkDaytime()
 		self.checkAstrology()
-		self.silent = False
 
 
 	def clearPronouns(self):
@@ -1018,10 +1023,10 @@ class Game():
 
 	def checkMoon(self):
 		mooncycle = (self.time % self.monthlength) // self.daylength
-		if mooncycle() == 0:
+		if mooncycle == 0:
 			self.Print("It is a new moon.")
 			self.events.add("new moon")
-		elif mooncycle() == 7:
+		elif mooncycle == 7:
 			self.Print("It is a full moon.")
 			self.events.add("full moon")
 		else:
@@ -1029,11 +1034,11 @@ class Game():
 			self.events.remove("full moon")
 
 
-	def checkAstrology(self, startUp=False):
+	def checkAstrology(self, update=False):
 		darkhours = ("cat","mouse","owl","serpent","wolf")
 		aurora_cycle = self.time % 2000
 		if aurora_cycle >= 0 and aurora_cycle < 100 and self.hour() in darkhours:
-			if "aurora" not in self.events or startUp:
+			if "aurora" not in self.events or update:
 				self.Print("There is an aurora in the sky!")			
 			self.events.add("aurora")
 		elif "aurora" in self.events:
@@ -1042,7 +1047,7 @@ class Game():
 
 		meteor_cycle = self.time % 3500
 		if meteor_cycle >= 0 and meteor_cycle < 300 and self.hour() in darkhours:
-			if "meteor shower" not in self.events or startUp:
+			if "meteor shower" not in self.events or update:
 				self.Print("There is a meteor shower in the sky!")
 			self.events.add("meteor shower")
 		elif "meteor shower" in self.events:
@@ -1052,7 +1057,7 @@ class Game():
 		lighthours = ("rooster","juniper","bell","sword","willow","lily")
 		eclipse_cycle = (self.time % (self.monthlength*3+100))
 		if eclipse_cycle > 0 and eclipse_cycle < 30 and self.hour() in lighthours:
-			if "eclipse" not in self.events or startUp:
+			if "eclipse" not in self.events or update:
 				self.Print("There is a solar eclipse in the sky!")
 			self.events.add("eclipse")
 		elif "eclipse" in self.events:
@@ -1101,7 +1106,7 @@ class Game():
 		game.Print()
 		self.currentroom.describe()
 		game.checkDaytime()
-		game.checkAstrology(startUp=True)
+		game.checkAstrology(update=True)
 
 
 	def describeRoom(self):
@@ -1238,8 +1243,7 @@ class Room():
 	def addCondition(self,name,dur,stackable=False):
 		if self.hasCondition(name) and not stackable:
 			return False
-		pair = [name,dur]
-		insort(self.status,pair)
+		insort(self.status,[name,dur])
 		if name.startswith("AREA"):
 			self.addAreaCondition(name)
 		return True
@@ -1493,8 +1497,7 @@ class Item():
 	def addCondition(self,name,dur,stackable=False):
 		if self.hasCondition(name) and not stackable:
 			return False
-		pair = [name,dur]
-		insort(self.status,pair)
+		insort(self.status,[name,dur])
 		return True
 
 
@@ -1581,7 +1584,7 @@ class Item():
 # Creatures have 10 base stats, called traits
 # They also have abilities; stats which are derived from traits through formulas
 class Creature():
-	def __init__(self,name,desc,weight,traits,hp,mp,inv,gear,money=0,carrying=None,carrier=None,riding=None,rider=None,status=None,descname=None,aliases=None,plural=None,determiner=None,pronoun="it",timeOfDeath=None,alert=False,seesPlayer=False,sawPlayer=-1):
+	def __init__(self,name,desc,weight,traits,hp,mp,inv,gear,money=0,carrying=None,carrier=None,riding=None,rider=None,status=None,descname=None,aliases=None,plural=None,determiner=None,pronoun="it",timeOfDeath=None,lastAte=0,lastSlept=0,regenTimer=0,alert=False,seesPlayer=False,sawPlayer=-1):
 		self.name = name
 		self.desc = desc
 		self.descname = descname if descname else name
@@ -1594,16 +1597,16 @@ class Creature():
 		self.weight = weight
 		self.pronoun = pronoun
 
-		self.STR = traits[0]
-		self.SPD = traits[1]
-		self.SKL = traits[2]
-		self.STM = traits[3]
-		self.CON = traits[4]
-		self.CHA = traits[5]
-		self.INT = traits[6]
-		self.WIS = traits[7]
-		self.FTH = traits[8]
-		self.LCK = traits[9]
+		self.str = traits[0]
+		self.spd = traits[1]
+		self.skl = traits[2]
+		self.stm = traits[3]
+		self.con = traits[4]
+		self.cha = traits[5]
+		self.int = traits[6]
+		self.wis = traits[7]
+		self.fth = traits[8]
+		self.lck = traits[9]
 
 		self.status = status if status else []
 		# sort status effects by duration; change '1' to '0' to sort by name
@@ -1621,14 +1624,18 @@ class Creature():
 		self.carrier = carrier
 		self.gear = gear
 
-
 		self.weapon = EmptyGear()
 		self.weapon2 = EmptyGear()
 		self.shield = EmptyGear()
 		self.shield2 = EmptyGear()
 
-		# these attributes remain unused in the Player subclass
 		self.timeOfDeath = timeOfDeath
+		# health regens very slowly
+		self.regenTimer = regenTimer
+		# eventually creatures get hungry and sleepy
+		self.lastAte = lastAte
+		self.lastSlept = lastSlept
+		# these attributes remain unused in the Player subclass
 		self.alert = alert
 		self.seesPlayer = seesPlayer
 		self.sawPlayer = sawPlayer
@@ -1638,7 +1645,7 @@ class Creature():
 	### Dunder Methods ###
 
 	def __repr__(self):
-		traits = [self.STR, self.SPD, self.SKL, self.STM, self.CON, self.CHA, self.INT, self.WIS, self.FTH, self.LCK]
+		traits = [self.str, self.spd, self.skl, self.stm, self.con, self.cha, self.int, self.wis, self.fth, self.lck]
 		return f"Creature({self.name}, {self.desc}, {self.hp}, {self.mp}, {traits}, {self.money} ...)"
 
 
@@ -1740,7 +1747,7 @@ class Creature():
 				del d[key]
 		d["gear"] = compressedGear
 		# convert traits to a form more easily writable in a JSON object
-		d["traits"] = [self.STR,self.SKL,self.SPD,self.STM,self.CON,self.CHA,self.INT,self.WIS,self.FTH,self.LCK]
+		d["traits"] = [self.str,self.skl,self.spd,self.stm,self.con,self.cha,self.int,self.wis,self.fth,self.lck]
 		# TODO: swap the following lines for Python 3.9
 		# d = {"__class__":self.__class__.__name__} | d
 		d |= tethers
@@ -1760,14 +1767,29 @@ class Creature():
 
 	# takes incoming damage, accounts for damage vulnerability or resistance
 	def takeDamage(self,dmg,type):
+		prevhp = self.hp
 		if(f"{type} vulnerability" in self.status): dmg *= 2
 		if(f"{type} resistance" in self.status): dmg //= 2
 		if(f"{type} immunity" in self.status): dmg = 0
-		game.Print(f"{self.stringName(det='the',cap=True)} took {dmg} {Data.dmgtypes[type]} damage.")
-		# player hp lowered to a minimum of 0
-		self.hp = min0(self.hp-dmg)
+		# bludgeoning damage can't kill you in one hit
+		if type == "b" and self.hp > 1:
+			self.hp = minm(1,self.hp-dmg)			
+		# hp lowered to a minimum of 0
+		else:
+			self.hp = min0(self.hp-dmg)
+		total_dmg = prevhp - self.hp
+		game.Print(f"{self.stringName(det='the',cap=True)} took {total_dmg} {Data.dmgtypes[type]} damage.")
 		if self.hp == 0:
 			self.death()
+
+
+	# heals player hp a given amount
+	def heal(self,heal,overflow=False):
+		if self.hp + heal > self.MXHP() and not overflow:
+			heal = self.MXHP() - self.hp
+		self.hp += heal
+		game.Print(f"You healed {heal} HP.")
+		return heal
 
 
 	# adds money
@@ -1919,8 +1941,7 @@ class Creature():
 	def addCondition(self,name,dur,stackable=False):
 		if self.hasCondition(name) and not stackable:
 			return False
-		pair = [name,dur]
-		insort(self.status,pair)
+		insort(self.status,[name,dur])
 		return True
 
 
@@ -1946,6 +1967,14 @@ class Creature():
 		# remove conditions with 0 duration left
 		self.removeCondition(reqDuration=0)
 
+		# regenerate health faster with a higher endurance		
+		if not self.hasAnyCondition("hungry","starving"):
+			self.regenTimer += 1
+			if self.regenTimer >= 50 - self.ENDR():
+					self.regenTimer = 0
+					h = 5 if self.hasCondition("asleep","regenerating") else 1
+					self.heal(h)
+
 
 	def checkHindered(self):
 		carryWeight = 0 if self.carrying is None else self.carrying.Weight()
@@ -1954,9 +1983,36 @@ class Creature():
 				self.addCondition("hindered",-3)
 
 
+	def checkHungry(self):
+		# hunger takes longer with more endurance
+		sinceLastAte = game.time - self.lastAte
+		if sinceLastAte > 100 + 10*self.ENDR():
+			self.removeCondition("hungry",-3)
+			self.addCondition("starving",-3)
+		elif sinceLastAte > 50 + 5*self.ENDR():
+			self.addCondition("hungry",-3)
+		else:
+			self.removeCondition("starving")
+			self.removeCondition("hungry")
+
+
+	def checkTired(self):
+		# sleep deprivation takes longer with more endurance
+		sinceLastSlept = game.time - self.lastSlept
+		if sinceLastSlept > 300 + 40*self.ENDR():
+			self.removeCondition("tired",-3)
+			self.addCondition("fatigued",-3)
+		elif sinceLastSlept > 150 + 20*self.ENDR():
+			self.addCondition("tired",-3)
+		else:
+			self.removeCondition("fatigued")
+			self.removeCondition("tired")
+
+
 	# called when a creature's hp hits 0
 	def death(self):
 		self.timeOfDeath = game.time
+		self.addCondition("dead",-3)
 		game.Print("\n" + f"{self.stringName(det='the',cap=True,c=1)} died.")
 		self.descname = f"dead {self.descname}"
 		n = diceRoll(3,player.LOOT(),-2)
@@ -1966,9 +2022,13 @@ class Creature():
 		if game.whoseturn is player:
 			# TODO: verify that this is an acceptable formula
 			lv = player.level()
-			xp = lv * self.level() + diceRoll(lv,player.LCK,player.LCK)
+			xp = lv * self.level() + diceRoll(lv,player.LCK(),player.LCK())
 			player.gainxp(xp)
 
+
+	def Eat(self,food):
+		food.parent.removeItem(food)
+		food.Eat()
 
 
 	### Behavior ###
@@ -2119,31 +2179,128 @@ class Creature():
 	### Getters ###
 
 	# these are creature stats that are determined dynamically with formulas
+	def STR(self):
+		ret = self.str
+		if self.hasCondition("brawniness"):
+			ret += 10 
+		if self.hasCondition("weakness"):
+			ret = min1(ret - 10)
+		return ret
+
+
+	def SPD(self):
+		ret = self.str
+		if self.hasCondition("swiftness"):
+			ret += 10 
+		if self.hasCondition("slowness"):
+			ret = min1(ret - 10)
+		return ret
+
+
+	def SKL(self):
+		ret = self.str
+		if self.hasCondition("prowess"):
+			ret += 10 
+		if self.hasCondition("clumsiness"):
+			ret = min1(ret - 10)
+		return ret
+
+
+	def STM(self):
+		ret = self.str
+		if self.hasCondition("liveliness"):
+			ret += 10 
+		if self.hasCondition("weariness"):
+			ret = min1(ret - 10)
+		if self.hasCondition("tired"):
+			ret = min1(ret - 3)
+		elif self.hasCondition("fatigued"):
+			ret = min1(ret - 5)
+		return ret
+
+
+	def CON(self):
+		ret = self.str
+		if self.hasCondition("toughness"):
+			ret += 10 
+		if self.hasCondition("illness"):
+			ret = min1(ret - 10)
+		return ret
+
+
+	def CHA(self):
+		ret = self.str
+		if self.hasCondition("felicity"):
+			ret += 10 
+		if self.hasCondition("timidity"):
+			ret = min1(ret - 10)
+		return ret
+
+
+	def INT(self):
+		ret = self.str
+		if self.hasCondition("sagacity"):
+			ret += 10 
+		if self.hasCondition("stupidity"):
+			ret = min1(ret - 10)
+		return ret
+
+
+	def WIS(self):
+		ret = self.str
+		if self.hasCondition("lucidity"):
+			ret += 10 
+		if self.hasCondition("insanity"):
+			ret = min1(ret - 10)
+		if self.hasCondition("fatigued"):
+			ret = min1(ret - 5)
+		return ret
+
+
+	def FTH(self):
+		ret = self.str
+		if self.hasCondition("fidelity"):
+			ret += 10 
+		if self.hasCondition("apathy"):
+			ret = min1(ret - 10)
+		return ret
+
+
+	def LCK(self):
+		ret = self.str
+		if self.hasCondition("prosperity"):
+			ret += 10 
+		if self.hasCondition("calamity"):
+			ret = min1(ret - 10)
+		return ret
+
+
+
 	# these formulas are difficult to read, check design document for details
-	def ACCU(self): return 45 + 2*self.SKL + self.LCK + self.weapon.sleight
-	def ATCK(self): return diceRoll(self.STR, self.weapon.might, self.atkmod())
-	def ATHL(self): return self.STR + self.SKL + self.STM
-	def ATSP(self): return self.SPD - min0(self.handheldWeight()//4 - self.CON)
-	def BRDN(self): return 20*self.CON + 10*self.STR + 5*self.FTH + self.weight
-	def CAST(self): return self.WIS + self.FTH + self.INT - min0(self.gearWeight()//4 - self.CON)
-	def CRIT(self): return self.SKL + self.LCK + self.weapon.sharpness
-	def CSSP(self): return self.WIS - min0(self.invWeight() - self.BRDN()) - min0(self.gearWeight()//4 - self.CON)
-	def DCPT(self): return 2*self.CHA + self.INT
-	def DFNS(self): return 2*self.CON + self.protection()
-	def ENDR(self): return 2*self.STM + self.CON
-	def EVSN(self): return 2*self.ATSP() + self.LCK
-	def INVS(self): return 2*self.INT + self.WIS
-	def KNWL(self): return 2*self.INT + self.LCK
-	def LOOT(self): return 2*self.LCK + self.FTH
-	def MVMT(self): return self.SPD + self.STM + 10 - min0(self.invWeight() - self.BRDN()) - min0(self.gearWeight()//4 - self.CON)
-	def MXHP(self): return self.level()*self.CON + self.STM
-	def MXMP(self): return self.level()*self.WIS + self.STM
-	def PRSD(self): return 2*self.CHA + self.WIS
-	def RSTN(self): return 2*self.FTH + self.STM
-	def RITL(self): return 2*self.FTH + self.LCK
-	def SLTH(self): return ( 2*self.SKL + self.INT - min0(self.invWeight() - self.BRDN()) ) * 2*int(self.hasCondition("hiding"))
-	def SPLS(self): return 3*self.INT
-	def TNKR(self): return 2*self.INT + self.SKL
+	def ACCU(self): return 45 + 2*self.SKL() + self.LCK() + self.weapon.sleight
+	def ATCK(self): return diceRoll(self.STR(), self.weapon.might, self.atkmod())
+	def ATHL(self): return self.STR() + self.SKL() + self.STM()
+	def ATSP(self): return self.SPD() - min0(self.handheldWeight()//4 - self.CON())
+	def BRDN(self): return 20*self.CON() + 10*self.STR() + 5*self.FTH() + self.weight
+	def CAST(self): return self.WIS() + self.FTH() + self.INT() - min0(self.gearWeight()//4 - self.CON())
+	def CRIT(self): return self.SKL() + self.LCK() + self.weapon.sharpness
+	def CSSP(self): return self.WIS() - min0(self.invWeight() - self.BRDN()) - min0(self.gearWeight()//4 - self.CON())
+	def DCPT(self): return 2*self.CHA() + self.INT()
+	def DFNS(self): return 2*self.CON() + self.protection()
+	def ENDR(self): return 2*self.STM() + self.CON()
+	def EVSN(self): return 2*self.ATSP() + self.LCK()
+	def INVS(self): return 2*self.INT() + self.WIS()
+	def KNWL(self): return 2*self.INT() + self.LCK()
+	def LOOT(self): return 2*self.LCK() + self.FTH()
+	def MVMT(self): return self.SPD() + self.STM() + 10 - min0(self.invWeight() - self.BRDN()) - min0(self.gearWeight()//4 - self.CON())
+	def MXHP(self): return self.level()*self.CON() + self.STM()
+	def MXMP(self): return self.level()*self.WIS() + self.STM()
+	def PRSD(self): return 2*self.CHA() + self.WIS()
+	def RSTN(self): return 2*self.FTH() + self.STM()
+	def RITL(self): return 2*self.FTH() + self.LCK()
+	def SLTH(self): return ( 2*self.SKL() + self.INT() - min0(self.invWeight() - self.BRDN()) ) * 2*int(self.hasCondition("hiding"))
+	def SPLS(self): return 3*self.INT()
+	def TNKR(self): return 2*self.INT() + self.SKL()
 
 
 	def Weight(self):
@@ -2198,7 +2355,7 @@ class Creature():
 
 
 	def rating(self):
-		return self.STR + self.SPD + self.SKL + self.STM + self.CON + self.CHA + self.INT + self.WIS + self.FTH + self.LCK
+		return self.str + self.spd + self.skl + self.stm + self.con + self.cha + self.int + self.wis + self.fth + self.lck
 
 
 	# returns sum of the weight of all items in the inventory
@@ -2259,9 +2416,11 @@ class Creature():
 
 
 	def hasAnyCondition(self,*names):
+		if len(names) == 0:
+			return len(self.status) > 0
 		if len(names) == 1:
 			names = names[0]
-		assert type(names) in (set, list, tuple)
+		assert isinstance(names,Iterable)
 		for name in names:
 			if self.hasCondition(name):
 				return True
@@ -2386,6 +2545,19 @@ class Player(Creature):
 		return True
 
 
+	def awaken(self,goodSleep=True):
+		game.silent = False
+		sleep(1)
+		game.Print("You wake up!")
+		sleep(1)
+		if goodSleep:
+			self.lastSlept = game.time
+			self.checkTired()
+		sleep(1)
+		game.Print("\n\n")
+		game.startUp()
+
+
 	def Teleport(self,newroom):
 		if type(self.parent) != Room:
 			raise Exception(f"Can't change rooms. Stuck inside {self.parent}")
@@ -2400,6 +2572,8 @@ class Player(Creature):
 
 	# takes incoming damage, accounts for damage vulnerability or resistance
 	def takeDamage(self,dmg,type):
+		if self.hasCondition("dead"):
+			return False
 		prevhp = self.hp
 		if(f"{type} vulnerability" in self.status): dmg *= 2
 		if(f"{type} resistance" in self.status): dmg /= 2
@@ -2411,18 +2585,14 @@ class Player(Creature):
 		else:
 			self.hp = min0(self.hp-dmg)
 		total_dmg = prevhp - self.hp
-		game.Print(f"You took {total_dmg} {Data.dmgtypes[type]} damage.")
+		p = "."
+		if player.hasCondition("asleep") or total_dmg > self.MXHP() // 2:
+			p = "!"
+		game.Print(f"You took {total_dmg} {Data.dmgtypes[type]} damage{p}",allowSilent=False)
 		if self.hp == 0:
-			self.death()
-
-
-	# heals player hp a given amount
-	def heal(self,heal):
-		if self.hp + heal > self.MXHP():
-			heal = self.MXHP() - self.hp
-		self.hp += heal
-		game.Print(f"You healed {heal} HP.")
-		return heal
+			return self.death()
+		if total_dmg > 0 and self.hasCondition("asleep"):
+			self.removeCondition("asleep")
 
 
 	# player gets 3 QPs for each level gained, can dispense them into any trait
@@ -2448,6 +2618,8 @@ class Player(Creature):
 		game.Print(f"\nQuality Points:	{QP}")
 		input("You are done leveling up.\n")
 		self.checkHindered()
+		self.checkTired()
+		self.checkHungry()
 
 
 	def updateReputation(self,repMod):
@@ -2490,27 +2662,68 @@ class Player(Creature):
 	def addCondition(self,name,dur,stackable=False):
 		if self.hasCondition(name) and not stackable:
 			return False
-		pair = [name,dur]
 		if not self.hasCondition(name):
-			if name in Data.curses or name in Data.blessings:
-				game.Print(f"You have {name}.")
+			if name in Data.curses:
+				game.Print(f"You have the curse of {name}.",allowSilent=False)
+			elif name in Data.blessings:
+				game.Print(f"You have the blessing of {name}.",allowSilent=False)
+			elif name == "asleep":
+				game.Print(f"You fall {name}.",allowSilent=False)
 			else:
-				game.Print(f"You are {name}.")
-		insort(self.status,pair)
+				game.Print(f"You are {name}.",allowSilent=False)
+		insort(self.status,[name,dur])
 		return True
 
 
 	# removes all condition of the same name
 	# if reqDuration is given, only removes conditions with that duration
 	def removeCondition(self,reqName=None,reqDuration=None):
+		wasSleeping = self.hasCondition("asleep")
+		goodSleep = False
+
 		# deep copy to prevent removing-while-iterating errors
 		for name,duration in [_ for _ in self.status]:
 			if name == reqName or reqName is None:
 				if duration == reqDuration or reqDuration is None:
 					self.status.remove([name,duration])
-
-					if not self.hasCondition(name):
+					if name == "asleep" and duration == 0:
+						goodSleep = True
+					if name != "asleep" and not self.hasCondition(name):
 						game.Print(f"You are no longer {name}.",allowSilent=False)
+		
+		if wasSleeping and not self.hasCondition("asleep"):
+			self.awaken(goodSleep=goodSleep)
+
+
+	def passTime(self,t):
+		for condition in self.status:
+			# if condition is has a special duration, ignore it
+			if condition[1] < 0:
+				continue
+			# subtract remaining duration on condition
+			elif condition[1] > 0:
+				condition[1] = min0(condition[1] - t)
+
+		# remove conditions with 0 duration left
+		self.removeCondition(reqDuration=0)
+
+		# take damage from damaging status conditions
+		for condition, _ in [_ for _ in self.status]:
+			if condition in Data.conditionDmg:
+				factor, type = Data.conditionDmg[condition]
+				dmg = min1(randint(1,factor) - self.LCK())
+				self.takeDamage(dmg,type)
+
+		self.checkTired()
+		self.checkHungry()
+
+		# regenerate health faster with a higher endurance
+		if not self.hasAnyCondition("hungry","starving"):
+			self.regenTimer += 1
+			if self.regenTimer >= 50 - self.ENDR():
+					self.regenTimer = 0
+					h = 5 if self.hasCondition("cozy","mending") else 1
+					self.heal(h)
 
 
 	def checkHindered(self):
@@ -2522,16 +2735,20 @@ class Player(Creature):
 			if self.hasCondition("hindered"):
 				game.Print("Your Inventory feels lighter.")
 				self.removeCondition("hindered",-3)
+				
 
 
 	# called when player hp hits 0
 	def death(self):
 		game.Print("You have died!")
 		ellipsis(3)
+		
 		if self.hasCondition("Anointed",reqDuration=-3):
+			sleep(1)
 			game.Print("You reawaken!")
 			self.hp = 1
 		else:
+			self.addCondition("dead",-3)
 			self.timeOfDeath = game.time
 		return True
 
@@ -2588,7 +2805,7 @@ class Player(Creature):
 		else:
 			game.Print("Nothing happens.")
 			return
-
+		
 
 
 	### Getters ###
@@ -2620,10 +2837,10 @@ class Player(Creature):
 	# prints all 10 player traits
 	def printTraits(self,trait=None):
 		if trait == None:
-			traits = [f"{t.upper()}: {getattr(self,t.upper())}" for t in Data.traits]
+			traits = [f"{t.upper()}: {getattr(self,t)}" for t in Data.traits]
 			columnPrint(traits,5,10)
 			return	
-		game.Print(f"{trait.upper()}: {getattr(self,trait.upper())}\n")
+		game.Print(f"{trait.upper()}: {getattr(self,trait)}\n")
 
 
 	def printAbility(self,ability=None):
@@ -3027,7 +3244,7 @@ class Serpens(Item):
 		return {
 			"__class__": self.__class__.__name__,
 			"value": self.value,
-			"status": {}
+			"status": self.status
 		}
 
 

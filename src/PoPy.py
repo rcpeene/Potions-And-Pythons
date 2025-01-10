@@ -43,7 +43,8 @@ def main(testing=False):
 			continue
 
 		# take user input until player successfully performs an action
-		while not Parser.parse(): continue
+		if not Core.player.hasCondition("asleep"):
+			while not Parser.parse(): continue
 		if Core.game.quit: return
 
 		# creatures in current room's turn
@@ -82,6 +83,11 @@ if __name__ == "__main__":
 ################################################################################
 
 # CURRENT TASKS
+
+# make level max 100 instead of 50. adjust the xp curve and only do 1 QP per lvlup
+# add crouching and laying. incorporate it into making sleep "cozy"
+# encode whether a room is in the sky or underground? and altitude? dont print sky events
+# encode whether a room is a road? so npcs can navigate?
 
 # add basic equipment and clothing items
 # fix/add Creature.isNaked or Player.isNaked

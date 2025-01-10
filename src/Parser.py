@@ -7,7 +7,7 @@
 # 2. Action functions	(action, shortaction, cheat functions called by parse())
 # 3. Action dicts		(dictionaries used to call action functions from)
 
-from random import choice
+from random import choice,randint
 
 import Data
 import Core
@@ -286,7 +286,7 @@ def parse(n=0):
 			if verb in Data.abilities:
 				return Core.player.printAbility(verb.upper())
 			if verb in Data.traits:
-				return Core.player.printTraits(verb.upper())
+				return Core.player.printTraits(verb)
 			return shortactions[verb](Core.player)
 	elif verb not in actions:
 		return promptHelp(f"'{verb}' is not a valid verb",n)
@@ -514,7 +514,9 @@ def Warp(command):
 		return
 	Core.game.Print(f"Warping {t}")
 	Core.game.passTime(t)
-	Core.game.Print(Core.game.time)
+	Core.game.Print("Time: ", Core.game.time)
+	Core.game.checkDaytime()
+	Core.game.checkAstrology(update=True)
 
 
 def Zap(command):
@@ -1025,7 +1027,8 @@ def Eat(dobj,iobj,prep):
 	if not Core.hasMethod(I,"Eat"):
 		Core.game.Print(f"You can't eat the {I.name}.")
 		return False
-	I.Eat()
+
+	I.Eat(Core.player)
 	return True
 
 
@@ -1490,7 +1493,35 @@ def Release(dobj,iobj,prep):
 
 
 def Rest(dobj,iobj,prep):
-	Core.game.Print("resting")
+	if Core.player.hasAnyCondition(Data.conditionDmg.keys()):
+		Core.game.Print("This is no time for slumber!")
+		return False
+	if prep not in ("behind","below","beneath","in","inside","into","on","onto","over","under","upon","using","with",None):
+		Core.game.print("Commmand not understood")
+		return False
+	if prep is None: prep = "on"
+
+	if dobj == None: dobj = iobj
+	if dobj == None: dobj = getNoun(f"What will you sleep {prep}?")
+	if dobj in Data.cancels: return False
+	if dobj in ("nothing","ground","floor","here","room"):
+		I = None
+	else:
+		I = findObjFromTerm(dobj)
+		if I == None and not Core.yesno("Would you like to sleep on the ground?"):
+			return False
+
+	if I == None:
+		Core.game.Print("Your sleep will not be very restful...")
+	if I != None:
+		# TODO: add lay down here
+		pass
+
+	sleeptime = 90 + randint(1,20)
+	Core.player.addCondition("asleep",sleeptime)
+	Core.ellipsis(3)
+	Core.game.silent=True
+	return True
 
 
 def Restrain(dobj,iobj,prep):
@@ -1856,6 +1887,7 @@ actions = {
 "escape":Escape,
 "examine":Look,
 "exit":Exit,
+"fall asleep":Rest,
 "feed":Feed,
 "feel":Touch,
 "fight":Attack,
@@ -1871,6 +1903,7 @@ actions = {
 "get up":Mount,
 "give":Give,
 "go":Go,
+"go to sleep":Rest,
 "grab":Take,
 "grapple":Take,
 "head":Go,
@@ -1942,6 +1975,7 @@ actions = {
 "smell":Smell,
 "sneak":Crouch,
 "sniff":Smell,
+"snooze":Rest,
 "speak":Talk,
 "steal":Steal,
 "stomp":Kick,

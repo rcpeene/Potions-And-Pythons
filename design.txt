@@ -689,7 +689,7 @@ curses;
 weakness - lowers STR
 slowness - lowers SPD
 clumsiness - lowers SKL
-tiredness - lowers STM
+weariness - lowers STM
 illness - lowers CON
 
 timidity - lowers CHA
@@ -716,7 +716,7 @@ prosperity - raises LCK
 CONDITION IDEAS:
 
 some condition summaries:
-- frozen (can't move and also taking damage over time, negates burning)
+- frozen (can't move and also taking damage over time, removed (cancels) with burning)
 - paralyzed (just can't move)
 - poisoned (little damage, lasts a long time)
 - bleeding (medium damage, lasts medium amount)
@@ -1021,6 +1021,7 @@ uroboros
 holy water
 molasses
 ambergris
+hops (to make beer)
 herb of immortality (makes potion, can be smoked? made into quintessence?)
 elixir of immortality (also requires venom)
 strange milk - makes you high, made from cows fed certain mushrooms
@@ -1173,6 +1174,8 @@ CHARACTER NAMES:
 	Lugh
 	Muriel
 	Eadmer
+	Godfrey
+	Einhard
 	Vixen
 	Gremlaw the Goblin
 	Aloy
@@ -1181,16 +1184,46 @@ CHARACTER NAMES:
 	Beowin
 	Rook
 
+	polemarch,commodore,margrave,
+	thane,earl,baron,duke,burgess,reeve,magistrate,warden,alderman,franklin,manciple
+	dame,lady,"hostess",courtesan,
+	bailiff,steward,sheriff,guard,watchman
+	knight,archer,cavalier,squire,page,knave,
+	boatman,sailor,pilot,ferryman,shipman,
+	messenger,envoy,herald,cryer
+	priest,nun,parson,rector,prior,chaplain,vicar,monk,abbott,bishop,friar,deacon
+	librarian,scribe/scrivener,historian,clerk,cartographer,
+	playwright,painter,poet,sculptor
+	bard,trumpeteer,fiddler,flautist,lyrist,puppeteer,jester,dancer
+	wizards,witches,warlocks,druid,shaman
+	apothecary,alchemist,herbalist,dyer
+	doctor,midwife,surgeon,barber
+	undertaker,groundskeeper
+	baker,butcher,miller,brewer,vintner,cheesemonger,spiceman,milkmaid
+	merchant,trader,peddler,salesmen,jeweler
+	blacksmith,brownsmith,whitesmith,goldsmith,silversmith,locksmith,gunsmith
+	carpenter,mason,glassmaker
+	cooper,potter,chandler,fletcher,bowyer,luthier
+	carpenter,wainwright,sawyer
+	tanner,tailor,weaver,seamstress,cobbler,hatter
+	fisherman,huntsman,woodsman
+	beekeeper,aviarist,falconist,ratcatcher,
+	rancher,stablekeeper,cowboy,shepherd,ostler
+	farmer,gardener,sweeper,yeoman
+	innkeeper,tavernkeeper
+	traveler,pilgrim
+
+
 	Hazelnut farmer with children named, fil, bert, hazel, and pet nut
 	Yernagate the wise 
 	The Oracle
 	Glycon the false Serpent God (secretly a puppet?)
 	Leviathan
 	Galigantus the giant
+	Grendel
 	Archons (regional rulers? maybe names for the giants)
 	Polemarch (archon of war)
 	The Benevolent Frog King (looking for his son the frog prince?)
-	a cobbler
 	one bbeg is the world serpent called Aeormungand (Leviathan?)
 	another bbg (Behemoth)
 	also an evil wizard ofc
@@ -1321,7 +1354,7 @@ Maelstrom, Malaise, Manumit, Melancholy, Micturate, Mirage, Moonshot
 Nyctophobia
 Parley, Paroxysm, Parry, Penumbra, Petrify, Phantasm, Pilfer, Ponder, Prescience, Psychosis, Putrefaction
 Refection, Rend, Repast, Resurrect, Revelry, Riposte
-Sanctuary, Scry, Serein, Shivaree, Simulacrum, Smite, Smithereens, Spangle, Squib, Sunder, Synpase
+Sanctuary, Scry, Serein, Shivaree, Simper, Simulacrum, Smite, Smithereens, Spangle, Squib, Sunder, Synpase
 Telekinesis, Tempest, Tether, Torrent
 Usurp
 Vamoose, Vendetta, Volley
