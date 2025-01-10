@@ -75,6 +75,15 @@ curses = {"weakness","slowness","clumsiness","tiredness","illness","timidity","s
 blessings = {"brawniness","swiftness","prowess","liveliness","toughness","felicity","sagacity","lucidity","fidelity","prosperity"}
 
 
+conditionDmg = {
+    "burning":(50,"f"),
+    "drowning":(50,"n"),
+    "bleeding":(25,"n"),
+    "frozen":(15,"f"),
+    "poisoned":(5,"x"),
+    "starving":(1,"n"),
+}
+
 
 # the following are tuples because their order should be preserved for printing
 
