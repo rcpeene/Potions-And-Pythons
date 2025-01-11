@@ -4,7 +4,7 @@ test
 \exe Core.player.addCondition("flying",3)
 \exe this should not execute
 
-\spn Items.Bottle("bottle","an empty glass bottle",[],"bottles",3,3,[])
+\spn Items.Bottle("bottle","an empty glass bottle",3,3,[])
 take bottle
 break bottle
 \spn blah
@@ -26,7 +26,7 @@ break bottle
 \lrn
 \lrn blah
 \lrn 1
-\lrn 1000
+\lrn 100
 
 STR
 STR

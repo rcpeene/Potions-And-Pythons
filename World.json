@@ -247,7 +247,7 @@
 		],
 		"creatures": [
 			{
-				"__class__": "Monster",
+				"__class__": "Humanoid",
 				"name": "goblin",
 				"desc": "A small green person with long ears, a pointy nose, and a grimacing visage.",
 				"weight": 10,
@@ -587,7 +587,7 @@
 				"__class__": "Person",
 				"name": "Dale",
 				"descname": "plain man",
-				"gender": "m",
+				"pronoun": "he",
 				"weight": 15,
 				"traits": [1,1,1,1,1,1,1,1,1,1],
 				"hp": 10,
@@ -651,7 +651,7 @@
 						]
 					},
 					"chatter": {
-						"trites": "basic_chatter"
+						"trites": "basicChatter"
 					}
 				}
 			},
@@ -660,7 +660,7 @@
 				"name": "The Earl of Chesterbrook",
 				"descname": "adorned man",
 				"aliases": ["earl","earl of chesterbrook"],
-				"gender": "m",
+				"pronoun": "m",
 				"weight": 15,
 				"traits": [1,1,1,1,1,1,1,1,1,1],
 				"hp": 10,
@@ -675,11 +675,8 @@
 					"legs": null
 				},
 				"dlogtree":{
-					"surprise": {},
-					"quest": {},
-					"colloquy": {},
 					"chatter": {
-						"trites": "basic_chatter"
+						"trites": "basicChatter"
 					}
 				}
 			}
@@ -704,6 +701,7 @@
 				"name": "green python",
 				"desc": "A small brown and green spotted snake",
 				"aliases": ["snake","python"],
+				"species": "python",
 				"weight": 3,
 				"traits": [1,1,1,1,1,1,1,1,1,1],
 				"hp": 2,

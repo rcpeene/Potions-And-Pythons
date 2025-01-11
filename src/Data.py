@@ -387,9 +387,16 @@ popyLines = ["",
 "   POTIONS  &  PYTHONS   	"]
 
 
-basic_chatter = {"How about the weather?", "I like your shirt.", "Gods be with ye."}
+
+horseSounds = {"neigh","neiigghh","neeiiiggghhh"}
+dragonSounds = {"rawr"}
+pythonSounds = {"hisssss..","sss...","tsss!"}
 
 
+basicChatter = {"How about the weather?", "I like your shirt.", "Gods be with ye."}
+horseChatter = {"Howdy partner."}
+dragonChatter = {"Greetings small one."}
+pythonChatter = {"Dessssstroy...."}
 
 
 

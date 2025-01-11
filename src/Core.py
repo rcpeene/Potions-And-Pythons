@@ -9,7 +9,7 @@
 
 from time import sleep
 from random import randint,sample
-from math import floor, log10
+from math import floor, sqrt
 from bisect import insort
 from collections.abc import Iterable
 import sys, os
@@ -99,12 +99,14 @@ def kbInput():
 
 
 # waits for any keyboard input
-def waitKbInput(text=""):
+def waitKbInput(text=None):
+	sys.stdout.flush
+	if text is not None:
+		game.Print(text,allowSilent=False)
 	# just pass if in test mode
 	if game.mode == 1:
 		return True
 	flushInput()
-	game.Print(text)
 	if os.name == 'nt':  # For Windows
 		import msvcrt
 		msvcrt.getch()
@@ -263,7 +265,7 @@ def diceRoll(n,d,m=0):
 	for _ in range(n):
 		x += randint(1,d)
 	x += m
-	return x
+	return min1(x)
 
 
 # returns a number, n, with a lower bound of m
@@ -334,6 +336,7 @@ def objQueryRecur(node,matches,key,d):
 # its 'parent' attribute to the object it is contained in
 def assignParents():
 	for room in world.values():
+		assert isinstance(room, Room)
 		assignParentsRecur(room)
 	player.assignParent(game.currentroom)
 	assignParentsRecur(player)
@@ -346,6 +349,8 @@ def assignParentsRecur(parent):
 	if not hasMethod(parent,'contents'):
 		return
 	for obj in parent.contents():
+		# everything in the world or player inv should be Item or Creature
+		assert isinstance(obj, (Item, Creature))
 		obj.assignParent(parent)
 		assignParentsRecur(obj)
 
@@ -372,7 +377,7 @@ def ensureWorldIntegrity():
 			for connection in connectionsToDelete:
 				del passage.connections[connection]
 
-		for creature in objQuery(room, d=3, key=lambda x: isinstance(x,Person)):
+		for creature in objQuery(room, d=3, key=lambda x: isinstance(x,(Person,Animal))):
 			creature.dlogtree.ensureIntegrity(creature,player,game,world)
 
 	# this is done in a separate loop to prevent errors caused by...
@@ -482,6 +487,7 @@ class DialogueNode():
 		# these are names of sets of strings in Data.py, representing 'canned' dialogue
 		self.trites = trites if trites else []
 		if type(self.trites) != list:
+			assert type(self.trites) is str
 			self.trites = [trites]
 		# these are strings of python code which should evaluate to a bool or int
 		self.cases = cases if cases else []
@@ -667,15 +673,15 @@ class DialogueNode():
 	### Getters ###
 
 	# ensures that at least one path in the tree will provide dialogue in all cases
-	def hasUnconditionalDialogue(self):
+	def hasDefiniteDialogue(self):
 		if self.remark or self.trites:
 			return True
 		if self.cases:
-			if self.children[-1].hasUnconditionalDialogue():
+			if self.children[-1].hasDefiniteDialogue():
 				return True
 			return False
 		for child in self.children:
-			if child.hasUnconditionalDialogue():
+			if child.hasDefiniteDialogue():
 				return True
 		return False
 
@@ -683,9 +689,10 @@ class DialogueNode():
 
 class DialogueTree():
 	def __init__(self,tree_json):
-		self.surprise = DialogueNode(self,self,**tree_json['surprise'])
-		self.quest = DialogueNode(self,self,**tree_json['quest'])
-		self.colloquy = DialogueNode(self,self,**tree_json['colloquy'])
+		# note that chatter is required to be populated; there must be some dialogue
+		self.surprise = DialogueNode(self,self,**tree_json.get('surprise',{}))
+		self.quest = DialogueNode(self,self,**tree_json.get('quest',{}))
+		self.colloquy = DialogueNode(self,self,**tree_json.get('colloquy',{}))
 		self.chatter = DialogueNode(self,self,**tree_json['chatter'])
 		self.checkpoint = tree_json.get('checkpoint',None)
 		self.id = []
@@ -718,8 +725,8 @@ class DialogueTree():
 				self.findNode(self.checkpoint)
 			except:
 				raise Exception(f"Checkpoint {self.checkpoint} not found in {speaker.name}'s dialogue tree")
-		if not self.chatter.hasUnconditionalDialogue():
-			raise Exception("Dialogue Tree has no unconditional dialogue")
+		if not self.chatter.hasDefiniteDialogue():
+			raise Exception(f"{speaker.name} dialogue Tree has no definite dialogue in {speaker.room()}")
 
 
 	### Operation ###
@@ -918,10 +925,10 @@ class Game():
 			self.it = obj
 		if isinstance(obj,Creature):
 			self.they = obj
-		if hasattr(obj,"gender"):
-			if obj.gender == "m":
+		if hasattr(obj,"pronoun"):
+			if obj.pronoun == "m":
 				self.he = obj
-			elif obj.gender == "f":
+			elif obj.pronoun == "f":
 				self.she = obj
 
 
@@ -1069,6 +1076,7 @@ class Game():
 	### User Output ###
 	
 	def Input(self,text="",low=True):
+		sys.stdout.flush()
 		# should never be silent when asking for input
 		self.Print(text,end='',allowSilent=False)
 		flushInput()
@@ -1096,6 +1104,7 @@ class Game():
 				sleep(delay)
 			sys.stdout.write(sep)
 			sys.stdout.flush()
+		sleep(delay)
 		sys.stdout.write(end)
 		sys.stdout.flush()
 		sleep(delay)
@@ -1155,7 +1164,7 @@ class Room():
 	### Dunder Methods ###
 
 	def __repr__(self):
-		return f"Room({self.name}, {self.desc}, {self.exits}...)"
+		return f"Room({self.name}, {tuple(self.exits.values())}...)"
 
 
 	def __str__(self):
@@ -1584,7 +1593,7 @@ class Item():
 # Creatures have 10 base stats, called traits
 # They also have abilities; stats which are derived from traits through formulas
 class Creature():
-	def __init__(self,name,desc,weight,traits,hp,mp,inv,gear,money=0,carrying=None,carrier=None,riding=None,rider=None,status=None,descname=None,aliases=None,plural=None,determiner=None,pronoun="it",timeOfDeath=None,lastAte=0,lastSlept=0,regenTimer=0,alert=False,seesPlayer=False,sawPlayer=-1):
+	def __init__(self,name,desc,weight,traits,hp,mp,inv,gear,memories=None,appraisal=None,love=0,fear=0,rapport=0,money=0,carrying=None,carrier=None,riding=None,rider=None,status=None,descname=None,aliases=None,plural=None,determiner=None,pronoun="it",timeOfDeath=None,lastAte=0,lastSlept=0,regenTimer=0,alert=False,seesPlayer=False,sawPlayer=-1):
 		self.name = name
 		self.desc = desc
 		self.descname = descname if descname else name
@@ -1616,7 +1625,12 @@ class Creature():
 		self.mp = mp
 		self.money = money
 		self.inv = inv
+		self.love = love
+		self.fear = fear
+		self.memories = memories if memories else set()
+		self.appraisal = appraisal if appraisal else set()
 		
+		# this get decompressed or reassigned by assignParent
 		self.parent = None
 		self.riding = riding
 		self.rider = rider
@@ -1967,46 +1981,39 @@ class Creature():
 		# remove conditions with 0 duration left
 		self.removeCondition(reqDuration=0)
 
-		# regenerate health faster with a higher endurance		
+		# take damage from damaging status conditions
+		for condition, _ in [_ for _ in self.status]:
+			if condition in Data.conditionDmg:
+				factor, type = Data.conditionDmg[condition]
+				dmg = min1(randint(1,factor) - self.LCK())
+				self.takeDamage(dmg,type)
+
+		self.checkTired()
+		self.checkHungry()
+
+		# natural healing is faster with a higher endurance		
 		if not self.hasAnyCondition("hungry","starving"):
 			self.regenTimer += 1
-			if self.regenTimer >= 50 - self.ENDR():
+			if self.regenTimer >= 50 - self.ENDR() or self.hasCondition("mending"):
 					self.regenTimer = 0
-					h = 5 if self.hasCondition("asleep","regenerating") else 1
+					h = 5 if self.hasAnyCondition("cozy","mending") else 1
 					self.heal(h)
 
 
 	def checkHindered(self):
 		carryWeight = 0 if self.carrying is None else self.carrying.Weight()
 		if self.invWeight() + carryWeight > self.BRDN():
-			if not self.hasCondition("hindered"):
-				self.addCondition("hindered",-3)
+			self.addCondition("hindered",-3)
+		if self.invWeight() + + carryWeight <= self.BRDN():
+			self.removeCondition("hindered")
 
 
 	def checkHungry(self):
-		# hunger takes longer with more endurance
-		sinceLastAte = game.time - self.lastAte
-		if sinceLastAte > 100 + 10*self.ENDR():
-			self.removeCondition("hungry",-3)
-			self.addCondition("starving",-3)
-		elif sinceLastAte > 50 + 5*self.ENDR():
-			self.addCondition("hungry",-3)
-		else:
-			self.removeCondition("starving")
-			self.removeCondition("hungry")
+		return False
 
 
 	def checkTired(self):
-		# sleep deprivation takes longer with more endurance
-		sinceLastSlept = game.time - self.lastSlept
-		if sinceLastSlept > 300 + 40*self.ENDR():
-			self.removeCondition("tired",-3)
-			self.addCondition("fatigued",-3)
-		elif sinceLastSlept > 150 + 20*self.ENDR():
-			self.addCondition("tired",-3)
-		else:
-			self.removeCondition("fatigued")
-			self.removeCondition("tired")
+		return False
 
 
 	# called when a creature's hp hits 0
@@ -2016,13 +2023,13 @@ class Creature():
 		game.Print("\n" + f"{self.stringName(det='the',cap=True,c=1)} died.")
 		self.descname = f"dead {self.descname}"
 		n = diceRoll(3,player.LOOT(),-2)
-		self.room().addItem(Serpens(n,[]))
+		self.room().addItem(Serpens(n))
 		if not game.silent:
 			game.Print(f"Dropped $ {n}.")
 		if game.whoseturn is player:
-			# TODO: verify that this is an acceptable formula
-			lv = player.level()
-			xp = lv * self.level() + diceRoll(lv,player.LCK(),player.LCK())
+			r = self.rating()
+			# xp granted generally scales with rating
+			xp = diceRoll(2, r//2, r-15)
 			player.gainxp(xp)
 
 
@@ -2178,102 +2185,76 @@ class Creature():
 
 	### Getters ###
 
+	def conditionalMod(self,stat,bonuses,min=None,max=None):
+		for condname, bonus in bonuses:
+			if self.hasCondition(condname):
+				stat = stat + bonus
+		if min:
+			stat = minm(min,stat)
+		if max:
+			stat = maxm(max,stat)
+		return stat
+
+
 	# these are creature stats that are determined dynamically with formulas
 	def STR(self):
-		ret = self.str
-		if self.hasCondition("brawniness"):
-			ret += 10 
-		if self.hasCondition("weakness"):
-			ret = min1(ret - 10)
-		return ret
+		modifiers = (("brawniness",10), ("weakness",-10))
+		return self.conditionalMod(self.str, modifiers, min=1)
 
 
 	def SPD(self):
-		ret = self.str
-		if self.hasCondition("swiftness"):
-			ret += 10 
-		if self.hasCondition("slowness"):
-			ret = min1(ret - 10)
-		return ret
+		modifiers = (("swiftness",10), ("slowness",-10))
+		return self.conditionalMod(self.spd, modifiers, min=1)
 
 
 	def SKL(self):
-		ret = self.str
-		if self.hasCondition("prowess"):
-			ret += 10 
-		if self.hasCondition("clumsiness"):
-			ret = min1(ret - 10)
-		return ret
+		modifiers = (("prowess",10), ("clumsiness",-10))
+		return self.conditionalMod(self.skl, modifiers, min=1)
 
 
 	def STM(self):
-		ret = self.str
-		if self.hasCondition("liveliness"):
-			ret += 10 
-		if self.hasCondition("weariness"):
-			ret = min1(ret - 10)
-		if self.hasCondition("tired"):
-			ret = min1(ret - 3)
-		elif self.hasCondition("fatigued"):
-			ret = min1(ret - 5)
-		return ret
+		modifiers = (("liveliness",10), ("weariness",-10), ("tired",-3), ("fatigued",-5))
+		return self.conditionalMod(self.stm, modifiers, min=1)
 
 
 	def CON(self):
-		ret = self.str
-		if self.hasCondition("toughness"):
-			ret += 10 
-		if self.hasCondition("illness"):
-			ret = min1(ret - 10)
-		return ret
+		modifiers = (("toughness",10), ("illness",-10))
+		return self.conditionalMod(self.con, modifiers, min=1)
 
 
 	def CHA(self):
-		ret = self.str
-		if self.hasCondition("felicity"):
-			ret += 10 
-		if self.hasCondition("timidity"):
-			ret = min1(ret - 10)
-		return ret
+		modifiers = (("felicity",10), ("timidity",-10))
+		return self.conditionalMod(self.cha, modifiers, min=1)
 
 
 	def INT(self):
-		ret = self.str
-		if self.hasCondition("sagacity"):
-			ret += 10 
-		if self.hasCondition("stupidity"):
-			ret = min1(ret - 10)
-		return ret
+		modifiers = [("sagacity",10), ("stupidity",-10)]
+		return self.conditionalMod(self.int, modifiers, min=1)
 
 
 	def WIS(self):
-		ret = self.str
-		if self.hasCondition("lucidity"):
-			ret += 10 
-		if self.hasCondition("insanity"):
-			ret = min1(ret - 10)
-		if self.hasCondition("fatigued"):
-			ret = min1(ret - 5)
-		return ret
+		modifiers = [("lucidity",10), ("instanity",-10), ("fatigued",-3)]
+		return self.conditionalMod(self.wis, modifiers, min=1)
 
 
 	def FTH(self):
-		ret = self.str
-		if self.hasCondition("fidelity"):
-			ret += 10 
-		if self.hasCondition("apathy"):
-			ret = min1(ret - 10)
-		return ret
+		modifiers = [("fidelity",10), ("apathy",-10)]
+		return self.conditionalMod(self.fth, modifiers, min=1)
 
 
 	def LCK(self):
-		ret = self.str
-		if self.hasCondition("prosperity"):
-			ret += 10 
-		if self.hasCondition("calamity"):
-			ret = min1(ret - 10)
-		return ret
+		modifiers = [("prosperity",10), ("calamity",-10)]
+		return self.conditionalMod(self.lck, modifiers, min=1)
 
+
+	def LOVE(self):
+		modifiers = [("enchanted",50)]
+		return self.conditionalMod(self.love, modifiers, min=-100, max=100)
+
+
+	def FEAR(self):
+		modifiers = [("haunted",50)]
+		return self.conditionalMod(self.fear, modifiers, min=-100, max=100)
 
 
 	# these formulas are difficult to read, check design document for details
@@ -2288,7 +2269,7 @@ class Creature():
 	def DCPT(self): return 2*self.CHA() + self.INT()
 	def DFNS(self): return 2*self.CON() + self.protection()
 	def ENDR(self): return 2*self.STM() + self.CON()
-	def EVSN(self): return 2*self.ATSP() + self.LCK()
+	def EVSN(self): return 2*self.ATSP() + self.LCK() + self.SPD()
 	def INVS(self): return 2*self.INT() + self.WIS()
 	def KNWL(self): return 2*self.INT() + self.LCK()
 	def LOOT(self): return 2*self.LCK() + self.FTH()
@@ -2305,8 +2286,8 @@ class Creature():
 
 	def Weight(self):
 		riderWeight = 0 if self.rider is None else self.rider.Weight()
-		carryingWeight = 0 if self.carrying is None else self.carrying.Weight()
-		return self.weight + self.invWeight() + riderWeight + carryingWeight
+		carryWeight = 0 if self.carrying is None else self.carrying.Weight()
+		return self.weight + self.invWeight() + riderWeight + carryWeight
 
 
 	def contents(self):
@@ -2545,12 +2526,12 @@ class Player(Creature):
 		return True
 
 
-	def awaken(self,goodSleep=True):
+	def awaken(self,wellRested=True):
 		game.silent = False
 		sleep(1)
 		game.Print("You wake up!")
 		sleep(1)
-		if goodSleep:
+		if wellRested:
 			self.lastSlept = game.time
 			self.checkTired()
 		sleep(1)
@@ -2595,28 +2576,26 @@ class Player(Creature):
 			self.removeCondition("asleep")
 
 
-	# player gets 3 QPs for each level gained, can dispense them into any trait
+	# player gets 1 QPs for each level gained, can dispense them into any trait
 	def levelUp(self,oldlv,newlv):
-		game.Print(f"You leveled up to level {newlv}!\n")
-		waitKbInput()
-		QP = 3*(newlv-oldlv)
+		waitKbInput(f"You leveled up to level {newlv}!\n")
+		QP = newlv-oldlv
 		while QP > 0:
 			self.printTraits()
 			game.Print(f"\nQuality Points:	{QP}")
 			trait = game.Input("What trait will you improve?\n> ")
+			game.Print()
 			if trait not in Data.traits:
 				continue
 			# increment corresponding player trait
-			traitval = getattr(self,trait.upper())
+			traitval = getattr(self,trait)
 			if traitval >= 20:
-				game.Print(f"Your {trait} cannot be raised any higher.\n")
-				waitKbInput()
+				waitKbInput(f"Your {trait} cannot be raised any higher.\n")
 				continue
-			setattr(self,trait.upper(),traitval+1)
+			setattr(self,trait,traitval+1)
 			QP -= 1
 		self.printTraits()
-		game.Print(f"\nQuality Points:	{QP}")
-		input("You are done leveling up.\n")
+		waitKbInput("You are done leveling up.\n")
 		self.checkHindered()
 		self.checkTired()
 		self.checkHungry()
@@ -2652,8 +2631,8 @@ class Player(Creature):
 	def gainxp(self,newxp):
 		oldlv = self.level()
 		game.Print(f"\nYou gained {newxp} xp.")
-		game.Print(f"{self.xp} + {newxp} = {self.xp+newxp}")
 		self.xp += newxp
+		# game.Print(f"You have {self.xp}")
 		newlv = self.level()
 		if oldlv != newlv:
 			self.levelUp(oldlv,newlv)
@@ -2679,7 +2658,7 @@ class Player(Creature):
 	# if reqDuration is given, only removes conditions with that duration
 	def removeCondition(self,reqName=None,reqDuration=None):
 		wasSleeping = self.hasCondition("asleep")
-		goodSleep = False
+		wellRested = False
 
 		# deep copy to prevent removing-while-iterating errors
 		for name,duration in [_ for _ in self.status]:
@@ -2687,55 +2666,56 @@ class Player(Creature):
 				if duration == reqDuration or reqDuration is None:
 					self.status.remove([name,duration])
 					if name == "asleep" and duration == 0:
-						goodSleep = True
+						wellRested = True
 					if name != "asleep" and not self.hasCondition(name):
 						game.Print(f"You are no longer {name}.",allowSilent=False)
 		
 		if wasSleeping and not self.hasCondition("asleep"):
-			self.awaken(goodSleep=goodSleep)
-
-
-	def passTime(self,t):
-		for condition in self.status:
-			# if condition is has a special duration, ignore it
-			if condition[1] < 0:
-				continue
-			# subtract remaining duration on condition
-			elif condition[1] > 0:
-				condition[1] = min0(condition[1] - t)
-
-		# remove conditions with 0 duration left
-		self.removeCondition(reqDuration=0)
-
-		# take damage from damaging status conditions
-		for condition, _ in [_ for _ in self.status]:
-			if condition in Data.conditionDmg:
-				factor, type = Data.conditionDmg[condition]
-				dmg = min1(randint(1,factor) - self.LCK())
-				self.takeDamage(dmg,type)
-
-		self.checkTired()
-		self.checkHungry()
-
-		# regenerate health faster with a higher endurance
-		if not self.hasAnyCondition("hungry","starving"):
-			self.regenTimer += 1
-			if self.regenTimer >= 50 - self.ENDR():
-					self.regenTimer = 0
-					h = 5 if self.hasCondition("cozy","mending") else 1
-					self.heal(h)
+			self.awaken(wellRested=wellRested)
 
 
 	def checkHindered(self):
-		if self.invWeight() > self.BRDN():
+		carryWeight = 0 if self.carrying is None else self.carrying.Weight()
+		if self.invWeight() + carryWeight > self.BRDN():
 			if not self.hasCondition("hindered"):
 				game.Print("Your Inventory grows heavy.")
 				self.addCondition("hindered",-3)
-		if self.invWeight() <= self.BRDN():
+		if self.invWeight() + carryWeight <= self.BRDN():
 			if self.hasCondition("hindered"):
 				game.Print("Your Inventory feels lighter.")
 				self.removeCondition("hindered",-3)
-				
+
+
+	def checkHungry(self):
+		# being invigorated prevents hunger but not starving
+		invigorated = self.hasCondition("invigorated")
+		# hunger takes longer with more endurance
+		sinceLastAte = game.time - self.lastAte
+		if sinceLastAte > 100 + 10*self.ENDR():
+			self.removeCondition("hungry",-3)
+			self.addCondition("starving",-3)
+		elif sinceLastAte > 50 + 5*self.ENDR() and not invigorated:
+			self.addCondition("hungry",-3)
+		elif sinceLastAte < 100:
+			self.removeCondition("starving")
+			self.removeCondition("hungry")
+		elif invigorated:
+			self.removeCondition("hungry")			
+
+
+	def checkTired(self):
+		# being invigorated prevents tired and fatigue
+		invigorated = self.hasCondition("invigorated")
+		# sleep deprivation takes longer with more endurance
+		sinceLastSlept = game.time - self.lastSlept
+		if sinceLastSlept > 300 + 40*self.ENDR() and not invigorated:
+			self.removeCondition("tired",-3)
+			self.addCondition("fatigued",-3)
+		elif sinceLastSlept > 150 + 20*self.ENDR() and not invigorated:
+			self.addCondition("tired",-3)
+		elif sinceLastSlept < 100 or invigorated:
+			self.removeCondition("fatigued")
+			self.removeCondition("tired")
 
 
 	# called when player hp hits 0
@@ -2760,7 +2740,7 @@ class Player(Creature):
 			crit = diceRoll(1,100) <= self.CRIT()
 			attack = self.ATCK()
 			if crit:
-				game.Print("Critical hit!")
+				waitKbInput("Critical hit!")
 				attack *= 2
 			damage = min0( attack - target.DFNS() )
 			target.takeDamage(damage,self.weapon2.type)
@@ -2768,29 +2748,31 @@ class Player(Creature):
 				return
 		else:
 			game.Print("Aw it missed.")
+		waitKbInput()
 
 
 	def attackCreature(self,target):
 		n = min1( self.ATSP() // min1(target.ATSP()) )
 		if n > 1:
-			game.Print(f"{n} attacks:")
+			game.Print(f"{n} attacks!")
 		for i in range(n):
 			if n > 1:
-				game.Print(f"\n{ordinal(i+1)} attack:")
+				waitKbInput(f"\n{ordinal(i+1)} attack:")
 			# TODO: what about if weapon is ranged?
 			hit = min1(maxm(99, self.ACCU() - target.EVSN()))
 			if diceRoll(1,100) <= hit:
 				crit = diceRoll(1,100) <= self.CRIT()
 				attack = self.ATCK()
 				if crit:
-					game.Print("Critical hit!")
+					waitKbInput("Critical hit!")
 					attack *= 2
 				damage = min0( attack - target.DFNS() )
 				target.takeDamage(damage,self.weapon.type)
-				if not target.isAlive():
-					return
 			else:
 				game.Print("Aw it missed.")
+			waitKbInput()
+			if not target.isAlive():
+				return
 			if self.weapon2 != EmptyGear():
 				self.dualAttack(target)
 			if not target.isAlive():
@@ -2821,11 +2803,10 @@ class Player(Creature):
 
 
 	# weird formula right? returns a positive number rounded down to nearest int
-	# to see an approximate curve, graph y = 5*log10(x/10)
-	# note that a lower bound is set to level 1 when xp < 16
-	# also note that the level cannot be higher than 50
+	# note that a lower bound is set to level 1 when xp < 8
+	# also note that the level cannot be higher than 100
 	def level(self):
-		return 1 if self.xp < 16 else maxm(50,floor( 5*log10(self.xp/10) ))
+		return 1 if self.xp < 8 else maxm(100,floor( sqrt(self.xp/2) ))
 
 
 
@@ -2840,7 +2821,7 @@ class Player(Creature):
 			traits = [f"{t.upper()}: {getattr(self,t)}" for t in Data.traits]
 			columnPrint(traits,5,10)
 			return	
-		game.Print(f"{trait.upper()}: {getattr(self,trait)}\n")
+		game.Print(f"{trait.upper()}: {getattr(self,trait)}")
 
 
 	def printAbility(self,ability=None):
@@ -2890,6 +2871,14 @@ class Player(Creature):
 				val = self.carrying.name
 			game.Print(slot + ":\t",end="")
 			game.Print(val)
+
+
+	def printCarrying(self, *args):
+		if self.carrying:
+			game.Print(f"Carrying {self.carrying.stringName(det='a')}")
+			game.Print(f"Weight: {self.carrying.Weight()}")
+		else:
+			game.Print("Carrying nothing")
 
 
 	def printRiding(self, *args):
@@ -2962,57 +2951,105 @@ class Player(Creature):
 ##########################
 
 
-class Person(Creature):
-	def __init__(self,name,descname,gender,dlogtree,love=0,fear=0,rapport=0,lastParley=None,spells=None,memories=None,appraisal=None,desc=None,**kwargs):
-		Creature.__init__(self,name,"",**kwargs)
-		self.descname = descname
-		self.gender = gender
-		self.spells = spells if spells else []
-		self.love = love
-		self.fear = fear
-		self.dlogtree = DialogueTree(dlogtree)
-		self.rapport = rapport
-		self.lastParley = lastParley
-		self.appraisal = appraisal if appraisal else set()
-		self.memories = memories if memories else set()
-		if desc:
-			self.desc = desc
-		else:
-			prefix = "An " if self.descname[0] in Data.vowels else "A "
-			self.desc = prefix + self.descname
 
-		if gender == "m":
-			self.pronoun = "he"
-			self.aliases.extend(("man","guy","dude","male"))
-		if gender == "f":
-			self.pronoun = "she"
-			self.aliases.extend(("woman","lady","dudette","female"))
-		else:
-			self.pronoun = "they"
-		self.aliases.append("person")
-	
-
-
-	### File I/O ###
-
-	# @classmethod
-	# def convertFromJSON(cls,d):
-	# 	return cls(**d)
-
-
-	# def convertToJSON(self):
-	# 	d = self.__dict__.copy()
-	# 	d = {"__class__":self.__class__.__name__, **d}
-	# 	return d
-
-
+class Humanoid(Creature):
 	### Operation ###
 
 	def act(self):
+		if not self.isAlive():
+			return
+		if not game.silent:
+			game.Print(f"\n{self.name}'s turn!")
+		self.attack()
+
+
+	def attack(self):
+		# if creature is not in same room as player
+		if game.currentroom != self.room():
+			return
+		else:
+			self.attackCreature(player)
+
+
+	def attackCreature(self,target):
+		if target == player:
+			targetname = "you"
+		else:
+			targetname = target.stringName()
+		game.Print(f"{self.stringName(det='the', cap=True)} tries to attack {targetname}")
+
+		n = min1( self.ATSP() // min1(target.ATSP()) )
+		if n > 1:
+			game.Print(f"{n} attacks!")
+		for i in range(n):
+			if n > 1:
+				waitKbInput(f"\n{ordinal(i+1)} attack:")
+			# TODO: what about if weapon is ranged?
+			hit = min1(maxm(99, self.ACCU() - target.EVSN()))
+			if diceRoll(1,100) <= hit:
+				crit = diceRoll(1,100) <= self.CRIT()
+				attack = self.ATCK()
+				if crit:
+					waitKbInput("Critical hit!")
+					attack *= 2
+				damage = min0( attack - target.DFNS() )
+				target.takeDamage(damage,self.weapon.type)
+			else:
+				game.Print("It missed!")
+			waitKbInput()
+			if not target.isAlive():
+				return
+			if self.weapon2 != EmptyGear():
+				self.dualAttack(target)
+			if not target.isAlive():
+				return
+
+
+	### Getters ###
+
+	def describe(self):
+		game.Print(f"It's {self.stringName()}.")
+		game.Print(f"{self.desc}.")
+		gearitems = [item for item in self.gear.values() if item != EmptyGear()]
+		if len(gearitems) != 0:
+			game.Print(f"It has {listObjects(gearitems)}.")
+
+
+	def level(self):
+		return (self.rating() - 10) // 10
+
+
+	def isArmed():
+		# returns true if monster is armed
 		pass
 
-	
+
+	def hasHealing():
+		# returns true is monster has healing potion or food
+		pass
+
+
+	def playerBloodied():
+		# returns true if monster believes player is bloodied
+		pass
+
+
+	def playerArmed():
+		# returns true if monster believes player is armed
+		pass
+
+
+
+class Speaker(Creature):
+	def __init__(self,name,desc,dlogtree,rapport=0,lastParley=None,**kwargs):
+		Creature.__init__(self,name,desc,**kwargs)
+		self.dlogtree = DialogueTree(dlogtree)
+		self.rapport = rapport
+		self.lastParley = lastParley
+
+
 	def firstImpression(self,player):
+		# TODO: add this
 		print(self.name, "impression")
 		# adjust love, fear from person baselines
 		self.memories.add("met")
@@ -3036,6 +3073,41 @@ class Person(Creature):
 		self.appraise(player,game)
 		if not self.dlogtree.visit(self,player,game,world):
 			game.Print(f"{self.name} says nothing...")
+
+
+class Person(Speaker,Humanoid):
+	def __init__(self,name,descname,pronoun,dlogtree,spells=None,desc=None,isChild=False,**kwargs):
+		Speaker.__init__(self,name,"",dlogtree,**kwargs)
+		self.descname = descname
+		self.pronoun = pronoun
+		self.spells = spells if spells else []
+		if desc:
+			self.desc = desc
+		else:
+			prefix = "An " if self.descname[0] in Data.vowels else "A "
+			self.desc = prefix + self.descname
+
+		if self.pronoun == "he":
+			if isChild:
+				self.aliases.extend(("boy","male"))
+			else:
+				self.aliases.extend(("man","guy","dude","male"))
+		if self.pronoun == "she":
+			if isChild:
+				self.aliases.extend(("girl","female"))
+			else:
+				self.aliases.extend(("woman","lady","dudette","female"))
+		else:
+			self.pronoun = "they"
+		if isChild:
+			self.aliases.append("child","kid")
+		self.aliases.append("person")
+	
+
+	### Operation ###
+
+	def act(self):
+		pass
 
 
 	### User Output ###
@@ -3073,7 +3145,20 @@ class Person(Creature):
 	
 
 
-class Animal(Creature):
+class Animal(Speaker):
+	def __init__(self,name,desc,species=None,dlogtree=None,**kwargs):
+		self.species = name if species is None else species
+		# if an animal isn't given dialogue, try to make template from tritepools
+		if dlogtree is None:
+			dlogtree = self.species
+		if type(dlogtree) is str:
+			trite = dlogtree+"Chatter"
+			assert hasattr(Data, trite), f"{self.species} dialogue not in data"
+			dlogtree = {"chatter":{"trites":trite}}
+		Speaker.__init__(self,self.species,desc,dlogtree,**kwargs)
+		assert hasattr(Data,self.species+"Sounds"), f"{self.species} sounds not in data"
+
+
 	def act(self):
 		if not self.timeOfDeath:
 			return
@@ -3082,9 +3167,22 @@ class Animal(Creature):
 		self.attack()
 
 
+	def Talk(self,player,game,world):
+		if not player.hasCondition("wildtongued"):
+			soundspool = getattr(Data,self.name+"Sounds")
+			sound = sample(soundspool,1)[0]
+			waitKbInput(f'"{sound}"')
+			return True
+		if "met" not in self.memories:
+			self.firstImpression(player)
+		self.appraise(player,game)
+		if not self.dlogtree.visit(self,player,game,world):
+			game.Print(f"{self.name} says nothing...")
+
+
 	def attack(self):
 		if not game.silent:
-			game.Print("attack?")
+			game.Print(f"{self.name} attack?")
 
 
 	def climb():
@@ -3330,90 +3428,6 @@ class Compass(Item):
 
 
 
-class Monster(Creature):
-	### Operation ###
-
-	def act(self):
-		if not self.isAlive():
-			return
-		if not game.silent:
-			game.Print(f"\n{self.name}'s turn!")
-		self.attack()
-
-
-	def attack(self):
-		# if creature is not in same room as player
-		if game.currentroom != self.room():
-			return
-		else:
-			self.attackCreature(player)
-
-
-	def attackCreature(self,target):
-		if target == player:
-			targetname = "you"
-		else:
-			targetname = target.stringName()
-		game.Print(f"{self.stringName(det='the', cap=True)} tries to attack {targetname}")
-
-		n = min1( self.ATSP() // min1(target.ATSP()) )
-		if n > 1:
-			game.Print(f"{n} attacks:")
-		for i in range(n):
-			if n > 1:
-				game.Print(f"\n{ordinal(i+1)} attack:")
-			# TODO: what about if weapon is ranged?
-			hit = min1(maxm(99, self.ACCU() - target.EVSN()))
-			if diceRoll(1,100) <= hit:
-				crit = diceRoll(1,100) <= self.CRIT()
-				attack = self.ATCK()
-				if crit:
-					game.Print("Critical hit!")
-					attack *= 2
-				damage = min0( attack - target.DFNS() )
-				target.takeDamage(damage,self.weapon.type)
-				if not target.isAlive():
-					return
-			else:
-				game.Print("It missed!")
-			if self.weapon2 != EmptyGear():
-				self.dualAttack(target)
-			if not target.isAlive():
-				return
-
-
-	### Getters ###
-
-	def describe(self):
-		game.Print(f"It's {self.stringName()}.")
-		game.Print(f"{self.desc}.")
-		gearitems = [item for item in self.gear.values() if item != EmptyGear()]
-		if len(gearitems) != 0:
-			game.Print(f"It has {listObjects(gearitems)}.")
-
-
-	def level(self):
-		return (self.rating() - 10) // 10
-
-
-	def isArmed():
-		# returns true if monster is armed
-		pass
-
-
-	def hasHealing():
-		# returns true is monster has healing potion or food
-		pass
-
-
-	def playerBloodied():
-		# returns true if monster believes player is bloodied
-		pass
-
-
-	def playerArmed():
-		# returns true if monster believes player is armed
-		pass
 
 
 

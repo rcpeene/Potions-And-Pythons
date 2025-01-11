@@ -84,7 +84,6 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# make level max 100 instead of 50. adjust the xp curve and only do 1 QP per lvlup
 # add crouching and laying. incorporate it into making sleep "cozy"
 # encode whether a room is in the sky or underground? and altitude? dont print sky events
 # encode whether a room is a road? so npcs can navigate?
@@ -110,6 +109,7 @@ if __name__ == "__main__":
 	# figure out combat? attack items?
 # examine output grammar/statements for lower level actions (in case non-player creatures do actions, we dont want it to print the same msgs), alter print to use G.print which depends on silent
 
+# add animal and monster spawning? would have to include animal templates somewhere
 # add portal object, which is basically a passage that isn't a fixture, (but still can't be taken?)
 # add dialect processor to tritepool output?
 # add possession? (so you can say 'break goblin's sword', 'take his food')... these could be easily restructured as "break sword from goblin", "take food from him"
