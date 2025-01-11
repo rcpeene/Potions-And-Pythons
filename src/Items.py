@@ -30,10 +30,10 @@ class Bottle(Core.Item):
 	def Break(self):
 		Core.game.Print(f"The {self.name} breaks. Shards of glass scatter everywhere.")
 		self.parent.removeItem(self)
-		#randomly generates n shards between 3,6
+		# randomly generates n shards between 3,6
 		for _ in range(randint(3,6)):
-			shard = Shard("shard","a sharp shard of glass",[],"shards",1,-1,[])
-			self.parent.addItem(shard)
+			shard = Shard("shard","a sharp shard of glass",1,-1)
+			Core.game.currentroom.addItem(shard)
 		return True
 
 

@@ -197,7 +197,7 @@ def processCmd(prompt,storeRawCmd=False):
 	# take input until input has any non-whitespace characters in it
 	while not any(i not in "\t " for i in rawcommand):
 		Core.flushInput()
-		rawcommand = Core.game.Input("> ")
+		rawcommand = Core.game.Input("> ",low=False)
 	# for convenience, save raw command in game object
 	if storeRawCmd:
 		Core.game.lastRawCommand = rawcommand.split()
@@ -471,6 +471,7 @@ def Set(command):
 		return False
 	print(f"Setting {obj}.{attrname} to {value}")
 	setattr(obj,attrname,value)
+	
 
 
 def Spawn(command):
@@ -526,14 +527,12 @@ def Zap(command):
 	objname = " ".join(command[1:])
 	key = lambda obj: Core.nameMatch(objname, obj)
 	matches = Core.game.queryRooms(key=key)
-	zappedObjects = 0
+	Core.game.Print(f"Zapped objects: {len(matches)}")
 	for obj in matches:
 		if isinstance(obj,Core.Item):
 			obj.Break()
 		elif isinstance(obj,Core.Creature):
 			obj.death()
-	Core.game.Print(f"Zapped objects: {len(matches)}")
-	Core.game.reapCreatures()
 
 
 
@@ -1493,14 +1492,15 @@ def Release(dobj,iobj,prep):
 
 
 def Rest(dobj,iobj,prep):
-	if Core.player.hasAnyCondition(Data.conditionDmg.keys()):
-		Core.game.Print("This is no time for slumber!")
-		return False
 	if prep not in ("behind","below","beneath","in","inside","into","on","onto","over","under","upon","using","with",None):
 		Core.game.print("Commmand not understood")
 		return False
-	if prep is None: prep = "on"
+	for condname in Data.conditionDmg.keys():
+		if Core.player.hasCondition(condname):
+			Core.game.Print(f"This is no time for slumber! You are {condname}.")
+			return False
 
+	if prep is None: prep = "on"
 	if dobj == None: dobj = iobj
 	if dobj == None: dobj = getNoun(f"What will you sleep {prep}?")
 	if dobj in Data.cancels: return False
