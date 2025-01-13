@@ -6,6 +6,7 @@
 from bisect import insort
 from random import randint
 
+import Effects
 import Core
 import Data
 
@@ -123,19 +124,18 @@ class Box(Core.Item):
 
 
 class Controller(Core.Item):
-	def __init__(self,name,desc,weight,durability,effect,**kwargs):
+	def __init__(self,name,desc,weight,durability,triggers,effect,**kwargs):
 		Core.Item.__init__(self,name,desc,weight,durability,**kwargs)
+		triggers = triggers if triggers else ["Use"]
 		self.effect = effect
+		for trigger in triggers:
+			f = lambda *args: self.Trigger(trigger,*args)
+			setattr(self,trigger,f)
 
 
 	# triggers some effect using the effect string to call related function
-	def Trigger(self):
-		eval(self.effect)
-
-
-	# using the controller triggers the effect
-	def Use(self):
-		self.Trigger()
+	def Trigger(self,*args):
+		exec(self.effect)
 
 
 
@@ -326,6 +326,7 @@ class Mouth(Core.Item):
 
 
 class Potion(Bottle):
+
 	# heals the player hp 1000, replaces potion with an empty bottle
 	def Drink(self):
 		Core.game.Print(f"You drink the {self.name}.")
@@ -514,3 +515,9 @@ class Wall(Core.Passage):
 		if not traverser.hasAnyCondition("fly","fleetfooted"):
 			traverser.takeDamage(self.difficulty-traverser.ATHL(),"b")
 		return True
+
+
+
+factory = {
+	"coffee": lambda: Potion("coffee bottle","A bottle of dark brown foamy liquid",4,3,aliases=["coffee","espresso"])
+}

@@ -587,8 +587,7 @@ def Laugh(*args): Core.game.Print('"HAHAHAHAHA!"')
 
 def Quit(*args):
 	if Core.yesno("Are you sure you want to quit? (Anything unsaved will be lost)"):
-		Core.game.quit = True
-		return True
+		Menu.quit()
 
 
 def Shout(*args): Core.game.Print('"AHHHHHHHHHH"')
@@ -2097,3 +2096,4 @@ actions = {
 # snap
 # observe/watch
 # capture (with a net?) -> take?
+# loot/scavenge/forage/salvage/harvest

@@ -818,6 +818,7 @@ EQUIPMENT PROPERTIES:
 	valorous
 	robust
 	phoenix - fire damage
+	spooky - causes frightening
 
 	mithril
 	gold
@@ -872,6 +873,7 @@ the magic map
 (Magic?) Umbrella
 Magic Teapot (or just a normal teapot idk)
 Astra - from hindu myth, divine projectiles
+Olifant - magic horn
 
 
 MISC EQUIPMENT:
@@ -942,12 +944,15 @@ water - raises hp and mp by 2
 Potions are bottled items that have different effects. Types of potions are:
 Red, Pink (deadly), Burgundy, Scarlet
 Orange, Rusty, Tawny, Amber,
-Yellow, Flaxen, Ochre, Citrine,
+Yellow, Blond, Ochre, Citrine,
 Green, Viridian, Mossy, Chartreuse
 Blue, Azure, Teal, Cyan
 Purple, Lavender, Indigo, Violet
-Clear, Brown, Black (explodes), Grey, White
+Clear (dissolves?), Brown (burns?), Black (explodes), Grey, White
 Bronze (defense), Silver (speed), Gold (atk/dmg/crit)
+
+Also elixirs, philter (love affect?), tonic (energizing), brew (alcohol), draught, 
+tincture (dyes), 
 
 
 Fruits:
@@ -1044,27 +1049,27 @@ however, I dont want them to be super "temple-y" like Legend of Zelda. that feel
 
 so these dungeons are generally just clusters of room nodes in the world graph that match a certain theme or aesthetic, and they have different general difficulty levels
 
--regular forest (starting location)
--the gallery
--hinterlands
--slime dungeon?
--mobile massive wizard school (with portal entrances around the world)
--a buried giant (inside of which is a dungeon? rooms like "giant foot")
--haunted manor, abandoned manor on a hill thats v spooky
--ancient mystical forest, full of illusions thats difficult to navigate
--the catacombs, simple basic religious dungeon under a giant old cathedral
--atlantis, underwater castle thats coral reef themed and fun, entered by getting to an island somewhere
--caverns, early dungeon that is large underground caverns
--necropolis, a massive sandy persian themed graveyard
--"the tower", tower of ___, hundreds of floors, considered scary and forbidden by nearby townsfolk, probably one of the most dangerous dungeons
--skyland, a beanstalk leads to a giants house? or smth on a floating cloud?
--labyrinth, underground labyrinth (maybe library themed), that has magical connections to all kinds of places all over the world
--mineshaft, underground mines maybe
--spaceship, extra idea maybe with aliens lol
+- regular forest (starting location)
+- the gallery
+- hinterlands
+- slime dungeon?
+- mobile massive wizard school (with portal entrances around the world)
+- a buried giant (inside of which is a dungeon? rooms like "giant foot")
+- haunted manor, abandoned manor on a hill thats v spooky
+- ancient mystical forest, full of illusions thats difficult to navigate
+- the catacombs, simple basic religious dungeon under a giant old cathedral
+- atlantis, underwater castle thats coral reef themed and fun, entered by getting to an island somewhere
+- caverns, early dungeon that is large underground caverns
+- necropolis, a massive sandy persian themed graveyard
+- "the tower", tower of ___, hundreds of floors, considered scary and forbidden by nearby townsfolk, probably one of the most dangerous dungeons
+- skyland, a beanstalk leads to a giants house? or smth on a floating cloud?
+- labyrinth, underground labyrinth (maybe library themed), that has magical connections to all kinds of places all over the world
+- mineshaft, underground mines maybe
+- spaceship, extra idea maybe with aliens lol
 	- in the alien spaceship have a recording or text log of a dead captain/space explorer
--snowy peaks, maybe ice castle? something cold themed
--hunt the wumpus map, with a WUMPUS!!! and traps and whatnot
--at the bottom of the pit, a temple to the imprisoned god uramut.
+- snowy peaks, maybe ice castle? something cold themed
+- hunt the wumpus map, with a WUMPUS!!! and traps and whatnot
+- at the bottom of the pit, a temple to the imprisoned god uramut.
 	Uramut manages to possess someone in the world and they gouge their eyes out and have one yellow eye on their head, Uramut wants to be released.
 
 several settlements exist in the world (aim for like at least 9)
@@ -1090,55 +1095,59 @@ norte chico - unknown
 chichen itza - unknown
 
 additional place ideas
--apple forest (early quest setting)
--seawall
--colonnade
--amphitheatre
--pavilion
--panopticon
--athenaeum
--the garden path "to mislead someone"
--a very smelly tree (why did I write this?)
--black lotus
--a talking cave
--The quivering quill (a spell store)
--The stove - tavern or speakeasy or hideout
--A casino or various luck based gambling games in the world
--An orb "ponder the orb?" maybe multiple orbs to ponder in the world like 7
--sign that says "no philandering!"
--town called "fleet-something"
+- apple forest (early quest setting)
+- seawall
+- colonnade
+- amphitheatre
+- pavilion
+- panopticon
+- athenaeum
+- the garden path "to mislead someone"
+- a very smelly tree (why did I write this?)
+- black lotus
+- a talking cave
+- The quivering quill (a spell store)
+- The stove, a tavern or speakeasy or hideout
+- A casino or various luck based gambling games in the world
+- An orb "ponder the orb?" maybe multiple orbs to ponder in the world like 7
+- sign that says "no philandering!"
+- town called "fleet-something"
 
 
 misc world ideas
+- witengamot
+- "omens aghast" as a greeting
 - the world underwent a 'cataclysm' and then a 'salvation'
--giant eternal clock
--a story legend of a hero who masters magic in an underground empire, called "ZORK"
--monolith
--magic nail
--gnomes
--small peoples like the minish and maybe theyre quirky in some way
--wicklewort trees
--something called "The Wizard's Fee"
--Eternal Stew
--bonefire
--a deal with a demon (with consequences)
--label that reads "FOR SCIENTIFIC USE ONLY"
--RICKROLL
--the four horsemen of awesomeness (or happiness)
--golden bug quest
--pandora box "banishment box" which unleashes all creatures the player has ever banished with the banish spell
--limericks/poems/poem book?
--the mist
--a zoo (royal menagerie?) in the big city
--a jar that is REALLY hard to open
--bottomless pit
--the four humors
--"sphinx of black quartz, judge my vow"
--"if you see a fox in the forest, don't follow it"
+- giant eternal clock
+- a story legend of a hero who masters magic in an underground empire, called "ZORK"
+- monolith/obelisk
+- magic nail
+- gnomes
+- magic art museum?
+- small peoples like the minish and maybe theyre quirky in some way
+- wicklewort trees
+- something called "The Wizard's Fee"
+- Eternal Stew
+- bonefire
+- a deal with a demon (with consequences)
+- label that reads "FOR SCIENTIFIC USE ONLY"
+- RICKROLL
+- the four horsemen of awesomeness (or happiness)
+- golden bug quest
+- pandora box "banishment box" which unleashes all creatures the player has ever banished with the banish spell
+- limericks/poems/poem book?
+- the mist
+- a zoo (royal menagerie?) in the big city
+- a jar that is REALLY hard to open
+- bottomless pit
+- the four humors
+- "sphinx of black quartz, judge my vow"
+- "if you see a fox in the forest, don't follow it"
 
 
 QUEST IDEAS:
 
+- a rabid tiger is terrorizing a town. should kill it
 - golden bug quest (collect 50 hidden bugs throughout the world) [reward??]
 - one quest for each god's temple, and the player gets rewarded with a QP for it and a word from the god.
 - bone faeries which will give you money for bones
@@ -1182,6 +1191,7 @@ CHARACTER NAMES:
 	The Frog Prince
 	Eilonwy
 	Beowin
+	Wayland the Smith
 	Rook
 
 	polemarch,commodore,margrave,
@@ -1224,7 +1234,7 @@ CHARACTER NAMES:
 	Archons (regional rulers? maybe names for the giants)
 	Polemarch (archon of war)
 	The Benevolent Frog King (looking for his son the frog prince?)
-	one bbeg is the world serpent called Aeormungand (Leviathan?)
+	one bbeg is the world serpent called Aeormungand (Leviathan?), also called Demiurge
 	another bbg (Behemoth)
 	also an evil wizard ofc
 	a cultist of Uramut who becomes possessed and tries to unleash him

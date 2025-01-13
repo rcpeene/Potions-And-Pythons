@@ -2,6 +2,8 @@
 # This file contains all the functions which represent some "effect" in the game
 # This file is dependent on Menu.py and is a dependency of PoPy.py
 
+import Creatures
+import Items
 import Core
 import Data
 
@@ -19,12 +21,23 @@ def applyAreaEffect(effect,root,condfunc=lambda x:True):
 		effect(obj)
 
 
-def spawnObject(room,obj):
+def spawnObject(obj,room=None):
+	if room is None:
+		room = Core.game.currentroom
+	if type(obj) is str:
+		if obj in Items.factory:
+			obj = Items.factory[obj]()
+		elif obj in Creatures.factory:
+			obj = Creatures.factory[obj]()
+		else:
+			raise Exception(f"object name '{obj}' not in any factory")
+
 	if isinstance(obj,Core.Creature):
 		room.addCreature(obj)
 	elif isinstance(obj,Core.Fixture):
 		room.addFixture(obj)
 	elif isinstance(obj,Core.Item):
+		print("adding item")
 		room.addItem(obj)
 	if not Core.game.silent:
 		Core.game.Print(f"{obj.stringName(det='a',cap=True)} appeared!")
