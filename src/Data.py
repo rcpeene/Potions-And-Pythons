@@ -65,7 +65,7 @@ miscexpressions = {"it all","spell list"}
 
 directions = {"n":"north","ne":"northeast","e":"east","se":"southeast","s":"south","sw":"southwest","w":"west","nw":"northwest","u":"up","d":"down","inside":"in","into":"in","o":"out","b":"beyond"}
 
-dmgtypes = {"a":"acid","b":"bludgeoning","c":"cold","e":"essential","f":"fire","i":"psychic","l":"lightning","n":"necrotic","p":"piercing","r":"radiant","s":"slashing","t":"thunder","v":"force","x":"poison"}
+dmgtypes = {"a":"acid","b":"bludgeoning","c":"cold","e":"essential","f":"fire","h":"hunger","i":"psychic","l":"lightning","n":"necrotic","p":"piercing","r":"radiant","s":"slashing","t":"thunder","v":"force","x":"poison"}
 
 # gear dict used to initialize the player object
 initgear = {"head":None, "torso":None, "left":None, "right":None, "legs":None}
@@ -81,20 +81,40 @@ conditionDmg = {
     "bleeding":(25,"n"),
     "frozen":(15,"f"),
     "poisoned":(5,"x"),
-    "starving":(1,"n"),
+    "starving":(1,"h"),
 }
 
+spawnpools = {
+    "Woodlands": (("green python",1), ("goblin",1)),
+    "Plains": (("red python",1), ("horse",1))
+}
 
 # the following are tuples because their order should be preserved for printing
 
 # base Creature stats
 traits = ("str","skl","spd","stm","con","cha","int","wis","fth","lck")
 
+inittraits = [1]*10
+
 # derived creature stats. they can be found as Creature methods
 abilities = ("accu","atck","athl","atsp","brdn","cast","crit","cssp","dcpt","dfns","endr","evsn","invs","knwl","loot","mvmt","mxhp","mxmp","prsd","rstn","ritl","slth","spls","tnkr")
 
 # the sequence of hours in the daily calendar
 hours = ("stag","rooster","juniper","bell","sword","willow","lily","hearth","cat","mouse","owl","serpent","wolf")
+
+animalSounds = {
+    "horse": {"neigh","neiigghh","neeiiiggghhh"},
+    "dragon": {"rawr"},
+    "python": {"hisssss..","sss...","tsss!"}
+}
+
+chatter = {
+    "basic": {"How about the weather?", "I like your shirt.", "Gods be with ye.","Salute"},
+    "horse": {"Howdy partner.","Yeehaw.","Git varmint"},
+    "dragon": {"Greetings small one.","Excelsior","Omens Aghast"},
+    "python": {"Dessssstroy....","Kill!","Sssoo... Hungrryyy..."}
+}
+
 
 
 
@@ -386,17 +406,6 @@ popyLines = ["",
 "   POTIONS  &  PYTHONS   	",
 "   POTIONS  &  PYTHONS   	"]
 
-
-
-horseSounds = {"neigh","neiigghh","neeiiiggghhh"}
-dragonSounds = {"rawr"}
-pythonSounds = {"hisssss..","sss...","tsss!"}
-
-
-basicChatter = {"How about the weather?", "I like your shirt.", "Gods be with ye."}
-horseChatter = {"Howdy partner."}
-dragonChatter = {"Greetings small one."}
-pythonChatter = {"Dessssstroy...."}
 
 
 

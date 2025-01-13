@@ -14,7 +14,7 @@ import os, json, sys
 
 import Data
 import Core
-
+import Creatures
 
 
 ##########################
@@ -119,7 +119,7 @@ def readGame(filename,World):
 	time = int(gametext[3][:-1])		# fourth line is time int
 	events = eval(gametext[4][:-1])
 	gfd.close()
-	return Core.Game(mode,World[currentroom],World[prevroom],time,events)
+	return Core.Game(mode,World[currentroom],World[prevroom],time,events,Creatures.factory)
 
 
 
@@ -235,6 +235,13 @@ def loadGame(filename=None):
 	Core.ellipsis(3)
 	Core.flushInput()
 	Core.clearScreen()
+	
+	# assign parents to objects and decompress some object reference values from JSON
+	Core.assignRefs()
+	# eliminate any room connections which don't exist in the world dict
+	Core.ensureWorldIntegrity()
+	# describe the current room
+	Core.game.startUp()
 	return True
 
 
@@ -313,7 +320,7 @@ def createCharacter():
 	desc = input("Describe yourself.\n> ")
 	while len(desc) == 0:
 		desc = input("> ")
-	return Core.Player(name,desc,50,[1]*10,2,2,0,[],Data.initgear,0,0)
+	return Core.Player(name,desc,50,[1]*10,2,2,0,0)
 
 
 # starts a new game and returns player, world, and game objects
@@ -323,12 +330,20 @@ def newGame():
 	# initializes from the character creation screen
 	Core.player = createCharacter()
 	# initializes the game at the "cave" room
-	Core.game = Core.Game(0,Core.world["cave"],Core.world["cave"],0,set())
+	Core.game = Core.Game(0,Core.world["cave"],Core.world["cave"],0,set(),Creatures.factory)
 	# Core.ellipsis(3)
 	# enter the starting room
 	sleep(0.5)
 	Core.clearScreen()
 	Core.flushInput()
+
+	# assign parents to objects and decompress some object reference values from JSON
+	Core.assignRefs()
+	# eliminate any room connections which don't exist in the world dict
+	Core.ensureWorldIntegrity()
+	# describe the current room
+	Core.game.startUp()
+
 
 
 # automatically starts a new game with a premade character for easy testing
@@ -338,10 +353,19 @@ def testGame():
 	inv = [Core.Compass("compass","a plain steel compass with a red arrow",2,10,plural="compasses")]
 	status = [["fireproof",-1], ["poisoned",5], ["cursed",-2], ["immortal",-1],
 	["sharpshooter",50], ["invisible",15], ["poisoned",-1], ["flying",5]]
-	Core.player = Core.Player("Norman","a hero",50,[4]*10,24,24,1000,inv,Data.initgear,100,100,spells=[],status=status)
-	Core.game = Core.Game(0,Core.world["cave"],Core.world["tunnel"],0,set())
+	Core.player = Core.Player("Norman","a hero",50,[4]*10,24,24,1000,50,inv=inv,love=100,fear=100,spells=[],status=status)
+	Core.game = Core.Game(0,Core.world["cave"],Core.world["tunnel"],0,set(),Creatures.factory)
 
 	Core.clearScreen()
+	Core.flushInput()
+	
+	# assign parents to objects and decompress some object reference values from JSON
+	Core.assignRefs()
+	# eliminate any room connections which don't exist in the world dict
+	Core.ensureWorldIntegrity()
+	# describe the current room
+	Core.game.startUp()
+
 	Core.game.mode = 1
 	Core.game.silent = False
 

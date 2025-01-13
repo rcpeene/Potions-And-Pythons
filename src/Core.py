@@ -334,25 +334,25 @@ def objQueryRecur(node,matches,key,d):
 
 # iterates through each object in the object tree of each room and assigns...
 # its 'parent' attribute to the object it is contained in
-def assignParents():
+def assignRefs():
 	for room in world.values():
 		assert isinstance(room, Room)
-		assignParentsRecur(room)
+		assignRefsRecur(room)
 	player.assignParent(game.currentroom)
-	assignParentsRecur(player)
+	assignRefsRecur(player)
 
 
-# helper function for assignParents()
+# helper function for assignRefs()
 # iterates through objects within the root and assigns root as their parent
 # recurs for each object
-def assignParentsRecur(parent):
+def assignRefsRecur(parent):
 	if not hasMethod(parent,'contents'):
 		return
 	for obj in parent.contents():
 		# everything in the world or player inv should be Item or Creature
 		assert isinstance(obj, (Item, Creature))
 		obj.assignParent(parent)
-		assignParentsRecur(obj)
+		assignRefsRecur(obj)
 
 
 # takes a dict of room names and room objects,
@@ -471,11 +471,13 @@ class TeeLogger:
 
 
 class DialogueNode():
-	def __init__(self,parent,root,nVisits=0,visitLimit=None,rapportReq=None,isCheckpoint=False,loveMod=0,fearMod=0,repMod=0,remark=None,trites=None,cases=None,responses=None,children=[]):
+	def __init__(self,parent,root,nVisits=0,lastTriteRemark=None,visitLimit=None,rapportReq=None,guardCase="True",isCheckpoint=False,loveMod=0,fearMod=0,repMod=0,remark=None,trites=None,cases=None,responses=None,children=[]):
 		self.parent = parent
 		self.root = root
 		self.nVisits = nVisits
+		self.lastTriteRemark = lastTriteRemark
 		self.visitLimit = visitLimit
+		self.guardCase = guardCase
 		self.rapportReq = rapportReq
 		self.isCheckpoint = isCheckpoint
 		self.loveMod=loveMod
@@ -548,13 +550,14 @@ class DialogueNode():
 	# note that speaker, player, game, and world are provided to ensure eval() is valid
 	def ensureIntegrity(self,speaker,player,game,world):
 		self.id = self.getID()
+		err = f"Invalid guard case node condition in {speaker.name}'s node {self.id}: {self.guardCase}"
+		assert type(eval(self.guardCase)) == bool, err
 		for case in self.cases:
-			try:
-				assert type(case) == int or type(eval(case)) == bool
-			except Exception as e:
-				raise Exception(f"Invalid case node condition in {speaker.name}'s node {self.id}: {case}, {e}")
+			err = f"Invalid case node condition in {speaker.name}'s node {self.id}: {case}"
+			assert type(case) == int or type(eval(case)) == bool, err
 		for trite in self.trites:
-			assert type(getattr(Data,trite)) is set
+			triteset = Data.chatter[trite]
+			assert type(triteset) is set and len(triteset) > 2
 		for child in self.children:
 			child.ensureIntegrity(speaker,player,game,world)
 
@@ -634,9 +637,15 @@ class DialogueNode():
 		elif self.trites:
 			tritepool = set()
 			for trite in self.trites:
-				tritepool |= getattr(Data,trite)
-			triteRemark = sample(tritepool,1)[0]
+				tritepool |= Data.chatter[trite]
+
+			samples = sample(tritepool,2)
+			triteRemark = samples[0]
+			if triteRemark == self.lastTriteRemark:
+				triteRemark = samples[1]
+
 			waitKbInput(f'"{triteRemark}"')
+			self.lastTriteRemark = triteRemark
 
 		# return next node if this node has children
 		nextNode = None
@@ -649,8 +658,6 @@ class DialogueNode():
 				if child.hop(speaker):
 					nextNode = child
 					break
-		if nextNode == None:
-			return None
 
 		# count this node as successfully visited
 		self.nVisits += 1
@@ -684,6 +691,7 @@ class DialogueNode():
 			if child.hasDefiniteDialogue():
 				return True
 		return False
+
 
 
 
@@ -822,7 +830,6 @@ class EmptyGear:
 			return False
 
 
-
 	### Getters ###
 
 	def stringName(self,det="",n=-1,plural=False,cap=False,c=1):
@@ -838,6 +845,7 @@ class EmptyGear:
 
 
 
+
 # The Game class stores a series of global data about the game that is not...
 # contained in the global world dict, W, including things like the time,...
 # a pointer to the current room and previous room, and a pointer to the...
@@ -845,7 +853,7 @@ class EmptyGear:
 # It also offers a series of methods for identifying the currently rendered...
 # rooms and finding information about them.
 class Game():
-	def __init__(self,mode,currentroom,prevroom,time,events):
+	def __init__(self,mode,currentroom,prevroom,time,events,creatureFactory):
 		# 0 for normal mode, 1 for testing mode, 2 for god mode
 		self.mode = mode
 		# the room that the player is currently in
@@ -858,8 +866,8 @@ class Game():
 		self.lastsave = time
 		# set of important events that have transpired in the game's progression
 		self.events = events
-		# used to break out of the main input loop when the player wants to quit
-		self.quit = False
+		# used to spawn creatures
+		self.creatureFactory = creatureFactory
 		# used for determining whether or not to print certain things
 		# usually, silent is True when events happen outside the current room
 		self.silent = False
@@ -880,7 +888,6 @@ class Game():
 		self.daylength = len(Data.hours) * self.hourlength
 		# 14 days in a month
 		self.monthlength = 14 * self.daylength
-
 
 
 	### Operation ###
@@ -1029,6 +1036,8 @@ class Game():
 
 
 	def checkMoon(self):
+		if self.currentroom.altitude < 0:
+			return
 		mooncycle = (self.time % self.monthlength) // self.daylength
 		if mooncycle == 0:
 			self.Print("It is a new moon.")
@@ -1041,7 +1050,9 @@ class Game():
 			self.events.remove("full moon")
 
 
-	def checkAstrology(self, update=False):
+	def checkAstrology(self,update=False):
+		if self.currentroom.altitude < 0:
+			return
 		darkhours = ("cat","mouse","owl","serpent","wolf")
 		aurora_cycle = self.time % 2000
 		if aurora_cycle >= 0 and aurora_cycle < 100 and self.hour() in darkhours:
@@ -1070,7 +1081,6 @@ class Game():
 		elif "eclipse" in self.events:
 			self.events.remove("eclipse")
 			self.Print("The solar eclipse is over.")
-
 
 
 	### User Output ###
@@ -1123,6 +1133,8 @@ class Game():
 
 
 	def checkDaytime(self):
+		if self.currentroom.altitude < 0:
+			return
 		if self.hour() in ('stag','rooster','juniper'):
 			self.Print('It is morning.')
 		if self.hour() in ('bell','sword','willow','lily'):
@@ -1132,6 +1144,7 @@ class Game():
 		if self.hour() in ('owl','serpent','wolf'):
 			self.Print('It is night.')
 			self.checkMoon()
+
 
 
 
@@ -1149,7 +1162,7 @@ class Game():
 # directed graph, facilitated by the world dict, where the exits dict specifies
 # the edges from a given node to its neighboring nodes.
 class Room():
-	def __init__(self,name,domain,desc,exits,fixtures,items,creatures,status=None):
+	def __init__(self,name,domain,desc,exits,fixtures,items,creatures,altitude=0,status=None):
 		self.name = name
 		self.domain = domain
 		self.desc = desc
@@ -1157,8 +1170,8 @@ class Room():
 		self.fixtures = fixtures
 		self.items = items
 		self.creatures = creatures
-		self.status=status if status else []
-		
+		self.altitude = altitude
+		self.status = status if status else []
 
 
 	### Dunder Methods ###
@@ -1169,7 +1182,6 @@ class Room():
 
 	def __str__(self):
 		return f"#{self.name}"
-
 
 
 	### Operation ###
@@ -1286,6 +1298,13 @@ class Room():
 
 		for obj in self.contents():
 			obj.passTime(t)
+		
+		# spawn up to 1 creature in the room
+		if len(self.creatures) > 0 or self is game.currentroom:
+			return
+		for name, prob in Data.spawnpools.get(self.domain,()):
+			if randint(1,100) <= prob and len(self.creatures) > 0:
+				self.addCreature(game.creatureFactory[name]())
 
 
 	# describe the room, and apply any room effects to the creature entering
@@ -1376,7 +1395,6 @@ class Room():
 		return objects
 
 
-
 	### User Output ###
 
 	# prints room name, description, all its items and creatures
@@ -1409,6 +1427,7 @@ class Room():
 
 
 
+
 # The Item class is the main game object class of things that cannot act
 # Anything in a Room that is not a Creature will be an Item
 # All items come with a name, description, weight, and durability
@@ -1428,12 +1447,10 @@ class Item():
 		self.parent = None
 
 
-
 	### File I/O ###
 
 	def assignParent(self, parent):
 		self.parent = parent
-
 
 
 	### Dunder Methods ###
@@ -1459,7 +1476,6 @@ class Item():
 
 	def __hash__(self):
 		return hash(frozenset(self.__dict__)) * hash(id(self))
-
 
 
 	### Operation ###
@@ -1518,7 +1534,6 @@ class Item():
 			if name == reqName or reqName is None:
 				if duration == reqDuration or reqDuration is None:
 					self.status.remove([name,duration])
-
 
 
 	### Getters ###
@@ -1586,14 +1601,13 @@ class Item():
 
 
 
-
 # The Creature class is the main class for anything in the game that can act
 # Anything in a Room that is not an Item will be a Creature
 # The player is a Creature too
 # Creatures have 10 base stats, called traits
 # They also have abilities; stats which are derived from traits through formulas
 class Creature():
-	def __init__(self,name,desc,weight,traits,hp,mp,inv,gear,memories=None,appraisal=None,love=0,fear=0,rapport=0,money=0,carrying=None,carrier=None,riding=None,rider=None,status=None,descname=None,aliases=None,plural=None,determiner=None,pronoun="it",timeOfDeath=None,lastAte=0,lastSlept=0,regenTimer=0,alert=False,seesPlayer=False,sawPlayer=-1):
+	def __init__(self,name,desc,weight,traits,hp,mp=0,money=0,inv=None,gear=None,love=0,fear=0,rapport=0,carrying=None,carrier=None,riding=None,rider=None,memories=None,appraisal=None,status=None,descname=None,aliases=None,plural=None,determiner=None,pronoun="it",timeOfDeath=None,lastAte=0,lastSlept=0,regenTimer=0,alert=False,seesPlayer=False,sawPlayer=-1):
 		self.name = name
 		self.desc = desc
 		self.descname = descname if descname else name
@@ -1624,7 +1638,7 @@ class Creature():
 		self.hp = hp
 		self.mp = mp
 		self.money = money
-		self.inv = inv
+		self.inv = inv if inv else []
 		self.love = love
 		self.fear = fear
 		self.memories = memories if memories else set()
@@ -1636,7 +1650,7 @@ class Creature():
 		self.rider = rider
 		self.carrying = carrying
 		self.carrier = carrier
-		self.gear = gear
+		self.gear = gear if gear else Data.initgear
 
 		self.weapon = EmptyGear()
 		self.weapon2 = EmptyGear()
@@ -1653,7 +1667,6 @@ class Creature():
 		self.alert = alert
 		self.seesPlayer = seesPlayer
 		self.sawPlayer = sawPlayer
-
 
 
 	### Dunder Methods ###
@@ -1682,7 +1695,6 @@ class Creature():
 		if isinstance(other, Creature):
 			return self.MVMT() < other.MVMT()
 		return self.name.lower() < other.name.lower()
-
 
 
 	### File I/O ###
@@ -1747,6 +1759,7 @@ class Creature():
 		}
 		return tethers
 
+
 	# returns a dict which contains all the necessary information to store...
 	# this object instance as a JSON object when saving the game
 	def convertToJSON(self):
@@ -1768,13 +1781,6 @@ class Creature():
 		d = {"__class__":self.__class__.__name__, **d}
 		del d["parent"]
 		return d
-
-
-	# # returns an instance of this class given a dict from a JSON file
-	# @classmethod
-	# def convertFromJSON(cls,d):
-	# 	return cls(**d)
-
 
 
 	### Operation ###
@@ -1991,7 +1997,7 @@ class Creature():
 		self.checkTired()
 		self.checkHungry()
 
-		# natural healing is faster with a higher endurance		
+		# natural healing is faster with a higher endurance
 		if not self.hasAnyCondition("hungry","starving"):
 			self.regenTimer += 1
 			if self.regenTimer >= 50 - self.ENDR() or self.hasCondition("mending"):
@@ -2182,7 +2188,6 @@ class Creature():
 		return True
 
 
-
 	### Getters ###
 
 	def conditionalMod(self,stat,bonuses,min=None,max=None):
@@ -2332,7 +2337,7 @@ class Creature():
 
 
 	def level(self):
-		return 1
+		return ((self.rating() - 10) // 10) + 1
 
 
 	def rating(self):
@@ -2493,24 +2498,14 @@ class Creature():
 
 # the class representing the player, contains all player stats
 class Player(Creature):
-	def __init__(self,name,desc,weight,traits,hp,mp,money,inv,gear,xp,rp,spells=None,**kwargs):
-		Creature.__init__(self,name,desc,weight,traits,hp,mp,inv,gear,money=money,**kwargs)
+	def __init__(self,name,desc,weight,traits,hp,mp,xp,rp,spells=None,**kwargs):
+		Creature.__init__(self,name,desc,weight,traits,hp,mp=mp,**kwargs)
 		self.xp = xp
 		self.rp = rp
 		self.spells = spells if spells else []
 
 
-
-	### File I/O ###
-
-	# @classmethod
-	# def convertFromJSON(cls,d):
-	# 	return cls(**d)
-
-
-
 	### Operation ###
-
 
 	def changeRoom(self,newroom):
 		# can only change rooms if not stuck inside some item
@@ -2729,6 +2724,7 @@ class Player(Creature):
 			self.hp = 1
 		else:
 			self.addCondition("dead",-3)
+			waitKbInput()
 			self.timeOfDeath = game.time
 		return True
 
@@ -2789,7 +2785,6 @@ class Player(Creature):
 			return
 		
 
-
 	### Getters ###
 
 	def countCompasses(self):
@@ -2807,7 +2802,6 @@ class Player(Creature):
 	# also note that the level cannot be higher than 100
 	def level(self):
 		return 1 if self.xp < 8 else maxm(100,floor( sqrt(self.xp/2) ))
-
 
 
 	### User Output ###
@@ -2951,7 +2945,6 @@ class Player(Creature):
 ##########################
 
 
-
 class Humanoid(Creature):
 	### Operation ###
 
@@ -3015,10 +3008,6 @@ class Humanoid(Creature):
 			game.Print(f"It has {listObjects(gearitems)}.")
 
 
-	def level(self):
-		return (self.rating() - 10) // 10
-
-
 	def isArmed():
 		# returns true if monster is armed
 		pass
@@ -3040,9 +3029,10 @@ class Humanoid(Creature):
 
 
 
+
 class Speaker(Creature):
-	def __init__(self,name,desc,dlogtree,rapport=0,lastParley=None,**kwargs):
-		Creature.__init__(self,name,desc,**kwargs)
+	def __init__(self,name,desc,weight,traits,hp,dlogtree,rapport=0,lastParley=None,**kwargs):
+		Creature.__init__(self,name,desc,weight,traits,hp,**kwargs)
 		self.dlogtree = DialogueTree(dlogtree)
 		self.rapport = rapport
 		self.lastParley = lastParley
@@ -3075,9 +3065,11 @@ class Speaker(Creature):
 			game.Print(f"{self.name} says nothing...")
 
 
+
+
 class Person(Speaker,Humanoid):
-	def __init__(self,name,descname,pronoun,dlogtree,spells=None,desc=None,isChild=False,**kwargs):
-		Speaker.__init__(self,name,"",dlogtree,**kwargs)
+	def __init__(self,name,descname,weight,traits,hp,pronoun,dlogtree,spells=None,desc=None,isChild=False,**kwargs):
+		Speaker.__init__(self,name,"",weight,traits,hp,dlogtree,**kwargs)
 		self.descname = descname
 		self.pronoun = pronoun
 		self.spells = spells if spells else []
@@ -3142,21 +3134,20 @@ class Person(Speaker,Humanoid):
 			strname = capWords(strname,c=c)
 		return strname
 
-	
+
 
 
 class Animal(Speaker):
-	def __init__(self,name,desc,species=None,dlogtree=None,**kwargs):
+	def __init__(self,name,desc,weight,traits,hp,species=None,dlogtree=None,**kwargs):
 		self.species = name if species is None else species
+		self.soundspool = Data.animalSounds[self.species]
 		# if an animal isn't given dialogue, try to make template from tritepools
 		if dlogtree is None:
 			dlogtree = self.species
 		if type(dlogtree) is str:
-			trite = dlogtree+"Chatter"
-			assert hasattr(Data, trite), f"{self.species} dialogue not in data"
-			dlogtree = {"chatter":{"trites":trite}}
-		Speaker.__init__(self,self.species,desc,dlogtree,**kwargs)
-		assert hasattr(Data,self.species+"Sounds"), f"{self.species} sounds not in data"
+			assert dlogtree in Data.chatter, f"Default chatter not in data for {self.dlogtree}"
+			dlogtree = {"chatter":{"trites":dlogtree}}
+		Speaker.__init__(self,name,desc,weight,traits,hp,dlogtree,**kwargs)
 
 
 	def act(self):
@@ -3169,8 +3160,7 @@ class Animal(Speaker):
 
 	def Talk(self,player,game,world):
 		if not player.hasCondition("wildtongued"):
-			soundspool = getattr(Data,self.name+"Sounds")
-			sound = sample(soundspool,1)[0]
+			sound = sample(self.soundspool,1)[0]
 			waitKbInput(f'"{sound}"')
 			return True
 		if "met" not in self.memories:
@@ -3274,7 +3264,6 @@ class Fixture(Item):
 		self.parent = None
 
 
-
 	### Operation ###
 
 	def Break(self):
@@ -3288,13 +3277,13 @@ class Fixture(Item):
 
 
 
+
 class Passage(Fixture):
 	def __init__(self,name,desc,weight,durability,connections,descname,passprep=None,mention=False,**kwargs):
 		Fixture.__init__(self,name,desc,weight=weight,durability=durability,mention=mention,**kwargs)
 		self.connections = connections
 		self.descname = descname
 		self.passprep = passprep
-
 
 
 	### Operation ###
@@ -3333,7 +3322,6 @@ class Serpens(Item):
 		self.value = value
 
 
-
 	### File I/O ###
 
 	# returns a dict which contains all the necessary information to store...
@@ -3344,7 +3332,6 @@ class Serpens(Item):
 			"value": self.value,
 			"status": self.status
 		}
-
 
 
 	### Operation ###
@@ -3360,7 +3347,6 @@ class Serpens(Item):
 		self.status += other.status
 		self.value += other.value
 		self.desc = f"{str(self.value)} glistening coins made of an ancient metal"
-
 
 
 	### User Output ###
@@ -3421,6 +3407,7 @@ class Armor(Item):
 
 
 
+
 class Compass(Item):
 	def Orient(self):
 		game.Print("Orienting you northward!")
@@ -3434,7 +3421,7 @@ class Compass(Item):
 
 
 
-player = Player("","",0,[0]*10,0,0,0,[],{},0,0)
-defaultRoom = Room("","","",{},[],[],[],set())
-game = Game(-1,defaultRoom,defaultRoom,-1,-1)
+player = Player("","",0,[0]*10,0,0,0,0)
+defaultRoom = Room("","","",{},[],[],[])
+game = Game(-1,defaultRoom,defaultRoom,-1,-1,{})
 world = {}

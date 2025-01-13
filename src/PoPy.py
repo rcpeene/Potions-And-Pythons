@@ -16,36 +16,30 @@ def main(testing=False):
 	# formatting the prompt window
 	os.system("mode con: lines=999")
 	os.system("title Potions ^& Pythons")
-	
+
 	if not testing:
 		logger = Core.TeeLogger("./transcript.log")
 		sys.stdin = logger
 		sys.stdout = logger
 		sys.stderr = logger
 
-	# run intro logo animation
-	if not testing: Menu.gameIntro()
-	# instantiate global objects Player, World, Game
-	Menu.mainMenu()
-	# assign parents to objects, which specifies what they are contained in
-	Core.assignParents()
-	# eliminate any room connections which don't exist in the world dict
-	Core.ensureWorldIntegrity()
+		# run intro logo animation
+		Menu.gameIntro()
 
-	# describe the current room
-	Core.game.startUp()
+	# instantiate global objects Player, World, Game and run start-up
+	Menu.mainMenu()
+
 	# main input loop
 	while True:
 		Core.game.silent = False
 		Core.game.whoseturn = Core.player
 		if not Core.player.isAlive(): 
-			if not Menu.restart(): Menu.quit()
+			Menu.restart()
 			continue
 
 		# take user input until player successfully performs an action
 		if not Core.player.hasCondition("asleep"):
 			while not Parser.parse(): continue
-		if Core.game.quit: return
 
 		# creatures in current room's turn
 		for creature in Core.game.currentroom.creatures:
@@ -84,6 +78,7 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
+# add item factories and creature factories
 # add crouching and laying. incorporate it into making sleep "cozy"
 # encode whether a room is in the sky or underground? and altitude? dont print sky events
 # encode whether a room is a road? so npcs can navigate?
@@ -109,7 +104,6 @@ if __name__ == "__main__":
 	# figure out combat? attack items?
 # examine output grammar/statements for lower level actions (in case non-player creatures do actions, we dont want it to print the same msgs), alter print to use G.print which depends on silent
 
-# add animal and monster spawning? would have to include animal templates somewhere
 # add portal object, which is basically a passage that isn't a fixture, (but still can't be taken?)
 # add dialect processor to tritepool output?
 # add possession? (so you can say 'break goblin's sword', 'take his food')... these could be easily restructured as "break sword from goblin", "take food from him"

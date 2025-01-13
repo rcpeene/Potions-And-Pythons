@@ -243,13 +243,23 @@
 				"aliases": ["potion"],
 				"weight": 4,
 				"durability": 3
+			},
+			{
+				"__class__": "Controller",
+				"name": "coffee machine",
+				"desc": "A stainless steel nespresso with a bright red button.",
+				"weight": 25,
+				"durability": 100,
+				"aliases": ["button","machine","coffee machine","nespresso"],
+				"triggers": ["Use", "Press", "Run"],
+				"effect": "Effects.spawnObject('coffee')"
 			}
 		],
 		"creatures": [
 			{
 				"__class__": "Humanoid",
 				"name": "goblin",
-				"desc": "A small green person with long ears, a pointy nose, and a grimacing visage.",
+				"desc": "A small green humanoid with long ears, a pointy nose, and a grimacing visage.",
 				"weight": 10,
 				"traits": [2,2,2,2,2,2,2,2,2,2],
 				"hp": 10,
@@ -606,7 +616,15 @@
 						"cases": "'naked' in speaker.appraisal",
 						"children": [{"remark": "Gollee! Put some clothes on!"}, {}]
 					},
-					"quest": {},
+					"quest": {
+						"cases": "",
+						"children": [
+							{
+								"rapportReq": 1,
+								"remark": "Well shucks... I could sure use a fresh cold beer right about now..."						
+							}
+						]
+					},
 					"colloquy": {
 						"visitLimit": 1,
 						"children": [
@@ -651,7 +669,7 @@
 						]
 					},
 					"chatter": {
-						"trites": "basicChatter"
+						"trites": "basic"
 					}
 				}
 			},
@@ -676,7 +694,7 @@
 				},
 				"dlogtree":{
 					"chatter": {
-						"trites": "basicChatter"
+						"trites": "basic"
 					}
 				}
 			}
