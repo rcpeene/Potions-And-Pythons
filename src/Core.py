@@ -210,7 +210,7 @@ def bagObjects(objects):
 	bag = []
 	for obj in objects:
 		for entry in bag:
-			if entry[0].name == obj.name:
+			if entry[0].stringName == obj.stringName:
 				entry[1] += 1
 				break
 		else:
@@ -1432,11 +1432,14 @@ class Room():
 # Anything in a Room that is not a Creature will be an Item
 # All items come with a name, description, weight, and durability
 class Item():
-	def __init__(self,name,desc,weight,durability,status=None,aliases=None,plural=None,determiner=None):
+	def __init__(self,name,desc,weight,durability,composition,scent=None,taste=None,status=None,aliases=None,plural=None,determiner=None):
 		self.name = name
 		self.desc = desc
 		self.weight = weight
 		self.durability = durability
+		self.composition = composition
+		self.scent = scent
+		self.taste = taste
 		self.status = status if status else []
 		self.aliases = aliases if aliases else []
 		if plural is None:
@@ -1595,7 +1598,7 @@ class Item():
 	
 
 	def describe(self):
-		game.Print(f"It's {self.stringName()}.")
+		game.Print(f"It's {self.stringName(det='a')}.")
 		game.Print(f"{self.desc}.")
 
 
@@ -1803,13 +1806,20 @@ class Creature():
 			self.death()
 
 
-	# heals player hp a given amount
+	# heals hp a given amount
 	def heal(self,heal,overflow=False):
 		if self.hp + heal > self.MXHP() and not overflow:
 			heal = self.MXHP() - self.hp
 		self.hp += heal
 		game.Print(f"You healed {heal} HP.")
 		return heal
+
+
+	def resurge(self,mana,overflow=False):
+		if self.mp + mana > self.MXMP() and not overflow:
+			mana = self.MXHP() - self.mp
+		self.mp += mana
+		return mana
 
 
 	# adds money
@@ -2001,9 +2011,10 @@ class Creature():
 		if not self.hasAnyCondition("hungry","starving"):
 			self.regenTimer += 1
 			if self.regenTimer >= 50 - self.ENDR() or self.hasCondition("mending"):
-					self.regenTimer = 0
-					h = 5 if self.hasAnyCondition("cozy","mending") else 1
-					self.heal(h)
+				self.regenTimer = 0
+				h = 5 if self.hasAnyCondition("cozy","mending") else 1
+				self.heal(h)
+				self.resurge(1)
 
 
 	def checkHindered(self):
@@ -2186,6 +2197,15 @@ class Creature():
 		rider.riding = self
 		game.Print(f"You ride {self.stringName(det='the')}.")
 		return True
+
+
+	def Smell(self,smeller):
+		game.Print("Smells a little like body odor.")
+
+
+	def Lick(self,smeller):
+		# TODO: make creatures evade this or try to
+		game.Print("Yuck!")
 
 
 	### Getters ###
@@ -2490,7 +2510,7 @@ class Creature():
 
 
 	def describe(self):
-		game.Print(f"It's {self.stringName()}.")
+		game.Print(f"It's {self.stringName(det='a')}.")
 		game.Print(f"{self.desc}.")
 
 
@@ -3001,7 +3021,7 @@ class Humanoid(Creature):
 	### Getters ###
 
 	def describe(self):
-		game.Print(f"It's {self.stringName()}.")
+		game.Print(f"It's {self.stringName(det='a')}.")
 		game.Print(f"{self.desc}.")
 		gearitems = [item for item in self.gear.values() if item != EmptyGear()]
 		if len(gearitems) != 0:
@@ -3258,8 +3278,8 @@ Set status
 
 # almost identical to the item class, but fixtures may not be removed from their initial location.
 class Fixture(Item):
-	def __init__(self,name,desc,weight=-1,durability=-1,mention=False,**kwargs):
-		Item.__init__(self,name,desc,weight=weight,durability=durability,**kwargs)
+	def __init__(self,name,desc,weight,durability,composition,mention=False,**kwargs):
+		Item.__init__(self,name,desc,weight,durability,composition,**kwargs)
 		self.mention = mention
 		self.parent = None
 
@@ -3279,8 +3299,8 @@ class Fixture(Item):
 
 
 class Passage(Fixture):
-	def __init__(self,name,desc,weight,durability,connections,descname,passprep=None,mention=False,**kwargs):
-		Fixture.__init__(self,name,desc,weight=weight,durability=durability,mention=mention,**kwargs)
+	def __init__(self,name,desc,weight,durability,composition,connections,descname,passprep=None,mention=False,**kwargs):
+		Fixture.__init__(self,name,desc,weight,durability,composition,mention=mention,**kwargs)
 		self.connections = connections
 		self.descname = descname
 		self.passprep = passprep
@@ -3317,6 +3337,7 @@ class Serpens(Item):
 		self.plural = "gold"
 		self.weight = value
 		self.durability = -1
+		self.composition = "gold"
 		self.status = status if status else []
 		self.descname = str(value) + " Gold"
 		self.value = value
@@ -3364,8 +3385,8 @@ class Serpens(Item):
 
 
 class Weapon(Item):
-	def __init__(self,name,desc,weight,durability,might,sleight,sharpness,range,type,twohanded=False,**kwargs):
-		Item.__init__(self,name,desc,weight,durability,**kwargs)
+	def __init__(self,name,desc,weight,durability,composition,might,sleight,sharpness,range,type,twohanded=False,**kwargs):
+		Item.__init__(self,name,desc,weight,durability,composition,**kwargs)
 		self.might = might
 		self.sleight = sleight
 		self.sharpness = sharpness
@@ -3382,16 +3403,16 @@ class Weapon(Item):
 
 
 class Shield(Item):
-	def __init__(self,name,desc,weight,durability,prot,**kwargs):
-		Item.__init__(self,name,desc,weight,durability,**kwargs)
+	def __init__(self,name,desc,weight,durability,composition,prot,**kwargs):
+		Item.__init__(self,name,desc,weight,durability,composition,**kwargs)
 		self.prot = prot
 
 
 
 
 class Armor(Item):
-	def __init__(self,name,desc,weight,durability,prot,slots=None,**kwargs):
-		Item.__init__(self,name,desc,weight,durability,**kwargs)
+	def __init__(self,name,desc,weight,durability,composition,prot,slots=None,**kwargs):
+		Item.__init__(self,name,desc,weight,durability,composition,**kwargs)
 		self.prot = prot
 		self.slots = slots if slots else []
 		if type(slots) is not list:

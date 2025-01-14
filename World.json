@@ -72,6 +72,7 @@
 				"desc": "creaky wooden stairway which leads up",
 				"weight": -1,
 				"durability": -1,
+				"composition": "wood",
 				"connections": {
 					"up": "cabin hallway",
 					"out": "cabin hallway"
@@ -89,6 +90,7 @@
 				"aliases": ["sword"],
 				"weight": 6,
 				"durability": 12,
+				"composition": "iron",
 				"might": 3,
 				"sleight": 3,
 				"sharpness": 2,
@@ -102,6 +104,7 @@
 				"aliases": ["sword"],
 				"weight": 11,
 				"durability": 10,
+				"composition": "rust",
 				"might": 3,
 				"sleight": 2,
 				"sharpness": 0,
@@ -112,10 +115,11 @@
 				"__class__": "Armor",
 				"name": "broken helm",
 				"desc": "An old iron soldier's helmet with a hole on the left side.",
-				"aliases": ["helm","iron helm"],
-				"slots": "head",
 				"weight": 4,
 				"durability": 5,
+				"composition": "iron",
+				"aliases": ["helm","iron helm"],
+				"slots": "head",
 				"prot": 3
 			}
 		],
@@ -141,6 +145,7 @@
 				"desc": "wooden stairs which lead up on the right of the hall and down on the left of the hall",
 				"weight": -1,
 				"durability": -1,
+				"composition": "wood",
 				"connections": {
 					"up": "cabin quarters",
 					"down": "cabin basement"
@@ -170,6 +175,7 @@
 				"desc": "A cold stone hearth embedded in the wall. It is blackened from soot and ash.",
 				"weight": -1,
 				"durability": -1,
+				"composition": "stone",
 				"aliases": ["stone hearth","grey stone hearth"]
 			},
 			{
@@ -178,6 +184,7 @@
 				"desc": "A brittle, dusty window on the northern wall of this room. You can't see through it",
 				"weight": 1,
 				"durability": 2,
+				"composition": "glass",
 				"aliases": ["northern window"]
 			}
 		],
@@ -189,30 +196,19 @@
 				"aliases": ["kitchen table"],
 				"weight": 1,
 				"durability": 1,
+				"composition": "wood",
 				"items": [
 					{
-						"__class__": "Potion",
-						"name": "red potion",
-						"desc": "A bubbling red liquid in a glass bottle",
-						"aliases": ["potion"],
-						"weight": 4,
-						"durability": 3
+						"__class__": "factoryItem",
+						"name": "red potion"
 					},
 					{
-						"__class__": "Potion",
-						"name": "blue potion",
-						"desc": "A bubbling blue liquid in a glass bottle",
-						"aliases": ["potion"],
-						"weight": 4,
-						"durability": 3
+						"__class__": "factoryItem",
+						"name": "blue potion"
 					},
 					{
-						"__class__": "Potion",
-						"name": "green potion",
-						"desc": "A bubbling green liquid in a glass bottle",
-						"aliases": ["potion"],
-						"weight": 4,
-						"durability": 3
+						"__class__": "factoryItem",
+						"name": "green potion"
 					},
 					{
 						"__class__": "Food",
@@ -221,6 +217,7 @@
 						"aliases": ["bread","breadroll","roll","biscuit"],
 						"weight": 2,
 						"durability": 2,
+						"composition": "bread",
 						"heal": 1
 					}
 				],
@@ -233,16 +230,13 @@
 				"aliases": ["kitchen table"],
 				"weight": 1,
 				"durability": 1,
+				"composition": "wood",
 				"items": [],
 				"descname": "table"
 			},
 			{
-				"__class__": "Potion",
-				"name": "red potion",
-				"desc": "A bubbling red liquid in a glass bottle",
-				"aliases": ["potion"],
-				"weight": 4,
-				"durability": 3
+				"__class__": "factoryItem",
+				"name": "red potion"
 			},
 			{
 				"__class__": "Controller",
@@ -250,32 +244,13 @@
 				"desc": "A stainless steel nespresso with a bright red button.",
 				"weight": 25,
 				"durability": 100,
+				"composition": "steel",
 				"aliases": ["button","machine","coffee machine","nespresso"],
 				"triggers": ["Use", "Press", "Run"],
 				"effect": "Effects.spawnObject('coffee')"
 			}
 		],
-		"creatures": [
-			{
-				"__class__": "Humanoid",
-				"name": "goblin",
-				"desc": "A small green humanoid with long ears, a pointy nose, and a grimacing visage.",
-				"weight": 10,
-				"traits": [2,2,2,2,2,2,2,2,2,2],
-				"hp": 10,
-				"mp": 0,
-				"money": 0,
-				"inv": [],
-				"gear": {
-					"head": null,
-					"torso": null,
-					"left": null,
-					"right": null,
-					"legs": null
-				}
-			}
-		],
-		"status": []
+		"creatures": []
 	},
 	"cabin privy": {
 		"__class__": "Room",
@@ -296,13 +271,19 @@
 				"aliases": ["bronze capsule"],
 				"weight": 1,
 				"durability": 100,
+				"composition": "bronze",
 				"open": false,
 				"items": [],
 				"keyids": [-1,1],
 				"locked": true
 			}
 		],
-		"creatures": [],
+		"creatures": [
+			{
+				"__class__": "factoryCreature",
+				"name": "goblin"
+			}
+		],
 		"status": []
 	},
 	"cabin quarters": {
@@ -319,6 +300,7 @@
 				"aliases": ["stairs","staircase","stairway"],
 				"weight": -1,
 				"durability": -1,
+				"composition": "wood",
 				"mention": true,
 				"connections": {
 					"down": "cabin hallway",
@@ -335,6 +317,7 @@
 				"aliases": ["box","chest"],
 				"weight": 8,
 				"durability": 10,
+				"composition": "wood",
 				"open": false,
 				"items": [
 					{
@@ -344,6 +327,7 @@
 						"aliases": ["key"],
 						"weight": 2,
 						"durability": 3,
+						"composition": "rust",
 						"id": 1
 					}
 				]
@@ -368,6 +352,7 @@
 				"desc": "a plain steel compass with a red arrow",
 				"weight": 2,
 				"durability": 10,
+				"composition": "steel",
 				"plural": "compasses"
 			}
 		],
@@ -393,6 +378,7 @@
 				"desc": "A mossy grey cliff",
 				"weight": -1,
 				"durability": -1,
+				"composition": "earth",
 				"aliases": ["cliffside","pale cliff"],
 				"difficulty": 30,
 				"connections": {
@@ -418,6 +404,7 @@
 				"desc": "A mossy grey cliff",
 				"weight": -1,
 				"durability": -1,
+				"composition": "earth",
 				"aliases": ["cliffside","white cliff"],
 				"difficulty": 30,
 				"connections": {
@@ -477,9 +464,7 @@
 			"south": "treeline"
 		},
 		"fixtures": [],
-		"items": [
-
-		],
+		"items": [],
 		"creatures": []
 	},
 	"glen": {
@@ -505,6 +490,7 @@
 				"aliases": ["wooden sign"],
 				"weight": 12,
 				"durability": 8,
+				"composition": "wood",
 				"text": "Beware of snakes!"
 			}
 		],
@@ -570,6 +556,7 @@
 				"aliases": ["axe","hatchet"],
 				"weight": 4,
 				"durability": 10,
+				"composition": "iron",
 				"might": 4,
 				"sleight": 0,
 				"sharpness": 1,

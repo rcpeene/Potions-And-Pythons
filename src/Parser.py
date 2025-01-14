@@ -567,9 +567,9 @@ def Help(*args):
 	Core.clearScreen()
 	Core.game.Print("\nSingle-Word Commands")
 	shortcommands = sorted(tuple(shortactions.keys()) + Data.traits + Data.abilities)
-	Core.columnPrint(shortcommands,12,10)
+	Core.columnPrint(shortcommands,12,10,printf=print)
 	Core.game.Print("\nVerb Commands (Does not include cheat codes and secret commands)")
-	Core.columnPrint(actions.keys(),12,10)
+	Core.columnPrint(actions.keys(),12,10,printf=print)
 	Core.game.Print("\nDuring the game, type 'info' for information on the game and how to play.")
 	Core.waitKbInput()
 	Core.clearScreen()
@@ -593,7 +593,7 @@ def Quit(*args):
 def Shout(*args): Core.game.Print('"AHHHHHHHHHH"')
 def Sing(*args): Core.game.Print('"Falalalaaaa"')
 def Time(*args): Core.game.Print("Time:", Core.game.time)
-def Yawn(*args): Core.game.Print("This is no time for slumber!")
+def Yawn(*args): return Rest(None,None,None) if Core.yesno("Do you want to sleep?") else None
 
 
 
@@ -622,11 +622,11 @@ def Attack(dobj,iobj,prep,target=None,weapon=None,weapon2=None):
 		weapon, weapon2 = weapon2, None
 	if iobj in ("fist","hand"):
 		Core.player.unequip(Core.player.gear["right"])
-		weapon = Items.Hand("your hand","",4,-1)
+		weapon = Items.Hand("your hand","",4,-1,None)
 	if iobj in ("foot","leg"):
-		weapon = Items.Foot("your foot","",6,-1)
+		weapon = Items.Foot("your foot","",6,-1,None)
 	if iobj in ("mouth","teeth"):
-		weapon = Items.Mouth("your mouth","",4,-1)
+		weapon = Items.Mouth("your mouth","",4,-1,None)
 	if iobj != None:
 		if weapon == None:
 			weapon = Core.player.inGear(iobj)
@@ -1265,7 +1265,25 @@ def Kill(dobj,iobj,prep):
 
 
 def Lick(dobj,iobj,prep):
-	Core.game.Print("licking")
+	if prep not in ("using","with",None):
+		Core.game.Print("Command not understood.")
+		return False
+	if dobj == None:
+		dobj = getNoun("What do you want to lick?")
+		if dobj in Data.cancels: return False
+
+	I = findObjFromTerm(dobj)
+	if I == None: return False
+	Core.game.setPronouns(I)
+
+	if Core.hasMethod(I,"Lick"):
+		return I.Lick(Core.player)
+		
+	if I.composition in Data.tastes:
+		Core.game.Print(Data.tastes[I.composition])
+	if I.composition in Data.scents:
+		Core.game.Print(Data.scents[I.composition].replace("scent","taste"))
+	return True
 
 
 def Light(dobj,iobj,prep):
@@ -1586,8 +1604,26 @@ def Shove(dobj,iobj,prep):
 	Core.game.Print("shoveing")
 
 
-def Smell(dobj,iobj,prep):
-	Core.game.Print("smelling")
+def Smell(dobj,iobj,prep):	
+	if prep not in ("using","with",None):
+		Core.game.Print("Command not understood.")
+		return False
+	if dobj == None:
+		dobj = getNoun("What do you want to smell?")
+		if dobj in Data.cancels: return False
+
+	I = findObjFromTerm(dobj)
+	if I == None: return False
+	Core.game.setPronouns(I)
+
+	if Core.hasMethod(I,"Smell"):
+		return I.Smell(Core.player)
+		
+	if I.composition in Data.scents:
+		Core.game.Print(Data.scents[I.composition])
+	elif I.composition in Data.tastes:
+		Core.game.Print(Data.tastes[I.composition].replace("taste","scent"))
+	return True
 
 
 def Steal(dobj,iobj,prep,I=None):
@@ -1971,6 +2007,7 @@ actions = {
 "sleep":Rest,
 "slice":Cut,
 "slumber":Rest,
+"smash":Break,
 "smell":Smell,
 "sneak":Crouch,
 "sniff":Smell,
@@ -2025,7 +2062,7 @@ actions = {
 # whip (attack)
 # dress/undress/strip
 # spit
-# douse -> reverse of pour on?
+# douse,drench -> reverse of pour on?
 # converse/communicate/discuss
 # say hello -> hello
 # sprint/run

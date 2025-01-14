@@ -37,7 +37,6 @@ def spawnObject(obj,room=None):
 	elif isinstance(obj,Core.Fixture):
 		room.addFixture(obj)
 	elif isinstance(obj,Core.Item):
-		print("adding item")
 		room.addItem(obj)
 	if not Core.game.silent:
 		Core.game.Print(f"{obj.stringName(det='a',cap=True)} appeared!")
