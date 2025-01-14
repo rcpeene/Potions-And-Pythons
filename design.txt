@@ -951,7 +951,7 @@ Purple, Lavender, Indigo, Violet
 Clear (dissolves?), Brown (burns?), Black (explodes), Grey, White
 Bronze (defense), Silver (speed), Gold (atk/dmg/crit)
 
-Also elixirs, philter (love affect?), tonic (energizing), brew (alcohol), draught, 
+Also elixirs, philter (love affect?), tonic (energizing), brew (alcohol), draught,
 tincture (dyes), 
 
 

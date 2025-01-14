@@ -15,6 +15,7 @@ import os, json, sys
 import Data
 import Core
 import Creatures
+import Items
 
 
 ##########################
@@ -78,7 +79,10 @@ def default(jsonDict):
 		del jsonDict["__class__"]
 		if objClassname == "set":
 			return set(jsonDict["setdata"])
-
+		if objClassname == "factoryCreature":
+			return Creatures.factory[jsonDict["name"]]()
+		elif objClassname == "factoryItem":
+			return Items.factory[jsonDict["name"]]()
 		objClass = Core.strToClass(objClassname,["Core","Creatures","Items"])
 		if objClass == None:
 			raise Exception("Could not find class for world key:",objClassname)
@@ -261,8 +265,7 @@ def deleteAll():
 		os.rmdir(savename)
 	os.chdir("..")
 	sleep(1)
-	print("\nAll save files deleted.\n")
-	input()
+	Core.waitKbInput("\nAll save files deleted.\n")
 
 
 # deletes a save file whose name is given by the user
@@ -308,8 +311,7 @@ def delete(filename):
 	os.rmdir(savename)
 	os.chdir("..")
 	sleep(1)
-	print("\nDeleted\n")
-	input()
+	Core.waitKbInput("\nDeleted\n")
 
 
 # asks for player name and description, starts everything else at initial values

@@ -78,10 +78,12 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# add item factories and creature factories
-# add crouching and laying. incorporate it into making sleep "cozy"
-# encode whether a room is in the sky or underground? and altitude? dont print sky events
+# add item "composition" (like wooden, iron etc)
+# add licking and tasting (use composition?)
+# don't print sky events
+# add ability to look at sun, clouds, stars, meteorshower, aurora
 # encode whether a room is a road? so npcs can navigate?
+# add crouching and laying. incorporate it into making sleep "cozy"
 
 # add basic equipment and clothing items
 # fix/add Creature.isNaked or Player.isNaked

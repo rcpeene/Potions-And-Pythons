@@ -115,7 +115,19 @@ chatter = {
     "python": {"Dessssstroy....","Kill!","Sssoo... Hungrryyy..."}
 }
 
+tastes = {
+    "earth": "It has a sharp taste of dry musty dirt.",
+    "stone": "It has a dull taste of chalk and lime.",
+    "wood": "It doesn't taste like much.",
+    "glass": "It has little taste.",
+    "bronze": "It has a light metallic taste.",
+    "iron": "It tastes like iron.",
+    "rust": "It tastes like dirty iron.",
+    "steel": "It has a sharp metallic taste.",
+    "bread": "It tastes like dreams and joy"
+}
 
+scents = {}
 
 
 ##########################

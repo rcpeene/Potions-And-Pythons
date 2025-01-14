@@ -33,7 +33,7 @@ class Bottle(Core.Item):
 		self.parent.removeItem(self)
 		# randomly generates n shards between 3,6
 		for _ in range(randint(3,6)):
-			shard = Shard("shard","a sharp shard of glass",1,-1)
+			shard = Shard("glass shard","a sharp shard of glass",1,-1)
 			Core.game.currentroom.addItem(shard)
 		return True
 
@@ -41,8 +41,8 @@ class Bottle(Core.Item):
 
 
 class Box(Core.Item):
-	def __init__(self,name,desc,weight,durability,open,items,**kwargs):
-		Core.Item.__init__(self,name,desc,weight,durability,**kwargs)
+	def __init__(self,name,desc,weight,durability,composition,open,items,**kwargs):
+		Core.Item.__init__(self,name,desc,weight,durability,composition,**kwargs)
 		self.open = open
 		self.items = items
 
@@ -141,8 +141,8 @@ class Controller(Core.Item):
 
 
 class Door(Core.Fixture):
-	def __init__(self,name,desc,weight,durability,mention,open,connections,**kwargs):
-		Core.Fixture.__init__(self,name,desc,weight,durability,mention,**kwargs)
+	def __init__(self,name,desc,weight,durability,composition,mention,open,connections,**kwargs):
+		Core.Fixture.__init__(self,name,desc,weight,durability,composition,mention,**kwargs)
 		self.open = open
 		# connection is a 4-tuple of the form:
 		# (outDirection, outLocation, inDirection, inLocation)
@@ -168,8 +168,8 @@ class Door(Core.Fixture):
 
 
 class Food(Core.Item):
-	def __init__(self,name,desc,weight,durability,heal,**kwargs):
-		Core.Item.__init__(self,name,desc,weight,durability,**kwargs)
+	def __init__(self,name,desc,weight,durability,composition,heal,**kwargs):
+		Core.Item.__init__(self,name,desc,weight,durability,composition,**kwargs)
 		self.heal = heal
 
 	# heals 'heal' hp to the player, removes food from inventory
@@ -187,7 +187,7 @@ class Food(Core.Item):
 
 class Foot(Core.Item):
 	def improviseWeapon(self):
-		return Core.Weapon(self.name,self.desc,self.weight,self.durability,Core.minm(1,self.weight//4),0,0,0,"b")
+		return Core.Weapon(self.name,self.desc,self.weight,self.durability,"",Core.minm(1,self.weight//4),0,0,0,"b")
 
 
 
@@ -204,8 +204,8 @@ class Fountain(Core.Fixture):
 
 
 class Generator(Controller):
-	def __init__(self,name,desc,weight,durability,effect,charge,capacity,rate,cost,**kwargs):
-		Core.Controller.__init__(self,name,desc,weight,durability,effect,**kwargs)
+	def __init__(self,name,desc,weight,durability,composition,effect,charge,capacity,rate,cost,**kwargs):
+		Core.Controller.__init__(self,name,desc,weight,durability,composition,effect,**kwargs)
 		self.charge = charge
 		self.capacity = capacity
 		self.rate = rate
@@ -231,14 +231,14 @@ class Generator(Controller):
 
 class Hand(Core.Item):
 	def improviseWeapon(self):
-		return Core.Weapon(self.name,self.desc,self.weight,self.durability,Core.minm(1,self.weight//4)+1,2,0,0,"b")
+		return Core.Weapon(self.name,self.desc,self.weight,self.durability,"",Core.minm(1,self.weight//4)+1,2,0,0,"b")
 
 
 
 
 class Key(Core.Item):
-	def __init__(self,name,desc,weight,durability,id,**kwargs):
-		Core.Item.__init__(self,name,desc,weight,durability,**kwargs)
+	def __init__(self,name,desc,weight,durability,composition,id,**kwargs):
+		Core.Item.__init__(self,name,desc,weight,durability,composition,**kwargs)
 		self.id = id
 
 
@@ -253,8 +253,8 @@ class Key(Core.Item):
 
 
 class Lockbox(Box):
-	def __init__(self,name,desc,weight,durability,open,items,keyids,locked,**kwargs):
-		Box.__init__(self,name,desc,weight,durability,open,items,**kwargs)
+	def __init__(self,name,desc,weight,durability,composition,open,items,keyids,locked,**kwargs):
+		Box.__init__(self,name,desc,weight,durability,composition,open,items,**kwargs)
 		self.keyids = keyids
 		self.locked = locked
 
@@ -320,7 +320,7 @@ class Lockbox(Box):
 
 class Mouth(Core.Item):
 	def improviseWeapon(self):
-		return Core.Weapon(self.name,self.desc,self.weight,self.durability,Core.minm(1,self.weight//4),0,0,4,"p")
+		return Core.Weapon(self.name,self.desc,self.weight,self.durability,"",Core.minm(1,self.weight//4),0,0,4,"p")
 
 
 
@@ -332,7 +332,7 @@ class Potion(Bottle):
 		Core.game.Print(f"You drink the {self.name}.")
 		Core.player.heal(1000)
 		self.parent.removeItem(self)
-		Core.player.addItem(Bottle("bottle","an empty glass bottle",3,3))
+		Core.player.addItem()
 
 
 	def Pour(self,obj=None):
@@ -340,7 +340,7 @@ class Potion(Bottle):
 			if Core.hasMethod(obj,"Drench"):
 				obj.Drench(self)
 		self.parent.removeItem(self)
-		Core.player.addItem(Bottle("bottle","an empty glass bottle",3,3))
+		Core.player.addItem(factory["bottle"]())
 
 
 
@@ -354,8 +354,8 @@ class Shard(Core.Item):
 
 
 class Sign(Core.Item):
-	def __init__(self,name,desc,weight,durability,text,**kwargs):
-		Core.Item.__init__(self,name,desc,weight,durability,**kwargs)
+	def __init__(self,name,desc,weight,durability,composition,text,**kwargs):
+		Core.Item.__init__(self,name,desc,weight,durability,composition,**kwargs)
 		self.text = text
 
 
@@ -367,8 +367,8 @@ class Sign(Core.Item):
 
 
 class Switch(Core.Fixture):
-	def __init__(self,name,desc,weight,durability,mention,effect,**kwargs):
-		Core.Fixture.__init__(self,name,desc,weight,durability,mention,**kwargs)
+	def __init__(self,name,desc,weight,durability,composition,mention,effect,**kwargs):
+		Core.Fixture.__init__(self,name,desc,weight,durability,composition,mention,**kwargs)
 		self.effect = effect
 
 
@@ -392,8 +392,8 @@ class Sword(Core.Weapon):
 
 
 class Table(Core.Item):
-	def __init__(self,name,desc,weight,durability,items,descname,**kwargs):
-		Core.Item.__init__(self,name,desc,weight,durability,**kwargs)
+	def __init__(self,name,desc,weight,durability,composition,items,descname,**kwargs):
+		Core.Item.__init__(self,name,desc,weight,durability,composition,**kwargs)
 		self.items = items
 		self.descname = descname
 
@@ -465,7 +465,7 @@ class Table(Core.Item):
 
 	### User Output ###
 
-	def desdifficultyibe(self):
+	def describe(self):
 		Core.game.Print(f"It's {self.stringName(det='a')}.")
 		if len(self.items) != 0:
 			Core.game.Print(f"On it is {Core.listObjects(self.items)}.")
@@ -476,8 +476,8 @@ class Table(Core.Item):
 
 
 class Wall(Core.Passage):
-	def __init__(self,name,desc,weight,durability,connections,descname,difficulty,**kwargs):
-		Core.Passage.__init__(self,name,desc,weight,durability,connections,descname,**kwargs)
+	def __init__(self,name,desc,weight,durability,composition,connections,descname,difficulty,**kwargs):
+		Core.Passage.__init__(self,name,desc,weight,durability,composition,connections,descname,**kwargs)
 		self.difficulty = difficulty
 
 
@@ -519,5 +519,9 @@ class Wall(Core.Passage):
 
 
 factory = {
-	"coffee": lambda: Potion("coffee bottle","A bottle of dark brown foamy liquid",4,3,aliases=["coffee","espresso"])
+	"bottle": lambda: Bottle("bottle","an empty glass bottle",3,3,"glass"),
+	"coffee": lambda: Potion("bottle of coffee","A bottle of dark brown foamy liquid",4,3,"glass",aliases=["coffee","espresso","bottle"]),
+	"red potion": lambda: Potion("red potion", "A bubbling red liquid in a glass bottle",4,3,"glass",aliases=["potion"]),
+	"blue potion": lambda: Potion("blue potion", "A bubbling blue liquid in a glass bottle",4,3,"glass",aliases=["potion"]),
+	"green potion": lambda: Potion("green potion", "A bubbling green liquid in a glass bottle",4,3,"glass",aliases=["potion"])
 }
