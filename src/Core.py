@@ -1551,7 +1551,7 @@ class Item():
 		
 		if self.despawnTimer is not None:
 			self.despawnTimer -= t
-			if self.despawnTimer <= 0:
+			if self.despawnTimer <= 0 and self.parent is not game.currentroom:
 				self.parent.removeItem(self)			
 
 
