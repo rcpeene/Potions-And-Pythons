@@ -78,10 +78,6 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# add item "composition" (like wooden, iron etc)
-# add licking and tasting (use composition?)
-# don't print sky events
-# add ability to look at sun, clouds, stars, meteorshower, aurora
 # encode whether a room is a road? so npcs can navigate?
 # add crouching and laying. incorporate it into making sleep "cozy"
 
@@ -95,6 +91,9 @@ if __name__ == "__main__":
 	# add magic beans or food to pour stuff on
 	# "drink from the fountain"
 	# make a list of all possible uses and inputs for each action and systematically test them. Revise the world to accomodate them
+# add asserts to most class methods
+# add better comments to methods
+# skim/update design
 
 # behavior
 	# design persons and person behavior all of the RP system?

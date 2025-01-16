@@ -1039,7 +1039,10 @@ alembic
 lodestone
 wooden spoon
 crocs - made from crocodile
-
+papyrus (made from plant stems)
+paper (cotton, linen, hemp, wood)
+parchment (white, vellum, purple)
+inks (black, blue, red, silver, golden)
 
 
 WORLD DESIGN IDEAS:
@@ -1195,7 +1198,8 @@ CHARACTER NAMES:
 	Rook
 
 	polemarch,commodore,margrave,
-	thane,earl,baron,duke,burgess,reeve,magistrate,warden,alderman,franklin,manciple
+	thane,earl,baron,duke,burgess,
+	reeve,magistrate,warden,alderman,franklin,manciple
 	dame,lady,"hostess",courtesan,
 	bailiff,steward,sheriff,guard,watchman
 	knight,archer,cavalier,squire,page,knave,
@@ -1212,10 +1216,9 @@ CHARACTER NAMES:
 	baker,butcher,miller,brewer,vintner,cheesemonger,spiceman,milkmaid
 	merchant,trader,peddler,salesmen,jeweler
 	blacksmith,brownsmith,whitesmith,goldsmith,silversmith,locksmith,gunsmith
-	carpenter,mason,glassmaker
+	carpenter,mason,glassmaker,wainwright,sawyer
 	cooper,potter,chandler,fletcher,bowyer,luthier
-	carpenter,wainwright,sawyer
-	tanner,tailor,weaver,seamstress,cobbler,hatter
+	tanner,tailor,weaver,seamstress,cobbler,hatter,parchminer
 	fisherman,huntsman,woodsman
 	beekeeper,aviarist,falconist,ratcatcher,
 	rancher,stablekeeper,cowboy,shepherd,ostler
@@ -1351,7 +1354,7 @@ Goblinmite, Brainworm, Orc Beetle, Mimicbug, Waterbear
 SPELL NAME IDEAS:
 Abjure, Aliment, Amphibify, Anathema, Armistice, Aspersion, Asterism, Avulsion
 Bamboozle, Bang, Banish, Banquet, Beacon, Bellow, Bolster, Boogaloo, Boom, Busk
-Cacophony, Catharsis, Chutzpah, Clemency, Collapse, Conjure
+Cacophony, Catharsis, Celeritas, Chutzpah, Clemency, Collapse, Conjure
 Delirium, Deluge, Dessicate, Discord
 Effervesce, Eidolon, Enchant, Ennervation, Enthrall, Expectorate, Expell
 Facade, Facsimile, Feast, Festoon, Fib, Fireball, Fizz, Flare, Frostbite
@@ -1363,11 +1366,11 @@ Lampoon, Lash, Lethargy, Levitate, Lignify, Limerence, Lure
 Maelstrom, Malaise, Manumit, Melancholy, Micturate, Mirage, Moonshot
 Nyctophobia
 Parley, Paroxysm, Parry, Penumbra, Petrify, Phantasm, Pilfer, Ponder, Prescience, Psychosis, Putrefaction
-Refection, Rend, Repast, Resurrect, Revelry, Riposte
+Refection, Rend, Repast, Resurrect, Revelry, Riposte, Ruin
 Sanctuary, Scry, Serein, Shivaree, Simper, Simulacrum, Smite, Smithereens, Spangle, Squib, Sunder, Synpase
 Telekinesis, Tempest, Tether, Torrent
 Usurp
-Vamoose, Vendetta, Volley
+Vamoose, Vendetta, Veritas, Volley
 Wallop, Weal, Wode, Woe
 Zeitgeist, Zephyr
 

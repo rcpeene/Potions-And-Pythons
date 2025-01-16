@@ -1045,15 +1045,16 @@ class Game():
 		elif mooncycle == 7:
 			self.Print("It is a full moon.")
 			self.events.add("full moon")
-		else:
+		if "new moon" in self.events:
 			self.events.remove("new moon")
+		if "full moon" in self.events:
 			self.events.remove("full moon")
 
 
 	def checkAstrology(self,update=False):
 		if self.currentroom.altitude < 0:
 			return
-		darkhours = ("cat","mouse","owl","serpent","wolf")
+		darkhours = ("hearth","cat","mouse","owl","serpent","wolf")
 		aurora_cycle = self.time % 2000
 		if aurora_cycle >= 0 and aurora_cycle < 100 and self.hour() in darkhours:
 			if "aurora" not in self.events or update:
@@ -1073,7 +1074,7 @@ class Game():
 			self.Print("The meteor shower is over.")
 
 		lighthours = ("rooster","juniper","bell","sword","willow","lily")
-		eclipse_cycle = (self.time % (self.monthlength*3+100))
+		eclipse_cycle = self.time % (self.monthlength*3+100)
 		if eclipse_cycle > 0 and eclipse_cycle < 30 and self.hour() in lighthours:
 			if "eclipse" not in self.events or update:
 				self.Print("There is a solar eclipse in the sky!")
@@ -1135,17 +1136,62 @@ class Game():
 	def checkDaytime(self):
 		if self.currentroom.altitude < 0:
 			return
-		if self.hour() in ('stag','rooster','juniper'):
-			self.Print('It is morning.')
-		if self.hour() in ('bell','sword','willow','lily'):
-			self.Print('It is day.')
-		if self.hour() in ('hearth','cat','mouse'):
-			self.Print('It is evening.')
-		if self.hour() in ('owl','serpent','wolf'):
-			self.Print('It is night.')
+		if self.hour() in ("stag","rooster","juniper"):
+			self.Print("It is morning.")
+		if self.hour() in ("bell","sword","willow","lily"):
+			self.Print("It is day.")
+		if self.hour() in ("hearth","cat"):
+			self.Print("It is evening.")
+		if self.hour() in ("mouse","owl","serpent","wolf"):
+			self.Print("It is night.")
 			self.checkMoon()
 
 
+	def LookUp(self,target):
+		if self.currentroom.altitude < 0:
+			self.Print("You can't see that from here.")
+		
+		if target == "sky":
+			target = "sun" if self.hour() in Data.dayhours else "moon"		
+
+		if "eclipse" in self.events:
+			self.Print("The bold red sun is blackened by the ominous moon. The world is dark below and above but for the ring of violet light tracing the moon. Those golden lines of fire that scar the moon's surface seem like cracks through which the sun's rays seep faintly through. All is still in the heavens as they bear witness to this solemn union.")
+			player.takeDamage(5,"r")
+		elif "eclipse" not in self.events and target in ("eclipse","solar eclipse"):
+			self.Print("There's no eclipse happening right now.")
+		elif target == "sun":
+			if self.hour() in ("stag","rooster","juniper"):
+				self.Print("A burning ball of red fire marches upward in the sky. In the morning air it paints the heavens a tinge of pale green.")
+			elif self.hour() in ("bell","sword","willow","lily"):
+				self.Print("A burning ball of red fire hangs high in the sky. It warms your face with its bold glow.")
+			elif self.hour() in ("hearth","cat"):
+				self.Print("A burning ball of red fire rests in the sky. As it descends toward the horizon it draws a curtain of violet across the world above.")
+			else:
+				self.Print("The sun isn't out right now.")
+		elif target in ("moon","stars"):
+			if self.hour() in Data.nighthours:
+				if "full moon" in self.events:
+					self.Print("A shimmering golden orb dances in the sky pouring whispers of light. You can make out traces of strange golden fire on its surface. The stars seem to dance around it joyously. You can make out the constellations of Zork, Norman, and Glycon acting out the tales of fate.")
+				elif "new moon" in self.events:
+					self.Print("On a night without the moon the world is full of silence and cold. The stars seem to shiver lonesomely. You can make out the constellations of Zork, Norman, and Glycon acting out the tales of fate.")
+				else:
+					self.Print("A shimmering golden orb dances in the sky pouring whispers of light. You can make out traces of strange golden fire on its surface. It hangs amongst a scattering of sparkling drops on all sides. You can make out the constellations of Zork, Norman, and Glycon acting out the tales of fate.")
+			elif target == "moon":
+				self.Print("The moon isn't out right now.")
+			elif target == "stars":
+				self.Print("The stars aren't out right now.")
+		
+		if "aurora" in self.events:
+			self.Print("Tides of the red, blue, and green aurora gently sweep over the sky. The colors seem to bathe the heavens as it caresses the shimmering silver stars.")
+		elif target in ("aurora","auroras"):
+			self.Print("There's no aurora happening right now.")
+
+		if "meteor shower" in self.events:
+			self.Print("Bolts of yellow light streak deftly across the sky, leaving their imprint for no more than a moment. The almost seem to take turns whizzing past like a flock of birds, eager to follow one another toward the edge of the heavens.")
+		elif target in ("shower","meteors","meteor shower"):
+			self.Print("There's no meteor shower happening right now.")
+
+		return True
 
 
 # The Room class is the fundamental unit of the game's world.
@@ -1162,7 +1208,7 @@ class Game():
 # directed graph, facilitated by the world dict, where the exits dict specifies
 # the edges from a given node to its neighboring nodes.
 class Room():
-	def __init__(self,name,domain,desc,exits,fixtures,items,creatures,altitude=0,status=None):
+	def __init__(self,name,domain,desc,exits,fixtures,items,creatures,altitude=0,isRoad=False,status=None):
 		self.name = name
 		self.domain = domain
 		self.desc = desc
@@ -1170,7 +1216,10 @@ class Room():
 		self.fixtures = fixtures
 		self.items = items
 		self.creatures = creatures
+		# 0 for outdoors, -1 for indoors, <-1 for underground, >0 for in the sky
 		self.altitude = altitude
+		# used by NPCs to navigate
+		self.isRoad = isRoad
 		self.status = status if status else []
 
 
@@ -1202,6 +1251,8 @@ class Room():
 					return
 		insort(self.items,I)
 		I.parent = self
+		I.despawnTimer = I.longevity
+		return True
 
 
 	def removeItem(self,I):
@@ -1432,12 +1483,15 @@ class Room():
 # Anything in a Room that is not a Creature will be an Item
 # All items come with a name, description, weight, and durability
 class Item():
-	def __init__(self,name,desc,weight,durability,composition,scent=None,taste=None,status=None,aliases=None,plural=None,determiner=None):
+	def __init__(self,name,desc,weight,durability,composition,longevity=None,despawnTimer=None,scent=None,taste=None,status=None,aliases=None,plural=None,determiner=None):
 		self.name = name
 		self.desc = desc
 		self.weight = weight
 		self.durability = durability
 		self.composition = composition
+		# how long it lasts in despawnable conditions
+		self.longevity = longevity
+		self.despawnTimer = despawnTimer
 		self.scent = scent
 		self.taste = taste
 		self.status = status if status else []
@@ -1494,6 +1548,11 @@ class Item():
 
 		# remove conditions with 0 duration left
 		self.removeCondition(reqDuration=0)
+		
+		if self.despawnTimer is not None:
+			self.despawnTimer -= t
+			if self.despawnTimer <= 0:
+				self.parent.removeItem(self)			
 
 
 	def Obtain(self,creature):
@@ -1822,7 +1881,6 @@ class Creature():
 		return mana
 
 
-	# adds money
 	def updateMoney(self,money):
 		self.money += money
 
@@ -1830,12 +1888,11 @@ class Creature():
 	# try to add an Item to Inventory
 	# it will fail if the inventory is too heavy
 	def addItem(self,I):
-		if isinstance(I,Serpens):
-			return True
 		if self.invWeight() + I.Weight() > self.BRDN() * 2:
 			return False
 		insort(self.inv,I)
 		I.parent = self
+		I.despawnTimer = None
 		return True
 
 
@@ -2623,9 +2680,9 @@ class Player(Creature):
 	def updateMoney(self,money):
 		self.money += money
 		if money > 0:
-			game.Print(f"\nYou have $ {self.money}!")
+			game.Print(f"You have $ {self.money}!")
 		else:
-			game.Print(f"\nYou have $ {self.money}.")
+			game.Print(f"You have $ {self.money}.")
 
 
 	def obtainItem(self,I,tookMsg=None,failMsg=None):
@@ -3399,6 +3456,19 @@ class Weapon(Item):
 		game.Print(f"{self.name} {self.might} {self.sleight}")
 		game.Print(f"{self.sharpness} { self.twohanded} {self.range}")
 
+
+	def Lick(self,licker):
+		if self.composition in ("glass","bronze","iron","steel"):
+			game.Print("It tastes like... blood.")
+			licker.takeDamage(3,"s")
+			return True
+
+		if self.composition in Data.tastes:
+			game.Print(Data.tastes[self.composition])
+		if self.composition in Data.scents:
+			game.Print(Data.scents[self.composition].replace("scent","taste"))
+
+			
 
 
 
