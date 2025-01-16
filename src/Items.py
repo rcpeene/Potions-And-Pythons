@@ -96,6 +96,7 @@ class Box(Core.Item):
 
 		insort(self.items,I)
 		I.parent = self
+		I.despawnTimer = None
 
 
 	def removeItem(self,I):
@@ -350,6 +351,17 @@ class Shard(Core.Item):
 	def Cut(self,P):
 		Core.game.Print("[you cut something?]")
 
+	
+	def Lick(self,licker):
+		if self.composition in ("glass","bronze","iron","steel"):
+			Core.game.Print("It tastes like... blood.")
+			licker.takeDamage(3,"s")
+			return True
+
+		if self.composition in Data.tastes:
+			Core.game.Print(Data.tastes[self.composition])
+		if self.composition in Data.scents:
+			Core.game.Print(Data.scents[self.composition].replace("scent","taste"))
 
 
 
@@ -426,6 +438,8 @@ class Table(Core.Item):
 
 		insort(self.items,I)
 		I.parent = self
+		I.despawnTimer = None
+
 		if len(self.items) == 1:
 			itemName = self.items[0].stringName(det='a')
 			self.descname = f"{self.name} with {itemName} on it"

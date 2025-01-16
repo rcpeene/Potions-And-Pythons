@@ -61,7 +61,7 @@ pronouns = {"she","he","they","her","him","them","it"}
 compounds = {"downstairs":["down","stairs"], "upstairs":["up","stairs"]}
 
 # used in nounify() in Parser.py to combine multiple words that might have a single meaning as a whole term
-miscexpressions = {"it all","spell list"}
+miscexpressions = {"it all","spell list","meteor shower","solar eclipse"}
 
 directions = {"n":"north","ne":"northeast","e":"east","se":"southeast","s":"south","sw":"southwest","w":"west","nw":"northwest","u":"up","d":"down","inside":"in","into":"in","o":"out","b":"beyond"}
 
@@ -101,6 +101,9 @@ abilities = ("accu","atck","athl","atsp","brdn","cast","crit","cssp","dcpt","dfn
 
 # the sequence of hours in the daily calendar
 hours = ("stag","rooster","juniper","bell","sword","willow","lily","hearth","cat","mouse","owl","serpent","wolf")
+dayhours = hours[:9]
+nighthours = hours[9:]
+
 
 animalSounds = {
     "horse": {"neigh","neiigghh","neeiiiggghhh"},

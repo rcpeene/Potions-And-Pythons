@@ -513,11 +513,10 @@ def Warp(command):
 	except:
 		Core.game.Print("Value not number")
 		return
+	Core.game.silent = True
 	Core.game.Print(f"Warping {t}")
 	Core.game.passTime(t)
 	Core.game.Print("Time: ", Core.game.time)
-	Core.game.checkDaytime()
-	Core.game.checkAstrology(update=True)
 
 
 def Zap(command):
@@ -1338,6 +1337,12 @@ def Look(dobj,iobj,prep):
 	if dobj in ("me","myself",Core.player.name):
 		Core.game.Print(f"You are {Core.player.desc}")
 		return True
+	if dobj in ("down","ground"):
+		Core.game.Print("Not much to see on the ground at your feet.")
+		return True
+	# TODO: Add something room specific if they look up or down?
+	if dobj in ("up","sky","sun","moon","stars","aurora","auroras","meteor shower","eclipse","solar eclipse"):
+		return Core.game.LookUp(dobj)
 
 	L = findObjFromTerm(dobj)
 	if L == None: return False
@@ -1445,6 +1450,7 @@ def Press(dobj,iobj,prep):
 
 
 def Pull(dobj,iobj,prep):
+	# accomodate "pull the door", "pull the weeds"
 	Core.game.Print("pulling")
 
 

@@ -329,6 +329,10 @@
 						"durability": 3,
 						"composition": "rust",
 						"id": 1
+					},
+					{
+						"__class__": "Serpens",
+						"value": 12
 					}
 				]
 			}
