@@ -939,17 +939,6 @@ class Game():
 				self.she = obj
 
 
-	def reapCreatures(self):
-		for room in self.renderedRooms():
-			room.reapCreatures()
-
-
-	# sorts the creatures of each room based on their MVMT() stat
-	def sortCreatures(self):
-		for room in self.renderedRooms():
-			room.sortCreatures()
-
-
 	def destroyCreature(self,C):
 		pass
 		### change creature to be a dead creature or something
@@ -1269,21 +1258,6 @@ class Room():
 		self.creatures.remove(C)
 
 
-	# sort all Creatures occupying the room by their MVMT() value, descending
-	def sortCreatures(self):
-		self.creatures.sort(key=lambda x: x.MVMT(), reverse=True)
-
-
-	# remove all dead creatures from creatures list
-	def reapCreatures(self):
-		reapable = lambda creature: creature.timeOfDeath is not None and \
-		(game.time - creature.timeOfDeath) > 100 and \
-		self is not game.currentroom() and \
-		player not in creature.ancestors()
-
-		self.creatures = [creature for creature in self.creatures if not reapable(creature)]
-
-
 	def addFixture(self,F):
 		insort(self.fixtures,F)
 		F.parent = self
@@ -1356,6 +1330,9 @@ class Room():
 		for name, prob in Data.spawnpools.get(self.domain,()):
 			if randint(1,100) <= prob and len(self.creatures) > 0:
 				self.addCreature(game.creatureFactory[name]())
+
+		# sort all Creatures occupying the room by their MVMT() value, descending
+		self.creatures.sort(key=lambda x: x.MVMT(), reverse=True)
 
 
 	# describe the room, and apply any room effects to the creature entering
@@ -1483,7 +1460,7 @@ class Room():
 # Anything in a Room that is not a Creature will be an Item
 # All items come with a name, description, weight, and durability
 class Item():
-	def __init__(self,name,desc,weight,durability,composition,longevity=None,despawnTimer=None,scent=None,taste=None,status=None,aliases=None,plural=None,determiner=None):
+	def __init__(self,name,desc,weight,durability,composition,longevity=None,despawnTimer=None,scent=None,taste=None,texture=None,status=None,aliases=None,plural=None,determiner=None):
 		self.name = name
 		self.desc = desc
 		self.weight = weight
@@ -1494,6 +1471,7 @@ class Item():
 		self.despawnTimer = despawnTimer
 		self.scent = scent
 		self.taste = taste
+		self.texture = texture
 		self.status = status if status else []
 		self.aliases = aliases if aliases else []
 		if plural is None:
@@ -1571,7 +1549,7 @@ class Item():
 
 	def Use(self,user):
 		if user not in self.ancestors():
-			game.Print(f"{self.stringName(det='the',cap=True)} is not in your inventory.")
+			game.Print(f"{self.stringName('the',cap=True)} is not in your inventory.")
 			return False
 		print(f"You use {self.name}")
 
@@ -1657,7 +1635,7 @@ class Item():
 	
 
 	def describe(self):
-		game.Print(f"It's {self.stringName(det='a')}.")
+		game.Print(f"It's {self.stringName('a')}.")
 		game.Print(f"{self.desc}.")
 
 
@@ -1860,7 +1838,7 @@ class Creature():
 		else:
 			self.hp = min0(self.hp-dmg)
 		total_dmg = prevhp - self.hp
-		game.Print(f"{self.stringName(det='the',cap=True)} took {total_dmg} {Data.dmgtypes[type]} damage.")
+		game.Print(f"{self.stringName('the',cap=True)} took {total_dmg} {Data.dmgtypes[type]} damage.")
 		if self.hp == 0:
 			self.death()
 
@@ -2073,6 +2051,14 @@ class Creature():
 				self.heal(h)
 				self.resurge(1)
 
+		# delete self if in a room and it has been 299 time since death
+		reapable = lambda creature: creature.timeOfDeath is not None and \
+		(game.time - creature.timeOfDeath) > 299 and \
+		isinstance(self.parent, Room) and \
+		self.parent is not game.currentroom()
+		if reapable(self):
+			self.parent.removeCreature(self)
+
 
 	def checkHindered(self):
 		carryWeight = 0 if self.carrying is None else self.carrying.Weight()
@@ -2094,7 +2080,7 @@ class Creature():
 	def death(self):
 		self.timeOfDeath = game.time
 		self.addCondition("dead",-3)
-		game.Print("\n" + f"{self.stringName(det='the',cap=True,c=1)} died.")
+		game.Print("\n" + f"{self.stringName('the',cap=True,c=1)} died.")
 		self.descname = f"dead {self.descname}"
 		n = diceRoll(3,player.LOOT(),-2)
 		self.room().addItem(Serpens(n))
@@ -2111,6 +2097,23 @@ class Creature():
 		food.parent.removeItem(food)
 		food.Eat()
 
+
+	def Sit(self):
+		self.removeCondition("laying")
+		self.removeCondition("crouching")
+		self.addCondition("sitting",-3)
+
+
+	def Crouch(self):
+		self.removeCondition("sitting")
+		self.removeCondition("laying")
+		self.addCondition("crouching",-3)
+		
+
+	def Lay(self):
+		self.removeCondition("crouching")
+		self.removeCondition("sitting")
+		self.addCondition("laying",-3)
 
 	### Behavior ###
 
@@ -2196,7 +2199,7 @@ class Creature():
 		# if a creature is found creating a loop with the actor and attempted target,
 		# identify the culprit
 		if looplink:
-			game.Print(f"You can't {dverb} {target.stringName(det='the')}, {target.pronoun} is {iverb} {looplink}")
+			game.Print(f"You can't {dverb} {target.stringName('the')}, {target.pronoun} is {iverb} {looplink}")
 			return True
 		return False
 
@@ -2205,7 +2208,7 @@ class Creature():
 		if self.checkTetherLoop(carrier,self,"carry"):
 			return False
 		if self.Weight() > carrier.BRDN():
-			game.Print(f"{self.stringName(det='the',cap=True)} is too heavy to carry.")
+			game.Print(f"{self.stringName('the',cap=True)} is too heavy to carry.")
 			return False
 		if not self.Restrain(carrier):
 			return False
@@ -2222,10 +2225,10 @@ class Creature():
 				#TODO: add restraining with items? like rope??
 				pass
 			if self.ATHL() > restrainer.ATHL() or self.EVSN() > restrainer.ATHL():
-				game.Print(f"You fail to restrain {self.stringName(det='the')}!")
+				game.Print(f"You fail to restrain {self.stringName('the')}!")
 				return False
 		self.addCondition("restrained",-3)
-		game.Print(f"You restrain {self.stringName(det='the')}!")
+		game.Print(f"You restrain {self.stringName('the')}!")
 		return True
 
 
@@ -2240,19 +2243,19 @@ class Creature():
 		if self.checkTetherLoop(rider,self,"ride"):
 			return False
 		if rider.Weight() > self.BRDN():
-			game.Print(f"You are too heavy to ride {self.stringName(det='the')}")
+			game.Print(f"You are too heavy to ride {self.stringName('the')}")
 			return False
 		if not self.isFriendly() and self.canMove():
-			game.Print(f"{self.stringName(det='the',cap=True)} struggles.")
+			game.Print(f"{self.stringName('the',cap=True)} struggles.")
 			athl_contest = self.ATHL() - rider.ATHL()
 			if athl_contest > 0:
-				game.Print(f"{self.stringName(det='the',cap=True)} shakes you off!")
+				game.Print(f"{self.stringName('the',cap=True)} shakes you off!")
 				if athl_contest > rider.ATHL():
 					rider.takeDamage(athl_contest-rider.ATHL(),"b")
 				return False
 		self.rider = rider
 		rider.riding = self
-		game.Print(f"You ride {self.stringName(det='the')}.")
+		game.Print(f"You ride {self.stringName('the')}.")
 		return True
 
 
@@ -2260,9 +2263,13 @@ class Creature():
 		game.Print("Smells a little like body odor.")
 
 
-	def Lick(self,smeller):
+	def Lick(self,licker):
 		# TODO: make creatures evade this or try to
 		game.Print("Yuck!")
+
+
+	def Touch(self,toucher):
+		game.Print("Feels soft and fleshy.")
 
 
 	### Getters ###
@@ -2351,7 +2358,7 @@ class Creature():
 	def DCPT(self): return 2*self.CHA() + self.INT()
 	def DFNS(self): return 2*self.CON() + self.protection()
 	def ENDR(self): return 2*self.STM() + self.CON()
-	def EVSN(self): return 2*self.ATSP() + self.LCK() + self.SPD()
+	def EVSN(self): return 10 if self.hasAnyCondition("sitting","laying") else 2*self.ATSP() + self.LCK() + self.SPD()
 	def INVS(self): return 2*self.INT() + self.WIS()
 	def KNWL(self): return 2*self.INT() + self.LCK()
 	def LOOT(self): return 2*self.LCK() + self.FTH()
@@ -2428,7 +2435,7 @@ class Creature():
 
 	# returns a list of names of all items in player inventory
 	def invNames(self):
-		return [item.stringName(det=False) if isinstance(item,Creature) else item.name for item in self.inv]
+		return [item.stringName() if isinstance(item,Creature) else item.name for item in self.inv]
 
 
 	# just a function wrapper for functions that call itemNames on objects
@@ -2567,7 +2574,7 @@ class Creature():
 
 
 	def describe(self):
-		game.Print(f"It's {self.stringName(det='a')}.")
+		game.Print(f"It's {self.stringName('a')}.")
 		game.Print(f"{self.desc}.")
 
 
@@ -2737,6 +2744,7 @@ class Player(Creature):
 			if name == reqName or reqName is None:
 				if duration == reqDuration or reqDuration is None:
 					self.status.remove([name,duration])
+
 					if name == "asleep" and duration == 0:
 						wellRested = True
 					if name != "asleep" and not self.hasCondition(name):
@@ -2946,7 +2954,7 @@ class Player(Creature):
 
 	def printCarrying(self, *args):
 		if self.carrying:
-			game.Print(f"Carrying {self.carrying.stringName(det='a')}")
+			game.Print(f"Carrying {self.carrying.stringName('a')}")
 			game.Print(f"Weight: {self.carrying.Weight()}")
 		else:
 			game.Print("Carrying nothing")
@@ -2954,7 +2962,7 @@ class Player(Creature):
 
 	def printRiding(self, *args):
 		if self.riding:
-			game.Print(f"Riding {self.riding.stringName(det='a')}")
+			game.Print(f"Riding {self.riding.stringName('a')}")
 		else:
 			game.Print("Riding nothing")
 
@@ -3046,7 +3054,7 @@ class Humanoid(Creature):
 			targetname = "you"
 		else:
 			targetname = target.stringName()
-		game.Print(f"{self.stringName(det='the', cap=True)} tries to attack {targetname}")
+		game.Print(f"{self.stringName('the', cap=True)} tries to attack {targetname}")
 
 		n = min1( self.ATSP() // min1(target.ATSP()) )
 		if n > 1:
@@ -3078,7 +3086,7 @@ class Humanoid(Creature):
 	### Getters ###
 
 	def describe(self):
-		game.Print(f"It's {self.stringName(det='a')}.")
+		game.Print(f"It's {self.stringName('a')}.")
 		game.Print(f"{self.desc}.")
 		gearitems = [item for item in self.gear.values() if item != EmptyGear()]
 		if len(gearitems) != 0:
@@ -3245,6 +3253,13 @@ class Animal(Speaker):
 		self.appraise(player,game)
 		if not self.dlogtree.visit(self,player,game,world):
 			game.Print(f"{self.name} says nothing...")
+
+
+	def Touch(self,toucher):
+		if self.species in Data.textures:
+			game.Print(Data.textures[self.species])
+		else:
+			return super().Touch(toucher)
 
 
 	def attack(self):

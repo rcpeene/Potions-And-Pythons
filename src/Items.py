@@ -25,6 +25,16 @@ class Axe(Core.Weapon):
 
 
 
+class Bed(Core.Item):
+	def Lay(self,layer):
+		layer.addCondition("cozy",-3)
+		return True
+	
+	def Sit(self,sitter):
+		return True
+
+
+
 class Bottle(Core.Item):
 	# breaks the bottle, removes it from player inventory, and randomly...
 	# generates a number of shards between 1,5 into the room.
