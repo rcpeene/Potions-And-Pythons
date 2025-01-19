@@ -311,6 +311,15 @@
 		],
 		"items": [
 			{
+				"__class__": "Bed",
+				"name": "Bed",
+				"desc": "An cheap oaken bed",
+				"aliases": [],
+				"weight": 100,
+				"durability": 15,
+				"composition": "wood"
+			},
+			{
 				"__class__": "Box",
 				"name": "wooden chest",
 				"desc": "A small wooden chest reinforced by iron",

@@ -118,10 +118,16 @@ chatter = {
     "python": {"Dessssstroy....","Kill!","Sssoo... Hungrryyy..."}
 }
 
+
+scents = {}
+
+
 tastes = {
-    "earth": "It has a sharp taste of dry musty dirt.",
+    "earth": "It has a sharp taste of ancient musty dirt.",
+    "soil": "It has a deep and full fresh earthy taste.",
     "stone": "It has a dull taste of chalk and lime.",
     "wood": "It doesn't taste like much.",
+    "brick": "It tastes like dry clay.",
     "glass": "It has little taste.",
     "bronze": "It has a light metallic taste.",
     "iron": "It tastes like iron.",
@@ -130,7 +136,22 @@ tastes = {
     "bread": "It tastes like dreams and joy"
 }
 
-scents = {}
+
+textures = {
+    "earth": "It feels dry and crumbly.",
+    "soil": "It feels loamy and moist.",
+    "stone": "It feels slighty rough and very solid.",
+    "wood": "It feels like a hard sturdy wood.",
+    "brick": "It feels flat and gritty.",
+    "glass": "It is very smooth.",
+    "bronze": "It feels slick and clean.",
+    "iron": "It feels smooth and sturdy.",
+    "rust": "It feels rough.",
+    "steel": "It feels smooth and sturdy.",
+    "bread": "It is soft and fluffly.",
+    
+    "python": "It feels smooth and scaly. Ew."
+}
 
 
 ##########################

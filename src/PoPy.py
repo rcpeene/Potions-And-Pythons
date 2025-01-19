@@ -60,10 +60,6 @@ def main(testing=False):
 		Core.game.whoseturn = None
 		# pass the time for all rooms and creatures
 		Core.game.passTime()
-		# remove dead creatures from room creatures
-		Core.game.reapCreatures()
-		# sort the creatures in each rendered room by their MVMT attribute
-		Core.game.sortCreatures()
 
 		if not Core.player.isAlive(): continue
 		# save game every so often just in case
@@ -78,8 +74,10 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# encode whether a room is a road? so npcs can navigate?
-# add crouching and laying. incorporate it into making sleep "cozy"
+# "give"ing to NPC. update dialogue trees to accomodate these effects?
+# add "climb" and "swim"
+# think about throwing and catching. thrown objects should probably hit something random based on weight if they miss the target
+# catching... hmm.... should they have time to react to a thrown item?
 
 # add basic equipment and clothing items
 # fix/add Creature.isNaked or Player.isNaked
