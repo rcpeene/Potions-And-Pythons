@@ -1210,7 +1210,7 @@ CHARACTER NAMES:
 	playwright,painter,poet,sculptor
 	bard,trumpeteer,fiddler,flautist,lyrist,puppeteer,jester,dancer
 	wizards,witches,warlocks,druid,shaman
-	apothecary,alchemist,herbalist,dyer
+	apothecary,alchemist,herbalist,dyer,potion seller
 	doctor,midwife,surgeon,barber
 	undertaker,groundskeeper
 	baker,butcher,miller,brewer,vintner,cheesemonger,spiceman,milkmaid

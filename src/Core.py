@@ -377,7 +377,8 @@ def ensureWorldIntegrity():
 			for connection in connectionsToDelete:
 				del passage.connections[connection]
 
-		for creature in objQuery(room, d=3, key=lambda x: isinstance(x,(Person,Animal))):
+		for creature in objQuery(room, d=3, key=lambda x: isinstance(x,Speaker)):
+			creature.buildDialogue()
 			creature.dlogtree.ensureIntegrity(creature,player,game,world)
 
 	# this is done in a separate loop to prevent errors caused by...
@@ -556,8 +557,8 @@ class DialogueNode():
 			err = f"Invalid case node condition in {speaker.name}'s node {self.id}: {case}"
 			assert type(case) == int or type(eval(case)) == bool, err
 		for trite in self.trites:
-			triteset = Data.chatter[trite]
-			assert type(triteset) is set and len(triteset) > 2
+			triteset = dlogDict["trites"][trite]
+			assert len(triteset) > 2
 		for child in self.children:
 			child.ensureIntegrity(speaker,player,game,world)
 
@@ -637,7 +638,7 @@ class DialogueNode():
 		elif self.trites:
 			tritepool = set()
 			for trite in self.trites:
-				tritepool |= Data.chatter[trite]
+				tritepool |= set(dlogDict["trites"][trite])
 
 			samples = sample(tritepool,2)
 			triteRemark = samples[0]
@@ -933,9 +934,9 @@ class Game():
 		if isinstance(obj,Creature):
 			self.they = obj
 		if hasattr(obj,"pronoun"):
-			if obj.pronoun == "m":
+			if obj.pronoun == "he":
 				self.he = obj
-			elif obj.pronoun == "f":
+			elif obj.pronoun == "she":
 				self.she = obj
 
 
@@ -3116,12 +3117,16 @@ class Humanoid(Creature):
 
 
 class Speaker(Creature):
-	def __init__(self,name,desc,weight,traits,hp,dlogtree,rapport=0,lastParley=None,**kwargs):
+	def __init__(self,name,desc,weight,traits,hp,dlogName=None,rapport=0,lastParley=None,**kwargs):
 		Creature.__init__(self,name,desc,weight,traits,hp,**kwargs)
-		self.dlogtree = DialogueTree(dlogtree)
+		self.dlogName = name if dlogName is None else dlogName
 		self.rapport = rapport
 		self.lastParley = lastParley
 
+
+	def buildDialogue(self):
+		self.dlogtree = DialogueTree(dlogDict["trees"][self.dlogName])
+		
 
 	def firstImpression(self,player):
 		# TODO: add this
@@ -3153,8 +3158,8 @@ class Speaker(Creature):
 
 
 class Person(Speaker,Humanoid):
-	def __init__(self,name,descname,weight,traits,hp,pronoun,dlogtree,spells=None,desc=None,isChild=False,**kwargs):
-		Speaker.__init__(self,name,"",weight,traits,hp,dlogtree,**kwargs)
+	def __init__(self,name,descname,weight,traits,hp,pronoun,spells=None,desc=None,isChild=False,**kwargs):
+		Speaker.__init__(self,name,"",weight,traits,hp,**kwargs)
 		self.descname = descname
 		self.pronoun = pronoun
 		self.spells = spells if spells else []
@@ -3169,7 +3174,7 @@ class Person(Speaker,Humanoid):
 				self.aliases.extend(("boy","male"))
 			else:
 				self.aliases.extend(("man","guy","dude","male"))
-		if self.pronoun == "she":
+		elif self.pronoun == "she":
 			if isChild:
 				self.aliases.extend(("girl","female"))
 			else:
@@ -3223,16 +3228,20 @@ class Person(Speaker,Humanoid):
 
 
 class Animal(Speaker):
-	def __init__(self,name,desc,weight,traits,hp,species=None,dlogtree=None,**kwargs):
+	def __init__(self,name,desc,weight,traits,hp,species=None,dlogName=None,**kwargs):
+		Speaker.__init__(self,name,desc,weight,traits,hp,**kwargs)
 		self.species = name if species is None else species
-		self.soundspool = Data.animalSounds[self.species]
-		# if an animal isn't given dialogue, try to make template from tritepools
-		if dlogtree is None:
-			dlogtree = self.species
-		if type(dlogtree) is str:
-			assert dlogtree in Data.chatter, f"Default chatter not in data for {self.dlogtree}"
-			dlogtree = {"chatter":{"trites":dlogtree}}
-		Speaker.__init__(self,name,desc,weight,traits,hp,dlogtree,**kwargs)
+		# dlogName was assigned by Speaker init, but should be reassigned here
+		self.dlogName = self.species if dlogName is None else self.dlogName
+
+
+	def buildDialogue(self):
+		self.sounds = dlogDict["sounds"][self.species]
+		# dlogName must either be the name of a tree or a trite
+		if self.dlogName in dlogDict["trees"]:
+			self.dlogtree = DialogueTree(dlogDict["trees"][self.dlogName])
+		else:
+			self.dlogtree = DialogueTree({"chatter":{"trites":self.dlogName}})
 
 
 	def act(self):
@@ -3245,7 +3254,7 @@ class Animal(Speaker):
 
 	def Talk(self,player,game,world):
 		if not player.hasCondition("wildtongued"):
-			sound = sample(self.soundspool,1)[0]
+			sound = sample(self.sounds,1)[0]
 			waitKbInput(f'"{sound}"')
 			return True
 		if "met" not in self.memories:
@@ -3531,3 +3540,4 @@ player = Player("","",0,[0]*10,0,0,0,0)
 defaultRoom = Room("","","",{},[],[],[])
 game = Game(-1,defaultRoom,defaultRoom,-1,-1,{})
 world = {}
+dlogDict = {}

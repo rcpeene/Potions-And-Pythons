@@ -1,0 +1,81 @@
+{
+	"sounds": {
+		"dragon": ["rawr"],
+		"horse": ["neigh","neiigghh","neeiiiggghhh"],
+		"python": ["hisssss..","sss...","tsss!"]
+	},
+	"trites": {
+		"basic": ["How about the weather?", "I like your shirt.", "Gods be with ye.","Salute"],
+		"dragon": ["Greetings small one.","Excelsior.","Omens Aghast."],
+		"horse": ["Howdy partner.","Git Varmint!","Yeehaw!"],
+		"python": ["Dessssstroy....","Kill!","Sssoo... Hungrryyy..."]
+	},
+	"trees": {
+		"Dale": {
+			"surprise":{
+				"cases": "'naked' in speaker.appraisal",
+				"children": [{"remark": "Gollee! Put some clothes on!"}, {}]
+			},
+			"quest": {
+				"cases": "",
+				"children": [
+					{
+						"rapportReq": 1,
+						"remark": "Well shucks... I could sure use a fresh cold brew right about now..."						
+					}
+				]
+			},
+			"colloquy": {
+				"visitLimit": 1,
+				"children": [
+					{
+						"rapportReq": 0,
+						"isCheckpoint": true,
+						"remark": "Howdy! We don't see many folks around here. I'm Dale",
+						"cases": [25,50],
+						"children": [
+							{
+								"remark": "You look like a fancy fella."
+							},
+							{
+								"remark": "You look like a nice fella."
+							},
+							{
+								"remark": "You look like a mean fella."
+							}
+						]
+					},
+					{
+						"rapportReq": 1,
+						"isCheckpoint": true,
+						"remark": "So you've come back around?",
+						"responses": ["Aye.","What's it to you?","I love you..."],
+						"children": [
+							{
+								"remark": "Alrighty then."
+							},
+							{
+								"remark": "Nuthin"
+							},
+							{
+								"remark": "Good golly... I'm not sure what to say..."
+							}
+						]
+					},
+					{
+						"rapportReq": 2,
+						"remark": "Again?"
+					}
+				]
+			},
+			"chatter": {
+				"trites": "basic"
+			}
+		},
+		"The Earl of Chesterbrook": {
+			"chatter": {
+				"trites": "basic"
+			}
+		}
+	}
+}

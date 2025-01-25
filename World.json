@@ -610,75 +610,14 @@
 					"right": null,
 					"legs": null
 				},
-				"inv": [],
-				"dlogtree":{
-					"surprise":{
-						"cases": "'naked' in speaker.appraisal",
-						"children": [{"remark": "Gollee! Put some clothes on!"}, {}]
-					},
-					"quest": {
-						"cases": "",
-						"children": [
-							{
-								"rapportReq": 1,
-								"remark": "Well shucks... I could sure use a fresh cold beer right about now..."						
-							}
-						]
-					},
-					"colloquy": {
-						"visitLimit": 1,
-						"children": [
-							{
-								"rapportReq": 0,
-								"isCheckpoint": true,
-								"remark": "Howdy! We don't see many folks around here. I'm Dale",
-								"cases": [25,50],
-								"children": [
-									{
-										"remark": "You look like a fancy fella."
-									},
-									{
-										"remark": "You look like a nice fella."
-									},
-									{
-										"remark": "You look like a mean fella."
-									}
-								]
-							},
-							{
-								"rapportReq": 1,
-								"isCheckpoint": true,
-								"remark": "So you've come back around?",
-								"responses": ["Aye.","What's it to you?","I love you..."],
-								"children": [
-									{
-										"remark": "Alrighty then."
-									},
-									{
-										"remark": "Nuthin"
-									},
-									{
-										"remark": "Good golly... I'm not sure what to say..."
-									}
-								]
-							},
-							{
-								"rapportReq": 2,
-								"remark": "Again?"
-							}
-						]
-					},
-					"chatter": {
-						"trites": "basic"
-					}
-				}
+				"inv": []
 			},
 			{
 				"__class__": "Person",
 				"name": "The Earl of Chesterbrook",
 				"descname": "adorned man",
 				"aliases": ["earl","earl of chesterbrook"],
-				"pronoun": "m",
+				"pronoun": "he",
 				"weight": 15,
 				"traits": [1,1,1,1,1,1,1,1,1,1],
 				"hp": 10,
@@ -691,11 +630,6 @@
 					"left": null,
 					"right": null,
 					"legs": null
-				},
-				"dlogtree":{
-					"chatter": {
-						"trites": "basic"
-					}
 				}
 			}
 
