@@ -105,17 +105,7 @@ dayhours = hours[:9]
 nighthours = hours[9:]
 
 
-animalSounds = {
-    "horse": {"neigh","neiigghh","neeiiiggghhh"},
-    "dragon": {"rawr"},
-    "python": {"hisssss..","sss...","tsss!"}
-}
-
 chatter = {
-    "basic": {"How about the weather?", "I like your shirt.", "Gods be with ye.","Salute"},
-    "horse": {"Howdy partner.","Yeehaw.","Git varmint"},
-    "dragon": {"Greetings small one.","Excelsior","Omens Aghast"},
-    "python": {"Dessssstroy....","Kill!","Sssoo... Hungrryyy..."}
 }
 
 

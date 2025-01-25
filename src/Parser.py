@@ -1114,7 +1114,23 @@ def Fuck(dobj,iobj,prep):
 
 
 def Give(dobj,iobj,prep):
-	Core.game.Print("giveing")
+	if prep not in ("to","over",None):
+		Core.game.Print("Command not understood.")
+		return False
+
+	if dobj is None:
+		dobj = getNoun("What will you give?")
+		if dobj in Data.cancels:
+			return False
+	I = findObjFromTerm(dobj)
+	# TODO: complete this
+	if iobj is None:
+		iobj = getNoun("Who will you give to?")
+		if iobj in Data.cancels:
+			return False
+	R = findObjFromTerm(iobj)
+
+	return True
 
 
 # not called by Parse directly
@@ -2095,6 +2111,7 @@ actions = {
 "go to sleep":Rest,
 "grab":Take,
 "grapple":Take,
+"hand":Give,
 "head":Go,
 "hear":Listen,
 "hide":Hide,
@@ -2120,6 +2137,7 @@ actions = {
 "mount":Mount,
 "move":Go,
 "obtain":Take,
+"offer":Give,
 "open":Open,
 "pet":Caress,
 "pick":Take,
