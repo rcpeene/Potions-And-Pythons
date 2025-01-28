@@ -332,19 +332,7 @@ def objQueryRecur(node,matches,key,d):
 	return matches
 
 
-# iterates through each object in the object tree of each room and assigns...
-# its 'parent' attribute to the object it is contained in
-def assignRefs():
-	for room in world.values():
-		assert isinstance(room, Room)
-		assignRefsRecur(room)
-	player.assignParent(game.currentroom)
-	assignRefsRecur(player)
-
-
-# helper function for assignRefs()
-# iterates through objects within the root and assigns root as their parent
-# recurs for each object
+# recurs through objects within the parent and assigns it as their parent
 def assignRefsRecur(parent):
 	if not hasMethod(parent,'contents'):
 		return
@@ -355,13 +343,18 @@ def assignRefsRecur(parent):
 		assignRefsRecur(obj)
 
 
-# takes a dict of room names and room objects,
 # removes any room connection values which don't exist in the world
-# this is in case the world file which was read as a JSON had invalid names...
 # to prevent errors if the world file was written incorrectly
-def ensureWorldIntegrity():
+# also assigns parents for all world objects (read objQuery() comments)
+# also assigns dialogue trees for speakers and validates them
+def buildWorld():
+	player.assignParent(game.currentroom)
+
 	namesToDelete = []
 	for room in world.values():
+		assert isinstance(room, Room)
+		assignRefsRecur(room)
+
 		for direction in room.exits:
 			connection = room.exits[direction]
 			if connection not in world:
@@ -377,6 +370,7 @@ def ensureWorldIntegrity():
 			for connection in connectionsToDelete:
 				del passage.connections[connection]
 
+		# assign the dialogue trees for all creatures and validate them
 		for creature in objQuery(room, d=3, key=lambda x: isinstance(x,Speaker)):
 			creature.buildDialogue()
 			creature.dlogtree.ensureIntegrity(creature,player,game,world)
@@ -447,11 +441,11 @@ class TeeLogger:
 # a node may contain either a remark or a list of 'trites' from which to generate dialogue
 # - a remark is a simple line of output dialogue. A trite is the name of a 'triteset'
 # - tritesets are sets of predetermined remarks, which can be sampled by many characters
-# the node may also contain either a 'cases' list or a 'responses' list
+# the node may also contain either a 'cases' list or a 'replies' list
 # - cases is a list of boolean expressions which can reference the character, player, game, or world objects
 # - instead of a boolean expression, a case may be an integer, representing a random probability
-# - responses is a list of potential dialogue responses that the user may choose during the dialogue
-# the child that is visited next can depend on the value of the corresponding case or the user-selected response
+# - replies is a list of potential dialogue replies that the user may choose during the dialogue
+# the child that is visited next can depend on the value of the corresponding case or the user-selected reply
 
 # there are four branches from the root; surprise, quest, colloquy, and chatter
 # the tree will try to traverse each branch in order until one produces dialogue output
@@ -472,7 +466,7 @@ class TeeLogger:
 
 
 class DialogueNode():
-	def __init__(self,parent,root,nVisits=0,lastTriteRemark=None,visitLimit=None,rapportReq=None,guardCase="True",isCheckpoint=False,loveMod=0,fearMod=0,repMod=0,remark=None,trites=None,cases=None,responses=None,children=[]):
+	def __init__(self,parent,root,nVisits=0,lastTriteRemark=None,visitLimit=None,rapportReq=None,guardCase="True",isCheckpoint=False,loveMod=0,fearMod=0,repMod=0,remark=None,trites=None,cases=None,replies=None,children=[]):
 		self.parent = parent
 		self.root = root
 		self.nVisits = nVisits
@@ -494,28 +488,28 @@ class DialogueNode():
 			self.trites = [trites]
 		# these are strings of python code which should evaluate to a bool or int
 		self.cases = cases if cases else []
-		# these are the optional Player responses to the dialogue
-		self.responses = responses if responses else []
+		# these are the optional Player replies to the dialogue
+		self.replies = replies if replies else []
 
-		# cases or responses correspond to child nodes and are used to determine where to visit next
-		# ensure the number of child nodes matches the cases or responses
+		# cases or replies correspond to child nodes and are used to determine where to visit next
+		# ensure the number of child nodes matches the cases or replies
 		if self.cases:
 			if type(self.cases) != list:
 				self.cases = [self.cases]
 			# one extra child for when all cases are false
 			assert len(self.children) == len(self.cases) + 1
-		elif self.responses:
-			if type(self.responses) != list:
-				self.responses = [self.responses]
-			assert len(self.children) == len(self.responses)
+		elif self.replies:
+			if type(self.replies) != list:
+				self.replies = [self.replies]
+			assert len(self.children) == len(self.replies)
 
 		# ensure node doesn't have both a remark and a trite set
 		assert self.remark is None or self.trites == []
-		# ensure node doesn't have both conditional cases and response cases
-		assert self.cases == [] or self.responses == []
+		# ensure node doesn't have both conditional cases and reply cases
+		assert self.cases == [] or self.replies == []
 		
-		if hasattr(self.parent, 'responses'):
-			assert self.visitLimit == None and self.rapportReq == None, 'child of response node must not have visitLimit or rapportReq'
+		if hasattr(self.parent, 'replies'):
+			assert self.visitLimit == None and self.rapportReq == None, 'child of reply node must not have visitLimit or rapportReq'
 
 
 	### File I/O ###
@@ -557,7 +551,7 @@ class DialogueNode():
 			err = f"Invalid case node condition in {speaker.name}'s node {self.id}: {case}"
 			assert type(case) == int or type(eval(case)) == bool, err
 		for trite in self.trites:
-			triteset = dlogDict["trites"][trite]
+			triteset = game.dlogDict["trites"][trite]
 			assert len(triteset) > 2
 		for child in self.children:
 			child.ensureIntegrity(speaker,player,game,world)
@@ -597,11 +591,11 @@ class DialogueNode():
 		return None
 	
 
-	# try to visit the child corresponding to the user-chosen dialogue response
+	# try to visit the child corresponding to the user-chosen dialogue reply
 	# users can end the dialogue by inputting a cancel command
-	def responseHop(self,speaker):
-		for i, response in enumerate(self.responses):
-			game.Print(f'{i+1}. {response}\n')
+	def replyHop(self,speaker):
+		for i, reply in enumerate(self.replies):
+			game.Print(f'{i+1}. {reply}\n')
 
 		while True:
 			choice = input("\n> ").lower()
@@ -638,7 +632,7 @@ class DialogueNode():
 		elif self.trites:
 			tritepool = set()
 			for trite in self.trites:
-				tritepool |= set(dlogDict["trites"][trite])
+				tritepool |= set(game.dlogDict["trites"][trite])
 
 			samples = sample(tritepool,2)
 			triteRemark = samples[0]
@@ -652,8 +646,8 @@ class DialogueNode():
 		nextNode = None
 		if self.cases:
 			nextNode = self.conditionalHop(speaker,player,game,world)
-		elif self.responses:
-			nextNode = self.responseHop(speaker)
+		elif self.replies:
+			nextNode = self.replyHop(speaker)
 		else:
 			for child in self.children:
 				if child.hop(speaker):
@@ -833,7 +827,7 @@ class EmptyGear:
 
 	### Getters ###
 
-	def stringName(self,det="",n=-1,plural=False,cap=False,c=1):
+	def stringName(self,det="",n=-1,plural=False,cap=0):
 		return ""
 
 
@@ -854,7 +848,7 @@ class EmptyGear:
 # It also offers a series of methods for identifying the currently rendered...
 # rooms and finding information about them.
 class Game():
-	def __init__(self,mode,currentroom,prevroom,time,events,creatureFactory):
+	def __init__(self,mode,currentroom,prevroom,time,events,dlogDict,creatureFactory):
 		# 0 for normal mode, 1 for testing mode, 2 for god mode
 		self.mode = mode
 		# the room that the player is currently in
@@ -867,6 +861,8 @@ class Game():
 		self.lastsave = time
 		# set of important events that have transpired in the game's progression
 		self.events = events
+		# used to generate dialogue dynamically by Speaker class
+		self.dlogDict = dlogDict
 		# used to spawn creatures
 		self.creatureFactory = creatureFactory
 		# used for determining whether or not to print certain things
@@ -1485,7 +1481,7 @@ class Item():
 
 	### File I/O ###
 
-	def assignParent(self, parent):
+	def assignParent(self,parent):
 		self.parent = parent
 
 
@@ -1550,7 +1546,7 @@ class Item():
 
 	def Use(self,user):
 		if user not in self.ancestors():
-			game.Print(f"{self.stringName('the',cap=True)} is not in your inventory.")
+			game.Print(f"{self.stringName('the',cap=1)} is not in your inventory.")
 			return False
 		print(f"You use {self.name}")
 
@@ -1605,7 +1601,7 @@ class Item():
 
 	### User Output ###
 
-	def stringName(self,det="",n=-1,plural=False,cap=False,c=1):
+	def stringName(self,det="",n=-1,plural=False,cap=0):
 		strname = getattr(self,"descname",self.name)
 		if len(strname) == 0:
 			return ""
@@ -1685,7 +1681,7 @@ class Creature():
 		self.memories = memories if memories else set()
 		self.appraisal = appraisal if appraisal else set()
 		
-		# this get decompressed or reassigned by assignParent
+		# this gets decompressed or reassigned by assignParent
 		self.parent = None
 		self.riding = riding
 		self.rider = rider
@@ -1839,7 +1835,7 @@ class Creature():
 		else:
 			self.hp = min0(self.hp-dmg)
 		total_dmg = prevhp - self.hp
-		game.Print(f"{self.stringName('the',cap=True)} took {total_dmg} {Data.dmgtypes[type]} damage.")
+		game.Print(f"{self.stringName('the',cap=1)} took {total_dmg} {Data.dmgtypes[type]} damage.")
 		if self.hp == 0:
 			self.death()
 
@@ -1849,7 +1845,8 @@ class Creature():
 		if self.hp + heal > self.MXHP() and not overflow:
 			heal = self.MXHP() - self.hp
 		self.hp += heal
-		game.Print(f"You healed {heal} HP.")
+		if isinstance(self,Player):
+			game.Print(f"You healed {heal} HP.")
 		return heal
 
 
@@ -2081,7 +2078,7 @@ class Creature():
 	def death(self):
 		self.timeOfDeath = game.time
 		self.addCondition("dead",-3)
-		game.Print("\n" + f"{self.stringName('the',cap=True,c=1)} died.")
+		game.Print("\n" + f"{self.stringName('the',cap=1)} died.")
 		self.descname = f"dead {self.descname}"
 		n = diceRoll(3,player.LOOT(),-2)
 		self.room().addItem(Serpens(n))
@@ -2115,6 +2112,11 @@ class Creature():
 		self.removeCondition("crouching")
 		self.removeCondition("sitting")
 		self.addCondition("laying",-3)
+
+
+	def Give(self,item):
+		game.Print(f"{self.stringName('the',c=1)} ignores your offer.")
+
 
 	### Behavior ###
 
@@ -2209,7 +2211,7 @@ class Creature():
 		if self.checkTetherLoop(carrier,self,"carry"):
 			return False
 		if self.Weight() > carrier.BRDN():
-			game.Print(f"{self.stringName('the',cap=True)} is too heavy to carry.")
+			game.Print(f"{self.stringName('the',cap=1)} is too heavy to carry.")
 			return False
 		if not self.Restrain(carrier):
 			return False
@@ -2247,10 +2249,10 @@ class Creature():
 			game.Print(f"You are too heavy to ride {self.stringName('the')}")
 			return False
 		if not self.isFriendly() and self.canMove():
-			game.Print(f"{self.stringName('the',cap=True)} struggles.")
+			game.Print(f"{self.stringName('the',cap=1)} struggles.")
 			athl_contest = self.ATHL() - rider.ATHL()
 			if athl_contest > 0:
-				game.Print(f"{self.stringName('the',cap=True)} shakes you off!")
+				game.Print(f"{self.stringName('the',cap=1)} shakes you off!")
 				if athl_contest > rider.ATHL():
 					rider.takeDamage(athl_contest-rider.ATHL(),"b")
 				return False
@@ -2275,7 +2277,7 @@ class Creature():
 
 	### Getters ###
 
-	def conditionalMod(self,stat,bonuses,min=None,max=None):
+	def conditionalMod(self,stat,bonuses=[],min=None,max=None):
 		for condname, bonus in bonuses:
 			if self.hasCondition(condname):
 				stat = stat + bonus
@@ -2545,7 +2547,7 @@ class Creature():
 
 	### User Output ###
 
-	def stringName(self,det="",n=-1,plural=False,cap=False,c=1):
+	def stringName(self,det="",n=-1,plural=False,c=-1):
 		strname = getattr(self,"descname",self.name)
 		if len(strname) == 0:
 			return ""
@@ -2569,7 +2571,7 @@ class Creature():
 						strname = "a " + strname
 			else:
 				strname = det + " " + strname
-		if cap:
+		if c > 0:
 			strname = capWords(strname,c=c)
 		return strname
 
@@ -2892,7 +2894,7 @@ class Player(Creature):
 
 	### User Output ###
 
-	def stringName(self,det="",n=-1,plural=False,cap=False,c=1):
+	def stringName(self,det="",n=-1,plural=False,c=-1):
 		return "yourself"
 
 	# prints all 10 player traits
@@ -3055,7 +3057,7 @@ class Humanoid(Creature):
 			targetname = "you"
 		else:
 			targetname = target.stringName()
-		game.Print(f"{self.stringName('the', cap=True)} tries to attack {targetname}")
+		game.Print(f"{self.stringName('the', cap=1)} tries to attack {targetname}")
 
 		n = min1( self.ATSP() // min1(target.ATSP()) )
 		if n > 1:
@@ -3125,7 +3127,7 @@ class Speaker(Creature):
 
 
 	def buildDialogue(self):
-		self.dlogtree = DialogueTree(dlogDict["trees"][self.dlogName])
+		self.dlogtree = DialogueTree(game.dlogDict["trees"][self.dlogName])
 		
 
 	def firstImpression(self,player):
@@ -3154,6 +3156,9 @@ class Speaker(Creature):
 		if not self.dlogtree.visit(self,player,game,world):
 			game.Print(f"{self.name} says nothing...")
 
+
+	def Give(self,I):
+		 pass
 
 
 
@@ -3188,13 +3193,14 @@ class Person(Speaker,Humanoid):
 
 	### Operation ###
 
+
 	def act(self):
 		pass
 
 
 	### User Output ###
 
-	def stringName(self,det="",n=-1,plural=False,cap=False,c=1):
+	def stringName(self,det="",n=-1,plural=False,cap=0):
 		if "met" in self.memories:
 			return self.name
 		strname = self.descname
@@ -3220,7 +3226,7 @@ class Person(Speaker,Humanoid):
 						strname = "a " + strname
 			else:
 				strname = det + " " + strname
-		if cap:
+		if cap > 0:
 			strname = capWords(strname,c=c)
 		return strname
 
@@ -3236,10 +3242,10 @@ class Animal(Speaker):
 
 
 	def buildDialogue(self):
-		self.sounds = dlogDict["sounds"][self.species]
+		self.sounds = game.dlogDict["sounds"][self.species]
 		# dlogName must either be the name of a tree or a trite
-		if self.dlogName in dlogDict["trees"]:
-			self.dlogtree = DialogueTree(dlogDict["trees"][self.dlogName])
+		if self.dlogName in game.dlogDict["trees"]:
+			self.dlogtree = DialogueTree(game.dlogDict["trees"][self.dlogName])
 		else:
 			self.dlogtree = DialogueTree({"chatter":{"trites":self.dlogName}})
 
@@ -3250,6 +3256,15 @@ class Animal(Speaker):
 		if not game.silent:
 			game.Print(f"\n{self.name}'s turn!")
 		self.attack()
+
+
+	def Give(self,I):
+		if hasMethod(I,"Eat"):
+			I.Eat(self)
+			self.love = minm(maxm(self.love+1,100),-100)
+			self.fear = minm(maxm(self.fear+1,100),-100)
+		else:
+			game.Print(f"{self.stringName('the',c=1)} ignores your offer.")
 
 
 	def Talk(self,player,game,world):
@@ -3453,12 +3468,12 @@ class Serpens(Item):
 
 	### User Output ###
 
-	def stringName(self,det="",n=-1,plural=False,cap=False,c=1):
+	def stringName(self,det="",n=-1,plural=False,cap=0):
 		strname = "Gold"
 		strname = str(self.value) + " " + strname
 		if det:
 			strname = det + " " + strname
-		if cap:
+		if cap > 0:
 			strname = capWords(strname,c=c)
 		return strname
 
@@ -3538,6 +3553,5 @@ class Compass(Item):
 
 player = Player("","",0,[0]*10,0,0,0,0)
 defaultRoom = Room("","","",{},[],[],[])
-game = Game(-1,defaultRoom,defaultRoom,-1,-1,{})
+game = Game(-1,defaultRoom,defaultRoom,-1,-1,{},{})
 world = {}
-dlogDict = {}

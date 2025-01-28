@@ -49,7 +49,7 @@
 						"rapportReq": 1,
 						"isCheckpoint": true,
 						"remark": "So you've come back around?",
-						"responses": ["Aye.","What's it to you?","I love you..."],
+						"replies": ["Aye.","What's it to you?","I love you..."],
 						"children": [
 							{
 								"remark": "Alrighty then."
