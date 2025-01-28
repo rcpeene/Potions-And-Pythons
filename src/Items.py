@@ -185,10 +185,13 @@ class Food(Core.Item):
 
 	# heals 'heal' hp to the player, removes food from inventory
 	def Eat(self,eater):
-		Core.game.Print(f"You consume the {self.name}.")
+		if isinstance(eater,Core.Player):
+			Core.game.Print(f"You consume the {self.name}.")
+		else:
+			Core.game.Print(f"{eater.stringName('the',c=1)} eats {self.stringName('the')}.")
 		h = eater.heal(self.heal)
 		eater.lastAte = Core.game.time
-		if h == 0:
+		if h == 0 and isinstance(eater,Core.Player):
 			Core.game.Print("Yummy...")
 		eater.checkHungry()
 		self.parent.removeItem(self)
@@ -451,7 +454,7 @@ class Table(Core.Item):
 		I.despawnTimer = None
 
 		if len(self.items) == 1:
-			itemName = self.items[0].stringName(det='a')
+			itemName = self.items[0].stringName('a')
 			self.descname = f"{self.name} with {itemName} on it"
 		elif len(self.items) > 1:
 			self.descname = f"{self.name} with things on it"
@@ -460,7 +463,7 @@ class Table(Core.Item):
 	def removeItem(self,I):
 		self.items.remove(I)
 		if len(self.items) == 1:
-			itemName = self.items[0].stringName(det='a')
+			itemName = self.items[0].stringName('a')
 			self.descname = f"{self.name} with {itemName} on it"
 		elif len(self.items) == 0:
 			self.descname = f"{self.name}"
@@ -490,7 +493,7 @@ class Table(Core.Item):
 	### User Output ###
 
 	def describe(self):
-		Core.game.Print(f"It's {self.stringName(det='a')}.")
+		Core.game.Print(f"It's {self.stringName('a')}.")
 		if len(self.items) != 0:
 			Core.game.Print(f"On it is {Core.listObjects(self.items)}.")
 		else:
@@ -521,13 +524,13 @@ class Wall(Core.Passage):
 		if traverser.riding:
 			return self.Traverse(traverser.riding,dir=dir)
 		if traverser.carrying:
-			Core.game.Print(f"You can't climb, you are carrying {traverser.carrying.stringName(det='a')}")
+			Core.game.Print(f"You can't climb, you are carrying {traverser.carrying.stringName('a')}")
 			return False
 
 		if traverser.hasCondition("clingfast"): verb = "crawl"
 		elif traverser.hasCondition("flying"): verb = "fly"
 		elif traverser is Core.player.riding: verb = "ride"
-		Core.game.Print(f"You {verb} {dir} {self.stringName(det='the')}.")
+		Core.game.Print(f"You {verb} {dir} {self.stringName('the')}.")
 
 		if traverser.ATHL() >= self.difficulty or traverser.hasAnyCondition("clingfast","flying"):
 			traverser.changeRoom(Core.world[self.connections[dir]])

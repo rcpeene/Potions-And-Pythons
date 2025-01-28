@@ -114,7 +114,7 @@ def readJSON(filename, object_hook=None):
 
 # reads the global game class file, probably named "game.txt"
 # takes the world dict as input, returns the Game object
-def readGame(filename,World):
+def readGame(filename,World,dlogDict):
 	gfd = open(filename,"r")
 	gametext = gfd.readlines()			# split game file into a list of lines
 	mode = int(gametext[0][:-1])		# first line is gamemode int
@@ -123,7 +123,7 @@ def readGame(filename,World):
 	time = int(gametext[3][:-1])		# fourth line is time int
 	events = eval(gametext[4][:-1])
 	gfd.close()
-	return Core.Game(mode,World[currentroom],World[prevroom],time,events,Creatures.factory)
+	return Core.Game(mode,World[currentroom],World[prevroom],time,events,dlogDict,Creatures.factory)
 
 
 
@@ -227,7 +227,8 @@ def loadGame(filename=None):
 	# try:
 	Core.player = readJSON("player.json",object_hook=worldHook)
 	Core.world = readJSON("world.json",object_hook=worldHook)
-	Core.game = readGame("game.txt",Core.world)
+	dlogDict = readJSON("../../Dialogue.json")
+	Core.game = readGame("game.txt",Core.world,dlogDict)
 	# hopefully load doesn't fail, that would suck
 	# except:
 	# 	print("Could not load game, save data corrupted\n")
@@ -235,13 +236,8 @@ def loadGame(filename=None):
 	# 	os.chdir("..")
 	# 	return False
 
-	os.chdir("../..")	
-	# read in the dialogue json for use by Creatures
-	Core.dlogDict = readJSON("Dialogue.json")
-	# assign parents to objects and decompress some object reference values from JSON
-	Core.assignRefs()
-	# eliminate any room connections which don't exist in the world dict
-	Core.ensureWorldIntegrity()
+	os.chdir("../..")
+	Core.buildWorld()
 	
 	Core.ellipsis(3)
 	Core.flushInput()
@@ -335,13 +331,10 @@ def newGame():
 	# initializes from the character creation screen
 	Core.player = createCharacter()
 	# initializes the game at the "cave" room
-	Core.game = Core.Game(0,Core.world["cave"],Core.world["cave"],0,set(),Creatures.factory)
+	dlogDict = readJSON("Dialogue.json")
+	Core.game = Core.Game(0,Core.world["cave"],Core.world["cave"],0,set(),dlogDict,Creatures.factory)
 
-	Core.dlogDict = readJSON("Dialogue.json")
-	# assign parents to objects and decompress some object reference values from JSON
-	Core.assignRefs()
-	# eliminate any room connections which don't exist in the world dict
-	Core.ensureWorldIntegrity()
+	Core.buildWorld()
 
 	# Core.ellipsis(3)
 	# enter the starting room
@@ -362,13 +355,10 @@ def testGame():
 	status = [["fireproof",-1], ["poisoned",5], ["cursed",-2], ["immortal",-1],
 	["sharpshooter",50], ["invisible",15], ["poisoned",-1], ["flying",5]]
 	Core.player = Core.Player("Norman","a hero",50,[4]*10,24,24,1000,50,inv=inv,love=100,fear=100,spells=[],status=status)
-	Core.game = Core.Game(0,Core.world["cave"],Core.world["tunnel"],0,set(),Creatures.factory)
+	dlogDict = readJSON("Dialogue.json")
+	Core.game = Core.Game(0,Core.world["cave"],Core.world["tunnel"],0,set(),dlogDict,Creatures.factory)
 	
-	Core.dlogDict = readJSON("Dialogue.json")
-	# assign parents to objects and decompress some object reference values from JSON
-	Core.assignRefs()
-	# eliminate any room connections which don't exist in the world dict
-	Core.ensureWorldIntegrity()
+	Core.buildWorld()
 	
 	Core.clearScreen()
 	Core.flushInput()

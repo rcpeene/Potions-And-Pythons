@@ -1122,15 +1122,23 @@ def Give(dobj,iobj,prep):
 		dobj = getNoun("What will you give?")
 		if dobj in Data.cancels:
 			return False
-	I = findObjFromTerm(dobj)
-	# TODO: complete this
+	I = findObjFromTerm(dobj,"player")
+	if I is None:
+		return False
+
 	if iobj is None:
 		iobj = getNoun("Who will you give to?")
 		if iobj in Data.cancels:
 			return False
-	R = findObjFromTerm(iobj)
-
-	return True
+	C = findObjFromTerm(iobj,"room")
+	if C is None:
+		return False
+	
+	if Core.hasMethod(C,"Give"):
+		return C.Give(I)
+	else:
+		Core.game.Print(f"You can't give to {C.stringName('the')}")
+		return False
 
 
 # not called by Parse directly
@@ -2286,7 +2294,7 @@ actions = {
 # drive -> ride
 # feed (food) -> give
 # scale -> climb
-# water -> pour on
+# water,splash -> pour on
 # dig, bury
 # rip, tear -> break
 # reload?
