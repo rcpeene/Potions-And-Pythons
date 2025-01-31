@@ -40,6 +40,7 @@ def spawnObject(obj,room=None):
 		room.addItem(obj)
 	if not Core.game.silent:
 		Core.game.Print(f"{obj.stringName('a',cap=1)} appeared!")
+		Core.game.setPronouns(obj)
 
 
 def destroyObject(obj):

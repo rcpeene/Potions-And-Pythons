@@ -34,12 +34,14 @@ def main(testing=False):
 		Core.game.silent = False
 		Core.game.whoseturn = Core.player
 		if not Core.player.isAlive(): 
-			Menu.restart()
+			if not Menu.restart():
+				return False
 			continue
 
 		# take user input until player successfully performs an action
 		if not Core.player.hasCondition("asleep"):
 			while not Parser.parse(): continue
+		if Core.game.quit: return Menu.quit()
 
 		# creatures in current room's turn
 		for creature in Core.game.currentroom.creatures:
@@ -75,6 +77,9 @@ if __name__ == "__main__":
 # CURRENT TASKS
 
 # "give"ing to NPC. update dialogue trees to accomodate these effects?
+	# have reactions give a 'return' True or False
+# > give dale the coffee
+# There is no 'dale' in your Inventory.
 # how will NPCs respond to being given something? or other triggers for that matter, like being healed or being attacked
 	# add "triggers" or "reaction" branch to dialogue trees that respond to things like being attacked or being given something, these should also leverage effects
 # add "climb" and "swim"

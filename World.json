@@ -610,7 +610,8 @@
 					"right": null,
 					"legs": null
 				},
-				"inv": []
+				"inv": [],
+				"status": [["wants bottle of coffee",-3]]
 			},
 			{
 				"__class__": "Person",

@@ -12,7 +12,7 @@
 	},
 	"trees": {
 		"Dale": {
-			"surprise":{
+			"surprise": {
 				"cases": "'naked' in speaker.appraisal",
 				"children": [{"remark": "Gollee! Put some clothes on!"}, {}]
 			},
@@ -70,6 +70,19 @@
 			},
 			"chatter": {
 				"trites": "basic"
+			},
+			"reactions": {
+				"Give": {
+					"children": [
+						{
+							"guardCase": "I.name == 'bottle of coffee'",
+							"remark": "Gee whiz! Thanks pal!",
+							"loveMod": 1,
+							"repMod": 1,
+							"reactTrue": true
+						}
+					]
+				}
 			}
 		},
 		"The Earl of Chesterbrook": {
