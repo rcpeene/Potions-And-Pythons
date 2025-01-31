@@ -37,7 +37,7 @@ def writeGame(filename,Game,World):
 class worldEncoder(json.JSONEncoder):
 	def default(self,objToWrite):
 		JSONprimitives = {dict,list,str,int,float,bool,None}
-		if type(objToWrite) == set:
+		if type(objToWrite) is set:
 			return {"__class__":"set","setdata":list(objToWrite)}
 		# elif type(objToWrite) == Room:
 		# 	return objToWrite.__dict__
@@ -164,7 +164,7 @@ def saveGame(savename=None):
 		else:
 			print(f"Save name cannot be '{savename}'.")
 		os.chdir("..")
-		return		
+		return
 
 	# if the save name is used, ask to overwrite it
 	if os.path.exists(savename):
@@ -418,22 +418,20 @@ def restart():
 	next = None
 	Core.flushInput()
 	while next is None:
-		if Core.yesno("Would you like to load from a save?",print,input):
+		if Core.yesno("Would you like to return to the main menu?",print,input):
 			next = "restart"
 		elif Core.yesno("Would you like to quit?",print,input):
 			next = "quit"
 		else:
 			print("You must choose! Don't be a sore loser.")
 	if next == "restart":
-		if loadGame():
-			return True
-	quit()
-	return False
+		return mainMenu()
+	return quit()
 
 
 def quit():
 	Core.waitKbInput("Goodbye.")
-	sys.exit()
+	return False
 
 
 

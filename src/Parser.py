@@ -1118,6 +1118,8 @@ def Give(dobj,iobj,prep):
 		Core.game.Print("Command not understood.")
 		return False
 
+	if prep is None:
+		dobj,iobj = iobj,dobj
 	if dobj is None:
 		dobj = getNoun("What will you give?")
 		if dobj in Data.cancels:
