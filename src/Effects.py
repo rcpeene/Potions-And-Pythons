@@ -51,7 +51,7 @@ def destroyObject(obj):
 	elif isinstance(obj,Core.Item):
 		obj.parent.removeItem(obj)
 	if not Core.game.silent:
-		Core.game.Print(f"{obj.stringName('a',cap=1)} was destroyed.")
+		Core.game.Print(f"{-obj} was destroyed.")
 
 
 def increment(obj,attribute,num):
