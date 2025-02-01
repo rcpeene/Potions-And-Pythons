@@ -81,6 +81,8 @@ class Box(Core.Item):
 		else:
 			self.open = True
 			Core.game.Print(f"Inside there is {Core.listObjects(self.items)}.")
+			Core.game.setPronouns(self.items[-1])
+		return True
 
 
 	def Break(self):
@@ -186,9 +188,9 @@ class Food(Core.Item):
 	# heals 'heal' hp to the player, removes food from inventory
 	def Eat(self,eater):
 		if isinstance(eater,Core.Player):
-			Core.game.Print(f"You consume the {self.name}.")
+			Core.game.Print(f"You consume {-self}.")
 		else:
-			Core.game.Print(f"{eater.stringName('the',c=1)} eats {self.stringName('the')}.")
+			Core.game.Print(f"{+eater} eats {-self}.")
 		h = eater.heal(self.heal)
 		eater.lastAte = Core.game.time
 		if h == 0 and isinstance(eater,Core.Player):
@@ -286,10 +288,8 @@ class Lockbox(Box):
 		else:
 			Core.game.Print(f"You open the {self.name}.")
 			self.open = True
-		if len(self.items) == 0:
-			Core.game.Print("It is empty.")
-		else:
-			Core.game.Print(f"Inside there is {Core.listObjects(self.items)}.")
+		self.Look()
+		return True
 
 
 	def Look(self):
@@ -300,6 +300,7 @@ class Lockbox(Box):
 		else:
 			self.open = True
 			Core.game.Print(f"Inside there is {Core.listObjects(self.items)}.")
+			Core.game.setPronouns(self.items[-1])
 
 
 	def Lock(self,key):
@@ -454,8 +455,7 @@ class Table(Core.Item):
 		I.despawnTimer = None
 
 		if len(self.items) == 1:
-			itemName = self.items[0].stringName('a')
-			self.descname = f"{self.name} with {itemName} on it"
+			self.descname = f"{self.name} with {~self.items[0]} on it"
 		elif len(self.items) > 1:
 			self.descname = f"{self.name} with things on it"
 
@@ -463,8 +463,7 @@ class Table(Core.Item):
 	def removeItem(self,I):
 		self.items.remove(I)
 		if len(self.items) == 1:
-			itemName = self.items[0].stringName('a')
-			self.descname = f"{self.name} with {itemName} on it"
+			self.descname = f"{self.name} with {~self.items[0]} on it"
 		elif len(self.items) == 0:
 			self.descname = f"{self.name}"
 
@@ -493,7 +492,7 @@ class Table(Core.Item):
 	### User Output ###
 
 	def describe(self):
-		Core.game.Print(f"It's {self.stringName('a')}.")
+		Core.game.Print(f"It's {~self}.")
 		if len(self.items) != 0:
 			Core.game.Print(f"On it is {Core.listObjects(self.items)}.")
 		else:
@@ -524,13 +523,13 @@ class Wall(Core.Passage):
 		if traverser.riding:
 			return self.Traverse(traverser.riding,dir=dir)
 		if traverser.carrying:
-			Core.game.Print(f"You can't climb, you are carrying {traverser.carrying.stringName('a')}")
+			Core.game.Print(f"You can't climb, you are carrying {~traverser.carrying}")
 			return False
 
 		if traverser.hasCondition("clingfast"): verb = "crawl"
 		elif traverser.hasCondition("flying"): verb = "fly"
 		elif traverser is Core.player.riding: verb = "ride"
-		Core.game.Print(f"You {verb} {dir} {self.stringName('the')}.")
+		Core.game.Print(f"You {verb} {dir} {-self}.")
 
 		if traverser.ATHL() >= self.difficulty or traverser.hasAnyCondition("clingfast","flying"):
 			traverser.changeRoom(Core.world[self.connections[dir]])

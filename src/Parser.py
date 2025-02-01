@@ -34,7 +34,6 @@ def chooseObject(name,objects):
 		return objects[0]
 	Core.game.Print()
 	for n,object in enumerate(objects):
-		strname = object.stringName()
 		labels = []
 		if isinstance(object,Core.Creature):
 			if not object.isAlive():
@@ -56,7 +55,7 @@ def chooseObject(name,objects):
 				strLabel += label + ","
 			strLabel = " (" + strLabel + labels[-1] + ")"
 
-		Core.game.Print(f"{n+1}. {strname}{strLabel}")
+		Core.game.Print(f"{n+1}. {object}{strLabel}")
 	Core.game.Print(f"\nWhich {name}?")
 
 	invalid_count = 0
@@ -460,15 +459,19 @@ def Set(command):
 def Spawn(command):
 	if len(command) < 2:
 		Core.game.Print("Error: no object given")
-	try:
-		obj = eval(" ".join(command[1:]))
-	except Exception as e:
-		Core.game.Print("Error: Object could not be instantiated:")
-		Core.game.Print(e)
-		return False
-	if not (isinstance(obj,Core.Creature) or isinstance(obj,Core.Item)):
-		Core.game.Print("Could not instantiate game object")
-	Effects.spawnObject(Core.game.currentroom,obj)
+	objname = " ".join(command[1:])
+	if objname in Creatures.factory or objname in Items.factory:
+		obj = objname
+	else:
+		try:
+			obj = eval(objname)
+			if not (isinstance(obj,Core.Creature) or isinstance(obj,Core.Item)):
+				raise TypeError
+		except Exception as e:
+			Core.game.Print("Error: Object could not be instantiated:")
+			Core.game.Print(e)
+			return False
+	Effects.spawnObject(obj)
 
 
 def Teleport(command):
@@ -654,7 +657,7 @@ def Attack(dobj,iobj,prep,target=None,weapon=None,weapon2=None):
 		weapon = weapon.improviseWeapon()
 	Core.player.weapon = weapon
 
-	Core.game.Print(f"\nYou attack {target.stringName('the')} with {Core.player.weapon.name}.")
+	Core.game.Print(f"\nYou attack {-target} with {Core.player.weapon.name}.")
 	if isinstance(target,Core.Creature): Core.player.attackCreature(target)
 	elif isinstance(target,Core.Item): Core.player.attackItem(target)
 	if stowed: Core.player.weapon,Core.player.weapon2 = stowedweapons
@@ -733,16 +736,16 @@ def CarryCreature(creature):
 	carrying = Core.player.carrying
 	
 	if carrying:
-		Core.game.Print(f"You're already carrying {carrying.stringName('the')}")
+		Core.game.Print(f"You're already carrying {-carrying}")
 	if not isinstance(creature,Core.Creature):
-		Core.game.Print(f"You can't carry {creature.stringName('the')}")
+		Core.game.Print(f"You can't carry {-creature}")
 		return False
 
 	Core.player.unequip(Core.player.gear["left"])
-	Core.game.Print(f"You try to pick up {creature.stringName('the')}.")
+	Core.game.Print(f"You try to pick up {-creature}.")
 	if not creature.Carry(Core.player):
 		return False
-	Core.game.Print(f"You are carrying {creature.stringName('the')}.")
+	Core.game.Print(f"You are carrying {-creature}.")
 	return True
 
 
@@ -891,7 +894,7 @@ def Dismount(dobj,iobj,prep):
 	
 	riding = Core.player.riding
 	Core.game.setPronouns(riding)
-	Core.game.Print(f"You dismount {riding.stringName('the')}.")	
+	Core.game.Print(f"You dismount {-riding}.")	
 	riding.rider = None
 	Core.player.riding = None	
 	return True
@@ -948,7 +951,7 @@ def Don(dobj,iobj,prep):
 		Core.game.Print(f"You aren't able to equip to '{iobj}'.")
 		return False
 	if iobj not in I.slots and iobj is not None:
-		Core.game.Print(f"You cannot wear {I.stringName('the')} {prep} your {iobj}.")
+		Core.game.Print(f"You cannot wear {-I} {prep} your {iobj}.")
 		return False
 	if not Core.player.equipArmor(I,iobj):
 		return False
@@ -995,7 +998,7 @@ def Drop(dobj,iobj,prep,I=None):
 
 	if isinstance(I, Core.Creature):
 		Core.player.removeCarry()
-		Core.game.Print(f"You drop {I.stringName('the')}")
+		Core.game.Print(f"You drop {-I}")
 	else:
 		I.parent.removeItem(I)
 		Core.game.Print(f"You drop your {I.name}")
@@ -1139,7 +1142,7 @@ def Give(dobj,iobj,prep):
 	if Core.hasMethod(C,"Give"):
 		return C.Give(I)
 	else:
-		Core.game.Print(f"You can't give to {C.stringName('the')}")
+		Core.game.Print(f"You can't give to {-C}")
 		return False
 
 
@@ -1193,7 +1196,7 @@ def assignGoTerms(dobj,iobj,prep):
 # passage. Then calls either traverse or changeroom accordingly
 def Go(dobj,iobj,prep):
 	for cond in ("sitting","laying"):
-		if Core.player.hasCondition(cond):
+		if Core.player.hasCondition(cond) and Core.player.riding is None:
 			Core.game.Print(f"You can't go, you are {cond}.")
 			return False
 
@@ -1259,7 +1262,7 @@ def Hide(dobj,iobj,prep):
 
 	riding = Core.player.riding
 	if riding is not None:
-		Core.game.Print(f"You can't hide, you are riding {riding.stringName('a')}")
+		Core.game.Print(f"You can't hide, you are riding {~riding}")
 		return False
 
 	if dobj is None: dobj = iobj
@@ -1340,7 +1343,7 @@ def Lay(dobj,iobj,prep):
 			Core.player.Lay()
 			R.Lay(Core.player)
 		else:
-			Core.game.Print(f"You can't lay on {R.stringName('the')}.")
+			Core.game.Print(f"You can't lay on {-R}.")
 			return False
 
 	Core.player.Lay()
@@ -1444,7 +1447,7 @@ def Mount(dobj,iobj,prep):
 		return False
 	
 	if Core.player.riding is not None:
-		print(f"You're already riding {Core.player.riding.stringName()}")
+		print(f"You're already riding {Core.player.riding}")
 		return False
 
 	if dobj is None: dobj = iobj
@@ -1457,7 +1460,7 @@ def Mount(dobj,iobj,prep):
 	Core.game.setPronouns(C)
 	
 	if Core.player.Weight() > C.BRDN():
-		Core.game.Print(f"You are too heavy to ride {C.stringName('the')}")
+		Core.game.Print(f"You are too heavy to ride {-C}")
 		return False
 
 	Core.player.removeCondition("hiding",-3)
@@ -1657,7 +1660,7 @@ def Restrain(dobj,iobj,prep):
 			return False
 
 	if "restrained" in C.status:
-		Core.game.Print(f"{C.stringName('the')} is already restrained.")
+		Core.game.Print(f"{-C} is already restrained.")
 	if not C.Restrain(Core.player,I):
 		Core.game.Print(f"You fail to restrain the {C.name}.")
 		return False
@@ -1731,7 +1734,7 @@ def Sit(dobj,iobj,prep):
 			Core.player.Sit()
 			R.Sit(Core.player)
 		else:
-			Core.game.Print(f"You can't sit on {R.stringName('the')}.")
+			Core.game.Print(f"You can't sit on {-R}.")
 			return False
 
 	Core.player.Sit()
@@ -1876,35 +1879,35 @@ def Take(dobj,iobj,prep):
 	if dobj in ("all","everything","it all"): return TakeAll()
 
 	if iobj in ("here", "room"):
-		obj = findObjFromTerm(dobj,"room",roomD=2)
+		objToTake = findObjFromTerm(dobj,"room",roomD=2)
 	else:
-		obj = findObjFromTerm(dobj,roomD=2,reqParent=iobj)
-	if obj is None:
+		objToTake = findObjFromTerm(dobj,roomD=2,reqParent=iobj)
+	if objToTake is None:
 		return False
-	if obj.parent is Core.player:
+	if objToTake.parent is Core.player:
 		Core.game.Print(f"You can't take from your own Inventory.")
 		return False
-	Core.game.setPronouns(obj)
+	Core.game.setPronouns(objToTake)
 
-	if isinstance(obj,Core.Creature): return CarryCreature(obj)
-	if not isinstance(obj,Core.Item) or isinstance(obj,Core.Fixture):
+	if isinstance(objToTake,Core.Creature): return CarryCreature(objToTake)
+	if not isinstance(objToTake,Core.Item) or isinstance(objToTake,Core.Fixture):
 		Core.game.Print(f"You can't take the {dobj}.")
 		return False
 
-	parent = obj.parent
+	parent = objToTake.parent
 	# if it is in a non-player inventory, it will have to be stolen
-	if any(isinstance(anc,Core.Creature) for anc in obj.ancestors()) and obj not in Core.player.invSet():
-		return Steal(dobj,iobj,prep,I=obj)
-	count = parent.itemNames().count(obj.name)
+	if any(isinstance(anc,Core.Creature) for anc in objToTake.ancestors()) and objToTake not in Core.player.invSet():
+		return Steal(dobj,iobj,prep,I=objToTake)
+	count = parent.itemNames().count(objToTake.name)
 
 	if parent is Core.game.currentroom: suffix = ""
-	elif Core.player in obj.ancestors(): suffix = " from your " + parent.name
+	elif Core.player in objToTake.ancestors(): suffix = " from your " + parent.name
 	else: suffix = " from the " + parent.name
-	strname = obj.stringName('the' if count==1 else 'a')
+	strname = objToTake.stringName('the' if count==1 else 'a')
 	tookMsg = f"You take {strname}{suffix}."
-	failMsg = f"You can't take the {obj.name}, your Inventory is too full."
+	failMsg = f"You can't take the {objToTake.name}, your Inventory is too full."
 
-	return Core.player.obtainItem(obj,tookMsg,failMsg)
+	return Core.player.obtainItem(objToTake,tookMsg,failMsg)
 
 
 def Touch(dobj,iobj,prep):

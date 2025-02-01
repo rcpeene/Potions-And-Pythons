@@ -8,7 +8,7 @@
 # 3. Core class definitions	(empty, game, room, item, creature, player, etc.)
 
 from time import sleep
-from random import randint,sample
+from random import randint,sample,choices
 from math import floor, sqrt
 from bisect import insort
 from collections.abc import Iterable
@@ -210,7 +210,7 @@ def bagObjects(objects):
 	bag = []
 	for obj in objects:
 		for entry in bag:
-			if entry[0].stringName == obj.stringName:
+			if entry[0].stringName() == obj.stringName():
 				entry[1] += 1
 				break
 		else:
@@ -887,7 +887,7 @@ class EmptyGear:
 
 
 	def __str__(self):
-		return "{}".format(self.name)
+		return self.name
 
 
 	def __eq__(self, other):
@@ -1291,7 +1291,7 @@ class Room():
 
 
 	def __str__(self):
-		return f"#{self.name}"
+		return self.name
 
 
 	### Operation ###
@@ -1567,7 +1567,19 @@ class Item():
 
 
 	def __str__(self):
-		return f"${self.name}"
+		return self.stringName()
+
+
+	def __neg__(self):
+		return self.stringName('the')
+
+
+	def __pos__(self):
+		return self.stringName('the',cap=1)
+	
+
+	def __invert__(self):
+		return self.stringName('a')
 
 
 	def __lt__(self,other):
@@ -1621,9 +1633,9 @@ class Item():
 
 	def Use(self,user):
 		if user not in self.ancestors():
-			game.Print(f"{self.stringName('the',cap=1)} is not in your inventory.")
+			game.Print(f"{+self} is not in your inventory.")
 			return False
-		print(f"You use {self.name}")
+		print(f"You use {-self}")
 
 
 	def takeDamage(self,dmg):
@@ -1706,7 +1718,7 @@ class Item():
 	
 
 	def describe(self):
-		game.Print(f"It's {self.stringName('a')}.")
+		game.Print(f"It's {-self}.")
 		game.Print(f"{self.desc}.")
 
 
@@ -1788,7 +1800,19 @@ class Creature():
 
 
 	def __str__(self):
-		return f"!{self.name}"
+		return self.stringName()
+
+
+	def __neg__(self):
+		return self.stringName('the')
+
+
+	def __pos__(self):
+		return self.stringName('the',cap=1)
+	
+
+	def __invert__(self):
+		return self.stringName('a')
 
 
 	def __eq__(self, other) :
@@ -1909,7 +1933,7 @@ class Creature():
 		else:
 			self.hp = min0(self.hp-dmg)
 		total_dmg = prevhp - self.hp
-		game.Print(f"{self.stringName('the',cap=1)} took {total_dmg} {Data.dmgtypes[type]} damage.")
+		game.Print(f"{+self} took {total_dmg} {Data.dmgtypes[type]} damage.")
 		if self.hp == 0:
 			self.death()
 
@@ -2167,7 +2191,7 @@ class Creature():
 	def death(self):
 		self.timeOfDeath = game.time
 		self.addCondition("dead",-3)
-		game.Print("\n" + f"{self.stringName('the',cap=1)} died.")
+		game.Print("\n" + f"{+self} died.")
 		self.descname = f"dead {self.descname}"
 		n = diceRoll(3,player.LOOT(),-2)
 		self.room().addItem(Serpens(n))
@@ -2204,7 +2228,7 @@ class Creature():
 
 
 	def Give(self,I):
-		game.Print(f"{self.stringName('the',cap=1)} ignores your offer.")
+		game.Print(f"{+self} ignores your offer.")
 
 
 	### Behavior ###
@@ -2291,7 +2315,7 @@ class Creature():
 		# if a creature is found creating a loop with the actor and attempted target,
 		# identify the culprit
 		if looplink:
-			game.Print(f"You can't {dverb} {target.stringName('the')}, {target.pronoun} is {iverb} {looplink}")
+			game.Print(f"You can't {dverb} {-target}, {target.pronoun} is {iverb} {looplink}")
 			return True
 		return False
 
@@ -2300,7 +2324,7 @@ class Creature():
 		if self.checkTetherLoop(carrier,self,"carry"):
 			return False
 		if self.Weight() > carrier.BRDN():
-			game.Print(f"{self.stringName('the',cap=1)} is too heavy to carry.")
+			game.Print(f"{+self} is too heavy to carry.")
 			return False
 		if not self.Restrain(carrier):
 			return False
@@ -2317,10 +2341,10 @@ class Creature():
 				#TODO: add restraining with items? like rope??
 				pass
 			if self.ATHL() > restrainer.ATHL() or self.EVSN() > restrainer.ATHL():
-				game.Print(f"You fail to restrain {self.stringName('the')}!")
+				game.Print(f"You fail to restrain {-self}!")
 				return False
 		self.addCondition("restrained",-3)
-		game.Print(f"You restrain {self.stringName('the')}!")
+		game.Print(f"You restrain {-self}!")
 		return True
 
 
@@ -2335,19 +2359,19 @@ class Creature():
 		if self.checkTetherLoop(rider,self,"ride"):
 			return False
 		if rider.Weight() > self.BRDN():
-			game.Print(f"You are too heavy to ride {self.stringName('the')}")
+			game.Print(f"You are too heavy to ride {-self}")
 			return False
 		if not self.isFriendly() and self.canMove():
-			game.Print(f"{self.stringName('the',cap=1)} struggles.")
+			game.Print(f"{+self} struggles.")
 			athl_contest = self.ATHL() - rider.ATHL()
 			if athl_contest > 0:
-				game.Print(f"{self.stringName('the',cap=1)} shakes you off!")
+				game.Print(f"{+self} shakes you off!")
 				if athl_contest > rider.ATHL():
 					rider.takeDamage(athl_contest-rider.ATHL(),"b")
 				return False
 		self.rider = rider
 		rider.riding = self
-		game.Print(f"You ride {self.stringName('the')}.")
+		game.Print(f"You ride {-self}.")
 		return True
 
 
@@ -2666,7 +2690,7 @@ class Creature():
 
 
 	def describe(self):
-		game.Print(f"It's {self.stringName('a')}.")
+		game.Print(f"It's {~self}.")
 		game.Print(f"{self.desc}.")
 
 
@@ -2679,6 +2703,18 @@ class Player(Creature):
 		self.xp = xp
 		self.rp = rp
 		self.spells = spells if spells else []
+
+
+	def __neg__(self):
+		return "you"
+
+
+	def __pos__(self):
+		return "You"
+	
+
+	def __invert__(self):
+		return "you"
 
 
 	### Operation ###
@@ -2715,10 +2751,10 @@ class Player(Creature):
 			raise Exception(f"Can't change rooms. Stuck inside {self.parent}")
 		game.changeRoom(newroom)
 		if self.riding:
-			game.Print(f"You are no longer riding {self.riding.stringName()}.")
+			game.Print(f"You are no longer riding {self.riding}.")
 			self.riding = None
 		if self.carrying:
-			game.Print(f"You are no longer carrying {self.carrying.stringName()}.")
+			game.Print(f"You are no longer carrying {self.carrying}.")
 			self.carrying = None
 
 
@@ -2983,8 +3019,6 @@ class Player(Creature):
 
 	### User Output ###
 
-	def stringName(self,det="",n=-1,plural=False,cap=-1):
-		return "yourself"
 
 	# prints all 10 player traits
 	def printTraits(self,trait=None):
@@ -3046,7 +3080,7 @@ class Player(Creature):
 
 	def printCarrying(self, *args):
 		if self.carrying:
-			game.Print(f"Carrying {self.carrying.stringName('a')}")
+			game.Print(f"Carrying {~self.carrying}")
 			game.Print(f"Weight: {self.carrying.Weight()}")
 		else:
 			game.Print("Carrying nothing")
@@ -3054,7 +3088,7 @@ class Player(Creature):
 
 	def printRiding(self, *args):
 		if self.riding:
-			game.Print(f"Riding {self.riding.stringName('a')}")
+			game.Print(f"Riding {~self.riding}")
 		else:
 			game.Print("Riding nothing")
 
@@ -3099,9 +3133,9 @@ class Player(Creature):
 		stats = [self.name, f"$ {self.money}", f"LV: {self.level()}", f"RP: {self.rp}", f"HP: {self.hp}/{self.MXHP()}", f"MP: {self.mp}/{self.MXMP()}"]
 		columnPrint(stats,2,16)
 		if self.carrying is not None:
-			game.Print(f"Carrying {self.carrying.stringName()}")
+			game.Print(f"Carrying {self.carrying}")
 		if self.riding is not None:
-			game.Print(f"Riding {self.riding.stringName()}")
+			game.Print(f"Riding {self.riding}")
 		if len(self.status) != 0:
 			game.Print()
 			self.printStatus()
@@ -3134,19 +3168,17 @@ class Humanoid(Creature):
 
 
 	def attack(self):
-		# if creature is not in same room as player
-		if game.currentroom != self.room():
-			return
-		else:
-			self.attackCreature(player)
+		targets = [creature for creature in self.room().creatures if creature is not self]
+		if self.room() is player.room():
+			targets += [player]
+		if len(targets) > 0:
+			target = choices(targets)[0]
+			return self.attackCreature(target)
+		return False
 
 
 	def attackCreature(self,target):
-		if target == player:
-			targetname = "you"
-		else:
-			targetname = target.stringName()
-		game.Print(f"{self.stringName('the', cap=1)} tries to attack {targetname}")
+		game.Print(f"{+self} tries to attack {-target}")
 
 		n = min1( self.ATSP() // min1(target.ATSP()) )
 		if n > 1:
@@ -3178,7 +3210,7 @@ class Humanoid(Creature):
 	### Getters ###
 
 	def describe(self):
-		game.Print(f"It's {self.stringName('a')}.")
+		game.Print(f"It's {~self}.")
 		game.Print(f"{self.desc}.")
 		gearitems = [item for item in self.gear.values() if item != EmptyGear()]
 		if len(gearitems) != 0:
@@ -3237,7 +3269,7 @@ class Speaker(Creature):
 		if player.isNaked():
 			self.appraisal.add("naked")
 		
-		
+
 	def Talk(self,player,game,world):
 		if "met" not in self.memories:
 			self.firstImpression(player)
@@ -3248,13 +3280,13 @@ class Speaker(Creature):
 
 	def Give(self,I):
 		if not self.canObtain(I):
-			game.Print(f"{self.stringName(det='the',cap=1)} can't carry any more!")	
+			game.Print(f"{+self} can't carry any more!")	
 		elif self.dlogtree.react("Give",self,I=I):
 			# if we fail to obtain item for whatever reason, drop it into room
 			if not self.obtainItem(I):
 				game.currentroom.addItem(I)
 		else:
-			game.Print(f"{self.stringName(det='the',cap=1)} ignores your offer.")			
+			game.Print(f"{+self} ignores your offer.")			
 		return True
 
 
@@ -3361,7 +3393,7 @@ class Animal(Speaker):
 			self.updateLove(1)
 			self.updateFear(-1)
 		else:
-			game.Print(f"{self.stringName('the',cap=1)} ignores your offer.")
+			game.Print(f"{+self} ignores your offer.")
 
 
 	def Talk(self,player,game,world):

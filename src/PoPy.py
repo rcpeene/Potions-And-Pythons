@@ -76,12 +76,7 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# "give"ing to NPC. update dialogue trees to accomodate these effects?
-	# have reactions give a 'return' True or False
-# > give dale the coffee
-# There is no 'dale' in your Inventory.
-# how will NPCs respond to being given something? or other triggers for that matter, like being healed or being attacked
-	# add "triggers" or "reaction" branch to dialogue trees that respond to things like being attacked or being given something, these should also leverage effects
+# add reactions to being healed or being attacked
 # add "climb" and "swim"
 # think about throwing and catching. thrown objects should probably hit something random based on weight if they miss the target
 # catching... hmm.... should they have time to react to a thrown item?
