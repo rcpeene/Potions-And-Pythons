@@ -8,6 +8,8 @@ delete
 new
 Menuman
 Menu Test!
+\mod 1
+
 save
 testsave
 quit
