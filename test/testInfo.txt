@@ -13,7 +13,6 @@ examples
 gear
 hello
 hi
-help
 
 hp
 info
@@ -21,6 +20,9 @@ info
 
 information
 
+commands
+
+verbs
 
 inventory
 inv
@@ -41,6 +43,7 @@ weapons
 xp
 yell
 yawn
+no
 \tpt tunnel
 look at python
 look

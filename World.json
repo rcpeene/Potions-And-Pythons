@@ -312,7 +312,7 @@
 		"items": [
 			{
 				"__class__": "Bed",
-				"name": "Bed",
+				"name": "bed",
 				"desc": "An cheap oaken bed",
 				"aliases": [],
 				"weight": 100,

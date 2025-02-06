@@ -43,7 +43,7 @@ class Bottle(Core.Item):
 		self.parent.removeItem(self)
 		# randomly generates n shards between 3,6
 		for _ in range(randint(3,6)):
-			shard = Shard("glass shard","a sharp shard of glass",1,-1)
+			shard = Shard("glass shard","a sharp shard of glass","glass",1,-1)
 			Core.game.currentroom.addItem(shard)
 		return True
 
@@ -139,12 +139,24 @@ class Box(Core.Item):
 class Controller(Core.Item):
 	def __init__(self,name,desc,weight,durability,triggers,effect,**kwargs):
 		Core.Item.__init__(self,name,desc,weight,durability,**kwargs)
-		triggers = triggers if triggers else ["Use"]
+		self.triggers = triggers if triggers else ["Use"]
 		self.effect = effect
-		for trigger in triggers:
+		for trigger in self.triggers:
 			f = lambda *args: self.Trigger(trigger,*args)
 			setattr(self,trigger,f)
 
+
+	### File I/O ###
+
+	def convertToJSON(self):
+		jsonDict = self.__dict__.copy()
+		for trigger in self.triggers:
+			del jsonDict[trigger]
+		jsonDict = {"__class__":self.__class__.__name__, **jsonDict}
+		return jsonDict
+
+
+	### Operation ###
 
 	# triggers some effect using the effect string to call related function
 	def Trigger(self,*args):

@@ -34,8 +34,17 @@ def writeGame(filename,Game,World):
 	gfd.close()
 
 
+visitedobjects = set()
+
 class worldEncoder(json.JSONEncoder):
 	def default(self,objToWrite):
+		if objToWrite in visitedobjects:
+			raise Exception(f"{objToWrite} already visited")
+		if type(objToWrite) is not set:
+			visitedobjects.add(objToWrite)
+		if type(objToWrite) is set:
+			visitedobjects.add(tuple(objToWrite))
+		
 		JSONprimitives = {dict,list,str,int,float,bool,None}
 		if type(objToWrite) is set:
 			return {"__class__":"set","setdata":list(objToWrite)}
@@ -71,7 +80,7 @@ def writeJSON(filename,World):
 #########################
 	
 
-def worldHook(jsonDict):
+def worldDecoder(jsonDict):
 	# print("==== converting object of type: " + str(type(jsonDict)))
 	if "__class__" in jsonDict:
 		objClassname = jsonDict["__class__"]
@@ -106,10 +115,21 @@ def worldHook(jsonDict):
 		return jsonDict
 
 
-def readJSON(filename, object_hook=None):
+def readJSON(filename,object_hook=None):
 	with open(filename,"r") as fd:
-		World = json.load(fd,object_hook=object_hook)
-	return World
+		JSON = json.load(fd,object_hook=object_hook)
+	return JSON
+
+
+def readDialogue(filename):
+	jsonDict = readJSON(filename)
+	resDict = {}
+	resDict["sounds"] = jsonDict["sounds"]
+	resDict["trites"] = jsonDict["trites"]
+	resDict["trees"] = {}
+	for treeLabel, treeJson in jsonDict["trees"].items():
+		resDict["trees"][treeLabel] = Core.DialogueTree(treeLabel,treeJson)
+	return resDict
 
 
 # reads the global game class file, probably named "game.txt"
@@ -154,9 +174,9 @@ def saveGame(savename=None):
 
 	# split existing save names into a list and display them
 	saves = os.listdir()
-	Core.columnPrint(saves,10,10)
 	if savename is None:
 		# player names their save
+		Core.columnPrint(saves,10,10)
 		savename = input("\nWhat name will you give this save file?\n> ").lower()
 	if savename in ("", "all", "autosave", "quicksave"):
 		if savename == "":
@@ -225,9 +245,9 @@ def loadGame(filename=None):
 	os.chdir(savename)
 	# try to load the player, world, and game objects
 	# try:
-	Core.player = readJSON("player.json",object_hook=worldHook)
-	Core.world = readJSON("world.json",object_hook=worldHook)
-	dlogDict = readJSON("../../Dialogue.json")
+	Core.player = readJSON("player.json",object_hook=worldDecoder)
+	Core.world = readJSON("world.json",object_hook=worldDecoder)
+	dlogDict = readDialogue("../../Dialogue.json")
 	Core.game = readGame("game.txt",Core.world,dlogDict)
 	# hopefully load doesn't fail, that would suck
 	# except:
@@ -327,11 +347,11 @@ def createCharacter():
 # starts a new game and returns player, world, and game objects
 def newGame():
 	# tries to load a clean new world from initial world file
-	Core.world = readJSON("World.json",object_hook=worldHook)
+	Core.world = readJSON("World.json",object_hook=worldDecoder)
 	# initializes from the character creation screen
 	Core.player = createCharacter()
 	# initializes the game at the "cave" room
-	dlogDict = readJSON("Dialogue.json")
+	dlogDict = readDialogue("Dialogue.json")
 	Core.game = Core.Game(0,Core.world["cave"],Core.world["cave"],0,set(),dlogDict,Creatures.factory)
 
 	Core.buildWorld()
@@ -349,13 +369,13 @@ def newGame():
 
 # automatically starts a new game with a premade character for easy testing
 def testGame():
-	Core.world = readJSON("World.json",object_hook=worldHook)
+	Core.world = readJSON("World.json",object_hook=worldDecoder)
 
-	inv = [Core.Compass("compass","a plain steel compass with a red arrow",2,10,plural="compasses")]
+	inv = [Core.Compass("compass","a plain steel compass with a red arrow",2,10,"steel",plural="compasses")]
 	status = [["fireproof",-1], ["poisoned",5], ["cursed",-2], ["immortal",-1],
 	["sharpshooter",50], ["invisible",15], ["poisoned",-1], ["flying",5]]
 	Core.player = Core.Player("Norman","a hero",50,[4]*10,24,24,1000,50,inv=inv,love=100,fear=100,spells=[],status=status)
-	dlogDict = readJSON("Dialogue.json")
+	dlogDict = readDialogue("Dialogue.json")
 	Core.game = Core.Game(0,Core.world["cave"],Core.world["tunnel"],0,set(),dlogDict,Creatures.factory)
 	
 	Core.buildWorld()
@@ -430,7 +450,8 @@ def restart():
 
 
 def quit():
-	Core.waitKbInput("Goodbye.")
+	if Core.game.mode != 1:
+		Core.waitKbInput("Goodbye.")
 	return False
 
 

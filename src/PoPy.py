@@ -76,7 +76,9 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# add reactions to being healed or being attacked
+# add total traversal limit on dlog nodes?
+# probably store dlog trees as static objects, read in separately with its own hook
+	# then make speaker dlog trees copies and record "nodevisits"
 # add "climb" and "swim"
 # think about throwing and catching. thrown objects should probably hit something random based on weight if they miss the target
 # catching... hmm.... should they have time to react to a thrown item?
@@ -97,6 +99,7 @@ if __name__ == "__main__":
 
 # behavior
 	# design persons and person behavior all of the RP system?
+	# add reactions to being healed or being attacked
 	# figure out animal behavior
 	# add monsters/monster behavior
 	# creatures attacking?

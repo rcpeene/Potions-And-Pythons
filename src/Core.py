@@ -338,7 +338,7 @@ def assignRefsRecur(parent):
 		return
 	for obj in parent.contents():
 		# everything in the world or player inv should be Item or Creature
-		assert isinstance(obj, (Item, Creature))
+		assert isinstance(obj, (Item, Creature)), f"object is not Item or Creature: {obj}, it is type {type(obj)}"
 		obj.assignParent(parent)
 		assignRefsRecur(obj)
 
@@ -349,6 +349,7 @@ def assignRefsRecur(parent):
 # also assigns dialogue trees for speakers and validates them
 def buildWorld():
 	player.assignParent(game.currentroom)
+	assignRefsRecur(player)
 
 	namesToDelete = []
 	for room in world.values():
@@ -373,7 +374,6 @@ def buildWorld():
 		# assign the dialogue trees for all creatures and validate them
 		for creature in objQuery(room, d=3, key=lambda x: isinstance(x,Speaker)):
 			creature.buildDialogue()
-			creature.dlogtree.ensureIntegrity(creature)
 
 	# this is done in a separate loop to prevent errors caused by...
 	# deleting elements from dict while iterating over the dict
@@ -466,16 +466,16 @@ class TeeLogger:
 
 
 class DialogueNode():
-	def __init__(self,parent,root,nVisits=0,lastTriteRemark=None,visitLimit=None,rapportReq=None,guardCase="True",isCheckpoint=False,loveMod=0,fearMod=0,repMod=0,memories=None,events=None,remark=None,trites=None,cases=None,replies=None,children=[],reactTrue=False):
+	def __init__(self,parent,label,idx,lastTriteRemark=None,visitLimit=None,rapportReq=None,guardCase="True",isCheckpoint=False,loveMod=0,fearMod=0,repMod=0,memories=None,events=None,remark=None,trites=None,cases=None,replies=None,children=[],reactTrue=False):
 		self.parent = parent
-		self.root = root
-		self.nVisits = nVisits
+		self.label = label
+		self.id = self.parent.id + (idx,)
 		self.lastTriteRemark = lastTriteRemark
 		self.visitLimit = visitLimit
 		self.guardCase = guardCase
 		self.rapportReq = rapportReq
 		self.isCheckpoint = isCheckpoint
-		self.children = [DialogueNode(self,root,**childJson) for childJson in children]
+		self.children = [DialogueNode(self,label,i,**childJson) for i,childJson in enumerate(children)]
 
 		### the following are effects that visiting the node will have
 		# these modify speaker stats
@@ -508,7 +508,7 @@ class DialogueNode():
 			self.trites = [trites]
 		for trite in self.trites:
 			assert type(trite) is str
-		
+
 		# should only be used for terminal nodes in 'reactions' branch of tree
 		# meant so dialogue tree can be used to determine if speaker's reaction is 'True'
 		# i.e. if a speaker refuses or accepts a player's 'Give' action
@@ -542,30 +542,24 @@ class DialogueNode():
 		self.globals = {"player":player,"game":game,"world":world}
 
 
+	### Dunder Methods ###
+
+	def __str__(self):
+		return f"{self.label} dlogNode {self.id}"
+
+
 	### File I/O ###
 
 	def convertToJSON(self):
 		jsonDict = self.__dict__.copy()
-		del jsonDict["root"]
 		del jsonDict["id"]
+		del jsonDict["globals"]
 		return jsonDict
 	
 
 	@classmethod
 	def convertFromJSON(cls,d):
-		game.Print('converting...')
-		game.Print(d)
 		return cls(**d)
-
-
-	# ID is the same thing as the 'path' through the tree
-	# which is a list of indices, specifying which child to go to from each parent
-	def getID(self):
-		for idx, child in enumerate(self.parent.children):
-			if self is child:
-				return self.parent.id + [idx]
-		else:
-			raise Exception("node not found in parent's children")
 
 
 	# ensures the following:
@@ -574,11 +568,10 @@ class DialogueNode():
 	# that all trites (which are stored in JSON as strings) are valid sets in Data.py
 	# note that speaker, player, game, and world are provided to ensure eval() is valid
 	def ensureIntegrity(self,speaker,**kwargs):
-		self.id = self.getID()
 		err = f"Invalid guard case node condition in {speaker.name}'s node {self.id}: {self.guardCase}"
 		context = kwargs | {"speaker":speaker}
 		guardCaseRes = eval(self.guardCase,self.globals,context)
-		# assert type(guardCaseRes) is bool, err
+		assert type(guardCaseRes) is bool, err
 		for case in self.cases:
 			err = f"Invalid case node condition in {speaker.name}'s node {self.id}: {case}"
 			caseRes = eval(str(case),self.globals,context)
@@ -586,18 +579,11 @@ class DialogueNode():
 		for trite in self.trites:
 			triteset = game.dlogDict["trites"][trite]
 			assert len(triteset) > 2
-		for child in self.children:			
+		for child in self.children:
 			child.ensureIntegrity(speaker,**kwargs)
 
 
 	### Operation ###
-
-	# set all visit counts back to 0 
-	def newParley(self):
-		self.nVisits = 0
-		for child in self.children:
-			child.newParley()
-
 
 	# try to visit the child with the first true case
 	# cases can be numbers, representing a probability of visiting that child
@@ -647,8 +633,9 @@ class DialogueNode():
 
 
 	def hop(self,speaker,**kwargs):
-		if self.visitLimit and self.nVisits >= self.visitLimit:
-			return False
+		if self.visitLimit is not None:
+			if speaker.dlogtree.getVisitCount(self.id) >= self.visitLimit:
+				return False
 		if self.rapportReq is not None:
 			if speaker.rapport != self.rapportReq:
 				return False
@@ -663,7 +650,7 @@ class DialogueNode():
 	def visit(self,speaker,**kwargs):	
 		# output this node's remark
 		if self.isCheckpoint:
-			self.root.checkpoint = self.id
+			speaker.dlogtree.checkpoint = self.id
 		if self.remark:
 			waitKbInput(f'"{self.remark}"')
 		elif self.trites:
@@ -692,10 +679,10 @@ class DialogueNode():
 					break
 
 		# count this node as successfully visited
-		self.nVisits += 1
+		speaker.dlogtree.countVisit(self.id)
 		if self.rapportReq != None:
 			speaker.rapport += 1
-		
+
 		# reaching a node can change the speaker's love or fear for the player
 		speaker.updateLove(self.loveMod)
 		speaker.updateFear(self.fearMod)
@@ -708,8 +695,8 @@ class DialogueNode():
 			game.events.add(event)
 
 		# unmark checkpoint if this node was succesfully visited
-		if nextNode and self.root.checkpoint == self.id:
-			self.root.checkpoint = None
+		if nextNode and speaker.dlogtree.checkpoint == self.id:
+			speaker.dlogtree.checkpoint = None
 		return nextNode
 
 
@@ -730,10 +717,11 @@ class DialogueNode():
 
 
 class ReactionNode(DialogueNode):
-	def __init__(self,parent,root,treeJson):
-		DialogueNode.__init__(self,parent,root)
-		self.reactions = {key: DialogueNode(self,root,**childJson) for key,childJson in treeJson.items()}
-		self.children = [child for child in self.reactions.values()]
+	def __init__(self,parent,label,idx,treeJson):
+		DialogueNode.__init__(self,parent,label,idx)
+		assert len(self.children) == 0, "Reaction node has non-reaction children"
+		self.reactions = {key: DialogueNode(self,label,i,**childJson) for i,(key,childJson) in enumerate(treeJson.items())}
+		self.children = (child for child in self.reactions.values())
 
 
 	def __getitem__(self,key):
@@ -746,30 +734,45 @@ class ReactionNode(DialogueNode):
 
 
 class DialogueTree():
-	def __init__(self,treeJson):
+	def __init__(self,label,treeJson,visitCounts=None,checkpoint=None):
+		self.label = label
+		self.id = ()
 		# note that chatter is required to be populated; there must be some dialogue
-		self.surprise = DialogueNode(self,self,**treeJson.get("surprise",{}))
-		self.quest = DialogueNode(self,self,**treeJson.get("quest",{}))
-		self.colloquy = DialogueNode(self,self,**treeJson.get("colloquy",{}))
-		self.chatter = DialogueNode(self,self,**treeJson["chatter"])
-		self.reactions = ReactionNode(self,self,treeJson.get("reactions",{}))
-		self.checkpoint = treeJson.get("checkpoint",None)
-		self.id = []
+		self.surprise = DialogueNode(self,label,0,**treeJson.get("surprise",{}))
+		self.quest = DialogueNode(self,label,1,**treeJson.get("quest",{}))
+		self.colloquy = DialogueNode(self,label,2,**treeJson.get("colloquy",{}))
+		self.chatter = DialogueNode(self,label,3,**treeJson["chatter"])
+		self.reactions = ReactionNode(self,label,4,treeJson.get("reactions",{}))
 		self.children = (self.surprise,self.quest,self.colloquy,self.chatter,self.reactions)
+		self.visitCounts = {} if visitCounts is None else visitCounts
+		self.checkpoint = None
+
+
+	### Dunder Methods ###
+
+	def __str__(self):
+		return f"{self.label} dlog tree"
 
 
 	### File I/O ###
 
 	def convertToJSON(self):
-		jsonDict = self.__dict__.copy()
-		del jsonDict["id"]
-		del jsonDict["children"]
-		return jsonDict
-	
+		return {
+			"label": self.label,
+			"visitCounts": self.visitCounts,
+			"checkpoint": self.checkpoint
+		}
 
-	@classmethod
-	def convertFromJSON(cls,d):
-		return cls(**d)
+
+	def copy(self):
+		treeCopy = DialogueTree(self.label,{"chatter":{}})
+		treeCopy.surprise = self.surprise
+		treeCopy.quest = self.quest
+		treeCopy.colloquy = self.colloquy
+		treeCopy.chatter = self.chatter
+		treeCopy.reactions = self.reactions
+		treeCopy.children = self.children
+		return treeCopy
 
 
 	# ensures the following;
@@ -786,11 +789,29 @@ class DialogueTree():
 				self.findNode(self.checkpoint)
 			except:
 				raise Exception(f"Checkpoint {self.checkpoint} not found in {speaker.name}'s dialogue tree")
+		for id in self.visitCounts.values():
+			try:
+				self.findNode(id)
+			except:
+				raise Exception(f"Visited node {id} not found in {speaker.name}'s dialogue tree")			
 		if not self.chatter.hasDefiniteDialogue():
 			raise Exception(f"{speaker.name} dialogue Tree has no definite dialogue in {speaker.room()}")
 
 
 	### Operation ###
+		
+	def countVisit(self,nodeId):
+		if nodeId in self.visitCounts:
+			self.visitCounts[nodeId] += 1
+		else:
+			self.visitCounts[nodeId] = 1
+
+
+	def getVisitCount(self,nodeId):
+		if nodeId in self.visitCounts:
+			return self.visitCounts[nodeId]
+		return 0
+
 
 	# visit the branch, return True if navigating any branch resulted in speaker dialogue
 	def visitBranch(self,node,speaker):
@@ -849,8 +870,7 @@ class DialogueTree():
 	# resets all nodes for new parley
 	def newParley(self):
 		self.checkpoint = None
-		for node in self.children:
-			node.newParley()
+		self.visitCounts = {}
 
 
 
@@ -1370,8 +1390,8 @@ class Room():
 	# removes all conditions of the same name
 	# if reqDuration is given, only removes conditions with that duration
 	def removeCondition(self,reqName=None,reqDuration=None):
-		# deep copy to prevent removing-while-iterating errors
-		for name,duration in [_ for _ in self.status]:
+		# copy to prevent removing-while-iterating errors
+		for name,duration in self.status.copy():
 			if name == reqName or reqName is None:
 				if duration == reqDuration or reqDuration is None:
 					self.status.remove([name,duration])
@@ -1653,8 +1673,8 @@ class Item():
 	# removes all condition of the same name
 	# if reqDuration is given, only removes conditions with that duration
 	def removeCondition(self,reqName=None,reqDuration=None):
-		# deep copy to prevent removing-while-iterating errors
-		for name,duration in [_ for _ in self.status]:
+		# copy to prevent removing-while-iterating errors
+		for name,duration in self.status.copy():
 			if name == reqName or reqName is None:
 				if duration == reqDuration or reqDuration is None:
 					self.status.remove([name,duration])
@@ -2124,8 +2144,8 @@ class Creature():
 	# removes all condition of the same name
 	# if reqDuration is given, only removes conditions with that duration
 	def removeCondition(self,reqName=None,reqDuration=None):
-		# deep copy to prevent removing-while-iterating errors
-		for name,duration in [_ for _ in self.status]:
+		# copy to prevent removing-while-iterating errors
+		for name,duration in self.status.copy():
 			if name == reqName or reqName is None:
 				if duration == reqDuration or reqDuration is None:
 					self.status.remove([name,duration])
@@ -2867,8 +2887,8 @@ class Player(Creature):
 		wasSleeping = self.hasCondition("asleep")
 		wellRested = False
 
-		# deep copy to prevent removing-while-iterating errors
-		for name,duration in [_ for _ in self.status]:
+		# copy to prevent removing-while-iterating errors
+		for name,duration in self.status.copy():
 			if name == reqName or reqName is None:
 				if duration == reqDuration or reqDuration is None:
 					self.status.remove([name,duration])
@@ -3212,7 +3232,7 @@ class Humanoid(Creature):
 	def describe(self):
 		game.Print(f"It's {~self}.")
 		game.Print(f"{self.desc}.")
-		gearitems = [item for item in self.gear.values() if item != EmptyGear()]
+		gearitems = [item for item in self.gear.values() if item is not EmptyGear()]
 		if len(gearitems) != 0:
 			game.Print(f"It has {listObjects(gearitems)}.")
 
@@ -3240,16 +3260,26 @@ class Humanoid(Creature):
 
 
 class Speaker(Creature):
-	def __init__(self,name,desc,weight,traits,hp,dlogName=None,rapport=0,lastParley=None,**kwargs):
+	def __init__(self,name,desc,weight,traits,hp,dlogName=None,dlogtree=None,rapport=0,lastParley=None,**kwargs):
 		Creature.__init__(self,name,desc,weight,traits,hp,**kwargs)
 		self.dlogName = name if dlogName is None else dlogName
+		self.dlogtree = dlogtree
 		self.rapport = rapport
 		self.lastParley = lastParley
 
 
 	def buildDialogue(self):
-		self.dlogtree = DialogueTree(game.dlogDict["trees"][self.dlogName])
+		savedDlogData = self.dlogtree
+		savedDlogData = {} if self.dlogtree is None else self.dlogtree
+		self.dlogtree = game.dlogDict["trees"][self.dlogName].copy()
+		if "visitCounts" in savedDlogData:
+			self.dlogtree.visitCounts = savedDlogData["visitCounts"]
+		if "checkpoint" in savedDlogData:
+			self.dlogtree.checkpoint = savedDlogData["checkpoint"]
+		self.dlogtree.ensureIntegrity(self)
 
+
+	### Behavior ###
 
 	def firstImpression(self,player):
 		# TODO: add this
@@ -3260,7 +3290,7 @@ class Speaker(Creature):
 		self.updateFear(player.rp)
 
 
-	def appraise(self,player,game):
+	def appraise(self):
 		if self.lastParley is None:
 			self.lastParley = game.time
 		elif game.time - self.lastParley > 100:
@@ -3270,10 +3300,10 @@ class Speaker(Creature):
 			self.appraisal.add("naked")
 		
 
-	def Talk(self,player,game,world):
+	def Talk(self):
 		if "met" not in self.memories:
 			self.firstImpression(player)
-		self.appraise(player,game)
+		self.appraise()
 		if not self.dlogtree.visit(self):
 			game.Print(f"{self.name} says nothing...")
 
@@ -3367,16 +3397,25 @@ class Animal(Speaker):
 		Speaker.__init__(self,name,desc,weight,traits,hp,**kwargs)
 		self.species = name if species is None else species
 		# dlogName was assigned by Speaker init, but should be reassigned here
-		self.dlogName = self.species if dlogName is None else self.dlogName
+		self.dlogName = self.species if dlogName is None else dlogName
 
 
 	def buildDialogue(self):
-		self.sounds = game.dlogDict["sounds"][self.species]
+		savedDlogData = self.dlogtree
+		savedDlogData = {} if self.dlogtree is None else self.dlogtree
+
 		# dlogName must either be the name of a tree or a trite
 		if self.dlogName in game.dlogDict["trees"]:
-			self.dlogtree = DialogueTree(game.dlogDict["trees"][self.dlogName])
+			self.dlogtree = game.dlogDict["trees"][self.dlogName].copy()
 		else:
-			self.dlogtree = DialogueTree({"chatter":{"trites":self.dlogName}})
+			self.dlogtree = DialogueTree(self.dlogName,{"chatter":{"trites":self.dlogName}})
+
+		if "visitCounts" in savedDlogData:
+			self.dlogtree.visitCounts = savedDlogData["visitCounts"]
+		if "checkpoint" in savedDlogData:
+			self.dlogtree.checkpoint = savedDlogData["checkpoint"]
+		self.dlogtree.ensureIntegrity(self)
+
 
 
 	def act(self):
@@ -3396,15 +3435,16 @@ class Animal(Speaker):
 			game.Print(f"{+self} ignores your offer.")
 
 
-	def Talk(self,player,game,world):
+	def Talk(self):
 		if not player.hasCondition("wildtongued"):
-			sound = sample(self.sounds,1)[0]
+			sounds = game.dlogDict["sounds"][self.species]
+			sound = sample(sounds,1)[0]
 			waitKbInput(f'"{sound}"')
 			return True
 		if "met" not in self.memories:
 			self.firstImpression(player)
-		self.appraise(player,game)
-		if not self.dlogtree.visit(self,player,game,world):
+		self.appraise()
+		if not self.dlogtree.visit(self):
 			game.Print(f"{self.name} says nothing...")
 
 
@@ -3555,15 +3595,11 @@ class Passage(Fixture):
 
 
 class Serpens(Item):
-	def __init__(self,value,status=None):
-		self.name = "Gold"
-		self.desc = f"{str(value)} glistening coins made of an ancient metal"
+	def __init__(self,value,**kwargs):
+		desc = f"{str(value)} glistening coins made of an ancient metal"
+		Item.__init__(self,"Gold",desc,value,-1,"gold",**kwargs)
 		self.aliases = ["coin","coins","money","serpen","serpens"]
 		self.plural = "gold"
-		self.weight = value
-		self.durability = -1
-		self.composition = "gold"
-		self.status = status if status else []
 		self.descname = str(value) + " Gold"
 		self.value = value
 

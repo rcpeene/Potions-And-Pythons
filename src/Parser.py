@@ -550,7 +550,7 @@ def Goodbye(*args): Core.game.Print(Core.capWords(choice(list(Data.goodbyes)),c=
 
 def Hello(*args): Core.game.Print(Core.capWords(choice(list(Data.hellos)),c=1))
 
-def Help(*args):
+def Commands(*args):
 	Core.flushInput()
 	Core.clearScreen()
 	Core.game.Print("\nSingle-Word Commands")
@@ -577,7 +577,8 @@ def Laugh(*args):
 
 def Quit(*args):
 	if Core.yesno("Are you sure you want to quit? (Anything unsaved will be lost)"):
-		Menu.quit()
+		Core.game.quit = True
+		return True
 
 
 def Shout(*args): 
@@ -1464,8 +1465,8 @@ def Mount(dobj,iobj,prep):
 		return False
 
 	Core.player.removeCondition("hiding",-3)
-	Core.player.Sit()
-	C.Ride(Core.player)
+	if C.Ride(Core.player):
+		Core.player.Sit()
 	return True
 
 
@@ -1759,7 +1760,7 @@ def Smell(dobj,iobj,prep):
 	if I.composition in Data.scents:
 		Core.game.Print(Data.scents[I.composition])
 	elif I.composition in Data.tastes:
-		Core.game.Print(Data.tastes[I.composition].replace("taste","scent"))
+		Core.game.Print(Data.tastes[I.composition].replace("taste","smell"))
 	return True
 
 
@@ -1823,7 +1824,7 @@ def Talk(dobj,iobj,prep):
 		Core.game.Print(f"There is no response...")
 		return False
 
-	target.Talk(Core.player,Core.game,Core.world)
+	target.Talk()
 	return True
 
 
@@ -2038,10 +2039,11 @@ shortactions = {
 "abilities":Core.Player.printAbility,
 "back":Return,
 "back up":Return,
+"commands":Commands,
 "examples":Examples,
 "exits":Exits,
 "gear":Core.Player.printGear,
-"help":Help,
+"help":Info,
 "hello":Hello,
 "here":Core.game.currentroom.describe,
 "hi":Hello,
@@ -2062,6 +2064,7 @@ shortactions = {
 "status":Core.Player.printStatus,
 "time":Time,
 "traits":Core.Player.printTraits,
+"verbs":Commands,
 "weapons":Core.Player.printWeapons,
 "xp":Core.Player.printXP,
 "yawn":Yawn
