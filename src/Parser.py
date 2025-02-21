@@ -68,7 +68,7 @@ def chooseObject(name,objects):
 			return objects[int(choice)-1]
 		except:
 			for obj in objects:
-				if choice == obj.stringName().lower():
+				if choice == obj.nounPhrase().lower():
 					return obj
 		Core.game.Print("That is not one of the options.")
 		if invalid_count >= 3:
@@ -187,7 +187,7 @@ def replacePronoun(term):
 		obj = Core.game.they
 	if obj is None:
 		return term
-	return obj.stringName()
+	return obj.nounPhrase()
 
 
 # validates user input and processes into into a command form usable by parse(),
@@ -658,7 +658,7 @@ def Attack(dobj,iobj,prep,target=None,weapon=None,weapon2=None):
 		weapon = weapon.improviseWeapon()
 	Core.player.weapon = weapon
 
-	Core.game.Print(f"\nYou attack {-target} with {Core.player.weapon.name}.")
+	Core.game.Print(f"You attack {-target} with your {Core.player.weapon}.")
 	if isinstance(target,Core.Creature): Core.player.attackCreature(target)
 	elif isinstance(target,Core.Item): Core.player.attackItem(target)
 	if stowed: Core.player.weapon,Core.player.weapon2 = stowedweapons
@@ -695,6 +695,8 @@ def Break(dobj,iobj,prep):
 		dobj = getNoun("What do you want to break?")
 		if dobj in Data.cancels: return False
 
+	# TODO: maybe figure out times when you will just break, not attack?
+	# for instance though, a window should be attacked
 	I = findObjFromTerm(dobj)
 	if I is None: return False
 	Core.game.setPronouns(I)
@@ -702,10 +704,8 @@ def Break(dobj,iobj,prep):
 	if not Core.hasMethod(I,"Break"):
 		Core.game.Print(f"You can't break the {I.name}.")
 		return False
-	if I.Break():
-		return True
-	else:
-		return False
+	Core.game.Print(f"You try to break {-I}.")
+	return Core.player.attackItem(I)
 
 
 def Caress(dobj,iobj,prep):
@@ -1223,9 +1223,6 @@ def Go(dobj,iobj,prep):
 	if (dir,dest,passage) == (None,None,None):
 		Core.game.Print(f"There is no exit leading to a '{dobj}' here.")
 		return False
-	if Core.nameMatch(dest,Core.game.currentroom):
-		Core.game.Print(f"You are already there!")
-		return False
 	if dir is None:
 		dir = Core.game.currentroom.getDirFromDest(dest)
 	if (dest,passage) == (None,None):
@@ -1237,6 +1234,9 @@ def Go(dobj,iobj,prep):
 		if dir is not None and dir not in Core.game.currentroom.allExits():
 			Core.game.Print(f"There is no exit leading '{dir}' here.")
 			return False
+	if passage is None and Core.nameMatch(dest,Core.game.currentroom):
+		Core.game.Print(f"You are already there!")
+		return False
 
 	Core.player.removeCondition("hiding",-3)
 	# call one of three functions to actually change rooms
@@ -1829,7 +1829,34 @@ def Talk(dobj,iobj,prep):
 
 
 def Throw(dobj,iobj,prep):
-	Core.game.Print("throwing")
+	if prep not in ("at","into","onto","through","to","toward"):
+		Core.game.Print("Command not understood.")
+		return False
+
+	if dobj is None:
+		dobj = getNoun("What do you want to throw?")
+		if dobj in Data.cancels: return False
+	I = findObjFromTerm(dobj,"player")
+	if I is None: return False
+
+	if iobj is None:
+		iobj = getNoun("What will you throw at?")
+		if iobj in Data.cancels: return False
+	T = findObjFromTerm(iobj)
+	if T is None: return False
+	Core.game.setPronouns(T)
+
+	# call I method, passing in T, 
+	# if I method hits using thrower aim and target evasion, 
+		# then call T method to potentially catch, 
+		# or call T take damage.
+	# otherwise, I may randomly hit some other target (other creatures may also evade?)
+	if Core.hasMethod(I,"Throw"):
+		return T.ThrowAt(Core.player,I)
+
+
+# throw at a tree, window, goblin, pit
+# throw a rock, sword, black potion, bird, goblin
 
 
 def Tie(dobj,iobj,prep):
@@ -1852,7 +1879,7 @@ def TakeAllRecur(objToTake):
 	if parent is Core.game.currentroom: suffix = ""
 	elif Core.player in objToTake.ancestors(): suffix = " from your " + parent.name
 	else: suffix = " from the " + parent.name
-	strname = objToTake.stringName('the' if count==1 else 'a')
+	strname = objToTake.nounPhrase('the' if count==1 else 'a')
 	tookMsg = f"You take {strname}{suffix}."
 	failMsg = f"You can't take the {objToTake.name}, your Inventory is too full."
 
@@ -1904,7 +1931,7 @@ def Take(dobj,iobj,prep):
 	if parent is Core.game.currentroom: suffix = ""
 	elif Core.player in objToTake.ancestors(): suffix = " from your " + parent.name
 	else: suffix = " from the " + parent.name
-	strname = objToTake.stringName('the' if count==1 else 'a')
+	strname = objToTake.nounPhrase('the' if count==1 else 'a')
 	tookMsg = f"You take {strname}{suffix}."
 	failMsg = f"You can't take the {objToTake.name}, your Inventory is too full."
 

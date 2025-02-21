@@ -24,7 +24,6 @@ class Axe(Core.Weapon):
 
 
 
-
 class Bed(Core.Item):
 	def Lay(self,layer):
 		layer.addCondition("cozy",-3)
@@ -34,19 +33,19 @@ class Bed(Core.Item):
 		return True
 
 
-
 class Bottle(Core.Item):
-	# breaks the bottle, removes it from player inventory, and randomly...
-	# generates a number of shards between 1,5 into the room.
+	# breaks the bottle, removes it from player inventory, and generates some shards
 	def Break(self):
-		Core.game.Print(f"The {self.name} breaks. Shards of glass scatter everywhere.")
+		Core.game.Print(f"The {self.name} breaks.")
 		self.parent.removeItem(self)
-		# randomly generates n shards between 3,6
-		for _ in range(randint(3,6)):
-			shard = Shard("glass shard","a sharp shard of glass","glass",1,-1)
+		if self.weight > 2 and self.composition == "glass":
+			Core.game.print("Shards of glass scatter everywhere.")
+		while self.weight > 2 and self.composition == "glass":
+			shardWeight = randint(2,4)
+			self.weight -= shardWeight
+			shard = Shard("glass shard","a sharp shard of glass","glass",shardWeight,-1)
 			Core.game.currentroom.addItem(shard)
 		return True
-
 
 
 
@@ -55,7 +54,6 @@ class Box(Core.Item):
 		Core.Item.__init__(self,name,desc,weight,durability,composition,**kwargs)
 		self.open = open
 		self.items = items
-
 
 
 	### Operation ###
@@ -68,6 +66,7 @@ class Box(Core.Item):
 			Core.game.Print(f"You open the {self.name}.")
 			self.open = True
 		self.Look()
+
 
 	# sets open bool to false
 	def Close(self):
@@ -115,7 +114,6 @@ class Box(Core.Item):
 		self.items.remove(I)
 
 
-
 	### Getters ###
 
 	# the weight of a box is equal to its own weight + weights of its items
@@ -132,7 +130,6 @@ class Box(Core.Item):
 
 	def itemNames(self):
 		return [item.name for item in self.items]
-
 
 
 
@@ -164,34 +161,6 @@ class Controller(Core.Item):
 
 
 
-
-class Door(Core.Fixture):
-	def __init__(self,name,desc,weight,durability,composition,mention,open,connections,**kwargs):
-		Core.Fixture.__init__(self,name,desc,weight,durability,composition,mention,**kwargs)
-		self.open = open
-		# connection is a 4-tuple of the form:
-		# (outDirection, outLocation, inDirection, inLocation)
-		self.outconnection = connections[0]
-
-
-	# sets open bool to true, triggers the effect
-	def Open(self,Currentroom):
-		if self.open:
-			Core.game.Print(f"The {self.name} is already open.")
-		else:
-			Core.game.Print(f"You open the {self.name}.")
-			self.open = True
-		outdir = self.connections[0]
-		outloc = self.connections[1]
-		indir = self.connections[2]
-		inloc = self.connections[3]
-		Currentroom.addConection(outdir,outloc)
-		Otherroom = Core.world[outloc]
-		Otherroom.addConnection(indir,inloc)
-
-
-
-
 class Food(Core.Item):
 	def __init__(self,name,desc,weight,durability,composition,heal,**kwargs):
 		Core.Item.__init__(self,name,desc,weight,durability,composition,**kwargs)
@@ -212,11 +181,9 @@ class Food(Core.Item):
 
 
 
-
 class Foot(Core.Item):
 	def improviseWeapon(self):
 		return Core.Weapon(self.name,self.desc,self.weight,self.durability,"",Core.minm(1,self.weight//4),0,0,0,"b")
-
 
 
 
@@ -227,7 +194,6 @@ class Fountain(Core.Fixture):
 
 	def Drink(self):
 		Core.game.Print(f"You drink from the {self.name}.")
-
 
 
 
@@ -256,11 +222,9 @@ class Generator(Controller):
 
 
 
-
 class Hand(Core.Item):
 	def improviseWeapon(self):
 		return Core.Weapon(self.name,self.desc,self.weight,self.durability,"",Core.minm(1,self.weight//4)+1,2,0,0,"b")
-
 
 
 
@@ -279,13 +243,11 @@ class Key(Core.Item):
 
 
 
-
 class Lockbox(Box):
 	def __init__(self,name,desc,weight,durability,composition,open,items,keyids,locked,**kwargs):
 		Box.__init__(self,name,desc,weight,durability,composition,open,items,**kwargs)
 		self.keyids = keyids
 		self.locked = locked
-
 
 
 	### Operation ###
@@ -344,11 +306,9 @@ class Lockbox(Box):
 
 
 
-
 class Mouth(Core.Item):
 	def improviseWeapon(self):
 		return Core.Weapon(self.name,self.desc,self.weight,self.durability,"",Core.minm(1,self.weight//4),0,0,4,"p")
-
 
 
 
@@ -368,7 +328,6 @@ class Potion(Bottle):
 				obj.Drench(self)
 		self.parent.removeItem(self)
 		Core.player.addItem(factory["bottle"]())
-
 
 
 
@@ -403,7 +362,6 @@ class Sign(Core.Item):
 
 
 
-
 class Switch(Core.Fixture):
 	def __init__(self,name,desc,weight,durability,composition,mention,effect,**kwargs):
 		Core.Fixture.__init__(self,name,desc,weight,durability,composition,mention,**kwargs)
@@ -421,11 +379,9 @@ class Switch(Core.Fixture):
 
 
 
-
 class Sword(Core.Weapon):
 	def Cut(self):
 		Core.game.Print("[you cut something?]")
-
 
 
 
@@ -434,7 +390,6 @@ class Table(Core.Item):
 		Core.Item.__init__(self,name,desc,weight,durability,composition,**kwargs)
 		self.items = items
 		self.descname = descname
-
 
 
 	### Operation ###
@@ -480,8 +435,6 @@ class Table(Core.Item):
 			self.descname = f"{self.name}"
 
 
-
-
 	### Getters ###
 
 	# the weight of a box is equal to its own weight + weights of its items
@@ -500,7 +453,6 @@ class Table(Core.Item):
 		return self.items
 
 
-
 	### User Output ###
 
 	def describe(self):
@@ -509,7 +461,6 @@ class Table(Core.Item):
 			Core.game.Print(f"On it is {Core.listObjects(self.items)}.")
 		else:
 			Core.game.Print("There is nothing on it.")
-
 
 
 
@@ -553,6 +504,74 @@ class Wall(Core.Passage):
 		if not traverser.hasAnyCondition("fly","fleetfooted"):
 			traverser.takeDamage(self.difficulty-traverser.ATHL(),"b")
 		return True
+
+
+
+class Window(Core.Passage):
+	def __init__(self,name,desc,weight,durability,composition,connections,descname,broken=False,**kwargs):
+		Core.Passage.__init__(self,name,desc,weight,durability,composition,connections,descname,**kwargs)
+		self.descname = descname
+		self.broken = broken
+		self.open = False
+
+
+	# breaks the window, removes it from player inventory, and generates some shards
+	def Break(self):
+		Core.game.Print(f"The {self.name} breaks.")
+		self.broken = True
+		self.open = True
+		if self.weight > 2 and self.composition == "glass":
+			Core.game.Print("Shards of glass scatter everywhere.")
+		while self.weight > 2 and self.composition == "glass":
+			shardWeight = randint(2,4)
+			self.weight -= shardWeight
+			shard = Shard("glass shard","a sharp shard of glass","glass",shardWeight,-1)
+			Core.game.currentroom.addItem(shard)
+		return True
+
+
+	def Traverse(self,traverser,dir=None,verb="go"):
+		if not (self.broken or self.open):
+			Core.game.Print(f"{+self} is closed.")
+			return False
+
+		if dir == None:
+			if len(set(self.connections.values())) == 1:
+				dir = list(self.connections.keys())[0]
+			else:
+				msg = f"Which direction will you go on the {self.name}?\n> "
+				dir = input(msg).lower()
+		if dir in Data.cancels:
+			return False
+		if dir not in self.connections:
+			Core.game.Print(f"The {self.name} does not go '{dir}'.")
+			return False
+
+		if traverser.riding:
+			return self.Traverse(traverser.riding,dir=dir)
+
+		if traverser.hasCondition("flying"): verb = "fly"
+		elif traverser is Core.player.riding: verb = "ride"
+		Core.game.Print(f"You {verb} {dir} {-self}.")
+		traverser.changeRoom(Core.world[self.connections[dir]])
+		return True
+
+
+
+class Door(Window):
+	def __init__(self,name,desc,weight,durability,composition,connections,descname,open=False,**kwargs):
+		Window.__init__(self,name,desc,weight,durability,composition,connections,descname,**kwargs)
+		self.descname = descname
+		self.open = open
+
+
+	# sets open bool to true, prints its items
+	def Open(self):
+		if self.open:
+			Core.game.Print(f"The {self.name} is already open.")
+		else:
+			Core.game.Print(f"You open the {self.name}.")
+			self.open = True
 
 
 

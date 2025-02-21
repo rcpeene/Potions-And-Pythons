@@ -39,7 +39,7 @@ def spawnObject(obj,room=None):
 	elif isinstance(obj,Core.Item):
 		room.addItem(obj)
 	if not Core.game.silent:
-		Core.game.Print(f"{obj.stringName('a',cap=1)} appeared!")
+		Core.game.Print(f"{obj.nounPhrase('a',cap=1)} appeared!")
 		Core.game.setPronouns(obj)
 
 

@@ -139,7 +139,6 @@ textures = {
     "rust": "It feels rough.",
     "steel": "It feels smooth and sturdy.",
     "bread": "It is soft and fluffly.",
-    
     "python": "It feels smooth and scaly. Ew."
 }
 
