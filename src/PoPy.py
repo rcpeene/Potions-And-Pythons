@@ -76,13 +76,15 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# add total traversal limit on dlog nodes?
-# probably store dlog trees as static objects, read in separately with its own hook
-	# then make speaker dlog trees copies and record "nodevisits"
 # add "climb" and "swim"
 # think about throwing and catching. thrown objects should probably hit something random based on weight if they miss the target
 # catching... hmm.... should they have time to react to a thrown item?
 
+# if something is one fire (or other condition) when entering a room, say it
+# what if the tree at "big tree" is destroyed? Some contingency to reset the room?
+# what if horse goes wild while riding it, doesn't obey your directions
+# create linked passages? if a window breaks on one side, it should break the other way too
+	
 # add basic equipment and clothing items
 # fix/add Creature.isNaked or Player.isNaked
 # add link nodes and effect nodes to dialogue after all
@@ -97,6 +99,7 @@ if __name__ == "__main__":
 # add better comments to methods
 # skim/update design
 
+# add total traversal limit on dlog nodes?
 # behavior
 	# design persons and person behavior all of the RP system?
 	# add reactions to being healed or being attacked

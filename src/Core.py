@@ -36,7 +36,7 @@ def nameMatch(term,obj):
 	term = term.lower()
 	if isinstance(obj, Room):
 		return term == obj.name.lower() or term in ["here", "room"]
-	return term == obj.name.lower() or term == obj.stringName().lower() or term in obj.aliases
+	return term == obj.name.lower() or term == obj.nounPhrase().lower() or term in obj.aliases
 
 
 # retrieves a class object with className from the modules list
@@ -210,7 +210,7 @@ def bagObjects(objects):
 	bag = []
 	for obj in objects:
 		for entry in bag:
-			if entry[0].stringName() == obj.stringName():
+			if entry[0].nounPhrase() == obj.nounPhrase():
 				entry[1] += 1
 				break
 		else:
@@ -226,11 +226,11 @@ def listObjects(objects):
 	l = len(objBag)
 	for i, (obj, count) in enumerate(objBag):
 		if i == l-1:
-			liststring += obj.stringName(n=count)
+			liststring += obj.nounPhrase(n=count)
 		elif i == l-2:
-			liststring += obj.stringName(n=count) + " and "
+			liststring += obj.nounPhrase(n=count) + " and "
 		else:
-			liststring += obj.stringName(n=count) + ", "
+			liststring += obj.nounPhrase(n=count) + ", "
 	return liststring
 
 
@@ -919,7 +919,7 @@ class EmptyGear:
 
 	### Getters ###
 
-	def stringName(self,det="",n=-1,plural=False,cap=0):
+	def nounPhrase(self,det="",n=-1,plural=False,cap=0):
 		return ""
 
 
@@ -1587,19 +1587,19 @@ class Item():
 
 
 	def __str__(self):
-		return self.stringName()
+		return self.nounPhrase()
 
 
 	def __neg__(self):
-		return self.stringName('the')
+		return self.nounPhrase('the')
 
 
 	def __pos__(self):
-		return self.stringName('the',cap=1)
+		return self.nounPhrase('the',cap=1)
 	
 
 	def __invert__(self):
-		return self.stringName('a')
+		return self.nounPhrase('a')
 
 
 	def __lt__(self,other):
@@ -1708,7 +1708,7 @@ class Item():
 
 	### User Output ###
 
-	def stringName(self,det="",n=-1,plural=False,cap=0):
+	def nounPhrase(self,det="",n=-1,plural=False,cap=0):
 		strname = getattr(self,"descname",self.name)
 		if len(strname) == 0:
 			return ""
@@ -1738,7 +1738,7 @@ class Item():
 	
 
 	def describe(self):
-		game.Print(f"It's {-self}.")
+		game.Print(f"It's {~self}.")
 		game.Print(f"{self.desc}.")
 
 
@@ -1820,19 +1820,19 @@ class Creature():
 
 
 	def __str__(self):
-		return self.stringName()
+		return self.nounPhrase()
 
 
 	def __neg__(self):
-		return self.stringName('the')
+		return self.nounPhrase('the')
 
 
 	def __pos__(self):
-		return self.stringName('the',cap=1)
+		return self.nounPhrase('the',cap=1)
 	
 
 	def __invert__(self):
-		return self.stringName('a')
+		return self.nounPhrase('a')
 
 
 	def __eq__(self, other) :
@@ -2571,7 +2571,7 @@ class Creature():
 
 	# returns a list of names of all items in player inventory
 	def invNames(self):
-		return [item.stringName() if isinstance(item,Creature) else item.name for item in self.inv]
+		return [item.nounPhrase() if isinstance(item,Creature) else item.name for item in self.inv]
 
 
 	# just a function wrapper for functions that call itemNames on objects
@@ -2680,7 +2680,7 @@ class Creature():
 
 	### User Output ###
 
-	def stringName(self,det="",n=-1,plural=False,cap=-1):
+	def nounPhrase(self,det="",n=-1,plural=False,cap=-1):
 		strname = getattr(self,"descname",self.name)
 		if len(strname) == 0:
 			return ""
@@ -3359,7 +3359,7 @@ class Person(Speaker,Humanoid):
 
 	### User Output ###
 
-	def stringName(self,det="",n=-1,plural=False,cap=0):
+	def nounPhrase(self,det="",n=-1,plural=False,cap=0):
 		if "met" in self.memories:
 			return self.name
 		strname = self.descname
@@ -3633,7 +3633,7 @@ class Serpens(Item):
 
 	### User Output ###
 
-	def stringName(self,det="",n=-1,plural=False,cap=0):
+	def nounPhrase(self,det="",n=-1,plural=False,cap=0):
 		strname = "Gold"
 		strname = str(self.value) + " " + strname
 		if det:

@@ -1020,20 +1020,95 @@ Tangerine - double regen of MP
 Watermelon - water walking?
 
 
+OTHER PLANTS:
+hops (to make beer)
+herb of immortality (makes potion, can be smoked? made into quintessence?)
+mushrooms - glowing ones too
+poisonwood
+juniper - gin, oil, wood
+myrtle - oil/scent
+boxwood
+hawthorn
+blackthorn
+gorse
+firethorn
+buckthorn
+wormwood
+cotton
+hemp - rope, paper, cannabis?
+rosemary - smells good
+scrollreed - for papyrus
+lavender
+mugwort - flavoring beer, oil, dreams and divination
+yarrow
+mandrake - toxic, screaming
+wolfsbane - super toxic
+sage - clarity, sagacity, smells good
+rue - "herb of grace"
+mayweed - "chamomile", calming, used in tea
+meadowsweet - pain reliever, used in mead
+king solomon's seal - protects against evil?
+nightshade - super poisonous, sedative
+fairyglove - toxic?
+dandelion - liver, diuretic, grants wishes?
+henbane - hallucinogenic, used for flight by witches
+carnation
+poppy - opiate
+rose - beautiful and smells good, thorny
+orchid - beautiful
+daisy - nothing special
+sunflower - seeds?
+moonflower - might be used in making rubber?
+lotus - aquatic, longevity, used in food and tea
+goldenrod - dye, honey, rubber?
+lily - aquatic, beautiful
+vervaine - protection and love
+hyssop - biblical mint, purification
+spearmint - flavor
+peppermint
+thyme - embalming, gives courage?
+clover - lucky, makes honey?
+holygrass - used for ceremonies
+lovage - psychic powers?
+woodruff - used for dye, perfume/smell
+muskroot - smell, oil
+bruisewort - "knitbone" heals bones?
+woundwort - heals wounds?
+ragweed - allergies
+tomeleaf
+keyflower - reveals treasure or key to fairy realm?
+indigo = dye
+fleabane - kills insects?
+starflower - causes courage?
+hoarhune - expells parasites, helps coughs
+heartwort
+mallow - found in marsh, sweet
+sweetroot - "licorice"
+fennel - spice, strength
+nettle - ouch!
+bloodroot - red dye, acidic
+anix - yummy absinthe
+pansy
+tansy - insect repellent, delays spoilage, wards of disease
+coriander - used in food, soap?
+bishopwort - mint family, considered highly protective, holy water, ointment?
+valerian - catnip, causes sleep?
+goatweed - aphrodisiac?
+flax
+burdock - pairs well with dandelion in mead, wards off evil? velcro
+butterbur - sticky
+cocklebur - spiny
+
+
 MISC ITEM IDEAS:
 cadeuceus
 uroboros
 holy water
 molasses
-ambergris
-hops (to make beer)
-herb of immortality (makes potion, can be smoked? made into quintessence?)
 elixir of immortality (also requires venom)
 strange milk - makes you high, made from cows fed certain mushrooms
-mushrooms - glowing ones too
-Poisonwood
-Wormwood
 Catgut
+ambergris
 star jelly
 alembic
 lodestone

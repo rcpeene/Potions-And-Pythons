@@ -16,21 +16,30 @@
 		"__class__": "Room",
 		"name": "Big Tree",
 		"domain": "Woodlands",
-		"desc": "A very large tree stands before you. Much larger than any trees in the surrounding forest. It's vast height and cold shade feel imposing. To the north, a clearing can be seen in the distance. To the south, there a clearing with a grassy hill. To the east and west, more woods.",
+		"desc": "A very large oak tree stands before you. Much larger than any trees in the surrounding forest. It's vast height and cold shade feel imposing. To the north, a clearing can be seen in the distance. To the south, there a clearing with a grassy hill. To the east and west, more woods.",
 		"exits": {
 			"north": "treeline",
 			"east": "boulder",
 			"south": "brook",
 			"west": "mound"
 		},
-		"fixtures": [],
+		"fixtures": [
+			{
+				"__class__": "Fixture",
+				"name": "big oak tree",
+				"desc": "It is much larger than any trees in the surrounding forest. It's vast height and cold shade feel imposing",
+				"weight": 100,
+				"durability": 100,
+				"composition": "wood"
+			}
+		],
 		"items": [],
 		"creatures": [],
 		"status": []
 	},
 	"boulder": {
 		"__class__": "Room",
-		"name": "Boulder",
+		"name": "boulder",
 		"domain": "Woodlands",
 		"desc": "Here there is a big grey boulder the size of an elephant. It has dark green moss growing on the south side. A clearing can be seen in the distant north. To the east there is a very wide tree.",
 		"exits": {
@@ -179,13 +188,19 @@
 				"aliases": ["stone hearth","grey stone hearth"]
 			},
 			{
-				"__class__": "Fixture",
+				"__class__": "Window",
 				"name": "window",
 				"desc": "A brittle, dusty window on the northern wall of this room. You can't see through it",
-				"weight": 1,
-				"durability": 2,
+				"weight": 6,
+				"durability": 3,
 				"composition": "glass",
-				"aliases": ["northern window"]
+				"aliases": ["northern window"],
+				"connections": {
+					"out": "cliffside",
+					"through": "cliffside",
+					"into": "cliffside"
+				},
+				"descname": "dusty window"
 			}
 		],
 		"items": [
@@ -195,7 +210,7 @@
 				"desc": "A sturdy oaken kitchen table",
 				"aliases": ["kitchen table"],
 				"weight": 1,
-				"durability": 1,
+				"durability": 12,
 				"composition": "wood",
 				"items": [
 					{
@@ -229,7 +244,7 @@
 				"desc": "A sturdy oaken kitchen table",
 				"aliases": ["kitchen table"],
 				"weight": 1,
-				"durability": 1,
+				"durability": 12,
 				"composition": "wood",
 				"items": [],
 				"descname": "table"
@@ -316,7 +331,7 @@
 				"desc": "An cheap oaken bed",
 				"aliases": [],
 				"weight": 100,
-				"durability": 15,
+				"durability": 10,
 				"composition": "wood"
 			},
 			{
@@ -387,7 +402,7 @@
 		"fixtures": [
 			{
 				"__class__": "Wall",
-				"name": "Cliff",
+				"name": "cliff",
 				"desc": "A mossy grey cliff",
 				"weight": -1,
 				"durability": -1,
@@ -413,7 +428,7 @@
 		"fixtures": [
 			{
 				"__class__": "Wall",
-				"name": "Cliff",
+				"name": "cliff",
 				"desc": "A mossy grey cliff",
 				"weight": -1,
 				"durability": -1,
@@ -505,6 +520,15 @@
 				"durability": 8,
 				"composition": "wood",
 				"text": "Beware of snakes!"
+			},
+			{
+				"__class__": "Item",
+				"name": "pebble",
+				"desc": "A small grey rock",
+				"aliases": ["stone","pebble"],
+				"weight": 3,
+				"durability": 5,
+				"composition": "stone"
 			}
 		],
 		"creatures": [],
@@ -533,7 +557,21 @@
 			"north": "pond",
 			"west": "glen"
 		},
-		"fixtures": [],
+		"fixtures": [
+			{
+				"__class__": "Wall",
+				"name": "pit",
+				"desc": "A deep black pit, big enough for a horse. You cannot see the bottom. ",
+				"weight": -1,
+				"durability": -1,
+				"composition": null,
+				"connections": {
+					"down": "cave"
+				},
+				"descname": "dark deep pit",
+				"difficulty": 100
+			}
+		],
 		"items": [],
 		"creatures": []
 	},
