@@ -525,7 +525,7 @@
 				"__class__": "Item",
 				"name": "pebble",
 				"desc": "A small grey rock",
-				"aliases": ["stone","pebble"],
+				"aliases": ["stone","rock"],
 				"weight": 3,
 				"durability": 5,
 				"composition": "stone"

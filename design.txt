@@ -1174,12 +1174,14 @@ norte chico - unknown
 chichen itza - unknown
 
 additional place ideas
+- brigadoon (disappearing village)
 - apple forest (early quest setting)
 - seawall
 - colonnade
 - amphitheatre
 - pavilion
 - panopticon
+- atelier (workshop)
 - athenaeum
 - the garden path "to mislead someone"
 - a very smelly tree (why did I write this?)
