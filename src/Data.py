@@ -31,7 +31,16 @@ physicaldmg = "bps"
 elementaldmg = "acfltx"
 magicaldmg = "inrv"
 
-
+colors = {
+    "red": "r",
+    "orange": "o",
+    "yellow": "y",
+    "green": "g",
+    "blue": "b",
+    "magenta": "m",
+    "grey": "k",
+    "white": "w"
+}
 
 
 #################

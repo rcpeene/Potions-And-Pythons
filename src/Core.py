@@ -8,7 +8,7 @@
 # 3. Core class definitions	(empty, game, room, item, creature, player, etc.)
 
 from time import sleep
-from random import randint,sample,choices
+from random import randint,sample,choice,choices
 from math import floor, sqrt
 from bisect import insort
 from collections.abc import Iterable
@@ -99,10 +99,10 @@ def kbInput():
 
 
 # waits for any keyboard input
-def waitKbInput(text=None):
+def waitKbInput(text=None,delay=0.005,color=None):
 	sys.stdout.flush
 	if text is not None:
-		game.Print(text,allowSilent=False)
+		game.Print(text,delay=delay,color=color,allowSilent=False)
 	# just pass if in test mode
 	if game.mode == 1:
 		return True
@@ -131,26 +131,24 @@ def ellipsis(n):
 
 # prints a list of strings, l, into n columns of width w characters
 # if an element is longer than one column, it takes up as many columns as needed
-def columnPrint(l,n,w,printf=None):
-	if printf is None:
-		printf = game.Print
+def columnPrint(l,n,w,delay=0,color=None):
 	# k is the number of characters that have been printed in the current row
 	k = 0
 	# for each string element in l
 	for term in l:
 		# if the string is longer than remaining row width; print on a new row
 		if len(term) >= (n*w) - k:
-			printf("\n" + term, end="")
+			game.Print("\n" + term,end="",delay=delay,color=color)
 			k = len(term)
 		# if the string is short enough, print it, increment k
 		else:
-			printf(term, end="")
+			game.Print(term,end="",delay=delay,color=color)
 			k += len(term)
 		# to preserve column alignment, print spaces until k is divisble by w
 		spaces = w - (k % w)
-		printf(spaces * ' ', end="")
+		game.Print(spaces * ' ',end="",delay=delay,color=color)
 		k += spaces
-	printf()
+	game.Print()
 
 
 # capitalizes the first letter of all the words in a string
@@ -245,18 +243,14 @@ def extractConditionInfo(roomCondition):
 
 
 # prints a question, gets a yes or no, returns True or False respectively
-def yesno(question,printf=None,inputf=None):
-	if printf is None:
-		printf = game.Print
-	if inputf is None:
-		inputf = game.Input
+def yesno(question,delay=0.005,color=None):
 	while True:
-		command = inputf(question + "\n> ").lower()
+		command = game.Input(question,delay=delay,color=color).lower()
 		if command in Data.yesses:
 			return True
 		elif command in Data.noes:
 			return False
-		printf("Enter yes or no")
+		game.Print("Enter yes or no",delay=delay,color=color)
 
 
 # rolls n dice of range d, adds a modifier m, returns number
@@ -283,6 +277,9 @@ def min1(n): return 1 if n < 1 else n
 # returns a number, n, with an upper bound of m
 def maxm(m,n): return m if n > m else n
 
+
+# returns a number n, bounded by min and max
+def bound(n,min,max): return min if n < min else (max if n > max else n)
 
 
 # the room, creatures, and some items can contain items within themselves
@@ -463,7 +460,6 @@ class TeeLogger:
 # the characters's rapport value is incremented as the user engages in more dialogue
 # rapport is meant to give the dialogue a progression throughout the game
 # reaching certain nodes can modify the character's love and fear for the player
-
 
 class DialogueNode():
 	def __init__(self,parent,label,idx,lastTriteRemark=None,visitLimit=None,rapportReq=None,guardCase="True",isCheckpoint=False,loveMod=0,fearMod=0,repMod=0,memories=None,events=None,remark=None,trites=None,cases=None,replies=None,children=[],reactTrue=False):
@@ -716,6 +712,7 @@ class DialogueNode():
 		return False
 
 
+
 class ReactionNode(DialogueNode):
 	def __init__(self,parent,label,idx,treeJson):
 		DialogueNode.__init__(self,parent,label,idx)
@@ -893,7 +890,6 @@ class EmptyGear:
 	type = "e"
 
 
-
 	### Dunder Methods ###
 
 	def __new__(cls):
@@ -927,9 +923,8 @@ class EmptyGear:
 		return 0
 
 
-	def improviseWeapon(self):
+	def asWeapon(self):
 		return self
-
 
 
 
@@ -1117,7 +1112,7 @@ class Game():
 
 
 	def checkMoon(self):
-		if self.currentroom.altitude < 0:
+		if self.currentroom.altitude < 0 or self.currentroom.type == "shelter":
 			return
 		mooncycle = (self.time % self.monthlength) // self.daylength
 		if mooncycle == 0:
@@ -1133,7 +1128,7 @@ class Game():
 
 
 	def checkAstrology(self,update=False):
-		if self.currentroom.altitude < 0:
+		if self.currentroom.altitude < 0 or self.currentroom.type == "shelter":
 			return
 		darkhours = ("hearth","cat","mouse","owl","serpent","wolf")
 		aurora_cycle = self.time % 2000
@@ -1167,26 +1162,35 @@ class Game():
 
 	### User Output ###
 	
-	def Input(self,text="",low=True):
+	def Input(self,text="",low=True,delay=0.005,color=None):
 		sys.stdout.flush()
 		# should never be silent when asking for input
-		self.Print(text,end='',allowSilent=False)
+		self.Print(text,end="",delay=delay,color=color,allowSilent=False)
 		flushInput()
 		if not low:
-			ret = input()
+			ret = input("\n> ")
 		else:
-			ret = input().lower()
+			ret = input("\n> ").lower()
 		return ret
 
 
-	def Print(self,*args,end="\n",sep='',delay=0.005,allowSilent=True):
+	def Print(self,*args,end="\n",sep='',delay=0.005,color=None,allowSilent=True):
+		colorMap = {
+			"r":"31", "o": "38;5;215", "y":"38;5;227", "g":"32", 
+			"b":"34", "m":"35", "k":"90", "w":"37"
+		}
 		sys.stdout.flush()
 		if self.silent and allowSilent:
 			return
-		if self.mode == 1:
-			return print(*args,end=end,sep=sep)
 		if len(args) > 1:
 			sep=' '
+		if color is not None:
+			c = colorMap[color]
+			args = list(args)
+			args[0] = f"\033[{c}m" + args[0]
+			args[-1] = args[-1] + f"\033[37m"
+		if self.mode == 1 or delay is None:
+			return print(*args,end=end,sep=sep)
 		for arg in args:
 			for char in str(arg):
 				if kbInput():
@@ -1275,6 +1279,7 @@ class Game():
 		return True
 
 
+
 # The Room class is the fundamental unit of the game's world.
 # The world dict, consists of key:value pairs of the form,
 # room name:room object
@@ -1289,7 +1294,7 @@ class Game():
 # directed graph, facilitated by the world dict, where the exits dict specifies
 # the edges from a given node to its neighboring nodes.
 class Room():
-	def __init__(self,name,domain,desc,exits,fixtures,items,creatures,altitude=0,isRoad=False,status=None):
+	def __init__(self,name,domain,desc,exits,fixtures,items,creatures,size=5,type=None,altitude=0,status=None):
 		self.name = name
 		self.domain = domain
 		self.desc = desc
@@ -1297,10 +1302,11 @@ class Room():
 		self.fixtures = fixtures
 		self.items = items
 		self.creatures = creatures
+		self.size = size
+		# "road", "shelter", None
+		self.type = type
 		# 0 for outdoors, -1 for indoors, <-1 for underground, >0 for in the sky
 		self.altitude = altitude
-		# used by NPCs to navigate
-		self.isRoad = isRoad
 		self.status = status if status else []
 
 
@@ -1427,24 +1433,29 @@ class Room():
 		self.creatures.sort(key=lambda x: x.MVMT(), reverse=True)
 
 
-	# describe the room, and apply any room effects to the creature entering
-	def enter(self,creature):
+	# describe the room, and apply any room effects to the obj entering
+	def enter(self,obj):
 		# if the player is entering the room, describe the room
-		if creature is player:
+		if obj is player:
 			self.describe()
-		condsToRemove = [pair for pair in creature.status if pair[1] == -1]
+		condsToRemove = [pair for pair in obj.status if pair[1] == -1]
 		# remove status conditions from previous room
 		for cond,dur in condsToRemove:
-			creature.removeCondition(cond,-1)
+			obj.removeCondition(cond,-1)
 		# add status conditions from this room
 		for cond,dur in self.status:
-			if cond.startswith("AREA"):
+			applyCond = False
+			if cond.startswith("ITEM") and isinstance(obj,Item):
+				applyCond = True
+			if cond.startswith("AREA") and isinstance(obj,Creature):
+				applyCond = True				
+			if applyCond:
 				[name,dur] = extractConditionInfo(cond)
-				creature.addCondition(name,dur)
+				obj.addCondition(name,dur)
 
 
-	# remove any room effects from the creature exiting
-	def exit(self,creature):
+	# remove any room effects from the obj exiting
+	def exit(self,obj):
 		pass
 
 
@@ -1452,16 +1463,17 @@ class Room():
 
 	# returns dict of exits, where keys are directions and values are room names
 	def allExits(self):
-		all = {}
+		exits = {}
 		for dir in self.exits:
-			all[dir] = self.exits[dir]
+			exits[dir] = self.exits[dir]
 		# get a list of passages in the room
 		passages = self.getPassages()
-		# for each passage, add its connections to all
+		# for each passage, add its connections to exits
 		for passage in passages:
 			for dir in passage.connections:
-				all[dir] = passage.connections[dir]
-		return all
+				if dir not in exits:
+					exits[dir] = passage.connections[dir]
+		return exits
 
 
 	def itemNames(self):
@@ -1544,7 +1556,6 @@ class Room():
 			game.Print(f"There is {listObjects(listCreatures)}.")
 		for creature in listCreatures:
 			game.setPronouns(creature)
-
 
 
 
@@ -1637,6 +1648,19 @@ class Item():
 				self.parent.removeItem(self)			
 
 
+	def changeRoom(self,newroom):
+		# can only change rooms if not stuck inside some item
+		if type(self.parent) is not Room:
+			raise Exception(f"Can't change rooms. Stuck inside {self.parent}")
+
+		prevroom = self.parent
+		prevroom.exit(self)
+		prevroom.removeItem(self)
+		self.parent = newroom
+		newroom.addItem(self)		
+		newroom.enter(self)
+
+
 	def Obtain(self,creature):
 		pass
 
@@ -1655,7 +1679,7 @@ class Item():
 		if user not in self.ancestors():
 			game.Print(f"{+self} is not in your inventory.")
 			return False
-		print(f"You use {-self}")
+		game.Print(f"You use {-self}")
 
 
 	def takeDamage(self,dmg):
@@ -1700,10 +1724,34 @@ class Item():
 		return self.ancestors()[-1]
 
 
+	def asProjectile(self):
+		return Projectile(self.name,self.desc,self.weight,self.durability,self.composition,min1(self.weight//4),0,"b",item=self)
+
+
 	# Used to create a generic Weapon() if this item is used to attack something
-	def improviseWeapon(self):
+	def asWeapon(self):
 		#TODO: if item is too large/heavy, make it two-handed
-		return Weapon(self.name,self.desc,self.weight,self.durability,min1(self.weight//4),0,0,0,"b")
+		return Weapon(self.name,self.desc,self.weight,self.durability,self.composition,min1(self.weight//4),0,0,0,"b")
+
+
+	def hasCondition(self,name,reqDuration=None):
+		for condname,duration in self.status:
+			if condname == name:
+				if reqDuration == None or reqDuration == duration:
+					return True
+		return False
+
+
+	def hasAnyCondition(self,*names):
+		if len(names) == 0:
+			return len(self.status) > 0
+		if len(names) == 1:
+			names = names[0]
+		assert isinstance(names,Iterable)
+		for name in names:
+			if self.hasCondition(name):
+				return True
+
 
 
 	### User Output ###
@@ -1740,7 +1788,6 @@ class Item():
 	def describe(self):
 		game.Print(f"It's {~self}.")
 		game.Print(f"{self.desc}.")
-
 
 
 
@@ -1948,7 +1995,7 @@ class Creature():
 		if(f"{type} immunity" in self.status): dmg = 0
 		# bludgeoning damage can't kill you in one hit
 		if type == "b" and self.hp > 1:
-			self.hp = minm(1,self.hp-dmg)			
+			self.hp = min1(self.hp-dmg)			
 		# hp lowered to a minimum of 0
 		else:
 			self.hp = min0(self.hp-dmg)
@@ -1980,11 +2027,11 @@ class Creature():
 
 
 	def updateLove(self,loveMod):
-		self.RP = maxm(100, minm(-100, loveMod))
+		self.RP = bound(loveMod,-100,100)
 
 
 	def updateFear(self,fearMod):
-		self.RP = maxm(100, minm(-100, fearMod))
+		self.RP = bound(fearMod,-100,100)
 
 
 	# check if item can fit in inventory
@@ -2056,11 +2103,11 @@ class Creature():
 
 		# ensure that weapons are of type Weapon
 		if not isinstance(self.weapon,Weapon):
-			if hasMethod(self.weapon,"improviseWeapon"):
-				self.weapon = self.weapon.improviseWeapon()
+			if hasMethod(self.weapon,"asWeapon"):
+				self.weapon = self.weapon.asWeapon()
 		if not isinstance(self.weapon2,Weapon):
-			if hasMethod(self.weapon,"improviseWeapon"):
-				self.weapon2 = self.weapon.improviseWeapon()
+			if hasMethod(self.weapon,"asWeapon"):
+				self.weapon2 = self.weapon.asWeapon()
 
 		# assign shield and shield2 based on types of gear in left and right
 		if isinstance(self.gear["right"],Shield) and isinstance(self.gear["left"],Shield):
@@ -2120,6 +2167,7 @@ class Creature():
 
 
 	def addCarry(self,creature):
+		assert isinstance(creature,Creature)
 		if self.gear["left"] is not EmptyGear():
 			self.gear.unequip("left")
 		self.carrying = creature
@@ -2256,7 +2304,7 @@ class Creature():
 	def changeRoom(self,newroom):
 		# can only change rooms if not stuck inside some item
 		if type(self.parent) is not Room:
-			return False
+			raise Exception(f"Can't change rooms. Stuck inside {self.parent}")
 		# shouldn't be changing rooms alone if being carried
 		if self.carrier and self.carrier.parent is not newroom:
 			return False
@@ -2340,6 +2388,21 @@ class Creature():
 		return False
 
 
+	def bombard(self,missile):
+		assert isinstance(missile,Projectile)
+		if missile.speed < self.MVMT():
+			if diceRoll(1,100) < 50:
+				if self.Catch(missile):
+					return True
+		hit = bound(missile.aim-self.EVSN(),1,99)
+		if diceRoll(1,100) < hit:
+			self.takeDamage(missile.damage(),missile.type)
+			missile = missile.asItem()
+			missile.parent.removeItem(missile)
+			return True
+		return False
+
+
 	def Carry(self,carrier):
 		if self.checkTetherLoop(carrier,self,"carry"):
 			return False
@@ -2351,6 +2414,22 @@ class Creature():
 		self.carrier = carrier
 		self.carrier.addCarry(self)
 		return True
+
+
+	def Catch(self,missile):
+		assert isinstance(missile,Projectile)
+		self.unequip(self.gear["left"])
+		canCatch = 5*self.ATHL() > missile.weight and self.canObtain(missile)
+		catch = bound(self.ACCU() - missile.speed*missile.weight,1,99)
+		if canCatch and diceRoll(1,100) <= catch:
+			missileItem = missile.asItem()
+			game.Print(f"{+self} catches {-missileItem}!")
+			self.obtainItem(missileItem)
+			self.equipInHand(missileItem)
+			return True
+		else:
+			game.Print(f"{+self} fails to catch {-missile}.")
+			return False
 
 
 	def Restrain(self,restrainer,item=None):
@@ -2366,6 +2445,44 @@ class Creature():
 		self.addCondition("restrained",-3)
 		game.Print(f"You restrain {-self}!")
 		return True
+
+
+	def Throw(self,missile,target):
+		self.removeItem(missile)
+		self.room().addItem(missile)
+		if type(target) is str:
+			assert target in world
+			dir = self.room().getDirFromDest(target)
+			game.Print(f"You throw {-missile} {dir}")
+			if dir == "up":
+				game.Print(f"{+missile} falls back down.")
+			return missile.changeRoom(world[target])
+
+		if not isinstance(missile,Projectile):
+			missile = missile.asProjectile()
+
+		speed = min1(self.ATHL())
+		aim = self.ACCU()
+		return missile.Launch(speed,aim,target)
+
+
+	def Toss(self,missile,target):
+		self.removeItem(missile)
+		self.room().addItem(missile)
+		if type(target) is str:
+			assert target in world
+			dir = self.room().getDirFromDest(target)
+			game.Print(f"You throw {-missile} {dir}")
+			if dir == "up":
+				game.Print(f"{+missile} falls back down.")
+			return missile.changeRoom(world[target])
+
+		if not isinstance(missile,Projectile):
+			missile = missile.asProjectile()
+
+		speed = 0
+		aim = self.ACCU()
+		return missile.Launch(speed,aim,target)
 
 
 	def Hide(self,I):
@@ -2385,7 +2502,7 @@ class Creature():
 			game.Print(f"{+self} struggles.")
 			athl_contest = self.ATHL() - rider.ATHL()
 			if athl_contest > 0:
-				game.Print(f"{+self} shakes you off!")
+				game.Print(f"{+self} shakes you off!",color="r")
 				if athl_contest > rider.ATHL():
 					rider.takeDamage(athl_contest-rider.ATHL(),"b")
 				return False
@@ -2399,7 +2516,7 @@ class Creature():
 		game.Print("Smells a little like body odor.")
 
 
-	def Lick(self,licker):
+	def lick(self,licker):
 		# TODO: make creatures evade this or try to
 		game.Print("Yuck!")
 
@@ -2487,14 +2604,14 @@ class Creature():
 	def ATCK(self): return diceRoll(self.STR(), self.weapon.might, self.atkmod())
 	def ATHL(self): return self.STR() + self.SKL() + self.STM()
 	def ATSP(self): return self.SPD() - min0(self.handheldWeight()//4 - self.CON())
-	def BRDN(self): return 20*self.CON() + 10*self.STR() + 5*self.FTH() + self.weight
+	def BRDN(self): return 12*self.CON() + 6*self.STR() + 3*self.FTH() + self.weight
 	def CAST(self): return self.WIS() + self.FTH() + self.INT() - min0(self.gearWeight()//4 - self.CON())
 	def CRIT(self): return self.SKL() + self.LCK() + self.weapon.sharpness
 	def CSSP(self): return self.WIS() - min0(self.invWeight() - self.BRDN()) - min0(self.gearWeight()//4 - self.CON())
 	def DCPT(self): return 2*self.CHA() + self.INT()
 	def DFNS(self): return 2*self.CON() + self.protection()
 	def ENDR(self): return 2*self.STM() + self.CON()
-	def EVSN(self): return 10 if self.hasAnyCondition("sitting","laying") else 2*self.ATSP() + self.LCK() + self.SPD()
+	def EVSN(self): return 8 if self.hasAnyCondition("sitting","laying") else 2*self.ATSP() + self.LCK() + self.SPD()
 	def INVS(self): return 2*self.INT() + self.WIS()
 	def KNWL(self): return 2*self.INT() + self.LCK()
 	def LOOT(self): return 2*self.LCK() + self.FTH()
@@ -2715,7 +2832,6 @@ class Creature():
 
 
 
-
 # the class representing the player, contains all player stats
 class Player(Creature):
 	def __init__(self,name,desc,weight,traits,hp,mp,xp,rp,spells=None,**kwargs):
@@ -2788,7 +2904,7 @@ class Player(Creature):
 		if(f"{type} immunity" in self.status): dmg = 0
 		# bludgeoning damage can't kill you in one hit
 		if type == "b" and self.hp > 1:
-			self.hp = minm(1,self.hp-dmg)			
+			self.hp = min1(self.hp-dmg)			
 		# player hp lowered to a minimum of 0
 		else:
 			self.hp = min0(self.hp-dmg)
@@ -2829,7 +2945,7 @@ class Player(Creature):
 
 
 	def updateReputation(self,repMod):
-		self.rp = maxm(100, minm(-100, repMod))
+		self.rp = bound(repMod,-100,100)
 
 
 	def updateMoney(self,money):
@@ -2948,7 +3064,7 @@ class Player(Creature):
 
 	# called when player hp hits 0
 	def death(self):
-		game.Print("You have died!")
+		game.Print("You have died!",color="r")
 		ellipsis(3)
 		
 		if self.hasCondition("Anointed",reqDuration=-3):
@@ -2964,12 +3080,13 @@ class Player(Creature):
 
 	def dualAttack(self,target):
 		game.Print("\nDual Attack!")
-		hit = min1(maxm(99, self.ACCU() - target.EVSN()))
+		hit = bound(self.ACCU() - target.EVSN(),1,99)
 		if diceRoll(1,100) <= hit:
 			crit = diceRoll(1,100) <= self.CRIT()
 			attack = self.ATCK()
 			if crit:
 				waitKbInput("Critical hit!")
+				self.weapon2.dull(1)
 				attack *= 2
 			damage = min0( attack - target.DFNS() )
 			target.takeDamage(damage,self.weapon2.type)
@@ -2988,12 +3105,13 @@ class Player(Creature):
 			if n > 1:
 				waitKbInput(f"\n{ordinal(i+1)} attack:")
 			# TODO: what about if weapon is ranged?
-			hit = min1(maxm(99, self.ACCU() - target.EVSN()))
+			hit = bound(self.ACCU() - target.EVSN(),1,99)
 			if diceRoll(1,100) <= hit:
 				crit = diceRoll(1,100) <= self.CRIT()
 				attack = self.ATCK()
 				if crit:
 					waitKbInput("Critical hit!")
+					self.weapon.dull(1)
 					attack *= 2
 				damage = min0( attack - target.DFNS() )
 				target.takeDamage(damage,self.weapon.type)
@@ -3012,11 +3130,26 @@ class Player(Creature):
 		attack = self.ATCK()
 		game.Print(f"{attack} damage")
 		if target.durability != -1 and attack > target.durability:
-			target.Break()
+			return target.Break()
 		else:
 			game.Print("Nothing happens.")
-			return
+			return False
 		
+
+	def bombard(self,missile):
+		assert isinstance(missile,Projectile)
+		if missile.speed < self.MVMT():
+			if yesno(f"Will you try to catch {-missile}?"):
+				if self.Catch(missile):
+					return True
+		hit = bound(missile.aim-self.EVSN(),1,99)
+		if diceRoll(1,100) < hit:
+			self.takeDamage(missile.damage(),missile.type)
+			missile = missile.asItem()
+			missile.parent.removeItem(missile)
+			return True
+		return False
+
 
 	### Getters ###
 
@@ -3038,7 +3171,6 @@ class Player(Creature):
 
 
 	### User Output ###
-
 
 	# prints all 10 player traits
 	def printTraits(self,trait=None):
@@ -3192,7 +3324,7 @@ class Humanoid(Creature):
 		if self.room() is player.room():
 			targets += [player]
 		if len(targets) > 0:
-			target = choices(targets)[0]
+			target = choice(targets)
 			return self.attackCreature(target)
 		return False
 
@@ -3207,7 +3339,7 @@ class Humanoid(Creature):
 			if n > 1:
 				waitKbInput(f"\n{ordinal(i+1)} attack:")
 			# TODO: what about if weapon is ranged?
-			hit = min1(maxm(99, self.ACCU() - target.EVSN()))
+			hit = bound(self.ACCU() - target.EVSN(),1,99)
 			if diceRoll(1,100) <= hit:
 				crit = diceRoll(1,100) <= self.CRIT()
 				attack = self.ATCK()
@@ -3255,7 +3387,6 @@ class Humanoid(Creature):
 	def playerArmed():
 		# returns true if monster believes player is armed
 		pass
-
 
 
 
@@ -3391,7 +3522,6 @@ class Person(Speaker,Humanoid):
 
 
 
-
 class Animal(Speaker):
 	def __init__(self,name,desc,weight,traits,hp,species=None,dlogName=None,**kwargs):
 		Speaker.__init__(self,name,desc,weight,traits,hp,**kwargs)
@@ -3415,7 +3545,6 @@ class Animal(Speaker):
 		if "checkpoint" in savedDlogData:
 			self.dlogtree.checkpoint = savedDlogData["checkpoint"]
 		self.dlogtree.ensureIntegrity(self)
-
 
 
 	def act(self):
@@ -3562,7 +3691,6 @@ class Fixture(Item):
 
 
 
-
 class Passage(Fixture):
 	def __init__(self,name,desc,weight,durability,composition,connections,descname,passprep=None,mention=False,**kwargs):
 		Fixture.__init__(self,name,desc,weight,durability,composition,mention=mention,**kwargs)
@@ -3592,6 +3720,120 @@ class Passage(Fixture):
 		return True
 
 
+	def Transfer(self,item,dir=None):
+		if isinstance(item,Creature):
+			return self.Traverse(item)
+
+		if dir is not None:
+			assert dir in self.connections
+		else:
+			dir = choice(tuple(self.connections.keys()))
+		
+		if self.connections[dir] == self.connections.get("up",None):
+			game.Print(f"{+item} falls back down.")
+			return
+		if "down" in self.connections:
+			dir = "down"
+			game.Print(f"{+item} falls into {-self}.")
+		else:
+			dir = choice([dir for dir in self.connections if dir != "up"])
+			game.Print(f"{+item} goes into {-self}.")
+		
+		item.changeRoom(world[self.connections[dir]])
+
+
+
+class Projectile(Item):
+	def __init__(self,name,desc,weight,durability,composition,might,sharpness,type,speed=0,item=None,**kwargs):
+		Item.__init__(self,name,desc,weight,durability,composition,**kwargs)
+		self.might = might
+		self.sharpness = sharpness
+		self.type = type
+		self.speed = speed
+		self.item = item
+
+
+	def Launch(self,speed,aim,target):
+		self.speed = speed
+		self.aim = 90 if self.hasCondition("homing") and aim < 90 else aim
+
+		if isinstance(target,Passage) and getattr(target,"open",True):
+			target.Transfer(self.asItem())
+
+		elif isinstance(target,Item):
+			if diceRoll(1,100) < maxm(99,self.aim+target.weight):
+				if hasattr(target,"open"):
+					if target.open:
+						game.Print(f"{+self} goes into {-target}.")
+						self = self.asItem()
+						self.room().removeItem(self)
+						target.addItem(self)
+						return
+				game.Print(f"{+self} hits {-target}.")
+				dmg = self.damage()
+				game.Print(f"{dmg} damage")
+				if target.durability != -1 and dmg > target.durability:
+					target.Break()
+			else:
+				self.Miss(target) 
+
+		elif isinstance(target,Creature):
+			if not target.bombard(self):
+				self.Miss(target)
+
+
+	def Miss(self,target):
+		game.Print("It misses...")
+		self.aim = -10 if self.hasCondition("homing") else min1(self.aim-10)
+
+		# have a chance to randomly hit a different object in room
+		otherObjs = [obj for obj in target.room().contents() if obj not in (self,target)]
+		weights = [obj.weight for obj in otherObjs]+[target.room().size]
+		victim = choices(otherObjs+[None],weights=weights)[0]
+		if victim is None:
+			return False
+
+		if isinstance(target,Passage):
+			if tuple(target.connections.keys()) == ("up"):
+				game.Print(f"{-self} falls down.")
+				pass
+			elif "down" in target.connections:
+				dest = target.connections["down"]
+			else:
+				dest = choice(tuple(target.connections.keys()))
+		elif isinstance(victim,Item):
+			if diceRoll(1,100) < maxm(99,self.aim+target.weight):
+				game.Print(f"It hits {-victim}!")
+				dmg = self.damage()
+				game.Print(f"{dmg} damage")
+				if victim.durability != -1 and dmg > victim.durability:
+					victim.Break()
+				else:
+					game.Print("Nothing happens.")
+		elif isinstance(victim,Creature):
+			game.Print(f"It whizzes toward {-victim}!")
+			victim.bombard(self)
+
+
+	def dull(self,dec):
+		if self.hasCondition("keen"):
+			return
+		self.sharpness = min0(self.sharpness - dec)
+
+
+	def damage(self):
+		d = self.might * self.speed
+		if diceRoll(1,100) <= self.sharpness:
+			d *= 2
+			self.dull(1)
+		return diceRoll(0,d,d)
+
+
+	def asItem(self):
+		if self.item is not None:
+			return self.item
+		else:
+			return self
 
 
 class Serpens(Item):
@@ -3644,7 +3886,6 @@ class Serpens(Item):
 
 
 
-
 class Weapon(Item):
 	def __init__(self,name,desc,weight,durability,composition,might,sleight,sharpness,range,type,twohanded=False,**kwargs):
 		Item.__init__(self,name,desc,weight,durability,composition,**kwargs)
@@ -3656,12 +3897,18 @@ class Weapon(Item):
 		self.type = type
 
 
-	def print(self):
+	def dull(self,dec):
+		if self.hasCondition("keen"):
+			return
+		self.sharpness = min0(self.sharpness - dec)
+
+
+	def show(self):
 		game.Print(f"{self.name} {self.might} {self.sleight}")
 		game.Print(f"{self.sharpness} { self.twohanded} {self.range}")
 
 
-	def Lick(self,licker):
+	def lick(self,licker):
 		if self.composition in ("glass","bronze","iron","steel"):
 			game.Print("It tastes like... blood.")
 			licker.takeDamage(3,"s")
@@ -3672,15 +3919,12 @@ class Weapon(Item):
 		if self.composition in Data.scents:
 			game.Print(Data.scents[self.composition].replace("scent","taste"))
 
-			
-
 
 
 class Shield(Item):
 	def __init__(self,name,desc,weight,durability,composition,prot,**kwargs):
 		Item.__init__(self,name,desc,weight,durability,composition,**kwargs)
 		self.prot = prot
-
 
 
 
@@ -3702,7 +3946,6 @@ class Armor(Item):
 
 
 
-
 class Compass(Item):
 	def Orient(self):
 		game.Print("Orienting you northward!")
@@ -3710,10 +3953,9 @@ class Compass(Item):
 
 
 
-
-
-
-
+#############
+## GLOBALS ##
+#############
 
 
 player = Player("","",0,[0]*10,0,0,0,0)

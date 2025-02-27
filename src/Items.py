@@ -39,7 +39,7 @@ class Bottle(Core.Item):
 		Core.game.Print(f"The {self.name} breaks.")
 		self.parent.removeItem(self)
 		if self.weight > 2 and self.composition == "glass":
-			Core.game.print("Shards of glass scatter everywhere.")
+			Core.game.Print("Shards of glass scatter everywhere.")
 		while self.weight > 2 and self.composition == "glass":
 			shardWeight = randint(2,4)
 			self.weight -= shardWeight
@@ -182,8 +182,8 @@ class Food(Core.Item):
 
 
 class Foot(Core.Item):
-	def improviseWeapon(self):
-		return Core.Weapon(self.name,self.desc,self.weight,self.durability,"",Core.minm(1,self.weight//4),0,0,0,"b")
+	def asWeapon(self):
+		return Core.Weapon(self.name,self.desc,self.weight,self.durability,"",Core.min1(self.weight//4),0,0,0,"b")
 
 
 
@@ -223,8 +223,8 @@ class Generator(Controller):
 
 
 class Hand(Core.Item):
-	def improviseWeapon(self):
-		return Core.Weapon(self.name,self.desc,self.weight,self.durability,"",Core.minm(1,self.weight//4)+1,2,0,0,"b")
+	def asWeapon(self):
+		return Core.Weapon(self.name,self.desc,self.weight,self.durability,"",Core.min1(self.weight//4)+1,2,0,0,"b")
 
 
 
@@ -307,8 +307,8 @@ class Lockbox(Box):
 
 
 class Mouth(Core.Item):
-	def improviseWeapon(self):
-		return Core.Weapon(self.name,self.desc,self.weight,self.durability,"",Core.minm(1,self.weight//4),0,0,4,"p")
+	def asWeapon(self):
+		return Core.Weapon(self.name,self.desc,self.weight,self.durability,"",Core.min1(self.weight//4),0,0,4,"p")
 
 
 

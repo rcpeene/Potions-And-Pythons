@@ -14,8 +14,9 @@ import Parser
 
 def main(testing=False):
 	# formatting the prompt window
-	os.system("mode con: lines=999")
+	os.system("mode con: lines=32")
 	os.system("title Potions ^& Pythons")
+	os.system("color 0F")
 
 	if not testing:
 		logger = Core.TeeLogger("./transcript.log")
@@ -31,6 +32,7 @@ def main(testing=False):
 
 	# main input loop
 	while True:
+		if Core.game.quit: return Menu.quit()
 		Core.game.silent = False
 		Core.game.whoseturn = Core.player
 		if not Core.player.isAlive(): 
@@ -76,15 +78,20 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# add "climb" and "swim"
-# think about throwing and catching. thrown objects should probably hit something random based on weight if they miss the target
-# catching... hmm.... should they have time to react to a thrown item?
-
+# test all kinds of throwing and catching
+# check if throwing a creature which has another riding it?
+# "throw rock east"
+# add dropping into pit -> add fall damage to items.
+# add in projectile weapons?
 # if something is one fire (or other condition) when entering a room, say it
 # what if the tree at "big tree" is destroyed? Some contingency to reset the room?
 # what if horse goes wild while riding it, doesn't obey your directions
 # create linked passages? if a window breaks on one side, it should break the other way too
-	
+# add "climb" and "swim"
+# try out using a creature as a weapon
+# add colored text?
+
+
 # add basic equipment and clothing items
 # fix/add Creature.isNaked or Player.isNaked
 # add link nodes and effect nodes to dialogue after all

@@ -17,6 +17,8 @@ import Creatures
 import Effects
 
 
+helpCounter = 0
+
 #######################
 ## PARSING FUNCTIONS ##
 #######################
@@ -60,7 +62,7 @@ def chooseObject(name,objects):
 
 	invalid_count = 0
 	while True:
-		choice = Core.game.Input("> ").lower()
+		choice = Core.game.Input().lower()
 		if choice == "": continue
 		if choice in Data.cancels: return None
 
@@ -70,9 +72,9 @@ def chooseObject(name,objects):
 			for obj in objects:
 				if choice == obj.nounPhrase().lower():
 					return obj
-		Core.game.Print("That is not one of the options.")
+		Core.game.Print("That is not one of the options.",color="k")
 		if invalid_count >= 3:
-			Core.game.Print("Type 'cancel' to undo this action.")
+			Core.game.Print("Type 'cancel' to undo this action.",color="k")
 		invalid_count += 1
 
 
@@ -111,7 +113,7 @@ def findObjFromTerm(term,queryType="both",filter=None,roomD=1,playerD=2,reqParen
 				suffix += " in your Inventory"
 			elif queryType == "room":
 				suffix += " here"
-			Core.game.Print(f"There is no '{term}'{suffix}.")
+			Core.game.Print(f"There is no '{term}'{suffix}.",color="k")
 		return None
 	elif len(matches) == 1:
 		return matches[0]
@@ -194,11 +196,11 @@ def replacePronoun(term):
 # namely, it returns a list of words without capitals, symbols, or articles
 # nounify() joins words that may only be meaningful as one term
 def processCmd(prompt,storeRawCmd=False):
-	rawcommand = Core.game.Input(prompt + "\n> ",low=False)
+	rawcommand = Core.game.Input(prompt,low=False)
 	# take input until input has any non-whitespace characters in it
 	while not any(i not in "\t " for i in rawcommand):
 		Core.flushInput()
-		rawcommand = Core.game.Input("> ",low=False)
+		rawcommand = Core.game.Input("",low=False)
 	# for convenience, save raw command in game object
 	if storeRawCmd:
 		Core.game.lastRawCommand = rawcommand.split()
@@ -245,14 +247,14 @@ def parseWithoutVerb(cmdInput):
 # called in parse() when a command fails, it simply recurs parse(), and...
 # prints a helpful message if user has provided invalid input 3 or more times
 # n is the number of times parse() has recurred
-def promptHelp(msg,n):
+def promptHelp(msg):
+	global helpCounter
 	if msg != "":
-		Core.game.Print(msg)
-	if n >= 2:
-		Core.game.Print("Enter 'help' for a list of commands.")
-	if n > 32:
-		return False	# prevent stack overflow from repeated bad input
-	return parse(n+1)	# ask again
+		Core.game.Print(msg,color="k")
+	helpCounter += 1
+	if helpCounter >= 2:
+		Core.game.Print("Enter 'help' for a list of commands.",color="k")
+	return False
 
 
 # the primary input parsing function for the game
@@ -260,10 +262,11 @@ def promptHelp(msg,n):
 # it is called on infinite loop until it returns True
 # it returns True only when the player successfully takes an action in the game
 # n denotes how many times parse has recurred
-def parse(n=0):
+def parse():
+	global helpCounter
 	command = processCmd("\n\nWhat will you do?",storeRawCmd=True)
 	if len(command) == 0:
-		return promptHelp("Command not understood.",n)
+		return promptHelp("Command not understood.")
 	verb = command[0]	# verb is always first word
 
 	# handle cases with special verb commands
@@ -273,30 +276,33 @@ def parse(n=0):
 		return Hello()
 	elif verb in Data.goodbyes:
 		return Goodbye()
-	elif verb in shortactions or verb in Data.traits + Data.abilities:
+	elif verb in shortactions or verb in Data.traits + Data.abilities or verb in Data.colors:
 		# 'cast' may be a stat command or a regular action
 		if verb != "cast" or len(command) == 1:
 			if len(command) != 1:
-				return promptHelp(f"The '{verb}' command can only be one word.",n)
+				return promptHelp(f"The '{verb}' command can only be one word.")
 			if verb == "here":
 				return Core.game.currentroom.describe()
 			if verb in Data.abilities:
 				return Core.player.printAbility(verb.upper())
 			if verb in Data.traits:
 				return Core.player.printTraits(verb)
+			if verb in Data.colors:
+				return Core.game.Print(verb.title()+".", color=Data.colors[verb])
 			return shortactions[verb](Core.player)
 	elif verb not in actions:
-		return promptHelp(f"'{verb}' is not a valid verb",n)
+		return promptHelp(f"'{verb}' is not a valid verb")
 
 	dobj,iobj,prep = parseWithoutVerb(command[1:])
 	# this line calls the action function using the 'actions' dict
 	actionCompleted = actions[verb](dobj,iobj,prep)
 	# if action was not completed for some reason, recur
 	if actionCompleted == False:
-		return promptHelp("",n)
+		return promptHelp("")
 	# if action didn't take any time, return False
 	if actionCompleted is None:
 		return False
+	helpCounter = 0
 	return True
 
 
@@ -308,13 +314,13 @@ def parse(n=0):
 
 def Evaluate(command):
 	if len(command) < 2:
-		Core.game.Print("Error: No code given")
+		Core.game.Print("Error: No code given",color="k")
 		return
 	code = " ".join(command[1:])
 	try:
 		Core.game.Print(eval(code))
 	except Exception as e:
-		Core.game.Print("Error: Code was unable to be executed.")
+		Core.game.Print("Error: Code was unable to be executed.",color="k")
 		Core.game.Print(e)
 
 
@@ -443,15 +449,13 @@ def Set(command):
 	elif objname in ("w","world"): obj = Core.world
 	else: obj = findObjFromTerm(command[1],playerD=3,roomD=3)
 
-	if obj is None:
-		Core.game.print(f"There is no {obj}")
-		return False
+	if obj is None: return False
 	try:
 		getattr(obj,attrname)
 	except:
 		Core.game.Print(f"{obj} has no attribute")
 		return False
-	print(f"Setting {obj}.{attrname} to {value}")
+	Core.game.Print(f"Setting {obj}.{attrname} to {value}")
 	setattr(obj,attrname,value)
 	
 
@@ -571,23 +575,23 @@ def Info(*args):
 
 
 def Laugh(*args):
-	Core.game.Print('"HAHAHAHAHA!"')
+	Core.game.Print('"HAHAHAHAHA!"',color="y")
 	Core.player.removeCondition("hiding",-3)
 
 
 def Quit(*args):
-	if Core.yesno("Are you sure you want to quit? (Anything unsaved will be lost)"):
+	if Core.yesno("Are you sure you want to quit? (Anything unsaved will be lost)",color="k"):
 		Core.game.quit = True
 		return True
 
 
 def Shout(*args): 
-	Core.game.Print('"AHHHHHHHHHH"')
+	Core.game.Print('"AHHHHHHHHHH"',color="y")
 	Core.player.removeCondition("hiding",-3)
 
 
 def Sing(*args):
-	Core.game.Print('"Falalalaaaa"')
+	Core.game.Print('"Falalalaaaa"',color="y")
 	Core.player.removeCondition("hiding",-3)
 
 
@@ -604,8 +608,7 @@ def Yawn(*args): return Rest(None,None,None) if Core.yesno("Do you want to sleep
 
 def Attack(dobj,iobj,prep,target=None,weapon=None,weapon2=None):
 	if prep not in ("using","with",None):
-		Core.game.Print("Command not understood.")
-		return False
+		return promptHelp("Command not understood.")
 
 	if iobj is None:
 		if len(Core.player.weapons()) == 0:
@@ -631,7 +634,7 @@ def Attack(dobj,iobj,prep,target=None,weapon=None,weapon2=None):
 			weapon = Core.player.inGear(iobj)
 		if weapon is None:
 			weapons = Core.player.inInv(iobj)
-			if len(weapons) == 0: Core.game.Print(f"There is no '{iobj}' in your Inventory.")
+			if len(weapons) == 0: Core.game.Print(f"There is no '{iobj}' in your Inventory.",color="k")
 			elif len(weapons) == 1: weapon = weapons[0]
 			else: weapon = chooseObject(iobj,weapons)
 			if weapon is None: return False
@@ -655,7 +658,7 @@ def Attack(dobj,iobj,prep,target=None,weapon=None,weapon2=None):
 		stowed = True
 		stowedweapons = (Core.player.weapon, Core.player.weapon2)
 	if not isinstance(weapon,Core.Weapon):
-		weapon = weapon.improviseWeapon()
+		weapon = weapon.asWeapon()
 	Core.player.weapon = weapon
 
 	Core.game.Print(f"You attack {-target} with your {Core.player.weapon}.")
@@ -667,7 +670,7 @@ def Attack(dobj,iobj,prep,target=None,weapon=None,weapon2=None):
 
 def Bite(dobj,iobj,prep):
 	if prep is not None:
-		Core.game.Print("Command not understood.")
+		return promptHelp("Command not understood.")
 	if dobj is None:
 		dobj = getNoun("What do you want to bite?")
 		if dobj in Data.cancels: return False
@@ -689,8 +692,7 @@ def Bite(dobj,iobj,prep):
 def Break(dobj,iobj,prep):
 	# TODO: potentially just redirect this func to attack, idk
 	if prep not in ("using","with",None):
-		Core.game.Print("Command not understood.")
-		return False
+		return promptHelp("Command not understood.")
 	if dobj is None:
 		dobj = getNoun("What do you want to break?")
 		if dobj in Data.cancels: return False
@@ -710,8 +712,8 @@ def Break(dobj,iobj,prep):
 
 def Caress(dobj,iobj,prep):
 	if prep not in ("using","with",None):
-		Core.game.Print("Command not understood.")
-		return False
+		return promptHelp("Command not understood.")
+
 	if dobj is None:
 		dobj = getNoun("What do you want to caress?")
 		if dobj in Data.cancels: return False
@@ -752,8 +754,8 @@ def CarryCreature(creature):
 
 def Cast(dobj,iobj,prep):
 	if prep not in ("at","on","onto","upon",None):
-		Core.game.Print("Command not understood.")
-		return False
+		return promptHelp("Command not understood.")
+
 	if dobj is None:
 		dobj = getNoun("What spell will you cast?")
 		if dobj in Data.cancels: return False
@@ -786,8 +788,8 @@ def Catch(dobj,iobj,prep):
 
 def Close(dobj,iobj,prep):
 	if prep is not None:
-		Core.game.Print("Command not understood.")
-		return False
+		return promptHelp("Command not understood.")
+
 	if dobj is None:
 		dobj = getNoun("What will you close?")
 		if dobj in Data.cancels: return False
@@ -797,16 +799,16 @@ def Close(dobj,iobj,prep):
 	Core.game.setPronouns(I)
 
 	if not hasattr(I,"open"):
-		Core.game.Print(f"The {I.name} doesn't close.")
+		Core.game.Print(f"{+I} doesn't close.")
 		return False
 	if not I.open:
-		Core.game.Print(f"The {I.name} is already closed.")
+		Core.game.Print(f"{+I} is already closed.")
 		return False
 	if Core.hasMethod(I,"Close"):
 		I.Close()
 	else:
 		I.open = False
-		Core.game.Print(f"You close the {I.name}.")
+		Core.game.Print(f"You close {-I}.")
 	return True
 
 
@@ -820,8 +822,8 @@ def Cross(dobj,iobj,prep):
 
 def Crouch(dobj,iobj,prep):
 	if prep not in ("behind","below","beneath","inside","under",None):
-		Core.game.Print("Command not understood.")
-		return False
+		return promptHelp("Command not understood.")
+
 
 	if dobj is None:
 		dobj = iobj
@@ -862,7 +864,7 @@ def Describe(dobj,iobj,prep):
 		Core.game.Print("Can only describe one thing at once.")
 		return False
 	if dobj is None:
-		dobj = getNoun("What do you want to be described?")
+		dobj = getNoun("What would you like described?")
 		if dobj in Data.cancels: return False
 
 	if dobj == Core.game.currentroom.name or dobj in ("room","here"):
@@ -878,11 +880,11 @@ def Describe(dobj,iobj,prep):
 
 def Dismount(dobj,iobj,prep):
 	if prep not in ("from","of","off","out","out of",None):
-		Core.game.Print("Command not understood.")
-		return False
+		return promptHelp("Command not understood.")
+
 	
 	if Core.player.riding is None:
-		print(f"You're not riding anything")
+		Core.game.Print(f"You're not riding anything")
 		return False
 
 	if iobj is not None:
@@ -890,7 +892,7 @@ def Dismount(dobj,iobj,prep):
 	if dobj is not None:
 		matches = Core.game.nameQueryRoom(dobj)
 		if Core.player.riding not in matches:
-			print(f"You're not riding a '{dobj}'")
+			Core.game.Print(f"You're not riding a '{dobj}'")
 			return False
 	
 	riding = Core.player.riding
@@ -930,8 +932,8 @@ def Doff(dobj,iobj,prep):
 
 def Don(dobj,iobj,prep):
 	if prep not in ("on","onto","over","to",None):
-		Core.game.Print("Command not understood.")
-		return False
+		return promptHelp("Command not understood.")
+
 	if prep is None:
 		prep = "on"
 	if dobj is None:
@@ -962,8 +964,8 @@ def Don(dobj,iobj,prep):
 
 def Drink(dobj,iobj,prep):
 	if prep not in ("using","with",None):
-		Core.game.Print("Command not understood.")
-		return False
+		return promptHelp("Command not understood.")
+
 	if dobj is None:
 		dobj = getNoun("What do you want to drink?.")
 		if dobj in Data.cancels: return False
@@ -973,17 +975,19 @@ def Drink(dobj,iobj,prep):
 	Core.game.setPronouns(I)
 
 	if not Core.hasMethod(I,"Drink"):
-		Core.game.Print(f"You can't drink the {I.name}.")
+		Core.game.Print(f"You can't drink {-I}.")
 		return False
 	I.Drink()
 	return True
 
 
 def Drop(dobj,iobj,prep,I=None):
-	if prep not in ("down",None):
+	if prep not in ("down","into","off",None):
 		return Put(dobj,iobj,prep)
+	if prep is None:
+		prep = "down"
 	if dobj is None and I is None:
-		dobj = getNoun("What will you drop?.")
+		dobj = getNoun("What will you drop?")
 		if dobj in Data.cancels: return False
 
 	if I is None and Core.nameMatch(dobj, Core.player.carrying):
@@ -997,20 +1001,35 @@ def Drop(dobj,iobj,prep,I=None):
 		if not Core.yesno(q):
 			return False
 
+	if iobj is not None:
+		R = findObjFromTerm(iobj,"room")
+		if R is None: return False
+		if isinstance(R,Core.Passage) and "down" in R.connections:
+			if getattr(R,"open",True):
+				Core.player.removeItem(I)
+				Core.game.currentroom.addItem(I)
+				return R.Transfer(I)
+			else:
+				Core.game.print(f"{+R} is closed.")
+				return False
+		elif not Core.hasMethod(R,"addItem"):
+			Core.game.Print(f"You can't drop {-I} {prep} {-R}.")
+			return False
+
 	if isinstance(I, Core.Creature):
 		Core.player.removeCarry()
-		Core.game.Print(f"You drop {-I}")
+		Core.game.Print(f"You drop {-I}.")
 	else:
 		I.parent.removeItem(I)
-		Core.game.Print(f"You drop your {I.name}")
+		Core.game.Print(f"You drop {-I}.")
 		Core.game.currentroom.addItem(I)
 	return True
 
 
 def Dump(dobj,iobj,prep):
 	if prep not in ("in","into","inside","on","onto","out","upon",None):
-		Core.game.Print("Command not understood.")
-		return False
+		return promptHelp("Command not understood.")
+
 	if dobj is None:
 		dobj = getNoun("What will you dump?")
 		if dobj in Data.cancels: return False
@@ -1027,8 +1046,8 @@ def Dump(dobj,iobj,prep):
 
 def Eat(dobj,iobj,prep):
 	if prep not in ("using","with",None):
-		Core.game.Print("Command not understood.")
-		return False
+		return promptHelp("Command not understood.")
+
 	if dobj is None:
 		dobj = getNoun("What do you want to eat?")
 		if dobj in Data.cancels: return False
@@ -1038,7 +1057,7 @@ def Eat(dobj,iobj,prep):
 	Core.game.setPronouns(I)
 
 	if not Core.hasMethod(I,"Eat"):
-		Core.game.Print(f"You can't eat the {I.name}.")
+		Core.game.Print(f"You can't eat {-I}.")
 		return False
 
 	I.Eat(Core.player)
@@ -1053,8 +1072,8 @@ def Enter(dobj,iobj,prep):
 
 def Equip(dobj,iobj,prep):
 	if prep is not None:
-		Core.game.Print("Command not understood.")
-		return False
+		return promptHelp("Command not understood.")
+
 	if dobj is None:
 		dobj = getNoun("What would you like to equip?")
 		if dobj in Data.cancels:
@@ -1065,7 +1084,7 @@ def Equip(dobj,iobj,prep):
 
 	matches = Core.player.inInv(dobj)
 	if len(matches) == 0:
-		Core.game.Print(f"There is no '{dobj}' in your Inventory")
+		Core.game.Print(f"There is no '{dobj}' in your Inventory",color="k")
 	I = chooseObject(dobj,matches)
 	if I is None: 
 		return False
@@ -1119,8 +1138,8 @@ def Fuck(dobj,iobj,prep):
 
 def Give(dobj,iobj,prep):
 	if prep not in ("to","over",None):
-		Core.game.Print("Command not understood.")
-		return False
+		return promptHelp("Command not understood.")
+
 
 	if prep is None:
 		dobj,iobj = iobj,dobj
@@ -1156,13 +1175,13 @@ def GoVertical(dir,passage=None,dobj=None):
 		return Core.player.changeRoom(Core.world[newroomname])
 
 	if passage is None and dobj is not None:
-		Core.game.Print(f"There is no '{dobj}' to go {dir} here.")
+		Core.game.Print(f"There is no '{dobj}' to go {dir} here.",color="k")
 		return False
 	if passage is None:
 		passagename = getNoun(f"What will you go {dir}?")
 		passage = findObjFromTerm(passagename,"room")
 	if passage is None:
-		Core.game.Print(f"There is no '{passagename}' to go {dir} here.")
+		Core.game.Print(f"There is no '{passagename}' to go {dir} here.",color="k")
 		return False
 	
 	if Core.hasMethod(passage,"Traverse"):
@@ -1170,7 +1189,7 @@ def GoVertical(dir,passage=None,dobj=None):
 
 
 # infers direction, destination, and passage (if they exist) from input terms
-def assignGoTerms(dobj,iobj,prep):
+def parseGoTerms(dobj,iobj,prep):
 	dir,dest,passage = None,None,None
 
 	# assign dest
@@ -1214,25 +1233,24 @@ def Go(dobj,iobj,prep):
 	# if any terms are abbreviations for a direction, expand them
 	dobj,iobj,prep = map(Core.expandDir,[dobj,iobj,prep])
 	if prep not in preps or (dobj,iobj,prep) == (None,None,None):
-		Core.game.Print("Command not understood.")
-		return False
+		return promptHelp("Command not understood.")
+
 
 	# get dir, dest, and passage and validate them
-	dir,dest,passage = assignGoTerms(dobj,iobj,prep)
-	# print(dir,dest,passage)
+	dir,dest,passage = parseGoTerms(dobj,iobj,prep)
 	if (dir,dest,passage) == (None,None,None):
-		Core.game.Print(f"There is no exit leading to a '{dobj}' here.")
+		Core.game.Print(f"There is no exit leading to a '{dobj}' here.",color="k")
 		return False
 	if dir is None:
 		dir = Core.game.currentroom.getDirFromDest(dest)
 	if (dest,passage) == (None,None):
 		if dir in Core.game.currentroom.allExits():
 			dest = Core.game.currentroom.allExits()[dir]
-	if passage is None:
+	if passage is None and dir not in Core.game.currentroom.exits:
 		passage = Core.game.currentroom.getPassageFromDir(dir)
 	if (dest,passage) == (None,None):
 		if dir is not None and dir not in Core.game.currentroom.allExits():
-			Core.game.Print(f"There is no exit leading '{dir}' here.")
+			Core.game.Print(f"There is no exit leading '{dir}' here.",color="k")
 			return False
 	if passage is None and Core.nameMatch(dest,Core.game.currentroom):
 		Core.game.Print(f"You are already there!")
@@ -1246,20 +1264,20 @@ def Go(dobj,iobj,prep):
 	# if just passage is given
 	if passage is not None:
 		if not Core.hasMethod(passage,"Traverse"):
-			Core.game.Print(f"The {passage.name} cannot be traversed.")
+			Core.game.Print(f"{+passage} cannot be traversed.")
 			return False
 		return passage.Traverse(Core.player,dir)
 	# if just dest given
 	if dest is not None:
 		return Core.player.changeRoom(Core.world[dest])
-	Core.game.Print(f"There is no exit leading to a '{dobj}' here.")
+	Core.game.Print(f"There is no exit leading to a '{dobj}' here.",color="k")
 	return False
 
 
 def Hide(dobj,iobj,prep):
 	if prep not in ("behind","below","beneath","inside","under",None):
-		Core.game.Print("Command not understood.")
-		return False
+		return promptHelp("Command not understood.")
+
 
 	riding = Core.player.riding
 	if riding is not None:
@@ -1306,10 +1324,10 @@ def Kick(dobj,iobj,prep):
 
 def Kill(dobj,iobj,prep):
 	if prep not in ("using","with",None):
-		Core.game.Print("Command not understood.")
-		return False
+		return promptHelp("Command not understood.")
+
 	if dobj in ("myself","me"):
-		if Core.yesno("Are you sure you want to kill yourself?"):
+		if Core.yesno("Are you sure you want to kill yourself?",color="r"):
 			Core.player.death()
 			return True
 		Core.game.Print("Fwew, that was close!")
@@ -1319,8 +1337,8 @@ def Kill(dobj,iobj,prep):
 
 def Lay(dobj,iobj,prep):
 	if prep not in ("behind","below","beneath","in","inside","on","onto","under","upon",None):
-		Core.game.Print("Command not understood.")
-		return False
+		return promptHelp("Command not understood.")
+
 
 	if dobj is None:
 		dobj = iobj
@@ -1353,8 +1371,8 @@ def Lay(dobj,iobj,prep):
 
 def Lick(dobj,iobj,prep):
 	if prep not in ("using","with",None):
-		Core.game.Print("Command not understood.")
-		return False
+		return promptHelp("Command not understood.")
+
 	if dobj is None:
 		dobj = getNoun("What do you want to lick?")
 		if dobj in Data.cancels: return False
@@ -1364,7 +1382,7 @@ def Lick(dobj,iobj,prep):
 	Core.game.setPronouns(I)
 
 	if Core.hasMethod(I,"Lick"):
-		return I.Lick(Core.player)
+		return I.lick(Core.player)
 
 	if I.composition in Data.tastes:
 		Core.game.Print(Data.tastes[I.composition])
@@ -1383,8 +1401,8 @@ def Listen(dobj,iobj,prep):
 
 def Lock(dobj,iobj,prep):
 	if prep not in ("using","with",None):
-		Core.game.Print("Command not understood.")
-		return False
+		return promptHelp("Command not understood.")
+
 
 	if dobj is None:
 		dobj = getNoun("What will you lock?")
@@ -1395,7 +1413,7 @@ def Lock(dobj,iobj,prep):
 	Core.game.setPronouns(I)
 
 	if not Core.hasMethod(I,"Lock"):
-		Core.game.Print(f"The {I.name} doesn't lock.")
+		Core.game.Print(f"{+I} doesn't lock.")
 		return False
 
 	if iobj is None:
@@ -1405,15 +1423,15 @@ def Lock(dobj,iobj,prep):
 	if K is None: return False
 
 	if not isinstance(K,Items.Key):
-		Core.game.Print(f"You can't lock with the {K.name}.")
+		Core.game.Print(f"You can't lock with {-K}.")
 		return False
 	return I.Lock(K)
 
 
 def Look(dobj,iobj,prep):
 	if prep not in ("at","in","inside","into","on","through",None):
-		Core.game.Print("Command not understood.")
-		return False
+		return promptHelp("Command not understood.")
+
 	if dobj is None: dobj = iobj
 	if dobj is None:
 		dobj = getNoun("What will you look at?")
@@ -1444,11 +1462,11 @@ def Look(dobj,iobj,prep):
 
 def Mount(dobj,iobj,prep):
 	if prep not in ("in","into","inside","on","onto","upon",None):
-		Core.game.Print("Command not understood.")
-		return False
+		return promptHelp("Command not understood.")
+
 	
 	if Core.player.riding is not None:
-		print(f"You're already riding {Core.player.riding}")
+		Core.game.Print(f"You're already riding {Core.player.riding}")
 		return False
 
 	if dobj is None: dobj = iobj
@@ -1472,8 +1490,8 @@ def Mount(dobj,iobj,prep):
 
 def Open(dobj,iobj,prep):
 	if prep not in ("using","with",None):
-		Core.game.Print("Command not understood.")
-		return False
+		return promptHelp("Command not understood.")
+
 	if dobj is None:
 		dobj = getNoun("What will you open?")
 		if dobj in Data.cancels: return False
@@ -1483,10 +1501,10 @@ def Open(dobj,iobj,prep):
 	Core.game.setPronouns(I)
 
 	if not Core.hasMethod(I,"Open"):
-		Core.game.Print(f"The {I.name} doesn't open.")
+		Core.game.Print(f"{+I} doesn't open.")
 		return False
 	if hasattr(I,"locked") and I.locked:
-		Core.game.Print(f"The {I.name} is locked")
+		Core.game.Print(f"{+I} is locked")
 		return False
 	I.Open()
 	return True
@@ -1502,8 +1520,8 @@ def Point(dobj,iobj,prep):
 
 def Pour(dobj,iobj,prep,I=None):
 	if prep not in ("in","into","inside","on","onto","out","upon",None):
-		Core.game.Print("Command not understood.")
-		return False
+		return promptHelp("Command not understood.")
+
 	if dobj is None:
 		dobj = getNoun("What will you pour?")
 		if dobj in Data.cancels: return False
@@ -1513,7 +1531,7 @@ def Pour(dobj,iobj,prep,I=None):
 	Core.game.setPronouns(I)
 
 	if not Core.hasMethod(I,"Pour"):
-		Core.game.Print(f"You can't pour the {I.name}.")
+		Core.game.Print(f"You can't pour {-I}.")
 		return False
 
 	R = None
@@ -1522,8 +1540,8 @@ def Pour(dobj,iobj,prep,I=None):
 		if R is None: return False
 
 	if prep is None: prep = "on"
-	if R is not None: Core.game.Print(f"You pour your {I.name} {prep} the {R.name}.")
-	else: Core.game.Print(f"You pour out your {I.name}.")
+	if R is not None: Core.game.Print(f"You pour {-I} {prep} {-R}.")
+	else: Core.game.Print(f"You pour out {-I}.")
 	I.Pour(R)
 	return True
 
@@ -1554,8 +1572,10 @@ def Push(dobj,iobj,prep):
 
 def Put(dobj,iobj,prep):
 	if prep not in ("in","into","inside","on","onto","upon","down",None):
-		Core.game.Print("Command not understood.")
-		return False
+		return promptHelp("Command not understood.")
+
+	if prep is None:
+		prep = "into"
 	if dobj is None:
 		dobj = getNoun("What will you put?")
 		if dobj in Data.cancels: return False
@@ -1578,15 +1598,22 @@ def Put(dobj,iobj,prep):
 		if not Core.yesno(q):
 			return False
 
-	if not Core.hasMethod(R,"addItem"):
-		Core.game.Print(f"You can't put the {I.name} {prep} the {R.name}.")
+	if isinstance(R,Core.Passage) and "down" in R.connections:
+		if getattr(R,"open",True):
+			Core.player.removeItem(I)
+			Core.game.currentroom.addItem(I)
+			return R.Transfer(I)
+		else:
+			Core.game.print(f"{+R} is closed.")
+	elif not Core.hasMethod(R,"addItem"):
+		Core.game.Print(f"You can't put {-I} {prep} {-R}.")
 		return False
 	
 	idet = "your" if Core.player in I.ancestors() else 'the'
 	rdet = "your" if Core.player in R.ancestors() else 'the'
 	outprep = "on" if isinstance(R,Items.Table) else "in"
 	if iobj == "here": Core.game.Print(f"You put your {I.name} here.")
-	else: Core.game.Print(f"You put {idet} {I.name} {outprep} {rdet} {R.name}.")
+	else: Core.game.Print(f"You put {idet} {I} {outprep} {rdet} {R}.")
 	I.parent.removeItem(I)
 	R.addItem(I)
 	return True
@@ -1603,7 +1630,7 @@ def Release(dobj,iobj,prep):
 
 def Rest(dobj,iobj,prep):
 	if prep not in ("behind","below","beneath","in","inside","into","on","onto","over","under","upon","using","with",None):
-		Core.game.print("Commmand not understood")
+		Core.game.Print("Commmand not understood")
 		return False
 	for condname in Data.conditionDmg.keys():
 		if Core.player.hasCondition(condname):
@@ -1637,8 +1664,8 @@ def Rest(dobj,iobj,prep):
 
 def Restrain(dobj,iobj,prep):
 	if prep not in ("using","with",None):
-		Core.game.Print("Command not understood.")
-		return False
+		return promptHelp("Command not understood.")
+
 
 	if dobj is None:
 		dobj = getNoun("What will you restrain?")
@@ -1649,7 +1676,7 @@ def Restrain(dobj,iobj,prep):
 	Core.game.setPronouns(C)
 
 	if not isinstance(C,Core.Creature):
-		Core.game.Print(f"You can't restrain the {C.name}.")
+		Core.game.Print(f"You can't restrain {-C}.")
 		return False
 
 	I = None
@@ -1657,15 +1684,15 @@ def Restrain(dobj,iobj,prep):
 		I = findObjFromTerm(iobj,"player")
 		if I is None: return False
 		if not Core.hasMethod(I,"RestrainWith"):
-			Core.game.Print(f"You can't restrain with the {I.name}.")
+			Core.game.Print(f"You can't restrain with {-I}.")
 			return False
 
 	if "restrained" in C.status:
 		Core.game.Print(f"{-C} is already restrained.")
 	if not C.Restrain(Core.player,I):
-		Core.game.Print(f"You fail to restrain the {C.name}.")
+		Core.game.Print(f"You fail to restrain {-C}.")
 		return False
-	Core.game.Print(f"You restrain the {C.name}.")
+	Core.game.Print(f"You restrain {-C}.")
 	return True
 
 
@@ -1679,8 +1706,8 @@ def Ring(dobj,iobj,prep):
 
 def Rub(dobj,iobj,prep):
 	if prep not in ("using","with",None):
-		Core.game.Print("Command not understood.")
-		return False
+		return promptHelp("Command not understood.")
+
 	if dobj is None:
 		dobj = getNoun("What do you want to rub?")
 		if dobj in Data.cancels: return False
@@ -1713,8 +1740,8 @@ def Shove(dobj,iobj,prep):
 
 def Sit(dobj,iobj,prep):
 	if prep not in ("below","beneath","in","inside","on","onto","under","upon",None):
-		Core.game.Print("Command not understood.")
-		return False
+		return promptHelp("Command not understood.")
+
 
 	if dobj is None:
 		dobj = iobj
@@ -1744,8 +1771,8 @@ def Sit(dobj,iobj,prep):
 
 def Smell(dobj,iobj,prep):	
 	if prep not in ("using","with",None):
-		Core.game.Print("Command not understood.")
-		return False
+		return promptHelp("Command not understood.")
+
 	if dobj is None:
 		dobj = getNoun("What do you want to smell?")
 		if dobj in Data.cancels: return False
@@ -1766,8 +1793,8 @@ def Smell(dobj,iobj,prep):
 
 def Stand(dobj,iobj,prep):
 	if prep not in ("at","behind","below","beneath","by","in","inside","near","on","onto","upon",None):
-		Core.game.print("Command not understood.")
-		return False
+		return promptHelp("Command not understood.")
+
 
 	Core.player.removeCondition("cozy",-3)
 	Core.player.removeCondition("laying")
@@ -1781,7 +1808,7 @@ def Stand(dobj,iobj,prep):
 			M = findObjFromTerm(dobj)
 			Mount(dobj,iobj,prep)
 	elif prep in ("at","by","near"):
-		Core.game.print("You are there.")
+		Core.game.Print("You are there.")
 	elif prep == "behind":
 		Hide(dobj,iobj,prep)
 	elif prep in ("below","beneath","under"):
@@ -1805,10 +1832,85 @@ def Swim(dobj,iobj,prep):
 	Core.game.Print("swiming")
 
 
+# if an item is a container, take each of its contents before taking it
+def TakeAllRecur(objToTake):
+	takenAll = True
+	takenAny = False
+	if hasattr(objToTake, "contents"):
+		# deep copy to prevent removing-while-iterating error
+		contents = [obj for obj in objToTake.contents()]
+		for content in contents:
+			takenAny = TakeAllRecur(content) or takenAny
+
+	parent = objToTake.parent
+	count = parent.itemNames().count(objToTake.name)
+	
+	if parent is Core.game.currentroom: suffix = ""
+	elif Core.player in objToTake.ancestors(): suffix = " from your " + parent.name
+	else: suffix = f" from {-parent}"
+	strname = objToTake.nounPhrase('the' if count==1 else 'a')
+	tookMsg = f"You take {strname}{suffix}."
+	failMsg = f"You can't take {-objToTake}, your Inventory is too full."
+
+	return Core.player.obtainItem(objToTake,tookMsg,failMsg) or takenAny
+
+
+def TakeAll():
+	if len(Core.game.currentroom.items) == 0:
+		Core.game.Print("There are no items to take.")
+		return False
+	takenAny = False
+	for obj in [obj for obj in Core.game.currentroom.items]:
+		takenAny = TakeAllRecur(obj) or takenAny
+	return takenAny
+
+
+def Take(dobj,iobj,prep):
+	if prep not in ("from","in","inside","out","out of","up",None):
+		return promptHelp("Command not understood.")
+
+	if dobj is None:
+		dobj = getNoun("What will you take?")
+		if dobj in Data.cancels: return False
+
+	if dobj in ("all","everything","it all"): return TakeAll()
+
+	if iobj in ("here", "room", None):
+		objToTake = findObjFromTerm(dobj,"room",roomD=2)
+	else:
+		objToTake = findObjFromTerm(dobj,roomD=2,reqParent=iobj)
+	if objToTake is None:
+		return False
+	if objToTake.parent is Core.player:
+		Core.game.Print(f"You can't take from your own Inventory.")
+		return False
+	Core.game.setPronouns(objToTake)
+
+	if isinstance(objToTake,Core.Creature): return CarryCreature(objToTake)
+	# if not isinstance(objToTake,Core.Item) or isinstance(objToTake,Core.Fixture):
+	# 	Core.game.Print(f"You can't take {objToTake}.")
+	# 	return False
+
+	parent = objToTake.parent
+	# if it is in a non-player inventory, it will have to be stolen
+	if any(isinstance(anc,Core.Creature) for anc in objToTake.ancestors()) and objToTake not in Core.player.invSet():
+		return Steal(dobj,iobj,prep,I=objToTake)
+	count = parent.itemNames().count(objToTake.name)
+
+	if parent is Core.game.currentroom: suffix = ""
+	elif Core.player in objToTake.ancestors(): suffix = " from your " + parent.name
+	else: suffix = f" from {-parent}"
+	strname = objToTake.nounPhrase('the' if count==1 else 'a')
+	tookMsg = f"You take {strname}{suffix}."
+	failMsg = f"You can't take {-objToTake}, your Inventory is too full."
+
+	return Core.player.obtainItem(objToTake,tookMsg,failMsg)
+
+
 def Talk(dobj,iobj,prep):
 	if prep not in ("at","into","to","toward","with",None):
-		Core.game.Print("Command not understood.")
-		return False
+		return promptHelp("Command not understood.")
+
 
 	if dobj is None: dobj = iobj
 	if dobj is None:
@@ -1829,9 +1931,13 @@ def Talk(dobj,iobj,prep):
 
 
 def Throw(dobj,iobj,prep):
-	if prep not in ("at","into","onto","through","to","toward"):
-		Core.game.Print("Command not understood.")
-		return False
+	if prep not in ("at","down","into","on","onto","through","to","toward","up",None):
+		return promptHelp("Command not understood.")
+
+	if prep in ("to","toward"):
+		return Toss(dobj,iobj,prep)
+	if prep in ("down","up") and iobj is None:
+		iobj = prep
 
 	if dobj is None:
 		dobj = getNoun("What do you want to throw?")
@@ -1842,106 +1948,70 @@ def Throw(dobj,iobj,prep):
 	if iobj is None:
 		iobj = getNoun("What will you throw at?")
 		if iobj in Data.cancels: return False
-	T = findObjFromTerm(iobj)
+	if iobj in ("down","floor","ground","here","room","up"):
+		if iobj == "up":
+			# TODO: figure out the best way to throw across rooms. Do you pass in the direction or the room? or what? account for throwing up and down... consider falling damage first
+			Core.game.Print(f"{+I} falls back down.")
+		else:
+			Core.game.Print(f"{+I} lands on the ground.")
+		Core.player.removeItem(I)
+		Core.game.currentroom.addItem(I)
+		return True
+	elif iobj.lower() in Core.game.currentroom.exits.keys():
+		T = Core.game.currentroom.exits[iobj]
+	elif iobj in Core.game.currentroom.exits.values():
+		T = iobj
+	else:
+		T = findObjFromTerm(iobj)
 	if T is None: return False
-	Core.game.setPronouns(T)
 
-	# call I method, passing in T, 
-	# if I method hits using thrower aim and target evasion, 
-		# then call T method to potentially catch, 
-		# or call T take damage.
-	# otherwise, I may randomly hit some other target (other creatures may also evade?)
-	if Core.hasMethod(I,"Throw"):
-		return T.ThrowAt(Core.player,I)
-
-
+	Core.game.setPronouns(I)
+	return Core.player.Throw(I,T)
 # throw at a tree, window, goblin, pit
 # throw a rock, sword, black potion, bird, goblin
+# toss into a basket? like basketball?
 
 
 def Tie(dobj,iobj,prep):
 	Core.game.Print("tieing")
 
 
-# if an item is a container, take each of its contents before taking it
-def TakeAllRecur(objToTake):
-	takenAll = True
-	takenAny = False
-	if hasattr(objToTake, "contents"):
-		# deep copy to prevent removing-while-iterating error
-		contents = [obj for obj in objToTake.contents()]
-		for content in contents:
-			takenAny = TakeAllRecur(content) or takenAny
+def Toss(dobj,iobj,prep):
+	if prep not in ("at","into","onto","through","to","toward","up",None):
+		return promptHelp("Command not understood.")
 
-	parent = objToTake.parent
-	count = parent.itemNames().count(objToTake.name)
-	
-	if parent is Core.game.currentroom: suffix = ""
-	elif Core.player in objToTake.ancestors(): suffix = " from your " + parent.name
-	else: suffix = " from the " + parent.name
-	strname = objToTake.nounPhrase('the' if count==1 else 'a')
-	tookMsg = f"You take {strname}{suffix}."
-	failMsg = f"You can't take the {objToTake.name}, your Inventory is too full."
+	if prep in ("at"):
+		return Throw(dobj,iobj,prep)
+	if prep == "up" and iobj is None:
+		iobj = "up"
 
-	return Core.player.obtainItem(objToTake,tookMsg,failMsg) or takenAny
-
-
-def TakeAll():
-	if len(Core.game.currentroom.items) == 0:
-		Core.game.Print("There are no items to take.")
-		return False
-	takenAny = False
-	for obj in [obj for obj in Core.game.currentroom.items]:
-		takenAny = TakeAllRecur(obj) or takenAny
-	return takenAny
-
-
-def Take(dobj,iobj,prep):
-	if prep not in ("from","in","inside","out","out of","up",None):
-		Core.game.Print("Command not understood.")
-		return False
 	if dobj is None:
-		dobj = getNoun("What will you take?")
+		dobj = getNoun("What do you want to toss?")
 		if dobj in Data.cancels: return False
+	I = findObjFromTerm(dobj,"player")
+	if I is None: return False
 
-	if dobj in ("all","everything","it all"): return TakeAll()
-
-	if iobj in ("here", "room"):
-		objToTake = findObjFromTerm(dobj,"room",roomD=2)
+	if iobj is None:
+		iobj = getNoun("What will you toss to?")
+		if iobj in Data.cancels: return False
+	if iobj in ("ground","floor","here","room"):
+		T = Core.game.currentroom
+	elif iobj.lower() in Core.game.currentroom.exits.keys():
+		T = Core.game.currentroom.exits[iobj]
+	elif iobj in Core.game.currentroom.exits.values():
+		T = iobj
 	else:
-		objToTake = findObjFromTerm(dobj,roomD=2,reqParent=iobj)
-	if objToTake is None:
-		return False
-	if objToTake.parent is Core.player:
-		Core.game.Print(f"You can't take from your own Inventory.")
-		return False
-	Core.game.setPronouns(objToTake)
+		T = findObjFromTerm(iobj)
+	if T is None: return False
 
-	if isinstance(objToTake,Core.Creature): return CarryCreature(objToTake)
-	if not isinstance(objToTake,Core.Item) or isinstance(objToTake,Core.Fixture):
-		Core.game.Print(f"You can't take the {dobj}.")
-		return False
-
-	parent = objToTake.parent
-	# if it is in a non-player inventory, it will have to be stolen
-	if any(isinstance(anc,Core.Creature) for anc in objToTake.ancestors()) and objToTake not in Core.player.invSet():
-		return Steal(dobj,iobj,prep,I=objToTake)
-	count = parent.itemNames().count(objToTake.name)
-
-	if parent is Core.game.currentroom: suffix = ""
-	elif Core.player in objToTake.ancestors(): suffix = " from your " + parent.name
-	else: suffix = " from the " + parent.name
-	strname = objToTake.nounPhrase('the' if count==1 else 'a')
-	tookMsg = f"You take {strname}{suffix}."
-	failMsg = f"You can't take the {objToTake.name}, your Inventory is too full."
-
-	return Core.player.obtainItem(objToTake,tookMsg,failMsg)
+	Core.game.setPronouns(I)
+	return Core.player.Toss(I,T)
 
 
 def Touch(dobj,iobj,prep):
 	if prep not in ("using","with",None):
-		Core.game.Print("Command not understood.")
-		return False
+		return promptHelp("Command not understood.")
+
 	if dobj is None:
 		dobj = getNoun("What do you want to touch?")
 		if dobj in Data.cancels: return False
@@ -1964,8 +2034,8 @@ def Trip(dobj,iobj,prep):
 
 def Unequip(dobj,iobj,prep):
 	if prep is not None:
-		Core.game.Print("Command not understood.")
-		return False
+		return promptHelp("Command not understood.")
+
 	if dobj is None:
 		dobj = getNoun("What would you like to unequip?")
 		if dobj in Data.cancels: return False
@@ -1983,8 +2053,8 @@ def Unequip(dobj,iobj,prep):
 
 def Unlock(dobj,iobj,prep):
 	if prep not in ("using","with",None):
-		Core.game.Print("Command not understood.")
-		return False
+		return promptHelp("Command not understood.")
+
 	if dobj is None:
 		dobj = getNoun("What will you unlock?")
 		if dobj in Data.cancels: return False
@@ -1993,7 +2063,7 @@ def Unlock(dobj,iobj,prep):
 	if I is None: return False
 	Core.game.setPronouns(I)
 	if not Core.hasMethod(I,"Unlock"):
-		Core.game.Print(f"The {I.name} doesn't unlock.")
+		Core.game.Print(f"{+I} doesn't unlock.")
 		return False
 
 	if iobj is None:
@@ -2004,7 +2074,7 @@ def Unlock(dobj,iobj,prep):
 	if K is None: return False
 
 	if not isinstance(K,Items.Key):
-		Core.game.Print(f"You can't unlock with the {K.name}.")
+		Core.game.Print(f"You can't unlock with {-K}.")
 		return False
 	return I.Unlock(K)
 
@@ -2023,7 +2093,7 @@ def Use(dobj,iobj,prep):
 	Core.game.setPronouns(I)
 
 	if not Core.hasMethod(I,"Use"):
-		Core.game.Print(f"You can't use the {I.name}.")
+		Core.game.Print(f"You can't use {-I}.")
 		return False
 	I.Use(Core.player)
 	return True
@@ -2251,7 +2321,7 @@ actions = {
 "throw":Throw,
 "tie":Tie,
 "tinker":Craft,
-"toss":Throw,
+"toss":Toss,
 "touch":Touch,
 "travel":Go,
 "trip":Trip,
