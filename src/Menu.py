@@ -35,10 +35,11 @@ def writeGame(filename,Game,World):
 
 
 visitedobjects = set()
-
 class worldEncoder(json.JSONEncoder):
 	def default(self,objToWrite):
-		if objToWrite in visitedobjects:
+		if type(objToWrite) is set and tuple(objToWrite) in visitedobjects:
+			raise Exception(f"{objToWrite} already visited")
+		elif objToWrite in visitedobjects:
 			raise Exception(f"{objToWrite} already visited")
 		if type(objToWrite) is not set:
 			visitedobjects.add(objToWrite)
@@ -69,6 +70,8 @@ class worldEncoder(json.JSONEncoder):
 
 
 def writeJSON(filename,World):
+	global visitedobjects
+	visitedobjects = set()
 	with open(filename,"w") as fd:
 		json.dump(World,fd,cls=worldEncoder,indent="\t")
 
@@ -175,18 +178,18 @@ def saveGame(savename=None):
 	if savename is None:
 		# player names their save
 		Core.columnPrint(saves,10,10,delay=None,color="k")
-		savename = Core.game.Input("\nWhat name will you give this save file?",delay=None).lower()
+		savename = Core.Input("\nWhat name will you give this save file?",delay=None,color="k").lower()
 	if savename in ("", "all", "autosave", "quicksave"):
 		if savename == "":
-			Core.game.Print(f"Save name cannot be empty.",delay=None,color="k")
+			Core.Print(f"Save name cannot be empty.",delay=None,color="k")
 		else:
-			Core.game.Print(f"Save name cannot be '{savename}'.",delay=None,color="k")
+			Core.Print(f"Save name cannot be '{savename}'.",delay=None,color="k")
 		os.chdir("..")
 		return
 
 	# if the save name is used, ask to overwrite it
 	if os.path.exists(savename):
-		Core.game.Print("A save file with this name already exists.",delay=None,color="k")
+		Core.Print("A save file with this name already exists.",delay=None,color="k")
 		#if dont overwrite, then just return
 		if not Core.yesno("Would you like to overwrite it?",delay=None,color="k"):
 			os.chdir("..")
@@ -196,7 +199,7 @@ def saveGame(savename=None):
 		try:
 			os.mkdir(savename)
 		except:
-			Core.game.Print("Invalid save name.",delay=None,color="k")
+			Core.Print("Invalid save name.",delay=None,color="k")
 			os.chdir("..")
 			return
 
@@ -207,7 +210,7 @@ def saveGame(savename=None):
 	writeGame("game.txt", Core.game, Core.world)
 	os.chdir("../..")
 	sleep(1)
-	Core.game.Print(f"Game saved as {savename}",delay=None,color="k")
+	Core.Print(f"Game saved as {savename}",delay=None,color="k")
 	Core.game.lastsave = Core.game.time
 	sleep(1)
 
@@ -216,17 +219,17 @@ def saveGame(savename=None):
 def loadGame(filename=None):
 	Core.clearScreen()
 	if not (os.path.exists("saves")) or len(os.listdir("./saves")) == 0:
-		Core.game.Print("\nThere are no save files.\n",delay=None,color="k")
+		Core.Print("\nThere are no save files.\n",delay=None,color="k")
 		Core.waitKbInput()
 		return False
 	os.chdir("saves")
 
 	if filename == None:
 		# split save names into a list and display them
-		Core.game.Print("Save files: ",delay=None,color="k")
+		Core.Print("Save files: ",delay=None,color="k")
 		saves = os.listdir()
 		Core.columnPrint(saves,10,10,delay=None,color="k")
-		savename = Core.game.Input("\nWhich save file will you load?",delay=None)
+		savename = Core.Input("\nWhich save file will you load?",delay=None,color="k")
 	else:
 		savename = filename
 
@@ -236,7 +239,7 @@ def loadGame(filename=None):
 
 	# if user inputs a save name that doesn't exist
 	if not os.path.exists(savename):
-		Core.game.Print(f"\nThere is no save file named '{savename}'.",delay=None,color="k")
+		Core.Print(f"\nThere is no save file named '{savename}'.",delay=None,color="k")
 		os.chdir("..")
 		Core.waitKbInput()
 		return False
@@ -249,7 +252,7 @@ def loadGame(filename=None):
 	Core.game = readGame("game.txt",Core.world,dlogDict)
 	# hopefully load doesn't fail, that would suck
 	# except:
-	# 	Core.game.Print("Could not load game, save data corrupted\n",delay=None,color="k")
+	# 	Core.Print("Could not load game, save data corrupted\n",delay=None,color="k")
 	# 	os.chdir("..")
 	# 	os.chdir("..")
 	# 	return False
@@ -289,17 +292,17 @@ def deleteAll():
 def delete(filename):
 	Core.clearScreen()
 	if not os.path.exists("saves") or len(os.listdir("./saves")) == 0:
-		Core.game.Print("\nThere are no save files.\n",delay=None,color="k")
+		Core.Print("\nThere are no save files.\n",delay=None,color="k")
 		Core.waitKbInput()
 		return
 	os.chdir("saves")
 
 	if filename == None:
 		# split save names into a list and display them
-		Core.game.Print("Save files: ",delay=None,color="k")
+		Core.Print("Save files: ",delay=None,color="k")
 		saves = os.listdir()
 		Core.columnPrint(saves,10,10,delay=None,color="k")
-		savename = Core.game.Input("\nWhich save file will you delete?",delay=None)
+		savename = Core.Input("\nWhich save file will you delete?",delay=None)
 	else:
 		savename = filename
 
@@ -311,7 +314,7 @@ def delete(filename):
 
 	# if the user inputs a save name that doesn't exist
 	if not os.path.exists(savename):
-		Core.game.Print(f"\nThere is no save file named '{savename}'.\n",delay=None,color="k")
+		Core.Print(f"\nThere is no save file named '{savename}'.\n",delay=None,color="k")
 		os.chdir("..")
 		Core.waitKbInput()
 		return mainMenu()
@@ -333,12 +336,12 @@ def delete(filename):
 
 # asks for player name and description, starts everything else at initial values
 def createCharacter():
-	name = Core.game.Input("What is your name?",delay=None)
+	name = Core.Input("What is your name?",delay=None,color="k").title()
 	while len(name) == 0:
-		name = Core.game.Input(delay=None)
-	desc = Core.game.Input("Describe yourself.",delay=None)
+		name = Core.Input(delay=None,color="k").title()
+	desc = Core.Input("Describe yourself.",cue="\nYou are ",delay=None,color="k")
 	while len(desc) == 0:
-		desc = Core.game.Input(delay=None)
+		desc = Core.Input(cue="\nYou are ",delay=None,color="k")
 	return Core.Player(name,desc,29,[1]*10,2,2,0,0)
 
 
@@ -390,7 +393,7 @@ def testGame():
 
 def gameInfo():
 	Core.clearScreen()
-	Core.game.Print(Data.gameinfo,delay=None,color="k")
+	Core.Print(Data.gameinfo,delay=None,color="k")
 	Core.waitKbInput()
 
 
@@ -405,8 +408,8 @@ def mainMenu():
 		Core.clearScreen()
 		Core.flushInput()
 		print(Data.logo)
-		Core.game.Print(Data.menuinstructions,end="",delay=None,color="k")
-		g = Core.game.Input(delay=None).split()
+		Core.Print(Data.menuinstructions,end="",delay=None,color="k")
+		g = Core.Input(delay=None).split()
 
 		if len(g) == 0:
 			continue
@@ -442,7 +445,7 @@ def restart():
 		elif Core.yesno("Would you like to quit?",delay=None,color="k"):
 			next = "quit"
 		else:
-			Core.game.Print("You must choose! Don't be a sore loser.",delay=None,color="k")
+			Core.Print("You must choose! Don't be a sore loser.",delay=None,color="k")
 	if next == "restart":
 		return mainMenu()
 	return quit()

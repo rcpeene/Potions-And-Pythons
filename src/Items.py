@@ -19,8 +19,9 @@ import Data
 
 
 class Axe(Core.Weapon):
+	# TODO: do something with this
 	def Cut(self):
-		Core.game.Print("[you cut something?]")
+		Core.Print("[you cut something?]")
 
 
 
@@ -36,10 +37,10 @@ class Bed(Core.Item):
 class Bottle(Core.Item):
 	# breaks the bottle, removes it from player inventory, and generates some shards
 	def Break(self):
-		Core.game.Print(f"The {self.name} breaks.")
+		Core.Print(f"{+self} breaks.")
 		self.parent.removeItem(self)
 		if self.weight > 2 and self.composition == "glass":
-			Core.game.Print("Shards of glass scatter everywhere.")
+			Core.Print("Shards of glass scatter everywhere.",color="o")
 		while self.weight > 2 and self.composition == "glass":
 			shardWeight = randint(2,4)
 			self.weight -= shardWeight
@@ -61,9 +62,9 @@ class Box(Core.Item):
 	# sets open bool to true, prints its items
 	def Open(self):
 		if self.open:
-			Core.game.Print(f"The {self.name} is already open.")
+			Core.Print(f"{+self} is already open.")
 		else:
-			Core.game.Print(f"You open the {self.name}.")
+			Core.Print(f"You open {-self}.")
 			self.open = True
 		self.Look()
 
@@ -71,25 +72,24 @@ class Box(Core.Item):
 	# sets open bool to false
 	def Close(self):
 		self.open = False
-		Core.game.Print(f"You close the {self.name}.")
+		Core.Print(f"You close {-self}.")
 
 
 	def Look(self):
 		if len(self.items) == 0:
-			Core.game.Print("It is empty.")
+			Core.Print("It is empty.")
 		else:
 			self.open = True
-			Core.game.Print(f"Inside there is {Core.listObjects(self.items)}.")
+			Core.Print(f"Inside there is {Core.listObjects(self.items)}.")
 			Core.game.setPronouns(self.items[-1])
 		return True
 
 
 	def Break(self):
 		if self.durability == -1:
-			if not Core.game.silent:
-				Core.game.Print(f"The {self.name} cannot be broken.")
+			Core.Print(f"{+self.name} cannot be broken.")
 			return False
-		Core.game.Print(f"The {self.name} breaks.")
+		Core.Print(f"{+self.name} breaks.")
 		self.parent.removeItem(self)
 		# drop things it contains into parent
 		for item in self.items:
@@ -169,13 +169,13 @@ class Food(Core.Item):
 	# heals 'heal' hp to the player, removes food from inventory
 	def Eat(self,eater):
 		if isinstance(eater,Core.Player):
-			Core.game.Print(f"You consume {-self}.")
+			Core.Print(f"You consume {-self}.")
 		else:
-			Core.game.Print(f"{+eater} eats {-self}.")
+			Core.Print(f"{+eater} eats {-self}.")
 		h = eater.heal(self.heal)
 		eater.lastAte = Core.game.time
 		if h == 0 and isinstance(eater,Core.Player):
-			Core.game.Print("Yummy...")
+			Core.Print("Yummy...")
 		eater.checkHungry()
 		self.parent.removeItem(self)
 
@@ -193,7 +193,7 @@ class Fountain(Core.Fixture):
 
 
 	def Drink(self):
-		Core.game.Print(f"You drink from the {self.name}.")
+		Core.Print(f"You drink from {-self.name}.")
 
 
 
@@ -210,8 +210,7 @@ class Generator(Controller):
 		if charge > self.cost:
 			charge -= self.cost
 			eval(self.effect)
-		if not Core.game.silent:
-			Core.game.Print("Nothing happened...")
+		Core.Print("Nothing happened...")
 
 
 	def passTime(self,t):
@@ -255,12 +254,12 @@ class Lockbox(Box):
 	# sets open bool to true, prints its items
 	def Open(self):
 		if self.open:
-			Core.game.Print(f"The {self.name} is already open.")
+			Core.Print(f"{+self} is already open.")
 		elif self.locked:
-			Core.game.Print(f"The {self.name} is locked.")
+			Core.Print(f"{+self} is locked.")
 			return False
 		else:
-			Core.game.Print(f"You open the {self.name}.")
+			Core.Print(f"You open {-self}.")
 			self.open = True
 		self.Look()
 		return True
@@ -268,40 +267,40 @@ class Lockbox(Box):
 
 	def Look(self):
 		if self.locked == True:
-			Core.game.Print("It is locked.")
+			Core.Print(f"{+self} is locked.")
 		elif len(self.items) == 0:
-			Core.game.Print("It is empty.")
+			Core.Print(f"{+self} is empty.")
 		else:
 			self.open = True
-			Core.game.Print(f"Inside there is {Core.listObjects(self.items)}.")
-			Core.game.setPronouns(self.items[-1])
+			Core.Print(f"Inside there is {Core.listObjects(self.items)}.")
+			Core.setPronouns(self.items[-1])
 
 
 	def Lock(self,key):
 		if self.locked:
-			Core.game.Print(f"The {self.name} is already locked.")
+			Core.Print(f"{+self} is already locked.")
 			return False
 		if key.id in self.keyids:
 			self.locked = True
-			Core.game.Print(f"You lock the {self.name}.")
+			Core.Print(f"You lock {-self}.")
 			if Core.hasMethod(key,"UnlockWith"):
 				key.UnlockWith(self)
 			return True
-		Core.game.Print(f"You can't lock the {self.name} with the {key.name}.")
+		Core.Print(f"You can't lock {-self} with {-key}.")
 		return True
 
 
 	def Unlock(self,key):
 		if not self.locked:
-			Core.game.Print(f"The {self.name} is not locked.")
+			Core.Print(f"{+self} is not locked.")
 			return False
 		if key.id in self.keyids:
 			self.locked = False
-			Core.game.Print(f"You unlock the {self.name}.")
+			Core.Print(f"You unlock {-self}.")
 			if Core.hasMethod(key,"LockWith"):
 				key.LockWith(self)
 			return True
-		Core.game.Print(f"The {key.name} won't work!")
+		Core.Print(f"{+key} won't work!")
 		return True
 
 
@@ -316,7 +315,7 @@ class Potion(Bottle):
 
 	# heals the player hp 1000, replaces potion with an empty bottle
 	def Drink(self):
-		Core.game.Print(f"You drink the {self.name}.")
+		Core.Print(f"You drink {-self.name}.")
 		Core.player.heal(1000)
 		self.parent.removeItem(self)
 		Core.player.addItem()
@@ -334,19 +333,20 @@ class Potion(Bottle):
 class Shard(Core.Item):
 	#???
 	def Cut(self,P):
-		Core.game.Print("[you cut something?]")
+		# TODO: do something here?
+		Core.Print("[you cut something?]")
 
 	
 	def Lick(self,licker):
 		if self.composition in ("glass","bronze","iron","steel"):
-			Core.game.Print("It tastes like... blood.")
+			Core.Print("It tastes like... blood.")
 			licker.takeDamage(3,"s")
 			return True
 
 		if self.composition in Data.tastes:
-			Core.game.Print(Data.tastes[self.composition])
+			Core.Print(Data.tastes[self.composition])
 		if self.composition in Data.scents:
-			Core.game.Print(Data.scents[self.composition].replace("scent","taste"))
+			Core.Print(Data.scents[self.composition].replace("scent","taste"))
 
 
 
@@ -358,7 +358,7 @@ class Sign(Core.Item):
 
 	# prints the text on the sign in quotes
 	def Look(self):
-		Core.game.Print(f'\n"{self.text}"')
+		Core.Print(f'\n"{self.text}"',color='y')
 
 
 
@@ -381,7 +381,8 @@ class Switch(Core.Fixture):
 
 class Sword(Core.Weapon):
 	def Cut(self):
-		Core.game.Print("[you cut something?]")
+		# TODO: once again, do something with this?
+		Core.Print("[you cut something?]")
 
 
 
@@ -397,13 +398,13 @@ class Table(Core.Item):
 	def Break(self):
 		if self.durability == -1:
 			if not Core.game.silent:
-				Core.game.Print(f"The {self.name} cannot be broken.")
+				Core.Print(f"{+self} cannot be broken.")
 			return False
-		Core.game.Print(f"The {self.name} breaks.")
+		Core.Print(f"{+self} breaks.")
 		self.parent.removeItem(self)
 		# drop things it contains into parent
 		if self.items:
-			Core.game.Print(f"It's contents fall onto the ground.")
+			Core.Print(f"It's contents fall onto the ground.")
 		for item in self.items:
 			self.parent.addItem(item)
 		return True
@@ -456,11 +457,11 @@ class Table(Core.Item):
 	### User Output ###
 
 	def describe(self):
-		Core.game.Print(f"It's {~self}.")
+		Core.Print(f"It's {~self}.")
 		if len(self.items) != 0:
-			Core.game.Print(f"On it is {Core.listObjects(self.items)}.")
+			Core.Print(f"On it is {Core.listObjects(self.items)}.")
 		else:
-			Core.game.Print("There is nothing on it.")
+			Core.Print("There is nothing on it.")
 
 
 
@@ -475,30 +476,30 @@ class Wall(Core.Passage):
 			if len(set(self.connections.values())) == 1:
 				dir = list(self.connections.keys())[0]
 			else:
-				msg = f"Which direction will you go on the {self.name}?\n> "
-				dir = input(msg).lower()
+				msg = f"Which direction will you go on the {self.name}?"
+				dir = Core.Input(msg).lower()
 		if dir in Data.cancels:
 			return False
 		if dir not in self.connections:
-			Core.game.Print(f"The {self.name} does not go '{dir}'.")
+			Core.Print(f"{+self} does not go '{dir}'.")
 			return False
 
 		if traverser.riding:
 			return self.Traverse(traverser.riding,dir=dir)
 		if traverser.carrying:
-			Core.game.Print(f"You can't climb, you are carrying {~traverser.carrying}")
+			Core.Print(f"You can't climb, you are carrying {~traverser.carrying}")
 			return False
 
 		if traverser.hasCondition("clingfast"): verb = "crawl"
 		elif traverser.hasCondition("flying"): verb = "fly"
 		elif traverser is Core.player.riding: verb = "ride"
-		Core.game.Print(f"You {verb} {dir} {-self}.")
+		Core.Print(f"You {verb} {dir} {-self}.")
 
 		if traverser.ATHL() >= self.difficulty or traverser.hasAnyCondition("clingfast","flying"):
 			traverser.changeRoom(Core.world[self.connections[dir]])
 			return True
 
-		Core.game.Print(f"You fall!")
+		Core.Print(f"You fall!",color="o")
 		if "down" in self.connections:
 			traverser.changeRoom(Core.world[self.connections["down"]])
 		if not traverser.hasAnyCondition("fly","fleetfooted"):
@@ -517,11 +518,11 @@ class Window(Core.Passage):
 
 	# breaks the window, removes it from player inventory, and generates some shards
 	def Break(self):
-		Core.game.Print(f"The {self.name} breaks.")
+		Core.Print(f"{+self} breaks.")
 		self.broken = True
 		self.open = True
 		if self.weight > 2 and self.composition == "glass":
-			Core.game.Print("Shards of glass scatter everywhere.")
+			Core.Print("Shards of glass scatter everywhere.",color="o")
 		while self.weight > 2 and self.composition == "glass":
 			shardWeight = randint(2,4)
 			self.weight -= shardWeight
@@ -532,7 +533,7 @@ class Window(Core.Passage):
 
 	def Traverse(self,traverser,dir=None,verb="go"):
 		if not (self.broken or self.open):
-			Core.game.Print(f"{+self} is closed.")
+			Core.Print(f"{+self} is closed.")
 			return False
 
 		if dir == None:
@@ -544,7 +545,7 @@ class Window(Core.Passage):
 		if dir in Data.cancels:
 			return False
 		if dir not in self.connections:
-			Core.game.Print(f"The {self.name} does not go '{dir}'.")
+			Core.Print(f"{+self} does not go '{dir}'.")
 			return False
 
 		if traverser.riding:
@@ -552,7 +553,7 @@ class Window(Core.Passage):
 
 		if traverser.hasCondition("flying"): verb = "fly"
 		elif traverser is Core.player.riding: verb = "ride"
-		Core.game.Print(f"You {verb} {dir} {-self}.")
+		Core.Print(f"You {verb} {dir} {-self}.")
 		traverser.changeRoom(Core.world[self.connections[dir]])
 		return True
 
@@ -568,9 +569,9 @@ class Door(Window):
 	# sets open bool to true, prints its items
 	def Open(self):
 		if self.open:
-			Core.game.Print(f"The {self.name} is already open.")
+			Core.Print(f"{+self} is already open.")
 		else:
-			Core.game.Print(f"You open the {self.name}.")
+			Core.Print(f"You open {-self}.")
 			self.open = True
 
 
