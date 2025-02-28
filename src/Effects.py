@@ -39,7 +39,7 @@ def spawnObject(obj,room=None):
 	elif isinstance(obj,Core.Item):
 		room.addItem(obj)
 	if not Core.game.silent:
-		Core.game.Print(f"{obj.nounPhrase('a',cap=1)} appeared!")
+		Core.Print(f"{obj.nounPhrase('a',cap=1)} appeared!")
 		Core.game.setPronouns(obj)
 
 
@@ -51,7 +51,7 @@ def destroyObject(obj):
 	elif isinstance(obj,Core.Item):
 		obj.parent.removeItem(obj)
 	if not Core.game.silent:
-		Core.game.Print(f"{-obj} was destroyed.")
+		Core.Print(f"{-obj} was destroyed.")
 
 
 def increment(obj,attribute,num):

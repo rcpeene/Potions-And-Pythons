@@ -12,7 +12,7 @@ from random import randint,sample,choice,choices
 from math import floor, sqrt
 from bisect import insort
 from collections.abc import Iterable
-import sys, os
+import sys, os, re
 
 try:
 	import msvcrt
@@ -98,11 +98,61 @@ def kbInput():
 		return msvcrt.kbhit()
 
 
+# color text using ANSI formatting
+def Tinge(*args,color=None):
+	colorMap = {
+		"r":"31", "o": "38;5;215", "y":"38;5;227", "g":"32", 
+		"b":"34", "m":"35", "k":"90", "w":"37"
+	}
+	if color is not None:
+		args = list(args)
+		c = colorMap[color]
+		args[0] = f"\033[{c}m" + args[0]
+		args[-1] = args[-1] + f"\033[37m"
+	
+	return tuple(args)
+
+
+# used to calculate string display lengths by ignoring formatting chars
+def Untinge(text):
+    # Regular expression to match ANSI escape sequences
+    ansi_escape = re.compile(r'\033\[[0-9;]*m')
+    return ansi_escape.sub('', text)
+
+
+def Print(*args,end="\n",sep='',delay=0.005,color=None,allowSilent=True):
+	sys.stdout.flush()
+	if game.silent and allowSilent:
+		return
+	if len(args) > 1:
+		sep=' '
+	printLength = sum(len(Untinge(s)) for s in args)
+	if color is not None:
+		args = Tinge(*args,color=color)
+	if game.mode == 1 or delay is None:
+		print(*args,end=end,sep=sep)
+		return printLength
+	for arg in args:
+		for char in str(arg):
+			if kbInput():
+				delay = 0
+			sys.stdout.write(char)
+			sys.stdout.flush()
+			sleep(delay)
+		sys.stdout.write(sep)
+		sys.stdout.flush()
+	sleep(delay)
+	sys.stdout.write(end)
+	sys.stdout.flush()
+	sleep(delay)
+	return printLength
+
+
 # waits for any keyboard input
 def waitKbInput(text=None,delay=0.005,color=None):
 	sys.stdout.flush
 	if text is not None:
-		game.Print(text,delay=delay,color=color,allowSilent=False)
+		Print(text,delay=delay,color=color,allowSilent=False)
 	# just pass if in test mode
 	if game.mode == 1:
 		return True
@@ -122,6 +172,28 @@ def waitKbInput(text=None,delay=0.005,color=None):
 			termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
 
 
+def Input(text="",cue="\n> ",low=True,delay=0.005,color=None):
+	sys.stdout.flush()
+	# should never be silent when asking for input
+	Print(text,end="",delay=delay,color=color,allowSilent=False)
+	flushInput()
+	ret = input(cue)
+	if low:
+		ret = ret.lower()
+	return ret
+
+
+# prints a question, gets a yes or no, returns True or False respectively
+def yesno(question,delay=0.005,color=None):
+	while True:
+		command = Input(question,delay=delay,color=color).lower()
+		if command in Data.yesses:
+			return True
+		elif command in Data.noes:
+			return False
+		Print("Enter yes or no",delay=delay,color=color)
+
+
 # prints a timed ellipsis, used for dramatic transitions
 def ellipsis(n):
 	for i in range(n):
@@ -129,26 +201,30 @@ def ellipsis(n):
 		print(".")
 	sleep(1)
 
+
 # prints a list of strings, l, into n columns of width w characters
 # if an element is longer than one column, it takes up as many columns as needed
-def columnPrint(l,n,w,delay=0,color=None):
+def columnPrint(l,n,w=None,delay=0,color=None):
+	# automatically set column width based on longest item
+	if w is None:
+		w = max(len(Untinge(s)) for s in l) + 2
+	assert w > 1
+
 	# k is the number of characters that have been printed in the current row
 	k = 0
 	# for each string element in l
 	for term in l:
 		# if the string is longer than remaining row width; print on a new row
-		if len(term) >= (n*w) - k:
-			game.Print("\n" + term,end="",delay=delay,color=color)
-			k = len(term)
+		if len(Untinge(term)) >= (n*w) - k:
+			# subtract 1 to ignore newline
+			k = Print("\n" + term,end="",delay=delay,color=color) - 1
 		# if the string is short enough, print it, increment k
 		else:
-			game.Print(term,end="",delay=delay,color=color)
-			k += len(term)
+			k += Print(term,end="",delay=delay,color=color)
 		# to preserve column alignment, print spaces until k is divisble by w
 		spaces = w - (k % w)
-		game.Print(spaces * ' ',end="",delay=delay,color=color)
-		k += spaces
-	game.Print()
+		k += Print(spaces * ' ',end="",delay=delay,color=color)
+	Print()
 
 
 # capitalizes the first letter of all the words in a string
@@ -240,17 +316,6 @@ def extractConditionInfo(roomCondition):
 	name = ' '.join(condInfo[1:-1])
 	dur = int(condInfo[-1])
 	return [name,dur]
-
-
-# prints a question, gets a yes or no, returns True or False respectively
-def yesno(question,delay=0.005,color=None):
-	while True:
-		command = game.Input(question,delay=delay,color=color).lower()
-		if command in Data.yesses:
-			return True
-		elif command in Data.noes:
-			return False
-		game.Print("Enter yes or no",delay=delay,color=color)
 
 
 # rolls n dice of range d, adds a modifier m, returns number
@@ -611,7 +676,7 @@ class DialogueNode():
 	# users can end the dialogue by inputting a cancel command
 	def replyHop(self):
 		for i, reply in enumerate(self.replies):
-			game.Print(f'{i+1}. {reply}\n')
+			Print(f'{i+1}. {reply}\n')
 
 		while True:
 			choice = input("\n> ").lower()
@@ -624,7 +689,7 @@ class DialogueNode():
 				# note that this does *not* hop(); it ignores child's visitLimit, rapportReq, guardCase
 				return self.children[int(choice)-1]
 			except:
-				game.Print('That is not one of the options. Input a number or type "cancel"')
+				Print("That is not one of the options. Input a number or type 'cancel'")
 				continue
 
 
@@ -648,7 +713,7 @@ class DialogueNode():
 		if self.isCheckpoint:
 			speaker.dlogtree.checkpoint = self.id
 		if self.remark:
-			waitKbInput(f'"{self.remark}"')
+			waitKbInput(f'"{self.remark}"',color="y")
 		elif self.trites:
 			tritepool = set()
 			for trite in self.trites:
@@ -659,7 +724,7 @@ class DialogueNode():
 			if triteRemark == self.lastTriteRemark:
 				triteRemark = samples[1]
 
-			waitKbInput(f'"{triteRemark}"')
+			waitKbInput(f'"{triteRemark}"',color="y")
 			self.lastTriteRemark = triteRemark
 
 		# return next node if this node has children
@@ -1116,10 +1181,10 @@ class Game():
 			return
 		mooncycle = (self.time % self.monthlength) // self.daylength
 		if mooncycle == 0:
-			self.Print("It is a new moon.")
+			Print("It is a new moon.",color="b")
 			self.events.add("new moon")
 		elif mooncycle == 7:
-			self.Print("It is a full moon.")
+			Print("It is a full moon.",color="b")
 			self.events.add("full moon")
 		if "new moon" in self.events:
 			self.events.remove("new moon")
@@ -1134,81 +1199,37 @@ class Game():
 		aurora_cycle = self.time % 2000
 		if aurora_cycle >= 0 and aurora_cycle < 100 and self.hour() in darkhours:
 			if "aurora" not in self.events or update:
-				self.Print("There is an aurora in the sky!")			
+				Print("There is an aurora in the sky!",color="b")			
 			self.events.add("aurora")
 		elif "aurora" in self.events:
 			self.events.remove("aurora")
-			self.Print("The aurora is over.")
+			Print("The aurora is over.")
 
 		meteor_cycle = self.time % 3500
 		if meteor_cycle >= 0 and meteor_cycle < 300 and self.hour() in darkhours:
 			if "meteor shower" not in self.events or update:
-				self.Print("There is a meteor shower in the sky!")
+				Print("There is a meteor shower in the sky!",color="b")
 			self.events.add("meteor shower")
 		elif "meteor shower" in self.events:
 			self.events.remove("meteor shower")
-			self.Print("The meteor shower is over.")
+			Print("The meteor shower is over.")
 
 		lighthours = ("rooster","juniper","bell","sword","willow","lily")
 		eclipse_cycle = self.time % (self.monthlength*3+100)
 		if eclipse_cycle > 0 and eclipse_cycle < 30 and self.hour() in lighthours:
 			if "eclipse" not in self.events or update:
-				self.Print("There is a solar eclipse in the sky!")
+				Print("There is a solar eclipse in the sky!",color="b")
 			self.events.add("eclipse")
 		elif "eclipse" in self.events:
 			self.events.remove("eclipse")
-			self.Print("The solar eclipse is over.")
+			Print("The solar eclipse is over.")
 
 
-	### User Output ###
-	
-	def Input(self,text="",low=True,delay=0.005,color=None):
-		sys.stdout.flush()
-		# should never be silent when asking for input
-		self.Print(text,end="",delay=delay,color=color,allowSilent=False)
-		flushInput()
-		if not low:
-			ret = input("\n> ")
-		else:
-			ret = input("\n> ").lower()
-		return ret
-
-
-	def Print(self,*args,end="\n",sep='',delay=0.005,color=None,allowSilent=True):
-		colorMap = {
-			"r":"31", "o": "38;5;215", "y":"38;5;227", "g":"32", 
-			"b":"34", "m":"35", "k":"90", "w":"37"
-		}
-		sys.stdout.flush()
-		if self.silent and allowSilent:
-			return
-		if len(args) > 1:
-			sep=' '
-		if color is not None:
-			c = colorMap[color]
-			args = list(args)
-			args[0] = f"\033[{c}m" + args[0]
-			args[-1] = args[-1] + f"\033[37m"
-		if self.mode == 1 or delay is None:
-			return print(*args,end=end,sep=sep)
-		for arg in args:
-			for char in str(arg):
-				if kbInput():
-					delay = 0
-				sys.stdout.write(char)
-				sys.stdout.flush()
-				sleep(delay)
-			sys.stdout.write(sep)
-			sys.stdout.flush()
-		sleep(delay)
-		sys.stdout.write(end)
-		sys.stdout.flush()
-		sleep(delay)
-		
+	### User Output ###		
 
 	def startUp(self):
 		player.printStats()
-		game.Print()
+		Print()
 		self.currentroom.describe()
 		game.checkDaytime()
 		game.checkAstrology(update=True)
@@ -1222,59 +1243,59 @@ class Game():
 		if self.currentroom.altitude < 0:
 			return
 		if self.hour() in ("stag","rooster","juniper"):
-			self.Print("It is morning.")
+			Print("It is morning.")
 		if self.hour() in ("bell","sword","willow","lily"):
-			self.Print("It is day.")
+			Print("It is day.")
 		if self.hour() in ("hearth","cat"):
-			self.Print("It is evening.")
+			Print("It is evening.")
 		if self.hour() in ("mouse","owl","serpent","wolf"):
-			self.Print("It is night.")
+			Print("It is night.")
 			self.checkMoon()
 
 
 	def LookUp(self,target):
 		if self.currentroom.altitude < 0:
-			self.Print("You can't see that from here.")
+			Print("You can't see that from here.")
 		
 		if target == "sky":
 			target = "sun" if self.hour() in Data.dayhours else "moon"		
 
 		if "eclipse" in self.events:
-			self.Print("The bold red sun is blackened by the ominous moon. The world is dark below and above but for the ring of violet light tracing the moon. Those golden lines of fire that scar the moon's surface seem like cracks through which the sun's rays seep faintly through. All is still in the heavens as they bear witness to this solemn union.")
+			Print("The bold red sun is blackened by the ominous moon. The world is dark below and above but for the ring of violet light tracing the moon. Those golden lines of fire that scar the moon's surface seem like cracks through which the sun's rays seep faintly through. All is still in the heavens as they bear witness to this solemn union.",color="b")
 			player.takeDamage(5,"r")
 		elif "eclipse" not in self.events and target in ("eclipse","solar eclipse"):
-			self.Print("There's no eclipse happening right now.")
+			Print("There's no eclipse happening right now.")
 		elif target == "sun":
 			if self.hour() in ("stag","rooster","juniper"):
-				self.Print("A burning ball of red fire marches upward in the sky. In the morning air it paints the heavens a tinge of pale green.")
+				Print("A burning ball of red fire marches upward in the sky. In the morning air it paints the heavens a tinge of pale green.")
 			elif self.hour() in ("bell","sword","willow","lily"):
-				self.Print("A burning ball of red fire hangs high in the sky. It warms your face with its bold glow.")
+				Print("A burning ball of red fire hangs high in the sky. It warms your face with its bold glow.")
 			elif self.hour() in ("hearth","cat"):
-				self.Print("A burning ball of red fire rests in the sky. As it descends toward the horizon it draws a curtain of violet across the world above.")
+				Print("A burning ball of red fire rests in the sky. As it descends toward the horizon it draws a curtain of violet across the world above.")
 			else:
-				self.Print("The sun isn't out right now.")
+				Print("The sun isn't out right now.")
 		elif target in ("moon","stars"):
 			if self.hour() in Data.nighthours:
 				if "full moon" in self.events:
-					self.Print("A shimmering golden orb dances in the sky pouring whispers of light. You can make out traces of strange golden fire on its surface. The stars seem to dance around it joyously. You can make out the constellations of Zork, Norman, and Glycon acting out the tales of fate.")
+					Print("A shimmering golden orb dances in the sky pouring whispers of light. You can make out traces of strange golden fire on its surface. The stars seem to dance around it joyously. You can make out the constellations of Zork, Norman, and Glycon acting out the tales of fate.",color="b")
 				elif "new moon" in self.events:
-					self.Print("On a night without the moon the world is full of silence and cold. The stars seem to shiver lonesomely. You can make out the constellations of Zork, Norman, and Glycon acting out the tales of fate.")
+					Print("On a night without the moon the world is full of silence and cold. The stars seem to shiver lonesomely. You can make out the constellations of Zork, Norman, and Glycon acting out the tales of fate.",color="b")
 				else:
-					self.Print("A shimmering golden orb dances in the sky pouring whispers of light. You can make out traces of strange golden fire on its surface. It hangs amongst a scattering of sparkling drops on all sides. You can make out the constellations of Zork, Norman, and Glycon acting out the tales of fate.")
+					Print("A shimmering golden orb dances in the sky pouring whispers of light. You can make out traces of strange golden fire on its surface. It hangs amongst a scattering of sparkling drops on all sides. You can make out the constellations of Zork, Norman, and Glycon acting out the tales of fate.")
 			elif target == "moon":
-				self.Print("The moon isn't out right now.")
+				Print("The moon isn't out right now.")
 			elif target == "stars":
-				self.Print("The stars aren't out right now.")
+				Print("The stars aren't out right now.")
 		
 		if "aurora" in self.events:
-			self.Print("Tides of the red, blue, and green aurora gently sweep over the sky. The colors seem to bathe the heavens as it caresses the shimmering silver stars.")
+			Print("Tides of the red, blue, and green aurora gently sweep over the sky. The colors seem to bathe the heavens as it caresses the shimmering silver stars.",color="b")
 		elif target in ("aurora","auroras"):
-			self.Print("There's no aurora happening right now.")
+			Print("There's no aurora happening right now.")
 
 		if "meteor shower" in self.events:
-			self.Print("Bolts of yellow light streak deftly across the sky, leaving their imprint for no more than a moment. The almost seem to take turns whizzing past like a flock of birds, eager to follow one another toward the edge of the heavens.")
+			Print("Bolts of yellow light streak deftly across the sky, leaving their imprint for no more than a moment. The almost seem to take turns whizzing past like a flock of birds, eager to follow one another toward the edge of the heavens.",color="b")
 		elif target in ("shower","meteors","meteor shower"):
-			self.Print("There's no meteor shower happening right now.")
+			Print("There's no meteor shower happening right now.")
 
 		return True
 
@@ -1437,6 +1458,7 @@ class Room():
 	def enter(self,obj):
 		# if the player is entering the room, describe the room
 		if obj is player:
+			clearScreen()
 			self.describe()
 		condsToRemove = [pair for pair in obj.status if pair[1] == -1]
 		# remove status conditions from previous room
@@ -1531,11 +1553,11 @@ class Room():
 
 	# prints room name, description, all its items and creatures
 	def describe(self):
-		game.Print("\n"+self.domain+"\n"+self.name)
+		Print("\n"+self.domain+"\n"+self.name)
 		# if player.countCompasses() == 0:
-		# 	game.Print("\n" + ambiguateDirections(self.desc))
+		# 	Print("\n" + ambiguateDirections(self.desc))
 		# else:
-		game.Print("\n" + self.desc)
+		Print("\n" + self.desc)
 		self.describeItems()
 		self.describeCreatures()
 
@@ -1544,7 +1566,7 @@ class Room():
 	def describeItems(self):
 		items = self.listableItems()
 		if len(items) != 0:
-			game.Print(f"There is {listObjects(self.listableItems())}.")
+			Print(f"There is {listObjects(self.listableItems())}.")
 		if len(items) == 1:
 			game.setPronouns(items[0])
 
@@ -1553,7 +1575,7 @@ class Room():
 	def describeCreatures(self):
 		listCreatures = [creature for creature in self.creatures if creature is not player.riding and creature is not player.carrying]
 		if len(listCreatures) != 0:
-			game.Print(f"There is {listObjects(listCreatures)}.")
+			Print(f"There is {listObjects(listCreatures)}.")
 		for creature in listCreatures:
 			game.setPronouns(creature)
 
@@ -1651,7 +1673,7 @@ class Item():
 	def changeRoom(self,newroom):
 		# can only change rooms if not stuck inside some item
 		if type(self.parent) is not Room:
-			raise Exception(f"Can't change rooms. Stuck inside {self.parent}")
+			raise Exception(f"Can't change rooms. Stuck inside {self.parent}.")
 
 		prevroom = self.parent
 		prevroom.exit(self)
@@ -1668,22 +1690,23 @@ class Item():
 	def Break(self):
 		if self.durability == -1:
 			if not game.silent:
-				game.Print(f"The {self.name} cannot be broken.")
+				Print(f"{+self} cannot be broken.")
 			return False
-		game.Print(f"The {self.name} breaks.")
+		Print(f"{+self} breaks.")
 		self.parent.removeItem(self)
 		return True
 
 
 	def Use(self,user):
 		if user not in self.ancestors():
-			game.Print(f"{+self} is not in your inventory.")
+			Print(f"{+self} is not in your inventory.")
 			return False
-		game.Print(f"You use {-self}")
+		Print(f"You use {-self}")
 
 
-	def takeDamage(self,dmg):
-		if dmg > self.durability:
+	def takeDamage(self,dmg,type):
+		Print(f"{dmg} {Data.dmgtypes[type]} damage",color="o")
+		if self.durability != -1 and dmg > self.durability:
 			return self.Break()
 
 
@@ -1786,8 +1809,8 @@ class Item():
 	
 
 	def describe(self):
-		game.Print(f"It's {~self}.")
-		game.Print(f"{self.desc}.")
+		Print(f"It's {~self}.")
+		Print(f"{self.desc}.")
 
 
 
@@ -2000,7 +2023,7 @@ class Creature():
 		else:
 			self.hp = min0(self.hp-dmg)
 		total_dmg = prevhp - self.hp
-		game.Print(f"{+self} took {total_dmg} {Data.dmgtypes[type]} damage.")
+		Print(f"{+self} took {total_dmg} {Data.dmgtypes[type]} damage.",color="o")
 		if self.hp == 0:
 			self.death()
 
@@ -2011,7 +2034,7 @@ class Creature():
 			heal = self.MXHP() - self.hp
 		self.hp += heal
 		if isinstance(self,Player):
-			game.Print(f"You healed {heal} HP.")
+			Print(f"You healed {heal} HP.",color="g")
 		return heal
 
 
@@ -2019,6 +2042,8 @@ class Creature():
 		if self.mp + mana > self.MXMP() and not overflow:
 			mana = self.MXHP() - self.mp
 		self.mp += mana
+		if isinstance(self,Player):
+			Print(f"You resurged {mana} MP.",color="b")
 		return mana
 
 
@@ -2076,7 +2101,7 @@ class Creature():
 		if self.addItem(I):
 			oldParent.removeItem(I)
 			if msg != None:
-				game.Print(msg)
+				Print(msg)
 			I.Obtain(self)
 			self.checkHindered()
 			return True
@@ -2132,8 +2157,7 @@ class Creature():
 		slot = gearslots[gearitems.index(I)]
 		self.gear[slot] = EmptyGear()
 		self.assignWeaponAndShield()
-		if not silent:
-			game.Print(f"You unequip your {I.name}.")
+		Print(f"You unequip your {I}.")
 		if hasMethod(I,"Unequip"): I.Unequip()
 
 
@@ -2259,12 +2283,12 @@ class Creature():
 	def death(self):
 		self.timeOfDeath = game.time
 		self.addCondition("dead",-3)
-		game.Print("\n" + f"{+self} died.")
+		Print("\n" + f"{+self} died.",color="o")
 		self.descname = f"dead {self.descname}"
 		n = diceRoll(3,player.LOOT(),-2)
 		self.room().addItem(Serpens(n))
 		if not game.silent:
-			game.Print(f"Dropped $ {n}.")
+			Print(f"Dropped $ {n}.",color="g")
 		if game.whoseturn is player:
 			r = self.rating()
 			# xp granted generally scales with rating
@@ -2296,7 +2320,7 @@ class Creature():
 
 
 	def Give(self,I):
-		game.Print(f"{+self} ignores your offer.")
+		Print(f"{+self} ignores your offer.")
 
 
 	### Behavior ###
@@ -2383,7 +2407,7 @@ class Creature():
 		# if a creature is found creating a loop with the actor and attempted target,
 		# identify the culprit
 		if looplink:
-			game.Print(f"You can't {dverb} {-target}, {target.pronoun} is {iverb} {looplink}")
+			Print(f"You can't {dverb} {-target}, {target.pronoun} is {iverb} {looplink}")
 			return True
 		return False
 
@@ -2407,7 +2431,7 @@ class Creature():
 		if self.checkTetherLoop(carrier,self,"carry"):
 			return False
 		if self.Weight() > carrier.BRDN():
-			game.Print(f"{+self} is too heavy to carry.")
+			Print(f"{+self} is too heavy to carry.")
 			return False
 		if not self.Restrain(carrier):
 			return False
@@ -2423,12 +2447,12 @@ class Creature():
 		catch = bound(self.ACCU() - missile.speed*missile.weight,1,99)
 		if canCatch and diceRoll(1,100) <= catch:
 			missileItem = missile.asItem()
-			game.Print(f"{+self} catches {-missileItem}!")
+			Print(f"{+self} catches {-missileItem}!",color="o")
 			self.obtainItem(missileItem)
 			self.equipInHand(missileItem)
 			return True
 		else:
-			game.Print(f"{+self} fails to catch {-missile}.")
+			Print(f"{+self} fails to catch {-missile}.")
 			return False
 
 
@@ -2440,10 +2464,10 @@ class Creature():
 				#TODO: add restraining with items? like rope??
 				pass
 			if self.ATHL() > restrainer.ATHL() or self.EVSN() > restrainer.ATHL():
-				game.Print(f"You fail to restrain {-self}!")
+				Print(f"You fail to restrain {-self}!",color="r")
 				return False
 		self.addCondition("restrained",-3)
-		game.Print(f"You restrain {-self}!")
+		Print(f"You restrain {-self}!",color="g")
 		return True
 
 
@@ -2453,9 +2477,9 @@ class Creature():
 		if type(target) is str:
 			assert target in world
 			dir = self.room().getDirFromDest(target)
-			game.Print(f"You throw {-missile} {dir}")
+			Print(f"You throw {-missile} {dir}")
 			if dir == "up":
-				game.Print(f"{+missile} falls back down.")
+				Print(f"{+missile} falls back down.")
 			return missile.changeRoom(world[target])
 
 		if not isinstance(missile,Projectile):
@@ -2472,9 +2496,9 @@ class Creature():
 		if type(target) is str:
 			assert target in world
 			dir = self.room().getDirFromDest(target)
-			game.Print(f"You throw {-missile} {dir}")
+			Print(f"You throw {-missile} {dir}")
 			if dir == "up":
-				game.Print(f"{+missile} falls back down.")
+				Print(f"{+missile} falls back down.")
 			return missile.changeRoom(world[target])
 
 		if not isinstance(missile,Projectile):
@@ -2496,33 +2520,34 @@ class Creature():
 		if self.checkTetherLoop(rider,self,"ride"):
 			return False
 		if rider.Weight() > self.BRDN():
-			game.Print(f"You are too heavy to ride {-self}")
+			Print(f"You are too heavy to ride {-self}")
 			return False
-		if not self.isFriendly() and self.canMove():
-			game.Print(f"{+self} struggles.")
+		contest = not self.isFriendly() and self.canMove()
+		if contest:
+			Print(f"{+self} struggles.",color="o")
 			athl_contest = self.ATHL() - rider.ATHL()
 			if athl_contest > 0:
-				game.Print(f"{+self} shakes you off!",color="r")
+				Print(f"{+self} shakes you off!",color="r")
 				if athl_contest > rider.ATHL():
 					rider.takeDamage(athl_contest-rider.ATHL(),"b")
 				return False
 		self.rider = rider
 		rider.riding = self
-		game.Print(f"You ride {-self}.")
+		Print(f"You ride {-self}.",color="g" if contest else "w")
 		return True
 
 
 	def Smell(self,smeller):
-		game.Print("Smells a little like body odor.")
+		Print("Smells a little like body odor.")
 
 
 	def lick(self,licker):
 		# TODO: make creatures evade this or try to
-		game.Print("Yuck!")
+		Print("Yuck!")
 
 
 	def Touch(self,toucher):
-		game.Print("Feels soft and fleshy.")
+		Print("Feels soft and fleshy.")
 
 
 	### Getters ###
@@ -2827,8 +2852,8 @@ class Creature():
 
 
 	def describe(self):
-		game.Print(f"It's {~self}.")
-		game.Print(f"{self.desc}.")
+		Print(f"It's {~self}.")
+		Print(f"{self.desc}.")
 
 
 
@@ -2872,13 +2897,13 @@ class Player(Creature):
 	def awaken(self,wellRested=True):
 		game.silent = False
 		sleep(1)
-		game.Print("You wake up!")
+		Print("You wake up!",color="o")
 		sleep(1)
 		if wellRested:
 			self.lastSlept = game.time
 			self.checkTired()
 		sleep(1)
-		game.Print("\n\n")
+		Print("\n\n")
 		game.startUp()
 
 
@@ -2887,10 +2912,10 @@ class Player(Creature):
 			raise Exception(f"Can't change rooms. Stuck inside {self.parent}")
 		game.changeRoom(newroom)
 		if self.riding:
-			game.Print(f"You are no longer riding {self.riding}.")
+			Print(f"You are no longer riding {self.riding}.")
 			self.riding = None
 		if self.carrying:
-			game.Print(f"You are no longer carrying {self.carrying}.")
+			Print(f"You are no longer carrying {self.carrying}.")
 			self.carrying = None
 
 
@@ -2912,7 +2937,7 @@ class Player(Creature):
 		p = "."
 		if player.hasCondition("asleep") or total_dmg > self.MXHP() // 2:
 			p = "!"
-		game.Print(f"You took {total_dmg} {Data.dmgtypes[type]} damage{p}",allowSilent=False)
+		Print(f"You took {total_dmg} {Data.dmgtypes[type]} damage{p}",allowSilent=False,color="r")
 		if self.hp == 0:
 			return self.death()
 		if total_dmg > 0 and self.hasCondition("asleep"):
@@ -2921,13 +2946,13 @@ class Player(Creature):
 
 	# player gets 1 QPs for each level gained, can dispense them into any trait
 	def levelUp(self,oldlv,newlv):
-		waitKbInput(f"You leveled up to level {newlv}!\n")
+		waitKbInput(f"You leveled up to level {newlv}!\n",color="g")
 		QP = newlv-oldlv
 		while QP > 0:
 			self.printTraits()
-			game.Print(f"\nQuality Points:	{QP}")
-			trait = game.Input("What trait will you improve?\n> ")
-			game.Print()
+			Print(f"\nQuality Points:	{QP}")
+			trait = Input("What trait will you improve?\n> ")
+			Print()
 			if trait not in Data.traits:
 				continue
 			# increment corresponding player trait
@@ -2950,10 +2975,10 @@ class Player(Creature):
 
 	def updateMoney(self,money):
 		self.money += money
-		if money > 0:
-			game.Print(f"You have $ {self.money}!")
+		if money == 0:
+			Print(f"You have $ {self.money}.")
 		else:
-			game.Print(f"You have $ {self.money}.")
+			Print(f"You have $ {self.money}!",color="g")
 
 
 	def obtainItem(self,I,tookMsg=None,failMsg=None):
@@ -2961,21 +2986,21 @@ class Player(Creature):
 		if self.addItem(I):
 			oldParent.removeItem(I)
 			if tookMsg != None:
-				game.Print(tookMsg)
+				Print(tookMsg)
 			I.Obtain(self)
 			self.checkHindered()
 			return True
 		if failMsg != None:
-			game.Print(failMsg)
+			Print(failMsg)
 		return False
 
 
 	# adds xp, checks for player level up
 	def gainxp(self,newxp):
 		oldlv = self.level()
-		game.Print(f"\nYou gained {newxp} xp.")
+		Print(f"\nYou gained {newxp} xp.",color="g")
 		self.xp += newxp
-		# game.Print(f"You have {self.xp}")
+		# Print(f"You have {self.xp}")
 		newlv = self.level()
 		if oldlv != newlv:
 			self.levelUp(oldlv,newlv)
@@ -2986,13 +3011,13 @@ class Player(Creature):
 			return False
 		if not self.hasCondition(name):
 			if name in Data.curses:
-				game.Print(f"You have the curse of {name}.",allowSilent=False)
+				Print(f"You have the curse of {name}.",allowSilent=False,color="r")
 			elif name in Data.blessings:
-				game.Print(f"You have the blessing of {name}.",allowSilent=False)
+				Print(f"You have the blessing of {name}.",allowSilent=False,color="g")
 			elif name == "asleep":
-				game.Print(f"You fall {name}.",allowSilent=False)
+				Print(f"You fall {name}.",allowSilent=False)
 			else:
-				game.Print(f"You are {name}.",allowSilent=False)
+				Print(f"You are {name}.",allowSilent=False)
 		insort(self.status,[name,dur])
 		return True
 
@@ -3012,7 +3037,7 @@ class Player(Creature):
 					if name == "asleep" and duration == 0:
 						wellRested = True
 					if name != "asleep" and not self.hasCondition(name):
-						game.Print(f"You are no longer {name}.",allowSilent=False)
+						Print(f"You are no longer {name}.",allowSilent=False)
 		
 		if wasSleeping and not self.hasCondition("asleep"):
 			self.awaken(wellRested=wellRested)
@@ -3022,11 +3047,11 @@ class Player(Creature):
 		carryWeight = 0 if self.carrying is None else self.carrying.Weight()
 		if self.invWeight() + carryWeight > self.BRDN():
 			if not self.hasCondition("hindered"):
-				game.Print("Your Inventory grows heavy.")
+				Print("Your Inventory grows heavy.")
 				self.addCondition("hindered",-3)
 		if self.invWeight() + carryWeight <= self.BRDN():
 			if self.hasCondition("hindered"):
-				game.Print("Your Inventory feels lighter.")
+				Print("Your Inventory feels lighter.")
 				self.removeCondition("hindered",-3)
 
 
@@ -3064,12 +3089,12 @@ class Player(Creature):
 
 	# called when player hp hits 0
 	def death(self):
-		game.Print("You have died!",color="r")
+		Print("You have died!",color="r")
 		ellipsis(3)
 		
 		if self.hasCondition("Anointed",reqDuration=-3):
 			sleep(1)
-			game.Print("You reawaken!")
+			Print("You reawaken!",color="g")
 			self.hp = 1
 		else:
 			self.addCondition("dead",-3)
@@ -3079,13 +3104,13 @@ class Player(Creature):
 
 
 	def dualAttack(self,target):
-		game.Print("\nDual Attack!")
+		Print("\nDual Attack!",color="o")
 		hit = bound(self.ACCU() - target.EVSN(),1,99)
 		if diceRoll(1,100) <= hit:
 			crit = diceRoll(1,100) <= self.CRIT()
 			attack = self.ATCK()
 			if crit:
-				waitKbInput("Critical hit!")
+				waitKbInput("Critical hit!",color="o")
 				self.weapon2.dull(1)
 				attack *= 2
 			damage = min0( attack - target.DFNS() )
@@ -3093,14 +3118,14 @@ class Player(Creature):
 			if not target.isAlive():
 				return
 		else:
-			game.Print("Aw it missed.")
+			Print("Aw it missed.")
 		waitKbInput()
 
 
 	def attackCreature(self,target):
 		n = min1( self.ATSP() // min1(target.ATSP()) )
 		if n > 1:
-			game.Print(f"{n} attacks!")
+			Print(f"{n} attacks!",color="o")
 		for i in range(n):
 			if n > 1:
 				waitKbInput(f"\n{ordinal(i+1)} attack:")
@@ -3110,13 +3135,13 @@ class Player(Creature):
 				crit = diceRoll(1,100) <= self.CRIT()
 				attack = self.ATCK()
 				if crit:
-					waitKbInput("Critical hit!")
+					waitKbInput("Critical hit!",color="o")
 					self.weapon.dull(1)
 					attack *= 2
 				damage = min0( attack - target.DFNS() )
 				target.takeDamage(damage,self.weapon.type)
 			else:
-				game.Print("Aw it missed.")
+				Print("Aw it missed.")
 			waitKbInput()
 			if not target.isAlive():
 				return
@@ -3127,13 +3152,9 @@ class Player(Creature):
 
 
 	def attackItem(self,target):
+		# TODO determine damage type here instead of always bludgeoning
 		attack = self.ATCK()
-		game.Print(f"{attack} damage")
-		if target.durability != -1 and attack > target.durability:
-			return target.Break()
-		else:
-			game.Print("Nothing happens.")
-			return False
+		return target.takeDamage(attack,"b")
 		
 
 	def bombard(self,missile):
@@ -3178,76 +3199,76 @@ class Player(Creature):
 			traits = [f"{t.upper()}: {getattr(self,t)}" for t in Data.traits]
 			columnPrint(traits,5,10)
 			return	
-		game.Print(f"{trait.upper()}: {getattr(self,trait)}")
+		Print(f"{trait.upper()}: {getattr(self,trait)}")
 
 
 	def printAbility(self,ability=None):
 		if ability == "atck":
-			game.Print(f"atck: {self.STR} - {self.weapon.might*self.STR}")
+			Print(f"atck: {self.STR} - {self.weapon.might*self.STR}")
 		elif ability == "brdn":
-			game.Print(f"brdn: {self.invWeight()}/{self.BRDN()}")
+			Print(f"brdn: {self.invWeight()}/{self.BRDN()}")
 		elif ability is not None:
-			game.Print(f"{ability}: {getattr(self,ability)()}")
+			Print(f"{ability}: {getattr(self,ability)()}")
 		else:
 			for ability in Data.abilities:
 				self.printAbility(ability.upper())
 
 
 	# each prints a different player stat
-	def printMoney(self, *args): game.Print(f"$ {self.money}")
-	def printHP(self, *args): game.Print(f"HP: {self.hp}/{self.MXHP()}")
-	def printLV(self, *args): game.Print(f"LV: {self.level()}")
-	def printMP(self, *args): game.Print(f"MP: {self.mp}/{self.MXMP()}")
-	def printXP(self, *args): game.Print(f"XP: {self.xp}")
-	def printRP(self, *args): game.Print(f"RP: {self.rp}")
+	def printMoney(self, *args): Print(f"$ {self.money}",color="g")
+	def printHP(self, *args): Print(f"HP: {self.hp}/{self.MXHP()}",color="r")
+	def printLV(self, *args): Print(f"LV: {self.level()}",color="o")
+	def printMP(self, *args): Print(f"MP: {self.mp}/{self.MXMP()}",color="b")
+	def printXP(self, *args): Print(f"XP: {self.xp}",color="o")
+	def printRP(self, *args): Print(f"RP: {self.rp}",color="y")
 
 
 	def printSpells(self, *args):
-		game.Print(f"Spells: {len(self.spells)}/{self.SPLS()}")
+		Print(f"Spells: {len(self.spells)}/{self.SPLS()}")
 		if len(self.spells) == 0:
-			game.Print("\nYou don't know any spells.")
+			Print("\nYou don't know any spells.")
 		else:
 			columnPrint(self.spells,8,12)
 
 
 	# prints player inventory
 	def printInv(self, *args):
-		game.Print(f"Weight: {self.invWeight()}/{self.BRDN()}")
+		Print(f"Weight: {self.invWeight()}/{self.BRDN()}")
 		if len(self.inv) == 0:
-			game.Print("\nYour Inventory is empty.")
+			Print("\nYour Inventory is empty.")
 		else:
 			columnPrint(self.invNames(),8,12)
 
 
 	# print each player gear slot and the items equipped in them
 	def printGear(self, *args):
-		game.Print()
+		Print()
 		for slot in self.gear:
 			val = self.gear[slot].name
 			if slot == "left" and self.carrying:
 				val = self.carrying.name
-			game.Print(slot + ":\t",end="")
-			game.Print(val)
+			Print(slot + ":\t",end="")
+			Print(val)
 
 
 	def printCarrying(self, *args):
 		if self.carrying:
-			game.Print(f"Carrying {~self.carrying}")
-			game.Print(f"Weight: {self.carrying.Weight()}")
+			Print(f"Carrying {~self.carrying}")
+			Print(f"Weight: {self.carrying.Weight()}")
 		else:
-			game.Print("Carrying nothing")
+			Print("Carrying nothing")
 
 
 	def printRiding(self, *args):
 		if self.riding:
-			game.Print(f"Riding {~self.riding}")
+			Print(f"Riding {~self.riding}")
 		else:
-			game.Print("Riding nothing")
+			Print("Riding nothing")
 
 
 	def printStatus(self, *args):
 		if len(self.status) == 0:
-			game.Print("None")
+			Print("None")
 			return
 
 		conditions = []
@@ -3282,21 +3303,24 @@ class Player(Creature):
 
 	# prints player level, money, hp, mp, rp, and status effects
 	def printStats(self, *args):
-		stats = [self.name, f"$ {self.money}", f"LV: {self.level()}", f"RP: {self.rp}", f"HP: {self.hp}/{self.MXHP()}", f"MP: {self.mp}/{self.MXMP()}"]
-		columnPrint(stats,2,16)
+		stats = [self.name,f"$ {self.money}",f"LV: {self.level()}",f"RP: {self.rp}/100",f"HP: {self.hp}/{self.MXHP()}",f"MP: {self.mp}/{self.MXMP()}"]
+		colors = ["w","g","o","y","r","b"]
+		stats = [Tinge(stats[i],color=colors[i])[0] for i in range(len(stats))]
+		columnPrint(stats,3)
+
 		if self.carrying is not None:
-			game.Print(f"Carrying {self.carrying}")
+			Print(f"Carrying {self.carrying}")
 		if self.riding is not None:
-			game.Print(f"Riding {self.riding}")
+			Print(f"Riding {self.riding}")
 		if len(self.status) != 0:
-			game.Print()
+			Print()
 			self.printStatus()
 
 
 	# for every item in player inventory, if its a weapon, print it
 	def printWeapons(self, *args):
 		if len(self.weapons()) == 0:
-			game.Print("You have no weapons.")
+			Print("You have no weapons.")
 		else:
 			columnPrint(self.weapons(),12,12)
 
@@ -3315,7 +3339,7 @@ class Humanoid(Creature):
 		if not self.isAlive():
 			return
 		if not game.silent:
-			game.Print(f"\n{self.name}'s turn!")
+			Print(f"\n{self.name}'s turn!")
 		self.attack()
 
 
@@ -3330,11 +3354,11 @@ class Humanoid(Creature):
 
 
 	def attackCreature(self,target):
-		game.Print(f"{+self} tries to attack {-target}")
+		Print(f"{+self} tries to attack {-target}",color="o")
 
 		n = min1( self.ATSP() // min1(target.ATSP()) )
 		if n > 1:
-			game.Print(f"{n} attacks!")
+			Print(f"{n} attacks!")
 		for i in range(n):
 			if n > 1:
 				waitKbInput(f"\n{ordinal(i+1)} attack:")
@@ -3344,12 +3368,12 @@ class Humanoid(Creature):
 				crit = diceRoll(1,100) <= self.CRIT()
 				attack = self.ATCK()
 				if crit:
-					waitKbInput("Critical hit!")
+					waitKbInput("Critical hit!",color="o")
 					attack *= 2
 				damage = min0( attack - target.DFNS() )
 				target.takeDamage(damage,self.weapon.type)
 			else:
-				game.Print("It missed!")
+				Print("It missed!")
 			waitKbInput()
 			if not target.isAlive():
 				return
@@ -3362,11 +3386,11 @@ class Humanoid(Creature):
 	### Getters ###
 
 	def describe(self):
-		game.Print(f"It's {~self}.")
-		game.Print(f"{self.desc}.")
+		Print(f"It's {~self}.")
+		Print(f"{self.desc}.")
 		gearitems = [item for item in self.gear.values() if item is not EmptyGear()]
 		if len(gearitems) != 0:
-			game.Print(f"It has {listObjects(gearitems)}.")
+			Print(f"It has {listObjects(gearitems)}.")
 
 
 	def isArmed():
@@ -3436,18 +3460,18 @@ class Speaker(Creature):
 			self.firstImpression(player)
 		self.appraise()
 		if not self.dlogtree.visit(self):
-			game.Print(f"{self.name} says nothing...")
+			Print(f"{self.name} says nothing...")
 
 
 	def Give(self,I):
 		if not self.canObtain(I):
-			game.Print(f"{+self} can't carry any more!")	
+			Print(f"{+self} can't carry any more!")	
 		elif self.dlogtree.react("Give",self,I=I):
 			# if we fail to obtain item for whatever reason, drop it into room
 			if not self.obtainItem(I):
 				game.currentroom.addItem(I)
 		else:
-			game.Print(f"{+self} ignores your offer.")			
+			Print(f"{+self} ignores your offer.")			
 		return True
 
 
@@ -3551,7 +3575,7 @@ class Animal(Speaker):
 		if not self.timeOfDeath:
 			return
 		if not game.silent:
-			game.Print(f"\n{self.name}'s turn!")
+			Print(f"\n{self.name}'s turn!")
 		self.attack()
 
 
@@ -3561,32 +3585,31 @@ class Animal(Speaker):
 			self.updateLove(1)
 			self.updateFear(-1)
 		else:
-			game.Print(f"{+self} ignores your offer.")
+			Print(f"{+self} ignores your offer.")
 
 
 	def Talk(self):
 		if not player.hasCondition("wildtongued"):
 			sounds = game.dlogDict["sounds"][self.species]
 			sound = sample(sounds,1)[0]
-			waitKbInput(f'"{sound}"')
+			waitKbInput(f'"{sound}"',color="y")
 			return True
 		if "met" not in self.memories:
 			self.firstImpression(player)
 		self.appraise()
 		if not self.dlogtree.visit(self):
-			game.Print(f"{self.name} says nothing...")
+			Print(f"{self.name} says nothing...")
 
 
 	def Touch(self,toucher):
 		if self.species in Data.textures:
-			game.Print(Data.textures[self.species])
+			Print(Data.textures[self.species])
 		else:
 			return super().Touch(toucher)
 
 
 	def attack(self):
-		if not game.silent:
-			game.Print(f"{self.name} attack?")
+		Print(f"{self.name} attack?")
 
 
 	def climb():
@@ -3683,9 +3706,9 @@ class Fixture(Item):
 	def Break(self):
 		if self.durability == -1:
 			if not game.silent:
-				game.Print(f"The {self.name} cannot be broken.")
+				Print(f"The {self.name} cannot be broken.")
 			return False
-		game.Print(f"The {self.name} breaks.")
+		Print(f"The {self.name} breaks.")
 		self.parent.removeFixture(self)
 		return True
 
@@ -3707,14 +3730,14 @@ class Passage(Fixture):
 				dir = list(self.connections.keys())[0]
 			else:
 				msg = f"Which direction will you go on the {self.name}?\n> "
-				dir = game.Input(msg)
+				dir = Input(msg)
 		if dir in Data.cancels:
 			return False
 		if dir not in self.connections:
-			game.Print(f"The {self.name} does not go '{dir}'.")
+			Print(f"The {self.name} does not go '{dir}'.")
 			return False
 
-		game.Print(f"You go {dir} the {self.name}.")
+		Print(f"You go {dir} the {self.name}.")
 		newroom = world[self.connections[dir]]
 		traverser.changeRoom(newroom)
 		return True
@@ -3730,14 +3753,14 @@ class Passage(Fixture):
 			dir = choice(tuple(self.connections.keys()))
 		
 		if self.connections[dir] == self.connections.get("up",None):
-			game.Print(f"{+item} falls back down.")
+			Print(f"{+item} falls back down.")
 			return
 		if "down" in self.connections:
 			dir = "down"
-			game.Print(f"{+item} falls into {-self}.")
+			Print(f"{+item} falls into {-self}.")
 		else:
 			dir = choice([dir for dir in self.connections if dir != "up"])
-			game.Print(f"{+item} goes into {-self}.")
+			Print(f"{+item} goes into {-self}.")
 		
 		item.changeRoom(world[self.connections[dir]])
 
@@ -3764,16 +3787,14 @@ class Projectile(Item):
 			if diceRoll(1,100) < maxm(99,self.aim+target.weight):
 				if hasattr(target,"open"):
 					if target.open:
-						game.Print(f"{+self} goes into {-target}.")
+						Print(f"{+self} goes into {-target}.")
 						self = self.asItem()
 						self.room().removeItem(self)
 						target.addItem(self)
 						return
-				game.Print(f"{+self} hits {-target}.")
-				dmg = self.damage()
-				game.Print(f"{dmg} damage")
-				if target.durability != -1 and dmg > target.durability:
-					target.Break()
+				Print(f"{+self} hits {-target}.")
+				# TODO determine damage type here
+				target.takeDamage(self.damage(),"b")
 			else:
 				self.Miss(target) 
 
@@ -3783,7 +3804,7 @@ class Projectile(Item):
 
 
 	def Miss(self,target):
-		game.Print("It misses...")
+		Print("It misses...")
 		self.aim = -10 if self.hasCondition("homing") else min1(self.aim-10)
 
 		# have a chance to randomly hit a different object in room
@@ -3795,7 +3816,7 @@ class Projectile(Item):
 
 		if isinstance(target,Passage):
 			if tuple(target.connections.keys()) == ("up"):
-				game.Print(f"{-self} falls down.")
+				Print(f"{-self} falls down.")
 				pass
 			elif "down" in target.connections:
 				dest = target.connections["down"]
@@ -3803,15 +3824,11 @@ class Projectile(Item):
 				dest = choice(tuple(target.connections.keys()))
 		elif isinstance(victim,Item):
 			if diceRoll(1,100) < maxm(99,self.aim+target.weight):
-				game.Print(f"It hits {-victim}!")
-				dmg = self.damage()
-				game.Print(f"{dmg} damage")
-				if victim.durability != -1 and dmg > victim.durability:
-					victim.Break()
-				else:
-					game.Print("Nothing happens.")
+				Print(f"It hits {-victim}!")
+				# TODO determine damage type here
+				victim.takeDamage(self.damage(),"b")
 		elif isinstance(victim,Creature):
-			game.Print(f"It whizzes toward {-victim}!")
+			Print(f"It whizzes toward {-victim}!",color="o")
 			victim.bombard(self)
 
 
@@ -3904,20 +3921,20 @@ class Weapon(Item):
 
 
 	def show(self):
-		game.Print(f"{self.name} {self.might} {self.sleight}")
-		game.Print(f"{self.sharpness} { self.twohanded} {self.range}")
+		Print(f"{self.name} {self.might} {self.sleight}")
+		Print(f"{self.sharpness} { self.twohanded} {self.range}")
 
 
 	def lick(self,licker):
 		if self.composition in ("glass","bronze","iron","steel"):
-			game.Print("It tastes like... blood.")
+			Print("It tastes like... blood.")
 			licker.takeDamage(3,"s")
 			return True
 
 		if self.composition in Data.tastes:
-			game.Print(Data.tastes[self.composition])
+			Print(Data.tastes[self.composition])
 		if self.composition in Data.scents:
-			game.Print(Data.scents[self.composition].replace("scent","taste"))
+			Print(Data.scents[self.composition].replace("scent","taste"))
 
 
 
@@ -3948,7 +3965,7 @@ class Armor(Item):
 
 class Compass(Item):
 	def Orient(self):
-		game.Print("Orienting you northward!")
+		Print("Orienting you northward!")
 
 
 
