@@ -113,20 +113,22 @@ def Tinge(*args,color=None):
 	return tuple(args)
 
 
-# used to calculate string display lengths by ignoring formatting chars
-def Untinge(text):
-    # Regular expression to match ANSI escape sequences
-    ansi_escape = re.compile(r'\033\[[0-9;]*m')
-    return ansi_escape.sub('', text)
+# used to calculate tinged string display lengths by ignoring formatting chars
+def displayLength(text):
+	# Regular expression to match ANSI escape sequences
+	ansi_escape = re.compile(r"\033\[[0-9;]*m")
+	l = len(ansi_escape.sub("", text.replace("\n","")))
+	return l
 
 
-def Print(*args,end="\n",sep='',delay=0.005,color=None,allowSilent=True):
+def Print(*args,end="\n",sep="",delay=0.005,color=None,allowSilent=True):
 	sys.stdout.flush()
 	if game.silent and allowSilent:
 		return
-	if len(args) > 1:
-		sep=' '
-	printLength = sum(len(Untinge(s)) for s in args)
+	if len(args) > 1 and sep=="":
+		sep=" "
+	args = [str(arg) for arg in args]
+	printLength = sum(displayLength(s) for s in args) + displayLength(sep)*(len(args)-1) + displayLength(end)
 	if color is not None:
 		args = Tinge(*args,color=color)
 	if game.mode == 1 or delay is None:
@@ -206,18 +208,20 @@ def ellipsis(n):
 # if an element is longer than one column, it takes up as many columns as needed
 def columnPrint(l,n,w=None,delay=0,color=None):
 	# automatically set column width based on longest item
+	termLengths = [displayLength(term) for term in l]
 	if w is None:
-		w = max(len(Untinge(s)) for s in l) + 2
+		w = max(termLengths) + 2
 	assert w > 1
+	print(w)
 
 	# k is the number of characters that have been printed in the current row
 	k = 0
 	# for each string element in l
-	for term in l:
+	for term, length in zip(l,termLengths):
 		# if the string is longer than remaining row width; print on a new row
-		if len(Untinge(term)) >= (n*w) - k:
+		if length >= (n*w) - k:
 			# subtract 1 to ignore newline
-			k = Print("\n" + term,end="",delay=delay,color=color) - 1
+			k = Print("\n" + term,end="",delay=delay,color=color)
 		# if the string is short enough, print it, increment k
 		else:
 			k += Print(term,end="",delay=delay,color=color)
@@ -1228,6 +1232,7 @@ class Game():
 	### User Output ###		
 
 	def startUp(self):
+		clearScreen()
 		player.printStats()
 		Print()
 		self.currentroom.describe()
@@ -3298,7 +3303,7 @@ class Player(Creature):
 
 		# dynamically determine display column width based on longest name
 		colWidth = len(max(conditions, key=len)) + 2
-		columnPrint(statusdisplay,2,colWidth)
+		columnPrint(statusdisplay,2)
 
 
 	# prints player level, money, hp, mp, rp, and status effects

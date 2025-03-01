@@ -37,14 +37,14 @@ def writeGame(filename,Game,World):
 visitedobjects = set()
 class worldEncoder(json.JSONEncoder):
 	def default(self,objToWrite):
-		if type(objToWrite) is set and tuple(objToWrite) in visitedobjects:
-			raise Exception(f"{objToWrite} already visited")
-		elif objToWrite in visitedobjects:
-			raise Exception(f"{objToWrite} already visited")
-		if type(objToWrite) is not set:
-			visitedobjects.add(objToWrite)
-		if type(objToWrite) is set:
-			visitedobjects.add(tuple(objToWrite))
+		# if type(objToWrite) is set and tuple(objToWrite) in visitedobjects:
+		# 	raise Exception(f"{objToWrite} already visited")
+		# elif objToWrite in visitedobjects:
+		# 	raise Exception(f"{objToWrite} already visited")
+		# if type(objToWrite) is not set:
+		# 	visitedobjects.add(objToWrite)
+		# if type(objToWrite) is set:
+		# 	visitedobjects.add(tuple(objToWrite))
 		
 		JSONprimitives = {dict,list,str,int,float,bool,None}
 		if type(objToWrite) is set:
@@ -262,7 +262,6 @@ def loadGame(filename=None):
 	
 	Core.ellipsis(3)
 	Core.flushInput()
-	Core.clearScreen()
 
 	# describe the current room
 	Core.game.startUp()

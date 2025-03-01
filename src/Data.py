@@ -188,7 +188,7 @@ definitions = {
 
 "burden":"Burden\nMaximum inventory weight without hindrance. Being Hindered reduces CSSP, MVMT and SLTH. BRDN is determined by CON and STR. Type 'brdn' to view your BRDN.",
 
-"cast":"Casting Bonus\nBonus added to various spells and magical effects in different ways. CAST is determined by WIS, FTH, and INT, and can be reduced if  Equipped Armor is too heavy. Type 'cast' to view your CAST.",
+"cast":"Casting Bonus\nBonus added to various spells and magical effects in different ways. CAST is determined by WIS, FTH, and INT, and can be reduced if Equipped Armor is too heavy. Type 'cast' to view your CAST.",
 
 "casting bonus":"Casting Bonus\nBonus added to various Spells and magical effects in different ways. CAST is determined by WIS, FTH, and INT, and can be reduced if the Equipped Armor is too heavy. Type 'cast' to view your CAST.",
 
@@ -388,9 +388,9 @@ definitions = {
 
 "weight":"Weight\nEvery Item has a weight value. Inventory weight is the combined weight of every Item in your Inventory. Weapons used that are too heavy can reduce ATSP. Armor Equipped that is too heavy can reduce CSSP, CAST, and MVMT.",
 
-"wis":"Wisdom\nTrait representing perceptiveness and unworldly understanding. WIS contributes to determining CAST, CSSP, INVS, MXMP, and PRSD. Type 'wis' to view your WIS.",
+"wis":"Wisdom\nTrait representing perceptiveness and unworldly insight. WIS contributes to determining CAST, CSSP, INVS, MXMP, and PRSD. Type 'wis' to view your WIS.",
 
-"wisdom":"Wisdom\nTrait representing perceptiveness and unworldly understanding. WIS contributes to determining CAST, CSSP, INVS, MXMP, and PRSD. Type 'wis' to view your WIS.",
+"wisdom":"Wisdom\nTrait representing perceptiveness and unworldly insight. WIS contributes to determining CAST, CSSP, INVS, MXMP, and PRSD. Type 'wis' to view your WIS.",
 
 "xp":"Experience Points\nXP determines Level. Player can gain XP from fighting, socializing, exploring, tinkering, and more. Type 'xp' to view your XP."
 }

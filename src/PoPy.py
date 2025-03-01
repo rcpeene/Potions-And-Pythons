@@ -89,8 +89,7 @@ if __name__ == "__main__":
 # create linked passages? if a window breaks on one side, it should break the other way too
 # add "climb" and "swim"
 # try out using a creature as a weapon
-# add colored text?
-
+# restrict Read to readable objects?
 
 # add basic equipment and clothing items
 # fix/add Creature.isNaked or Player.isNaked
