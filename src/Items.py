@@ -509,11 +509,11 @@ class Wall(Core.Passage):
 
 
 class Window(Core.Passage):
-	def __init__(self,name,desc,weight,durability,composition,connections,descname,broken=False,**kwargs):
+	def __init__(self,name,desc,weight,durability,composition,connections,descname,open=False,broken=False,**kwargs):
 		Core.Passage.__init__(self,name,desc,weight,durability,composition,connections,descname,**kwargs)
 		self.descname = descname
+		self.open = open
 		self.broken = broken
-		self.open = False
 
 
 	# breaks the window, removes it from player inventory, and generates some shards

@@ -253,7 +253,7 @@ def promptHelp(msg):
 		Core.Print(msg,color="k")
 	helpCounter += 1
 	if helpCounter >= 3:
-		Core.Print("Enter 'help' for a list of commands.",color="k")
+		Core.Print("Enter 'help' for instructions.",color="k")
 	return False
 
 
@@ -296,13 +296,10 @@ def parse():
 	dobj,iobj,prep = parseWithoutVerb(command[1:])
 	# this line calls the action function using the 'actions' dict
 	actionCompleted = actions[verb](dobj,iobj,prep)
-	# if action was not completed for some reason, recur
-	if actionCompleted == False:
-		return promptHelp("")
+	helpCounter = 0
 	# if action didn't take any time, return False
 	if actionCompleted is None:
 		return False
-	helpCounter = 0
 	return True
 
 
@@ -565,7 +562,7 @@ def Hello(*args):
 def Commands(*args):
 	Core.flushInput()
 	Core.clearScreen()
-	Core.Print("\nSingle-Word Commands",color="k")
+	Core.Print("Short Commands (May only be one word)",color="k")
 	shortcommands = sorted(tuple(shortactions.keys()) + Data.traits + Data.abilities)
 	Core.columnPrint(shortcommands,12,10,delay=0,color="k")
 	Core.Print("\nVerb Commands (Does not include cheat codes and secret commands)",color="k")
@@ -604,6 +601,8 @@ def Sing(*args):
 
 
 def Time(*args): Core.Print("Time:",Core.game.time,color="k")
+
+
 def Yawn(*args): return Rest(None,None,None) if Core.yesno("Do you want to sleep?") else None
 
 
