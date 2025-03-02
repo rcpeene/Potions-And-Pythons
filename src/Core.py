@@ -197,7 +197,7 @@ def yesno(question,delay=0.005,color=None):
 
 
 # prints a timed ellipsis, used for dramatic transitions
-def ellipsis(n):
+def ellipsis(n=3):
 	for i in range(n):
 		sleep(1)
 		print(".")
@@ -212,7 +212,6 @@ def columnPrint(l,n,w=None,delay=0,color=None):
 	if w is None:
 		w = max(termLengths) + 2
 	assert w > 1
-	print(w)
 
 	# k is the number of characters that have been printed in the current row
 	k = 0
@@ -811,6 +810,7 @@ class DialogueTree():
 		self.reactions = ReactionNode(self,label,4,treeJson.get("reactions",{}))
 		self.children = (self.surprise,self.quest,self.colloquy,self.chatter,self.reactions)
 		self.visitCounts = {} if visitCounts is None else visitCounts
+		self.visitCounts = self.deserializeTupDict(self.visitCounts)
 		self.checkpoint = None
 
 
@@ -822,10 +822,14 @@ class DialogueTree():
 
 	### File I/O ###
 
+	def deserializeTupDict(self,tupDict):
+		return {tuple(tupStr.split(',')): val for tupStr, val in tupDict.items()}
+
+
 	def convertToJSON(self):
 		return {
 			"label": self.label,
-			"visitCounts": self.visitCounts,
+			"visitCounts": {str(id): count for id, count in self.visitCounts.items()},
 			"checkpoint": self.checkpoint
 		}
 
@@ -950,7 +954,7 @@ class DialogueTree():
 class EmptyGear:
 	_instance = None
 	name = "[empty]"
-	aliases = []
+	aliases = set()
 	weight = 0
 	prot = 0
 	might = 1
@@ -1051,11 +1055,8 @@ class Game():
 	# exits the previous room and enters the new room
 	def changeRoom(self,newroom):
 		self.clearPronouns()
-		self.prevroom.exit(player)
 		self.prevroom = self.currentroom
 		self.currentroom = newroom
-		player.parent = newroom
-		self.currentroom.enter(player)
 		return True
 
 
@@ -1266,7 +1267,7 @@ class Game():
 			target = "sun" if self.hour() in Data.dayhours else "moon"		
 
 		if "eclipse" in self.events:
-			Print("The bold red sun is blackened by the ominous moon. The world is dark below and above but for the ring of violet light tracing the moon. Those golden lines of fire that scar the moon's surface seem like cracks through which the sun's rays seep faintly through. All is still in the heavens as they bear witness to this solemn union.",color="b")
+			Print("The bold red sun is blackened by the ominous moon. The world is dark above and below but for the ring of violet light tracing the moon. Those golden lines of fire that scar the moon's surface seem like cracks through which the sun's rays seep faintly through. All is still in the heavens as they bear witness to this solemn union.",color="b")
 			player.takeDamage(5,"r")
 		elif "eclipse" not in self.events and target in ("eclipse","solar eclipse"):
 			Print("There's no eclipse happening right now.")
@@ -1320,7 +1321,7 @@ class Game():
 # directed graph, facilitated by the world dict, where the exits dict specifies
 # the edges from a given node to its neighboring nodes.
 class Room():
-	def __init__(self,name,domain,desc,exits,fixtures,items,creatures,size=5,type=None,altitude=0,status=None):
+	def __init__(self,name,domain,desc,exits,fixtures,items,creatures,size=10,type=None,altitude=0,status=None):
 		self.name = name
 		self.domain = domain
 		self.desc = desc
@@ -1531,6 +1532,7 @@ class Room():
 
 	# if the given room object, dest, is in one of the rooms exits, then find the direction it is in from the room.
 	def getDirFromDest(self,dest):
+		assert dest in self.allExits.values()
 		if dest in self.allExits().values():
 			idx = list(self.allExits().values()).index(dest)
 			dir = list(self.allExits().keys())[idx]
@@ -1571,9 +1573,8 @@ class Room():
 	def describeItems(self):
 		items = self.listableItems()
 		if len(items) != 0:
-			Print(f"There is {listObjects(self.listableItems())}.")
-		if len(items) == 1:
-			game.setPronouns(items[0])
+			Print(f"There is {listObjects(items)}.")
+			game.setPronouns(items[-1])
 
 
 	# prints all the creatures in the room in sentence form
@@ -1590,7 +1591,7 @@ class Room():
 # Anything in a Room that is not a Creature will be an Item
 # All items come with a name, description, weight, and durability
 class Item():
-	def __init__(self,name,desc,weight,durability,composition,longevity=None,despawnTimer=None,scent=None,taste=None,texture=None,status=None,aliases=None,plural=None,determiner=None):
+	def __init__(self,name,desc,weight,durability,composition,aliases=None,status=None,plural=None,determiner=None,longevity=None,despawnTimer=None,scent=None,taste=None,texture=None):
 		self.name = name
 		self.desc = desc
 		self.weight = weight
@@ -1603,7 +1604,7 @@ class Item():
 		self.taste = taste
 		self.texture = texture
 		self.status = status if status else []
-		self.aliases = aliases if aliases else []
+		self.aliases = set(aliases) if aliases else set()
 		if plural is None:
 			self.plural = self.name + 's'
 		else:
@@ -1679,8 +1680,10 @@ class Item():
 		# can only change rooms if not stuck inside some item
 		if type(self.parent) is not Room:
 			raise Exception(f"Can't change rooms. Stuck inside {self.parent}.")
-
 		prevroom = self.parent
+		if newroom is prevroom:
+			return False
+		
 		prevroom.exit(self)
 		prevroom.removeItem(self)
 		self.parent = newroom
@@ -1702,6 +1705,23 @@ class Item():
 		return True
 
 
+	def Fall(self,height=0,room=None):
+		if room is None:
+			room = self.room()
+		if self.room() is game.currentroom:
+			Print(f"{+self} falls down.")
+
+		while room.altitude != 0 and "down" in room.exits:
+			height += room.size
+			room = world[room["down"]]
+		if room != self.room():
+			self.changeRoom(room)
+			if self.room() is game.currentroom:
+				Print(f"{+self} falls from above.")
+		self.takeDamage(height,"b")
+		return True
+
+
 	def Use(self,user):
 		if user not in self.ancestors():
 			Print(f"{+self} is not in your inventory.")
@@ -1710,9 +1730,26 @@ class Item():
 
 
 	def takeDamage(self,dmg,type):
-		Print(f"{dmg} {Data.dmgtypes[type]} damage",color="o")
+		if self.room() is game.currentroom and dmg > 0:
+			Print(f"{+self} took {dmg} {Data.dmgtypes[type]} damage.")
 		if self.durability != -1 and dmg > self.durability:
 			return self.Break()
+
+
+	def Bombard(self,missile):
+		assert isinstance(missile,Projectile)
+		if diceRoll(1,100) < bound(missile.aim+self.weight+10,1,99):
+			if getattr(self,"open",False):
+				Print(f"{+missile} goes into {-self}.")
+				missile = missile.asItem()
+				missile.room().removeItem(missile)
+				self.addItem(missile)
+			else:
+				Print(f"{+missile} hits {-self}.")
+				# TODO determine damage type here
+				self.takeDamage(missile.damage(),"b")
+			return True
+		return False
 
 
 	def addCondition(self,name,dur,stackable=False):
@@ -1829,7 +1866,7 @@ class Creature():
 		self.name = name
 		self.desc = desc
 		self.descname = descname if descname else name
-		self.aliases = aliases if aliases else []
+		self.aliases = set(aliases) if aliases else set()
 		self.determiner = determiner
 		if plural is None:
 			self.plural = self.name + 's'
@@ -2288,7 +2325,7 @@ class Creature():
 	def death(self):
 		self.timeOfDeath = game.time
 		self.addCondition("dead",-3)
-		Print("\n" + f"{+self} died.",color="o")
+		Print(f"{+self} died.",color="o")
 		self.descname = f"dead {self.descname}"
 		n = diceRoll(3,player.LOOT(),-2)
 		self.room().addItem(Serpens(n))
@@ -2299,6 +2336,27 @@ class Creature():
 			# xp granted generally scales with rating
 			xp = diceRoll(2, r//2, r-15)
 			player.gainxp(xp)
+
+
+	def Fall(self,height=0,room=None):
+		Print(f"{+self} falls.",color="o")
+
+		if self.hasCondition("flying"):
+			Print(f"But {self.prep} is flying.")
+			return False
+
+		if room is None:
+			room = self.room()
+		while room.altitude != 0 and "down" in room.exits:
+			height += room.size
+			room = world[room["down"]]
+		if room != self.room():
+			self.changeRoom(room)
+			
+		if self.hasCondition("fleetfooted"):
+			height = 0
+		self.takeDamage(height,"b")
+		return True
 
 
 	def Eat(self,food):
@@ -2337,8 +2395,10 @@ class Creature():
 		# shouldn't be changing rooms alone if being carried
 		if self.carrier and self.carrier.parent is not newroom:
 			return False
-
 		prevroom = self.parent
+		if newroom is self.parent:
+			return False
+
 		prevroom.exit(self)
 		prevroom.removeCreature(self)
 		self.parent = newroom
@@ -2417,17 +2477,17 @@ class Creature():
 		return False
 
 
-	def bombard(self,missile):
+	def Bombard(self,missile):
 		assert isinstance(missile,Projectile)
 		if missile.speed < self.MVMT():
-			if diceRoll(1,100) < 50:
+			# TODO: determine how they'll decide if they catch here
+			if diceRoll(1,100) < 50 and hasMethod(self,"Catch"):
 				if self.Catch(missile):
 					return True
-		hit = bound(missile.aim-self.EVSN(),1,99)
-		if diceRoll(1,100) < hit:
+		if diceRoll(1,100) < bound(missile.aim-self.EVSN(),1,99):
 			self.takeDamage(missile.damage(),missile.type)
 			missile = missile.asItem()
-			missile.parent.removeItem(missile)
+			# missile.parent.removeItem(missile)
 			return True
 		return False
 
@@ -2445,22 +2505,6 @@ class Creature():
 		return True
 
 
-	def Catch(self,missile):
-		assert isinstance(missile,Projectile)
-		self.unequip(self.gear["left"])
-		canCatch = 5*self.ATHL() > missile.weight and self.canObtain(missile)
-		catch = bound(self.ACCU() - missile.speed*missile.weight,1,99)
-		if canCatch and diceRoll(1,100) <= catch:
-			missileItem = missile.asItem()
-			Print(f"{+self} catches {-missileItem}!",color="o")
-			self.obtainItem(missileItem)
-			self.equipInHand(missileItem)
-			return True
-		else:
-			Print(f"{+self} fails to catch {-missile}.")
-			return False
-
-
 	def Restrain(self,restrainer,item=None):
 		if not self.isAlive():
 			return True
@@ -2476,40 +2520,14 @@ class Creature():
 		return True
 
 
-	def Throw(self,missile,target):
+	def Throw(self,missile,target,speed=None):
 		self.removeItem(missile)
 		self.room().addItem(missile)
-		if type(target) is str:
-			assert target in world
-			dir = self.room().getDirFromDest(target)
-			Print(f"You throw {-missile} {dir}")
-			if dir == "up":
-				Print(f"{+missile} falls back down.")
-			return missile.changeRoom(world[target])
 
-		if not isinstance(missile,Projectile):
-			missile = missile.asProjectile()
+		missile = missile.asProjectile()
 
-		speed = min1(self.ATHL())
-		aim = self.ACCU()
-		return missile.Launch(speed,aim,target)
-
-
-	def Toss(self,missile,target):
-		self.removeItem(missile)
-		self.room().addItem(missile)
-		if type(target) is str:
-			assert target in world
-			dir = self.room().getDirFromDest(target)
-			Print(f"You throw {-missile} {dir}")
-			if dir == "up":
-				Print(f"{+missile} falls back down.")
-			return missile.changeRoom(world[target])
-
-		if not isinstance(missile,Projectile):
-			missile = missile.asProjectile()
-
-		speed = 0
+		if speed is None:
+			speed = diceRoll(1,self.STR(),self.STR())
 		aim = self.ACCU()
 		return missile.Launch(speed,aim,target)
 
@@ -2534,7 +2552,7 @@ class Creature():
 			if athl_contest > 0:
 				Print(f"{+self} shakes you off!",color="r")
 				if athl_contest > rider.ATHL():
-					rider.takeDamage(athl_contest-rider.ATHL(),"b")
+					rider.Fall(athl_contest-rider.ATHL())
 				return False
 		self.rider = rider
 		rider.riding = self
@@ -2630,7 +2648,7 @@ class Creature():
 
 
 	# these formulas are difficult to read, check design document for details
-	def ACCU(self): return 45 + 2*self.SKL() + self.LCK() + self.weapon.sleight
+	def ACCU(self): return 60 + 2*self.SKL() + self.LCK() + self.weapon.sleight
 	def ATCK(self): return diceRoll(self.STR(), self.weapon.might, self.atkmod())
 	def ATHL(self): return self.STR() + self.SKL() + self.STM()
 	def ATSP(self): return self.SPD() - min0(self.handheldWeight()//4 - self.CON())
@@ -2641,7 +2659,7 @@ class Creature():
 	def DCPT(self): return 2*self.CHA() + self.INT()
 	def DFNS(self): return 2*self.CON() + self.protection()
 	def ENDR(self): return 2*self.STM() + self.CON()
-	def EVSN(self): return 8 if self.hasAnyCondition("sitting","laying") else 2*self.ATSP() + self.LCK() + self.SPD()
+	def EVSN(self): return 10 if self.hasAnyCondition("sitting","laying") else 2*self.ATSP() + self.LCK() + self.SPD()
 	def INVS(self): return 2*self.INT() + self.WIS()
 	def KNWL(self): return 2*self.INT() + self.LCK()
 	def LOOT(self): return 2*self.LCK() + self.FTH()
@@ -2889,7 +2907,18 @@ class Player(Creature):
 		# can only change rooms if not stuck inside some item
 		if type(self.parent) is not Room:
 			raise Exception(f"Can't change rooms. Stuck inside {self.parent}")
+		# shouldn't be changing rooms alone if being carried
+		if self.carrier and self.carrier.parent is not newroom:
+			return False
+		prevroom = self.parent
+		if newroom is prevroom:
+			return
+
+		prevroom.exit(self)
+		self.parent = newroom
 		game.changeRoom(newroom)
+		newroom.enter(self)
+
 		if self.riding:
 			self.riding.changeRoom(newroom)
 		if self.carrying:
@@ -2939,9 +2968,7 @@ class Player(Creature):
 		else:
 			self.hp = min0(self.hp-dmg)
 		total_dmg = prevhp - self.hp
-		p = "."
-		if player.hasCondition("asleep") or total_dmg > self.MXHP() // 2:
-			p = "!"
+		p = "!" if player.hasCondition("asleep") or total_dmg > self.MXHP() // 3 else "."
 		Print(f"You took {total_dmg} {Data.dmgtypes[type]} damage{p}",allowSilent=False,color="r")
 		if self.hp == 0:
 			return self.death()
@@ -3003,7 +3030,7 @@ class Player(Creature):
 	# adds xp, checks for player level up
 	def gainxp(self,newxp):
 		oldlv = self.level()
-		Print(f"\nYou gained {newxp} xp.",color="g")
+		Print(f"You gained {newxp} xp.",color="g")
 		self.xp += newxp
 		# Print(f"You have {self.xp}")
 		newlv = self.level()
@@ -3095,7 +3122,7 @@ class Player(Creature):
 	# called when player hp hits 0
 	def death(self):
 		Print("You have died!",color="r")
-		ellipsis(3)
+		ellipsis()
 		
 		if self.hasCondition("Anointed",reqDuration=-3):
 			sleep(1)
@@ -3162,14 +3189,35 @@ class Player(Creature):
 		return target.takeDamage(attack,"b")
 		
 
-	def bombard(self,missile):
+	def Fall(self,height=0,room=None):
+		Print(f"You fall!",color="o")
+
+		if self.hasCondition("flying"):
+			Print(f"But you're flying.",color="g")
+			return False
+
+		if room is None:
+			room = self.room()
+		while room.altitude != 0 and "down" in room.exits:
+			height += room.size
+			room = world[room["down"]]
+		if room != self.room():
+			ellipsis()
+			self.changeRoom(room)
+			
+		if self.hasCondition("fleetfooted"):
+			height = 0
+		self.takeDamage(height,"b")
+		return True
+
+
+	def Bombard(self,missile):
 		assert isinstance(missile,Projectile)
 		if missile.speed < self.MVMT():
 			if yesno(f"Will you try to catch {-missile}?"):
 				if self.Catch(missile):
 					return True
-		hit = bound(missile.aim-self.EVSN(),1,99)
-		if diceRoll(1,100) < hit:
+		if diceRoll(1,100) < bound(missile.aim-self.EVSN(),1,99):
 			self.takeDamage(missile.damage(),missile.type)
 			missile = missile.asItem()
 			missile.parent.removeItem(missile)
@@ -3242,7 +3290,7 @@ class Player(Creature):
 		if len(self.inv) == 0:
 			Print("\nYour Inventory is empty.")
 		else:
-			columnPrint(self.invNames(),8,12)
+			columnPrint(self.invNames(),8,16)
 
 
 	# print each player gear slot and the items equipped in them
@@ -3388,6 +3436,22 @@ class Humanoid(Creature):
 				return
 
 
+	def Catch(self,missile):
+		assert isinstance(missile,Projectile)
+		self.unequip(self.gear["left"])
+		canCatch = 5*self.ATHL() > missile.weight and self.canObtain(missile)
+		catch = bound(self.ACCU() - missile.speed*missile.weight,1,99)
+		if canCatch and diceRoll(1,100) <= catch:
+			missileItem = missile.asItem()
+			Print(f"{+self} catches {-missileItem}!",color="o")
+			self.obtainItem(missileItem)
+			self.equipInHand(missileItem)
+			return True
+		else:
+			Print(f"{+self} fails to catch {-missile}.")
+			return False
+
+
 	### Getters ###
 
 	def describe(self):
@@ -3495,19 +3559,19 @@ class Person(Speaker,Humanoid):
 
 		if self.pronoun == "he":
 			if isChild:
-				self.aliases.extend(("boy","male"))
+				self.aliases.update(("boy","male"))
 			else:
-				self.aliases.extend(("man","guy","dude","male"))
+				self.aliases.update(("man","guy","dude","male"))
 		elif self.pronoun == "she":
 			if isChild:
-				self.aliases.extend(("girl","female"))
+				self.aliases.update(("girl","female"))
 			else:
-				self.aliases.extend(("woman","lady","dudette","female"))
+				self.aliases.update(("woman","lady","dudette","female"))
 		else:
 			self.pronoun = "they"
 		if isChild:
-			self.aliases.append("child","kid")
-		self.aliases.append("person")
+			self.aliases.update(("child","kid"))
+		self.aliases.add("person")
 	
 
 	### Operation ###
@@ -3720,7 +3784,7 @@ class Fixture(Item):
 
 
 class Passage(Fixture):
-	def __init__(self,name,desc,weight,durability,composition,connections,descname,passprep=None,mention=False,**kwargs):
+	def __init__(self,name,desc,weight,durability,composition,connections,descname,passprep="into",mention=False,**kwargs):
 		Fixture.__init__(self,name,desc,weight,durability,composition,mention=mention,**kwargs)
 		self.connections = connections
 		self.descname = descname
@@ -3742,31 +3806,39 @@ class Passage(Fixture):
 			Print(f"The {self.name} does not go '{dir}'.")
 			return False
 
-		Print(f"You go {dir} the {self.name}.")
+		waitKbInput(f"You go {dir} the {self.name}.")
 		newroom = world[self.connections[dir]]
 		traverser.changeRoom(newroom)
 		return True
 
 
-	def Transfer(self,item,dir=None):
-		if isinstance(item,Creature):
-			return self.Traverse(item)
+	def Bombard(self,missile):
+		assert isinstance(missile,Projectile)
+		if diceRoll(1,100) < bound(missile.aim+self.weight+10,1,99):
+			if getattr(self,"open",True):
+				# Print(f"{+missile} goes {self.passprep} {-self}.")
+				self.Transfer(missile.asItem())
+			else:
+				Print(f"{+missile} hits {-self}.")
+				# TODO determine damage type here
+				self.takeDamage(missile.damage(),"b")
+			return True
+		return False
 
-		if dir is not None:
-			assert dir in self.connections
-		else:
-			dir = choice(tuple(self.connections.keys()))
-		
-		if self.connections[dir] == self.connections.get("up",None):
-			Print(f"{+item} falls back down.")
-			return
+
+	def Transfer(self,item):
+		if isinstance(item,Creature):
+			return self.Traverse(item,dir=dir)
+
 		if "down" in self.connections:
-			dir = "down"
-			Print(f"{+item} falls into {-self}.")
-		else:
-			dir = choice([dir for dir in self.connections if dir != "up"])
-			Print(f"{+item} goes into {-self}.")
-		
+			return item.Fall(room=world[self.connections["down"]])
+
+		# item can't randomly go up
+		dir = choice([dir for dir in self.connections])
+		if self.connections[dir] == self.connections.get("up",None):
+			return item.Fall()
+
+		# Print(f"{+item} goes {self.passprep} {-self}.")	
 		item.changeRoom(world[self.connections[dir]])
 
 
@@ -3782,59 +3854,32 @@ class Projectile(Item):
 
 
 	def Launch(self,speed,aim,target):
+		assert isinstance(self.item.parent,Room), "Launched item must be in a room"
 		self.speed = speed
 		self.aim = 90 if self.hasCondition("homing") and aim < 90 else aim
 
-		if isinstance(target,Passage) and getattr(target,"open",True):
-			target.Transfer(self.asItem())
-
-		elif isinstance(target,Item):
-			if diceRoll(1,100) < maxm(99,self.aim+target.weight):
-				if hasattr(target,"open"):
-					if target.open:
-						Print(f"{+self} goes into {-target}.")
-						self = self.asItem()
-						self.room().removeItem(self)
-						target.addItem(self)
-						return
-				Print(f"{+self} hits {-target}.")
-				# TODO determine damage type here
-				target.takeDamage(self.damage(),"b")
-			else:
-				self.Miss(target) 
-
-		elif isinstance(target,Creature):
-			if not target.bombard(self):
-				self.Miss(target)
+		if isinstance(target,Room):
+			self = self.asItem()
+			self.changeRoom(target)
+			return self.Fall(speed//2)
+		
+		if not target.Bombard(self):
+			Print("It misses!")
+			self.Miss(target)
 
 
 	def Miss(self,target):
-		Print("It misses...")
-		self.aim = -10 if self.hasCondition("homing") else min1(self.aim-10)
+		self.aim = -10 if self.asItem().hasCondition("homing") else min1(self.aim-10)
 
 		# have a chance to randomly hit a different object in room
-		otherObjs = [obj for obj in target.room().contents() if obj not in (self,target)]
-		weights = [obj.weight for obj in otherObjs]+[target.room().size]
-		victim = choices(otherObjs+[None],weights=weights)[0]
+		otherObjs = [obj for obj in target.room().contents() if obj not in (self,self.item,target)]
+		weights = [obj.weight for obj in otherObjs]
+		victim = choices(otherObjs+[None],weights+[target.room().size])[0]
 		if victim is None:
 			return False
-
-		if isinstance(target,Passage):
-			if tuple(target.connections.keys()) == ("up"):
-				Print(f"{-self} falls down.")
-				pass
-			elif "down" in target.connections:
-				dest = target.connections["down"]
-			else:
-				dest = choice(tuple(target.connections.keys()))
-		elif isinstance(victim,Item):
-			if diceRoll(1,100) < maxm(99,self.aim+target.weight):
-				Print(f"It hits {-victim}!")
-				# TODO determine damage type here
-				victim.takeDamage(self.damage(),"b")
-		elif isinstance(victim,Creature):
-			Print(f"It whizzes toward {-victim}!",color="o")
-			victim.bombard(self)
+		Print(f"It whizzes toward {-victim}!", color="o")
+		if not victim.Bombard(self):
+			Print("It misses...")
 
 
 	def dull(self,dec):
@@ -3858,11 +3903,16 @@ class Projectile(Item):
 			return self
 
 
+	def asProjectile(self):
+		return self
+
+
+
 class Serpens(Item):
 	def __init__(self,value,**kwargs):
 		desc = f"{str(value)} glistening coins made of an ancient metal"
 		Item.__init__(self,"Gold",desc,value,-1,"gold",**kwargs)
-		self.aliases = ["coin","coins","money","serpen","serpens"]
+		self.aliases = {"coin","coins","money","serpen","serpens"}
 		self.plural = "gold"
 		self.descname = str(value) + " Gold"
 		self.value = value
@@ -3940,6 +3990,10 @@ class Weapon(Item):
 			Print(Data.tastes[self.composition])
 		if self.composition in Data.scents:
 			Print(Data.scents[self.composition].replace("scent","taste"))
+
+
+	def asProjectile(self):
+		return Projectile(self.name,self.desc,self.weight,self.durability,self.composition,self.might,self.sharpness,self.type,item=self)
 
 
 

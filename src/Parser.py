@@ -200,7 +200,7 @@ def processCmd(prompt,storeRawCmd=False):
 	# take input until input has any non-whitespace characters in it
 	while not any(i not in "\t " for i in rawcommand):
 		Core.flushInput()
-		rawcommand = Core.Input("",low=False)
+		rawcommand = Core.Input("",cue="> ",low=False)
 	# for convenience, save raw command in game object
 	if storeRawCmd:
 		Core.game.lastRawCommand = rawcommand.split()
@@ -1428,6 +1428,7 @@ def Lock(dobj,iobj,prep):
 
 
 def Look(dobj,iobj,prep):
+	# TODO: add "look up", so they can look at sky or ceiling
 	if prep not in ("at","in","inside","into","on","through",None):
 		return promptHelp("Command not understood.")
 
@@ -1617,8 +1618,9 @@ def Put(dobj,iobj,prep):
 	return True
 
 
-def Quicksave():
+def Quicksave(*args):
 	Menu.quickSave("quicksave")
+	Core.waitKbInput("Quicksaved.",color="k")
 	return parse()
 
 
@@ -1654,7 +1656,7 @@ def Rest(dobj,iobj,prep):
 
 	sleeptime = 90 + randint(1,20)
 	Core.player.addCondition("asleep",sleeptime)
-	Core.ellipsis(3)
+	Core.ellipsis()
 	Core.game.silent=True
 	return True
 
@@ -1827,11 +1829,9 @@ def Swim(dobj,iobj,prep):
 
 # if an item is a container, take each of its contents before taking it
 def TakeAllRecur(objToTake):
-	takenAll = True
 	takenAny = False
 	if hasattr(objToTake, "contents"):
-		# deep copy to prevent removing-while-iterating error
-		contents = [obj for obj in objToTake.contents()]
+		contents = sorted(objToTake.contents(), key=lambda x: x.Weight())
 		for content in contents:
 			takenAny = TakeAllRecur(content) or takenAny
 
@@ -1853,7 +1853,7 @@ def TakeAll():
 		Core.Print("There are no items to take.")
 		return False
 	takenAny = False
-	for obj in [obj for obj in Core.game.currentroom.items]:
+	for obj in sorted(Core.game.currentroom.items, key=lambda x: x.Weight()):
 		takenAny = TakeAllRecur(obj) or takenAny
 	return takenAny
 
@@ -1874,15 +1874,16 @@ def Take(dobj,iobj,prep):
 		objToTake = findObjFromTerm(dobj,roomD=2,reqParent=iobj)
 	if objToTake is None:
 		return False
+	Core.game.setPronouns(objToTake)
 	if objToTake.parent is Core.player:
 		Core.Print(f"You can't take from your own Inventory.")
 		return False
-	Core.game.setPronouns(objToTake)
 
-	if isinstance(objToTake,Core.Creature): return CarryCreature(objToTake)
-	# if not isinstance(objToTake,Core.Item) or isinstance(objToTake,Core.Fixture):
-	# 	Core.Print(f"You can't take {objToTake}.")
-	# 	return False
+	if isinstance(objToTake,Core.Creature): 
+		return CarryCreature(objToTake)
+	if isinstance(objToTake,Core.Fixture):
+		Core.Print(f"You can't take {objToTake}.")
+		return False
 
 	parent = objToTake.parent
 	# if it is in a non-player inventory, it will have to be stolen
@@ -1923,14 +1924,13 @@ def Talk(dobj,iobj,prep):
 
 
 def Throw(dobj,iobj,prep):
-	if prep not in ("at","down","into","on","onto","through","to","toward","up",None):
+	if prep not in ("at","down","into","off","on","onto","out","through","to","toward","up",None):
 		return promptHelp("Command not understood.")
-
 	if prep in ("to","toward"):
 		return Toss(dobj,iobj,prep)
+	
 	if prep in ("down","up") and iobj is None:
 		iobj = prep
-
 	if dobj is None:
 		dobj = getNoun("What do you want to throw?")
 		if dobj in Data.cancels: return False
@@ -1940,23 +1940,23 @@ def Throw(dobj,iobj,prep):
 	if iobj is None:
 		iobj = getNoun("What will you throw at?")
 		if iobj in Data.cancels: return False
+	dir = None
 	if iobj in ("down","floor","ground","here","room","up"):
-		if iobj == "up":
-			# TODO: figure out the best way to throw across rooms. Do you pass in the direction or the room? or what? account for throwing up and down... consider falling damage first
-			Core.Print(f"{+I} falls back down.")
-		else:
-			Core.Print(f"{+I} lands on the ground.")
-		Core.player.removeItem(I)
-		Core.game.currentroom.addItem(I)
-		return True
+		T = Core.game.currentroom
+		dir = "up" if iobj == "up" else "down"
 	elif iobj.lower() in Core.game.currentroom.exits.keys():
-		T = Core.game.currentroom.exits[iobj]
+		T = Core.world[Core.game.currentroom.exits[iobj]]
+		dir = iobj
 	elif iobj in Core.game.currentroom.exits.values():
-		T = iobj
+		T = Core.world[iobj]
+		dir = Core.getDirFromDest(T)
 	else:
 		T = findObjFromTerm(iobj)
-	if T is None: return False
-
+		if T is None: return False
+		dirprep = getattr(T,"passprep","toward")
+		dir = f"{dirprep} {-T}"
+	
+	Core.Print(f"You throw {-I} {dir}.")
 	Core.game.setPronouns(I)
 	return Core.player.Throw(I,T)
 # throw at a tree, window, goblin, pit
@@ -1969,14 +1969,11 @@ def Tie(dobj,iobj,prep):
 
 
 def Toss(dobj,iobj,prep):
-	if prep not in ("at","into","onto","through","to","toward","up",None):
+	if prep not in ("at","down","into","off","on","onto","out","through","to","toward","up",None):
 		return promptHelp("Command not understood.")
 
-	if prep in ("at"):
-		return Throw(dobj,iobj,prep)
-	if prep == "up" and iobj is None:
-		iobj = "up"
-
+	if prep in ("down","up") and iobj is None:
+		iobj = prep
 	if dobj is None:
 		dobj = getNoun("What do you want to toss?")
 		if dobj in Data.cancels: return False
@@ -1986,18 +1983,25 @@ def Toss(dobj,iobj,prep):
 	if iobj is None:
 		iobj = getNoun("What will you toss to?")
 		if iobj in Data.cancels: return False
-	if iobj in ("ground","floor","here","room"):
+	dir = None
+	if iobj in ("down","floor","ground","here","room","up"):
 		T = Core.game.currentroom
+		dir = "up" if iobj == "up" else "down"
 	elif iobj.lower() in Core.game.currentroom.exits.keys():
-		T = Core.game.currentroom.exits[iobj]
+		T = Core.world[Core.game.currentroom.exits[iobj]]
+		dir = iobj
 	elif iobj in Core.game.currentroom.exits.values():
-		T = iobj
+		T = Core.world[iobj]
+		dir = Core.getDirFromDest(T)
 	else:
 		T = findObjFromTerm(iobj)
-	if T is None: return False
-
+		if T is None: return False
+		dirprep = getattr(T,"passprep","toward")
+		dir = f"{dirprep} {-T}"
+	
+	Core.Print(f"You toss {-I} {dir}.")
 	Core.game.setPronouns(I)
-	return Core.player.Toss(I,T)
+	return Core.player.Throw(I,T,0)
 
 
 def Touch(dobj,iobj,prep):
@@ -2263,6 +2267,7 @@ actions = {
 "put down":Drop,
 "put on":Don,
 "quaff":Drink,
+"quicksave":Quicksave,
 "read":Look,
 "release":Release,
 "remove":Unequip,
@@ -2332,10 +2337,10 @@ actions = {
 
 # headbutt
 # poke
-# think
-# show/reveal
-# write
 # remove clothing/strip
+# show/reveal
+# think
+# write
 # draw/sheath/stow
 # bow
 # slap
@@ -2349,6 +2354,7 @@ actions = {
 # whip (attack)
 # dress/undress/strip
 # spit
+# ponder (the orb, to see future?)
 # douse,drench -> reverse of pour on?
 # converse/communicate/discuss
 # say hello -> hello
@@ -2386,7 +2392,7 @@ actions = {
 # pee/poop/shit on (soil your pants if they have them on)
 # choke/strangle
 # paint/draw
-# carve/whittle
+# carve/whittle/hew
 # chase -> follow?
 # drive -> ride
 # feed (food) -> give
@@ -2418,4 +2424,4 @@ actions = {
 # snap
 # observe/watch
 # capture (with a net?) -> take?
-# loot/scavenge/forage/salvage/harvest
+# loot/scavenge/forage/salvage/harvest/pluck

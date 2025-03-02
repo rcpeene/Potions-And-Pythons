@@ -69,11 +69,58 @@ class worldEncoder(json.JSONEncoder):
 			return objToWrite
 
 
+def serialize_safe(obj, encoder_class):
+	try:
+		# Try serializing the object to check if it's serializable
+		return json.dumps(obj, cls=encoder_class), None
+	except Exception as e:
+		# Return None and raise the exception
+		# print(f"Serialization failed: {e}")
+		return None, e
+
+
+def find_problematic_subobject(obj):
+	"""Recursively traverse the object to find the problematic part."""
+	if isinstance(obj, dict):
+		for key, value in obj.items():
+			result, error = serialize_safe(value, worldEncoder)
+			if result is None:  # If serialization failed
+				print(f"Problematic key: {key}")
+				print(f"Error: {error}")
+				print(f"Object causing the error: {value}")
+				break  # Once the problematic sub-object is found, exit the loop
+	elif isinstance(obj, list):
+		for idx, item in enumerate(obj):
+			result, error = serialize_safe(item, worldEncoder)
+			if result is None:  # If serialization failed
+				print(f"Problematic index: {idx}")
+				print(f"Error: {error}")
+				print(f"Object causing the error: {item}")
+				break  # Once the problematic sub-object is found, exit the loop
+	else:
+		# Base case for other types (e.g., int, str)
+		result, error = serialize_safe(obj, worldEncoder)
+		if result is None:
+			print(f"Problematic object: {obj}")
+			print(f"Error: {error}")
+
+
 def writeJSON(filename,World):
 	global visitedobjects
 	visitedobjects = set()
-	with open(filename,"w") as fd:
-		json.dump(World,fd,cls=worldEncoder,indent="\t")
+
+	try:
+		with open(filename, "w") as fd:
+				json.dump(World, fd, cls=worldEncoder, indent="\t")
+	except Exception as e:
+		print("Error while serializing object to JSON:")
+		print(f"Error: {e}")
+		
+		# Now we try to isolate the problematic sub-object in World
+		print("Attempting to find the problematic sub-object...")
+		find_problematic_subobject(World)
+		
+		raise  # Re-raise the exception for further handling
 
 
 
@@ -260,7 +307,7 @@ def loadGame(filename=None):
 	os.chdir("../..")
 	Core.buildWorld()
 	
-	Core.ellipsis(3)
+	Core.ellipsis()
 	Core.flushInput()
 
 	# describe the current room
@@ -356,7 +403,7 @@ def newGame():
 
 	Core.buildWorld()
 
-	# Core.ellipsis(3)
+	# Core.ellipsis()
 	# enter the starting room
 	sleep(0.5)
 	Core.clearScreen()
@@ -446,7 +493,9 @@ def restart():
 		else:
 			Core.Print("You must choose! Don't be a sore loser.",delay=None,color="k")
 	if next == "restart":
-		return mainMenu()
+		Core.game.quit = 0
+		mainMenu()
+		return True
 	return quit()
 
 

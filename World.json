@@ -26,11 +26,12 @@
 		"fixtures": [
 			{
 				"__class__": "Fixture",
-				"name": "big oak tree",
+				"name": "oak tree",
 				"desc": "It is much larger than any trees in the surrounding forest. It's vast height and cold shade feel imposing",
 				"weight": 100,
 				"durability": 100,
-				"composition": "wood"
+				"composition": "wood",
+				"aliases": ["tree","big tree","oak"]
 			}
 		],
 		"items": [],
@@ -438,7 +439,8 @@
 				"connections": {
 					"down": "cliffside"
 				},
-				"descname": "pale cliff"
+				"descname": "pale cliff",
+				"passprep": "down"
 			}
 		],
 		"items": [],
@@ -527,7 +529,7 @@
 				"desc": "A small grey rock",
 				"aliases": ["stone","rock"],
 				"weight": 3,
-				"durability": 5,
+				"durability": 6,
 				"composition": "stone"
 			}
 		],
