@@ -1313,6 +1313,7 @@ def Insert(dobj,iobj,prep):
 
 def Jump(dobj,iobj,prep):
 	Core.Print("jumping")
+	return True
 
 
 def Kick(dobj,iobj,prep):
@@ -2091,12 +2092,14 @@ def Use(dobj,iobj,prep):
 	if not Core.hasMethod(I,"Use"):
 		Core.Print(f"You can't use {-I}.")
 		return False
+	print(f"You use {-I}.")
 	I.Use(Core.player)
 	return True
 
 
 def Wait(dobj,iobj,prep):
 	Core.Print("waiting")
+	return True
 
 
 def Wave(dobj,iobj,prep):

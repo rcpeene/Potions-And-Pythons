@@ -134,12 +134,12 @@ class Box(Core.Item):
 
 
 class Controller(Core.Item):
-	def __init__(self,name,desc,weight,durability,triggers,effect,**kwargs):
-		Core.Item.__init__(self,name,desc,weight,durability,**kwargs)
+	def __init__(self,name,desc,weight,durability,composition,triggers,effect,**kwargs):
+		Core.Item.__init__(self,name,desc,weight,durability,composition,**kwargs)
 		self.triggers = triggers if triggers else ["Use"]
 		self.effect = effect
 		for trigger in self.triggers:
-			f = lambda *args: self.Trigger(trigger,*args)
+			f = lambda *args: self.Trigger(*args)
 			setattr(self,trigger,f)
 
 
@@ -206,11 +206,12 @@ class Generator(Controller):
 		self.cost = cost
 
 
-	def Trigger(self):
-		if charge > self.cost:
-			charge -= self.cost
+	def Trigger(self,*args):
+		if self.charge > self.cost:
+			self.charge -= self.cost
 			eval(self.effect)
-		Core.Print("Nothing happened...")
+		else:
+			Core.Print("Nothing happened...")
 
 
 	def passTime(self,t):
@@ -218,6 +219,36 @@ class Generator(Controller):
 		self.charge += self.rate*t
 		if self.charge > self.capacity:
 			self.charge = self.capacity
+
+
+
+class Timer(Controller):
+	def __init__(self,name,desc,weight,durability,composition,on=False,delay=1,fuse=None,repeats=0,maxRepeats=1,**kwargs):
+		Controller.__init__(self,name,desc,weight,durability,composition,**kwargs)
+		self.on = on
+		self.delay = delay
+		self.fuse = self.delay if fuse is None else fuse
+		self.repeats = repeats
+		self.maxRepeats = maxRepeats
+
+
+	def Trigger(self,*args):
+		if self.on or (self.maxRepeats is not None and self.repeats >= self.maxRepeats):
+			return False
+		self.on = True
+		self.fuse = self.delay
+
+
+	def passTime(self,t):
+		Controller.passTime(self,t)
+		if not self.on:
+			return
+
+		if self.fuse <= 0:
+			eval(self.effect)
+			self.repeats += 1
+			self.fuse = self.delay
+		self.fuse -= 1
 
 
 
@@ -589,9 +620,10 @@ class Door(Window):
 
 
 factory = {
+	"blue potion": lambda: Potion("blue potion", "A bubbling blue liquid in a glass bottle",4,3,"glass",{"potion"}),
 	"bottle": lambda: Bottle("bottle","an empty glass bottle",3,3,"glass"),
 	"coffee": lambda: Potion("bottle of coffee","A bottle of dark brown foamy liquid",4,3,"glass",{"coffee","espresso","bottle"}),
+	"green potion": lambda: Potion("green potion", "A bubbling green liquid in a glass bottle",4,3,"glass",{"potion"}),
 	"red potion": lambda: Potion("red potion", "A bubbling red liquid in a glass bottle",4,3,"glass",{"potion"}),
-	"blue potion": lambda: Potion("blue potion", "A bubbling blue liquid in a glass bottle",4,3,"glass",{"potion"}),
-	"green potion": lambda: Potion("green potion", "A bubbling green liquid in a glass bottle",4,3,"glass",{"potion"})
+	"shard": lambda: Shard("glass shard","a black glass shard",1,1,"glass",["shard"])
 }

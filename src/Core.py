@@ -2479,12 +2479,14 @@ class Creature():
 
 	def Bombard(self,missile):
 		assert isinstance(missile,Projectile)
+		dodge = self.EVSN()
 		if missile.speed < self.MVMT():
 			# TODO: determine how they'll decide if they catch here
 			if diceRoll(1,100) < 50 and hasMethod(self,"Catch"):
+				dodge = -10
 				if self.Catch(missile):
 					return True
-		if diceRoll(1,100) < bound(missile.aim-self.EVSN(),1,99):
+		if diceRoll(1,100) < bound(missile.aim-dodge,1,99):
 			self.takeDamage(missile.damage(),missile.type)
 			missile = missile.asItem()
 			# missile.parent.removeItem(missile)
@@ -3187,7 +3189,23 @@ class Player(Creature):
 		# TODO determine damage type here instead of always bludgeoning
 		attack = self.ATCK()
 		return target.takeDamage(attack,"b")
-		
+
+
+	def Catch(self,missile):
+		assert isinstance(missile,Projectile)
+		self.unequip(self.gear["left"])
+		canCatch = 5*self.ATHL() > missile.weight and self.canObtain(missile)
+		catch = bound(self.ACCU() - missile.speed*missile.weight,1,99)
+		if canCatch and diceRoll(1,100) <= catch:
+			missileItem = missile.asItem()
+			Print(f"You catch {-missileItem}!",color="o")
+			self.obtainItem(missileItem)
+			self.equipInHand(missileItem)
+			return True
+		else:
+			Print(f"You fail to catch {-missile}.")
+			return False
+
 
 	def Fall(self,height=0,room=None):
 		Print(f"You fall!",color="o")
@@ -3213,11 +3231,13 @@ class Player(Creature):
 
 	def Bombard(self,missile):
 		assert isinstance(missile,Projectile)
+		dodge = self.EVSN()
 		if missile.speed < self.MVMT():
 			if yesno(f"Will you try to catch {-missile}?"):
+				dodge = -10
 				if self.Catch(missile):
 					return True
-		if diceRoll(1,100) < bound(missile.aim-self.EVSN(),1,99):
+		if diceRoll(1,100) < bound(missile.aim-dodge,1,99):
 			self.takeDamage(missile.damage(),missile.type)
 			missile = missile.asItem()
 			missile.parent.removeItem(missile)
@@ -3853,7 +3873,7 @@ class Projectile(Item):
 		self.item = item
 
 
-	def Launch(self,speed,aim,target):
+	def Launch(self,speed,aim,launcher,target):
 		assert isinstance(self.item.parent,Room), "Launched item must be in a room"
 		self.speed = speed
 		self.aim = 90 if self.hasCondition("homing") and aim < 90 else aim
@@ -3865,14 +3885,14 @@ class Projectile(Item):
 		
 		if not target.Bombard(self):
 			Print("It misses!")
-			self.Miss(target)
+			self.Miss(launcher,target)
 
 
-	def Miss(self,target):
+	def Miss(self,launcher,target):
 		self.aim = -10 if self.asItem().hasCondition("homing") else min1(self.aim-10)
 
 		# have a chance to randomly hit a different object in room
-		otherObjs = [obj for obj in target.room().contents() if obj not in (self,self.item,target)]
+		otherObjs = [obj for obj in target.room().contents() if obj not in (self,self.item,launcher,target)]
 		weights = [obj.weight for obj in otherObjs]
 		victim = choices(otherObjs+[None],weights+[target.room().size])[0]
 		if victim is None:
