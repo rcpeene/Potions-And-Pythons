@@ -44,7 +44,7 @@ class Bottle(Core.Item):
 		while self.weight > 2 and self.composition == "glass":
 			shardWeight = randint(2,4)
 			self.weight -= shardWeight
-			shard = Shard("glass shard","a sharp shard of glass","glass",shardWeight,-1)
+			shard = Shard("glass shard","a sharp shard of glass",shardWeight,-1,"glass",{"shard"})
 			Core.game.currentroom.addItem(shard)
 		return True
 
@@ -498,19 +498,17 @@ class Wall(Core.Passage):
 		if traverser.ATHL() >= self.difficulty or traverser.hasAnyCondition("clingfast","flying"):
 			traverser.changeRoom(Core.world[self.connections[dir]])
 			return True
-
-		Core.Print(f"You fall!",color="o")
-		if "down" in self.connections:
-			traverser.changeRoom(Core.world[self.connections["down"]])
-		if not traverser.hasAnyCondition("fly","fleetfooted"):
-			traverser.takeDamage(self.difficulty-traverser.ATHL(),"b")
+		elif "down" in self.connections:
+			traverser.Fall(self.difficulty,room=Core.world[self.connections["down"]])
+		else:
+			traverser.Fall(self.difficulty)
 		return True
 
 
 
 class Window(Core.Passage):
-	def __init__(self,name,desc,weight,durability,composition,connections,descname,open=False,broken=False,**kwargs):
-		Core.Passage.__init__(self,name,desc,weight,durability,composition,connections,descname,**kwargs)
+	def __init__(self,name,desc,weight,durability,composition,connections,descname,open=False,broken=False,passprep="through",**kwargs):
+		Core.Passage.__init__(self,name,desc,weight,durability,composition,connections,descname,passprep=passprep,**kwargs)
 		self.descname = descname
 		self.open = open
 		self.broken = broken
@@ -526,7 +524,7 @@ class Window(Core.Passage):
 		while self.weight > 2 and self.composition == "glass":
 			shardWeight = randint(2,4)
 			self.weight -= shardWeight
-			shard = Shard("glass shard","a sharp shard of glass","glass",shardWeight,-1)
+			shard = Shard("glass shard","a sharp shard of glass",shardWeight,-1,"glass",{"shard"})
 			Core.game.currentroom.addItem(shard)
 		return True
 
@@ -558,6 +556,20 @@ class Window(Core.Passage):
 		return True
 
 
+	def Bombard(self,missile):
+		assert isinstance(missile,Core.Projectile)
+		if Core.diceRoll(1,100) < Core.bound(missile.aim+self.weight+10,1,99):
+			if not self.open:
+				Core.Print(f"{+missile} hits {-self}.")
+				# TODO determine damage type here
+				self.takeDamage(missile.damage(),"b")
+			if self.open:
+				Core.Print(f"{+missile} goes {self.passprep} {-self}.")
+				self.Transfer(missile.asItem())
+			return True
+		return False
+
+
 
 class Door(Window):
 	def __init__(self,name,desc,weight,durability,composition,connections,descname,open=False,**kwargs):
@@ -578,8 +590,8 @@ class Door(Window):
 
 factory = {
 	"bottle": lambda: Bottle("bottle","an empty glass bottle",3,3,"glass"),
-	"coffee": lambda: Potion("bottle of coffee","A bottle of dark brown foamy liquid",4,3,"glass",aliases=["coffee","espresso","bottle"]),
-	"red potion": lambda: Potion("red potion", "A bubbling red liquid in a glass bottle",4,3,"glass",aliases=["potion"]),
-	"blue potion": lambda: Potion("blue potion", "A bubbling blue liquid in a glass bottle",4,3,"glass",aliases=["potion"]),
-	"green potion": lambda: Potion("green potion", "A bubbling green liquid in a glass bottle",4,3,"glass",aliases=["potion"])
+	"coffee": lambda: Potion("bottle of coffee","A bottle of dark brown foamy liquid",4,3,"glass",{"coffee","espresso","bottle"}),
+	"red potion": lambda: Potion("red potion", "A bubbling red liquid in a glass bottle",4,3,"glass",{"potion"}),
+	"blue potion": lambda: Potion("blue potion", "A bubbling blue liquid in a glass bottle",4,3,"glass",{"potion"}),
+	"green potion": lambda: Potion("green potion", "A bubbling green liquid in a glass bottle",4,3,"glass",{"potion"})
 }

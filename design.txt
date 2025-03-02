@@ -212,6 +212,8 @@ exits: set of directions denoting accessible adjacent rooms
 allcontents: set of all items and creatures in the room
 contents: set of booleans denoting which items and creatures are 'hidden' or not
 additional room booleans and characteristics
+types: "covered", "floating", "road"
+
 
 #note: each object should contain a list of objects it is adjacent to in the room. Any objects adjacent to eachother must share all adjacent objects
 #currently in question: should room store a 2d array of items which are passable/impassable.
@@ -309,9 +311,10 @@ QP - quality points
 amount of experience player has with different attributes called qualities.
 determined by level and race
 the lowest any stat can begin at is 1
-different races get an initial bonuses to any qualities totaling +10
+from levelup, you get 99 by level 100, for a score total of 109. You can get 41 others through quests in the game.
+Ideally, if you have a score of 150, you have completed everything in the game.
 
-Total quality points should be 7 + 3*LV,
+Total quality points should be 9 + LV,
 i.e., the player has 1 in all ten qualities at level 1, and gains 3 points total with each level up
 upon leveling up the player allocates the 3 new points to the categories of their choice, in any amount they would like
 
@@ -736,6 +739,8 @@ some condition summaries:
 - lignified (perhaps same as petrified. would become more vulnerable to fire damage)
 - hindered (penalty to speed)
 - sanguine (overflow damage heals)
+- eagle-eyed (something that gives you great ranged aim)
+- throwmaster (gives you bonus to throwing speed?)
 
 
 'cool' with glasses or something so it says "you are cool"
@@ -869,6 +874,7 @@ Nebula Shroud/Cloak
 MAGIC ITEMS:
 Camphor Staff (or sm othr tree idk) Gingko Staff? etc,
 willow staff, banyan, aspen, birch, baobab, elm, sycamore, oak, pine, cyprus
+nimbus rod, cumulus rod, stratus rod
 the magic map
 (Magic?) Umbrella
 Magic Teapot (or just a normal teapot idk)
@@ -1098,6 +1104,7 @@ flax
 burdock - pairs well with dandelion in mead, wards off evil? velcro
 butterbur - sticky
 cocklebur - spiny
+tea plant
 
 
 MISC ITEM IDEAS:
@@ -1118,6 +1125,30 @@ papyrus (made from plant stems)
 paper (cotton, linen, hemp, wood)
 parchment (white, vellum, purple)
 inks (black, blue, red, silver, golden)
+
+
+CRAFTING/RECIPE IDEAS:
+
+scrollreed: harvest -> reed stems
+reed stems: glue -> papyrus
+hide/pelt: wash in solution -> untanned leather
+untanned leather: stretch -> parchment
+rag/torn cloth/cotton/linen/hemp/wood: bath in solution -> (x) pulp
+(x) pulp: strain -> (x) paper
+
+tea plant: pluck -> tea leaf
+tea leaf: boil -> white tea, cook -> roasted tea leaf, ground -> ground tea leaf
+roasted tea leaf: boil -> yellow tea, cook -> ash, ground -> green tea powder
+green tea powder: boil -> green tea, cook -> ash
+ground tea leaf: boil -> brown tea, cook -> black tea powder
+black tea powder: boil -> black tea, cook -> ash
+
+coffee tree: pluck -> coffee cherry
+coffee cherry: dry -> coffee raisin
+coffe raisin: hull -> coffee bean
+coffee bean: roast -> roasted coffee bean
+roasted coffee bean: grind -> coffee powder
+coffee powder: boil -> coffee
 
 
 WORLD DESIGN IDEAS:
@@ -1190,22 +1221,27 @@ additional place ideas
 - The quivering quill (a spell store)
 - The stove, a tavern or speakeasy or hideout
 - A casino or various luck based gambling games in the world
-- An orb "ponder the orb?" maybe multiple orbs to ponder in the world like 7
-- sign that says "no philandering!"
+- a circus?
+- small peoples like the minish and maybe theyre quirky in some way
+- a zoo (royal menagerie?) in the big city
 - town called "fleet-something"
+- brothel, when you go in it gives an ellipsis and then you leave.
 
 
 misc world ideas
 - witengamot
 - "omens aghast" as a greeting
+- grimoire, book of spells
+- tome, book of lore
+- therimoire, book of recipes/rituals? or good spells?
 - the world underwent a 'cataclysm' and then a 'salvation'
 - giant eternal clock
 - a story legend of a hero who masters magic in an underground empire, called "ZORK"
 - monolith/obelisk
 - magic nail
+- sign that says "no philandering!"
 - gnomes
 - magic art museum?
-- small peoples like the minish and maybe theyre quirky in some way
 - wicklewort trees
 - something called "The Wizard's Fee"
 - Eternal Stew
@@ -1218,9 +1254,10 @@ misc world ideas
 - pandora box "banishment box" which unleashes all creatures the player has ever banished with the banish spell
 - limericks/poems/poem book?
 - the mist
-- a zoo (royal menagerie?) in the big city
 - a jar that is REALLY hard to open
 - bottomless pit
+- An orb "ponder the orb?" maybe multiple orbs to ponder in the world like 7
+	- fortune telling orbs which might alter your future?
 - the four humors
 - "sphinx of black quartz, judge my vow"
 - "if you see a fox in the forest, don't follow it"
