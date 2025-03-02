@@ -21,7 +21,7 @@ def applyAreaEffect(effect,root,condfunc=lambda x:True):
 		effect(obj)
 
 
-def spawnObject(obj,room=None):
+def spawnObject(obj,room=None,silent=False):
 	if room is None:
 		room = Core.game.currentroom
 	if type(obj) is str:
@@ -38,9 +38,10 @@ def spawnObject(obj,room=None):
 		room.addFixture(obj)
 	elif isinstance(obj,Core.Item):
 		room.addItem(obj)
-	if not Core.game.silent:
+	if not Core.game.silent and not silent:
 		Core.Print(f"{obj.nounPhrase('a',cap=1)} appeared!")
 		Core.game.setPronouns(obj)
+	return obj
 
 
 def destroyObject(obj):
@@ -63,6 +64,15 @@ def increment(obj,attribute,num):
             raise TypeError(f"The attribute '{attribute}' is not an integer.")
     else:
         raise AttributeError(f"The object {obj} has no attribute '{attribute}'.")
+
+
+def Launch(obj,speed,aim,launcher,target):
+	obj = spawnObject(obj,silent=True).asProjectile()
+	if target is Core.player:
+		Core.Print(f"{obj.nounPhrase(det='A')} is launched at you!",color="o")
+	else:
+		Core.Print(f"{obj.nounPhrase(det='A')} is launched at {-target}")
+	obj.Launch(speed,aim,launcher,target)
 
 
 

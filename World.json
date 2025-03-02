@@ -494,7 +494,21 @@
 			"south": "treeline"
 		},
 		"fixtures": [],
-		"items": [],
+		"items": [
+			{
+				"__class__": "Timer",
+				"name": "pitching machine",
+				"desc": "A red metal tripod machine with a long barrel.",
+				"weight": 30,
+				"durability": 20,
+				"composition": "steel",
+				"aliases": ["machine","pitcher"],
+				"triggers": ["Use", "Press", "Run"],
+				"effect": "Effects.Launch('shard',20,20,self,Core.player)",
+				"delay": 3,
+				"maxRepeats": 5
+			}
+		],
 		"creatures": []
 	},
 	"glen": {
