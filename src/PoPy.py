@@ -78,12 +78,27 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# test all kinds of throwing and catching
+# throw snake into chest???
+	# add ability to go into containers
+		# add container capacity
+		# get in/get out
+		# adjust go to handle being in something
+	# include hiding ability?
+		# you are hiding (if in one)
+	# allow put into chest
+	# test drop/throw into chest
+	# utilize fall method
+# make projectile subclass for creatures? maybe subclass not necessary
+# drop/throw goblin off cliff
+# throw goblin up/down stairs
+# throw snake at goblin
+# refactor drop into a creature method?
 # check if throwing a creature which has another riding it?
 # "throw rock east"
 # add dropping into pit -> add fall damage to items.
 # add in projectile weapons?
 # throw 'grappling hook' which creates a new passage?, throw up a cliff or across a gap
+
 # fix obtaining money problem, think about other objects which won't go into inv upon obtaining
 # if something is one fire (or other condition) when entering a room, say it
 # what if the tree at "big tree" is destroyed? Some contingency to reset the room?
@@ -92,6 +107,7 @@ if __name__ == "__main__":
 # add "climb" and "swim"
 # "jump off cliff"
 # add "look up" as valid. Should look at sky if not in a room?
+	# add room property which is description of directions ("look up", "look east", "look out", etc.)
 # add chopping tree
 # add fencing and wooden swords
 # add dull method to weapons, add blunt weapons which cant be sharpened?

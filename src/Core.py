@@ -197,10 +197,10 @@ def yesno(question,delay=0.005,color=None):
 
 
 # prints a timed ellipsis, used for dramatic transitions
-def ellipsis(n=3):
+def ellipsis(n=3,color=None):
 	for i in range(n):
 		sleep(1)
-		print(".")
+		Print(".",color=color)
 	sleep(1)
 
 
@@ -1743,7 +1743,7 @@ class Item():
 	def Bombard(self,missile):
 		assert isinstance(missile,Projectile)
 		if diceRoll(1,100) < bound(missile.aim+self.weight+10,1,99):
-			if getattr(self,"open",False):
+			if getattr(self,"open",False) and missile.weight < self.weight:
 				Print(f"{+missile} goes into {-self}.")
 				missile = missile.asItem()
 				missile.room().removeItem(missile)
@@ -2067,7 +2067,8 @@ class Creature():
 		else:
 			self.hp = min0(self.hp-dmg)
 		total_dmg = prevhp - self.hp
-		Print(f"{+self} took {total_dmg} {Data.dmgtypes[type]} damage.",color="o")
+		if self.room() is game.currentroom:
+			Print(f"{+self} took {total_dmg} {Data.dmgtypes[type]} damage.",color="o")
 		if self.hp == 0:
 			self.death()
 
@@ -2125,9 +2126,10 @@ class Creature():
 	# if it was equipped, unequip it
 	# if it has a Drop() method, call that
 	# check if still hindered
-	def removeItem(self,I):
-		if I in self.gear.values():
-			self.unequip(I)
+	def removeItem(self,I,silent=False):
+		for slot,obj in self.gear.items():
+			if I is obj:
+				self.unequip(slot,silent=silent)
 		self.inv.remove(I)
 		if hasMethod(I,"Drop"):
 			I.Drop(self)
@@ -2190,19 +2192,19 @@ class Creature():
 
 	# finds the slot in which item resides, sets it to EmptyGear()
 	# calls the item's Unequip() method if it has one
-	def unequip(self,I,silent=False):
-		if type(I) is str:
-			I = self.gear[I]
+	def unequip(self,slot,silent=False):
+		assert slot in self.gear, f"'{slot}' is not a valid gear slot."
+		I = self.gear[slot]
 		if I is EmptyGear():
 			return False
-		gearslots = list(self.gear.keys())
-		gearitems = list(self.gear.values())
-		# finds the slot whose value is I, sets it to empty
-		slot = gearslots[gearitems.index(I)]
-		self.gear[slot] = EmptyGear()
-		self.assignWeaponAndShield()
-		Print(f"You unequip your {I}.")
-		if hasMethod(I,"Unequip"): I.Unequip()
+		if I is self.carrying:
+			self.removeCarry(silent=silent)
+		else:
+			self.gear[slot] = EmptyGear()
+			self.assignWeaponAndShield()
+			if not silent:
+				Print(f"You unequip your {I}.")
+			if hasMethod(I,"Unequip"): I.Unequip()
 
 
 	# if the item is armor, equip it, otherwise return False
@@ -2223,29 +2225,46 @@ class Creature():
 	# equips the new item in right hand
 	# if the new item is twohanded, set lefthand to EmptyGear()
 	# calls the new item's Equip() method if it has one
-	def equipInHand(self,I):
-		assert I in self.inv
-		self.unequip(self.gear["left"])
-		self.gear["left"] = self.gear["right"]
-		self.gear["right"] = I
-		if (hasattr(I,"twohanded") and I.twohanded) or isinstance(I,Creature):
-			self.gear["left"] = EmptyGear()
+	def equipInHand(self,I,slot="right"):
+		assert I in self.inv or I is self.carrying
+		if I is self.gear["right"] or I is self.gear["left"]:
+			return
+		if getattr(self.gear["right"],"twohanded",False):
+			self.unequip("right")
+
+		if getattr(I,"twohanded",False):
+			self.unequip("right")
+			self.unequip("left")
+		elif slot == "right" and not self.carrying:
+			self.unequip("left")
+			self.gear["left"] = self.gear["right"]
+		elif slot == "left" and self.gear["right"] is EmptyGear:
+			self.gear["right"] = self.gear["left"]
+		else:
+			self.unequip(slot)
+
+		self.gear[slot] = I
 		self.assignWeaponAndShield()
 		if hasMethod(I,"Equip"): I.Equip(self)
 
 
 	def addCarry(self,creature):
 		assert isinstance(creature,Creature)
-		if self.gear["left"] is not EmptyGear():
-			self.gear.unequip("left")
+		self.unequip("left")
+		if getattr(self.gear["right"],"twohanded",False):
+			self.unequip("right")
+
 		self.carrying = creature
 		self.gear["left"] = creature
 		self.checkHindered()
-		
 
-	def removeCarry(self):
+
+	def removeCarry(self,silent=False):
+		if self is player and not silent:
+			Print(f"You drop {-self.carrying}.")
 		self.gear["left"] = EmptyGear()
 		self.carrying.carrier = None
+		self.carrying.removeCondition("restrained",-3)
 		self.carrying = None
 		self.checkHindered()
 
@@ -2521,14 +2540,26 @@ class Creature():
 		return True
 
 
-	def Throw(self,missile,target,speed=None):
-		self.removeItem(missile)
-		self.room().addItem(missile)
+	def Throw(self,missile,target,maxspeed=None):
+		if missile is self.carrying:
+			self.removeCarry(silent=True)
+		else:
+			self.equipInHand(missile)
+			self.removeItem(missile,silent=True)
+			self.room().addItem(missile)
 
 		missile = missile.asProjectile()
 
-		if speed is None:
-			speed = min1(diceRoll(1,self.STR()//2,self.SPD()//2))
+		speedfactor = 10 - bound((missile.weight//4)//self.STR,1,10)
+		if speedfactor == 0:
+			if self is player:
+				Print(f"{+missile} is too heavy to throw.")
+			return False
+
+		speed = min1(diceRoll(1,speedfactor,self.SPD()//2))
+		if speed > maxspeed:
+			speed = maxspeed
+
 		aim = self.ACCU()
 		return missile.Launch(speed,aim,self,target)
 
@@ -2769,8 +2800,8 @@ class Creature():
 	def inGear(self,term):
 		for slot,object in self.gear.items():
 			if nameMatch(term,object) or term.lower() == slot.lower():
-				return object
-		return None
+				return slot, object
+		return None, None
 
 
 	# return all items in inv whose name matches term, otherwise return None
@@ -2976,7 +3007,8 @@ class Player(Creature):
 			self.hp = min0(self.hp-dmg)
 		total_dmg = prevhp - self.hp
 		p = "!" if player.hasCondition("asleep") or total_dmg > self.MXHP() // 4 else "."
-		Print(f"You took {total_dmg} {Data.dmgtypes[type]} damage{p}",allowSilent=False,color="r")
+		color = "r" if total_dmg > 0 else "w"
+		Print(f"You took {total_dmg} {Data.dmgtypes[type]} damage{p}",allowSilent=False,color=color)
 		if self.hp == 0:
 			return self.death()
 		if total_dmg > 0 and self.hasCondition("asleep"):
@@ -3049,14 +3081,19 @@ class Player(Creature):
 		if self.hasCondition(name) and not stackable:
 			return False
 		if not self.hasCondition(name):
+			color = "w"
+			if name in Data.buffs | Data.blessings:
+				color = "g"
+			if name in Data.debuffs | Data.curses:
+				color = "r"
 			if name in Data.curses:
-				Print(f"You have the curse of {name}.",allowSilent=False,color="r")
+				Print(f"You have the curse of {name}.",allowSilent=False,color=color)
 			elif name in Data.blessings:
-				Print(f"You have the blessing of {name}.",allowSilent=False,color="g")
+				Print(f"You have the blessing of {name}.",allowSilent=False,color=color)
 			elif name == "asleep":
 				Print(f"You fall {name}.",allowSilent=False)
 			else:
-				Print(f"You are {name}.",allowSilent=False)
+				Print(f"You are {name}.",allowSilent=False,color=color)
 		insort(self.status,[name,dur])
 		return True
 
@@ -3129,9 +3166,9 @@ class Player(Creature):
 	# called when player hp hits 0
 	def death(self):
 		Print("You have died!",color="r")
-		ellipsis()
+		ellipsis(color="r")
 		
-		if self.hasCondition("Anointed",reqDuration=-3):
+		if self.hasCondition("anointed",reqDuration=-3):
 			sleep(1)
 			Print("You reawaken!",color="g")
 			self.hp = 1
@@ -3198,7 +3235,7 @@ class Player(Creature):
 
 	def Catch(self,missile):
 		assert isinstance(missile,Projectile)
-		self.unequip(self.gear["left"])
+		self.unequip("left")
 		canCatch = 5*self.ATHL() > missile.weight and self.canObtain(missile)
 		catch = bound(self.ACCU() - missile.speed*missile.weight,1,99)
 		if canCatch and diceRoll(1,100) <= catch:
@@ -3308,7 +3345,12 @@ class Player(Creature):
 
 	# prints player inventory
 	def printInv(self, *args):
-		Print(f"Weight: {self.invWeight()}/{self.BRDN()}")
+		color = "w"
+		if self.invWeight() > self.BRDN():
+			color = "r"
+		elif self.invWeight() / self.BRDN() > 0.85:
+			color = "o"
+		Print(f"Weight: {self.invWeight()}/{self.BRDN()}", color=color)
 		if len(self.inv) == 0:
 			Print("\nYour Inventory is empty.")
 		else:
@@ -3415,7 +3457,8 @@ class Humanoid(Creature):
 			return
 		if not game.silent:
 			Print(f"\n{self.name}'s turn!")
-		self.attack()
+		if self.canMove():
+			self.attack()
 
 
 	def dualAttack(self,target):
@@ -3438,6 +3481,8 @@ class Humanoid(Creature):
 
 
 	def attack(self):
+		if not self.canMove():
+			return
 		targets = [creature for creature in self.room().creatures if creature is not self]
 		if self.room() is player.room():
 			targets += [player]
@@ -3479,7 +3524,7 @@ class Humanoid(Creature):
 
 	def Catch(self,missile):
 		assert isinstance(missile,Projectile)
-		self.unequip(self.gear["left"])
+		self.unequip("left")
 		canCatch = 5*self.ATHL() > missile.weight and self.canObtain(missile)
 		catch = bound(self.ACCU() - missile.speed*missile.weight,1,99)
 		if canCatch and diceRoll(1,100) <= catch:
@@ -3738,9 +3783,6 @@ class Animal(Speaker):
 		pass
 
 
-	def throw():
-		pass
-
 
 
 notes = '''
@@ -3847,7 +3889,8 @@ class Passage(Fixture):
 			Print(f"The {self.name} does not go '{dir}'.")
 			return False
 
-		waitKbInput(f"You go {dir} the {self.name}.")
+		if traverser is player:
+			waitKbInput(f"You go {dir} the {self.name}.")
 		newroom = world[self.connections[dir]]
 		traverser.changeRoom(newroom)
 		return True
@@ -3867,7 +3910,7 @@ class Passage(Fixture):
 
 	def Transfer(self,item):
 		if isinstance(item,Creature):
-			return self.Traverse(item,dir=dir)
+			return self.Traverse(item,dir="down")
 
 		if "down" in self.connections:
 			return item.Fall(room=world[self.connections["down"]])
@@ -3913,7 +3956,7 @@ class Projectile(Item):
 		# have a chance to randomly hit a different object in room
 		otherObjs = [obj for obj in target.room().contents() if obj not in (self,self.item,launcher,target)]
 		weights = [obj.weight for obj in otherObjs]
-		victim = choices(otherObjs+[None],weights+[target.room().size])[0]
+		victim = choices(otherObjs+[None],weights+[target.room().size*10])[0]
 		if victim is None:
 			return False
 		Print(f"It whizzes toward {-victim}!", color="o")
@@ -3933,8 +3976,9 @@ class Projectile(Item):
 		if target is player:
 			Print(f"{+self} hits you!",color="o")
 		else:
-			Print(f"{+self} hits {-target}.",color="o")
+			Print(f"{+self} hits {-target}.")
 
+		# deal damage to target
 		d = self.might * self.speed
 		if diceRoll(1,100) <= self.sharpness:
 			d *= 2
@@ -3943,8 +3987,10 @@ class Projectile(Item):
 		damage = diceRoll(0,d,d)
 		target.takeDamage(damage,self.type)
 
+		# take self damage
 		if self.item:
 			selfdmg = 0
+			# if hits a creature, take damage according to one of the creature's gear
 			if isinstance(target,Creature):
 				gearItems = [item for item in target.gear.values()]
 				weights = [min1(item.Weight()) for item in gearItems]
@@ -3957,7 +4003,6 @@ class Projectile(Item):
 				self.item.takeDamage(selfdmg,"b")
 		else:
 			self.parent.removeItem(self)
-
 		return True
 
 

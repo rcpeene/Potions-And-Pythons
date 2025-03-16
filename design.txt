@@ -1257,6 +1257,7 @@ additional place ideas
 - a zoo (royal menagerie?) in the big city
 - ophidiarium - snake aquarium
 - town called "fleet-something"
+- town called "___-burn"
 - brothel, when you go in it gives an ellipsis and then you leave.
 
 
@@ -1313,6 +1314,7 @@ CHARACTER NAMES:
 	Pax - person
 	giant swamp crocodile
 	Lilith - demon lady? (Secretly a demon lady???)
+	Mammon - demon representing greed?
 	Somnus
 	The zodiac signs
 	The Lady of the Lake
@@ -1325,6 +1327,7 @@ CHARACTER NAMES:
 	Balthazar the Wizard
 	Tyro
 	Cogg
+	Garl
 	Sir Tom Knight (Sir Tom the Hero!)
 	Mr.Oliphant
 	Ike

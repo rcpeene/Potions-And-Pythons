@@ -299,7 +299,7 @@ def parse():
 	actionCompleted = actions[verb](dobj,iobj,prep)
 	helpCounter = 0
 	# if action didn't take any time, return False
-	if actionCompleted is None:
+	if not actionCompleted:
 		return False
 	return True
 
@@ -639,7 +639,7 @@ def Attack(dobj,iobj,prep,target=None,weapon=None,weapon2=None):
 		weapon = Items.Mouth("your mouth","",4,-1,None)
 	if iobj is not None:
 		if weapon is None:
-			weapon = Core.player.inGear(iobj)
+			_, weapon = Core.player.inGear(iobj)
 		if weapon is None:
 			weapons = Core.player.inInv(iobj)
 			if len(weapons) == 0: Core.Print(f"There is no '{iobj}' in your Inventory.",color="k")
@@ -752,7 +752,7 @@ def CarryCreature(creature):
 		Core.Print(f"You can't carry {-creature}")
 		return False
 
-	Core.player.unequip(Core.player.gear["left"])
+	Core.player.unequip("left")
 	Core.Print(f"You try to pick up {-creature}.",color="o")
 	if not creature.Carry(Core.player):
 		return False
@@ -922,14 +922,14 @@ def Doff(dobj,iobj,prep):
 		dobj = getNoun("What do you want to doff?")
 		if dobj in Data.cancels: return False
 
-	I = Core.player.inGear(dobj)
+	slot, I = Core.player.inGear(dobj)
 	if I is None or not isinstance(I,Core.Armor):
 		Core.Print(f"You aren't wearing a '{dobj}'.")
 		return False
 	Core.game.setPronouns(I)
 
-	Core.player.unequip(I)
 	Core.Print(f"You doff your {I.name}.")
+	Core.player.unequip(slot)
 	return True
 
 
@@ -1009,8 +1009,12 @@ def Drop(dobj,iobj,prep,I=None):
 		if R is None: return False
 		if isinstance(R,Core.Passage) and "down" in R.connections:
 			if getattr(R,"open",True):
-				Core.player.removeItem(I)
-				Core.game.currentroom.addItem(I)
+				if isinstance(I,Core.Creature):
+					Core.player.removeCarry(I)
+				else:
+					Core.player.removeItem(I)
+					Core.game.currentroom.addItem(I)
+				Core.Print(f"You drop {-I} {prep} {-R}.")
 				return R.Transfer(I)
 			else:
 				Core.Print(f"{+R} is closed.")
@@ -1021,7 +1025,6 @@ def Drop(dobj,iobj,prep,I=None):
 
 	if isinstance(I, Core.Creature):
 		Core.player.removeCarry()
-		Core.Print(f"You drop {-I}.")
 	else:
 		I.parent.removeItem(I)
 		Core.Print(f"You drop {-I}.")
@@ -1084,7 +1087,7 @@ def Equip(dobj,iobj,prep):
 	if dobj.startswith("my "):
 		dobj = dobj[3:]
 
-
+	# uses inInv instead of findObjFromTerm because we only want top level of inv tree
 	matches = Core.player.inInv(dobj)
 	if len(matches) == 0:
 		Core.Print(f"There is no '{dobj}' in your Inventory",color="k")
@@ -1936,7 +1939,10 @@ def Throw(dobj,iobj,prep):
 	if dobj is None:
 		dobj = getNoun("What do you want to throw?")
 		if dobj in Data.cancels: return False
-	I = findObjFromTerm(dobj,"player","throw")
+	if Core.nameMatch(dobj,Core.player.carrying):
+		I = Core.player.carrying
+	else:
+		I = findObjFromTerm(dobj,"player","throw")
 	if I is None: return False
 
 	if iobj is None:
@@ -1958,9 +1964,14 @@ def Throw(dobj,iobj,prep):
 		dirprep = getattr(T,"passprep","toward")
 		dir = f"{dirprep} {-T}"
 	
-	Core.Print(f"You throw {-I} {dir}.")
+	Core.player.equipInHand(I,slot="left")
 	Core.game.setPronouns(I)
-	return Core.player.Throw(I,T)
+	if Core.player.Throw(I,T):
+		Core.Print(f"You throw {-I} {dir}.")
+		return True
+	else:
+		return False
+
 # throw at a tree, window, goblin, pit
 # throw a rock, sword, black potion, bird, goblin
 # toss into a basket? like basketball?
@@ -1979,7 +1990,10 @@ def Toss(dobj,iobj,prep):
 	if dobj is None:
 		dobj = getNoun("What do you want to toss?")
 		if dobj in Data.cancels: return False
-	I = findObjFromTerm(dobj,"player")
+	if Core.nameMatch(dobj,Core.player.carrying):
+		I = Core.player.carrying
+	else:
+		I = findObjFromTerm(dobj,"player","toss")
 	if I is None: return False
 
 	if iobj is None:
@@ -2001,9 +2015,13 @@ def Toss(dobj,iobj,prep):
 		dirprep = getattr(T,"passprep","toward")
 		dir = f"{dirprep} {-T}"
 	
-	Core.Print(f"You toss {-I} {dir}.")
+	Core.player.equipInHand(I,slot="left")
 	Core.game.setPronouns(I)
-	return Core.player.Throw(I,T,0)
+	if Core.player.Throw(I,T,0):
+		Core.Print(f"You toss {-I} {dir}.")
+		return True
+	else:
+		return False
 
 
 def Touch(dobj,iobj,prep):
@@ -2043,13 +2061,11 @@ def Unequip(dobj,iobj,prep):
 		dobj = getNoun("What would you like to unequip?")
 		if dobj in Data.cancels: return False
 
-	I = Core.player.inGear(dobj)
+	slot, I = Core.player.inGear(dobj)
 	if I is None:
 		Core.Print(f"You do not have a '{dobj}' equipped.",color="k")
 		return False
 	Core.game.setPronouns(I)
-
-	Core.Print(f"You unequip your {I.name}.")
 	Core.player.unequip(I)
 	return True
 
