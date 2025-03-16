@@ -79,9 +79,13 @@ dmgtypes = {"a":"acid","b":"bludgeoning","c":"cold","e":"essential","f":"fire","
 # gear dict used to initialize the player object
 initgear = {"head":None, "torso":None, "left":None, "right":None, "legs":None}
 
+blessings = {"brawniness","swiftness","prowess","liveliness","toughness","felicity","sagacity","lucidity","fidelity","prosperity"}
+
 curses = {"weakness","slowness","clumsiness","tiredness","illness","timidity","stupidity","insanity","apathy","calamity"}
 
-blessings = {"brawniness","swiftness","prowess","liveliness","toughness","felicity","sagacity","lucidity","fidelity","prosperity"}
+buffs = {"anointed","invigorated","wildtongued"}
+
+debuffs = {"dead","fleetfooted","flying","hindered","mending"}
 
 
 conditionDmg = {
@@ -288,7 +292,7 @@ definitions = {
 
 "monsters":"Monsters\nCreatures which can use Items, but cannot Talk or Trade.",
 
-"movement":"Movement\nSpeed of movement in on action. MVMT is determined is determined by SPD and STM and can be reduced if Armor is too heavy or if player is Hindered. Type 'mvmt' to view your MVMT.",
+"movement":"Movement\nSpeed of movement in action. MVMT is determined is determined by SPD and STM and can be reduced if Armor is too heavy or if player is Hindered. Type 'mvmt' to view your MVMT.",
 
 "mp":"Magic Points\nPlayer magic potential. MP can be replenished up to MXMP. MP are used to cast spells and magical effects. Type 'mp' to view your MP.",
 

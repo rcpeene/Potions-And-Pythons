@@ -99,9 +99,9 @@
 				"desc": "an iron sword that is broken halfway down the blade",
 				"aliases": ["sword"],
 				"weight": 6,
-				"durability": 12,
+				"durability": 15,
 				"composition": "iron",
-				"might": 3,
+				"might": 5,
 				"sleight": 3,
 				"sharpness": 2,
 				"range": 0,
@@ -113,9 +113,9 @@
 				"desc": "a medium-length iron sword with a rusted edge",
 				"aliases": ["sword"],
 				"weight": 11,
-				"durability": 10,
+				"durability": 9,
 				"composition": "rust",
-				"might": 3,
+				"might": 5,
 				"sleight": 2,
 				"sharpness": 0,
 				"range": 0,
@@ -583,7 +583,8 @@
 				"durability": -1,
 				"composition": null,
 				"connections": {
-					"down": "cave"
+					"down": "cave",
+					"in": "cave"
 				},
 				"descname": "dark deep pit",
 				"difficulty": 100

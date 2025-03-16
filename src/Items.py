@@ -540,7 +540,8 @@ class Wall(Core.Passage):
 		if traverser.hasCondition("clingfast"): verb = "crawl"
 		elif traverser.hasCondition("flying"): verb = "fly"
 		elif traverser is Core.player.riding: verb = "ride"
-		Core.Print(f"You {verb} {dir} {-self}.")
+		if traverser is Core.player:
+			Core.waitKbInput(f"You {verb} {dir} {-self}.")
 
 		if traverser.ATHL() >= self.difficulty or traverser.hasAnyCondition("clingfast","flying"):
 			traverser.changeRoom(Core.world[self.connections[dir]])
