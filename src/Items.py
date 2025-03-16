@@ -198,10 +198,10 @@ class Fountain(Core.Fixture):
 
 
 class Generator(Controller):
-	def __init__(self,name,desc,weight,durability,composition,effect,charge,capacity,rate,cost,**kwargs):
+	def __init__(self,name,desc,weight,durability,composition,effect,charge,cap,rate,cost,**kwargs):
 		Core.Controller.__init__(self,name,desc,weight,durability,composition,effect,**kwargs)
 		self.charge = charge
-		self.capacity = capacity
+		self.cap = cap
 		self.rate = rate
 		self.cost = cost
 
@@ -217,26 +217,42 @@ class Generator(Controller):
 	def passTime(self,t):
 		Controller.passTime(self,t)
 		self.charge += self.rate*t
-		if self.charge > self.capacity:
-			self.charge = self.capacity
+		if self.charge > self.cap:
+			self.charge = self.cap
 
 
 
 class Timer(Controller):
-	def __init__(self,name,desc,weight,durability,composition,on=False,delay=1,fuse=None,repeats=0,maxRepeats=1,**kwargs):
+	def __init__(self,name,desc,weight,durability,composition,on=False,delay=1,fuse=None,repeats=0,maxRepeats=1,toggle=False,reset=True,**kwargs):
 		Controller.__init__(self,name,desc,weight,durability,composition,**kwargs)
 		self.on = on
+		# the 'length' of the fuse
 		self.delay = delay
+		# time until next trigger
 		self.fuse = self.delay if fuse is None else fuse
+		# number of times been triggered
 		self.repeats = repeats
+		# will stop after repeats reaches this
 		self.maxRepeats = maxRepeats
+		# whether or not it can be turned off after turn on
+		self.toggle = toggle
+		# whether or not repeats and fuse reset upon trigger
+		self.reset = reset
 
 
 	def Trigger(self,*args):
-		if self.on or (self.maxRepeats is not None and self.repeats >= self.maxRepeats):
+		if self.reset and not self.on:
+			self.repeats = 0
+			self.fuse = self.delay
+		if self.toggle and self.on:
+			Core.Print(f"{+self} turns off.")
+			self.on = False
+			return True
+		if self.maxRepeats is not None and self.repeats > self.maxRepeats:
 			return False
+
 		self.on = True
-		self.fuse = self.delay
+		Core.Print(f"{+self} turns on.")
 
 
 	def passTime(self,t):
@@ -542,6 +558,8 @@ class Window(Core.Passage):
 		Core.Passage.__init__(self,name,desc,weight,durability,composition,connections,descname,passprep=passprep,**kwargs)
 		self.descname = descname
 		self.open = open
+		if not self.open:
+			self.passprep = "at"
 		self.broken = broken
 
 
@@ -550,6 +568,7 @@ class Window(Core.Passage):
 		Core.Print(f"{+self} breaks.")
 		self.broken = True
 		self.open = True
+		self.passprep = "through"
 		if self.weight > 2 and self.composition == "glass":
 			Core.Print("Shards of glass scatter everywhere.",color="o")
 		while self.weight > 2 and self.composition == "glass":
@@ -591,9 +610,7 @@ class Window(Core.Passage):
 		assert isinstance(missile,Core.Projectile)
 		if Core.diceRoll(1,100) < Core.bound(missile.aim+self.weight+10,1,99):
 			if not self.open:
-				Core.Print(f"{+missile} hits {-self}.")
-				# TODO determine damage type here
-				self.takeDamage(missile.damage(),"b")
+				missile.Collide(self)
 			if self.open:
 				Core.Print(f"{+missile} goes {self.passprep} {-self}.")
 				self.Transfer(missile.asItem())
@@ -620,10 +637,10 @@ class Door(Window):
 
 
 factory = {
-	"blue potion": lambda: Potion("blue potion", "A bubbling blue liquid in a glass bottle",4,3,"glass",{"potion"}),
-	"bottle": lambda: Bottle("bottle","an empty glass bottle",3,3,"glass"),
-	"coffee": lambda: Potion("bottle of coffee","A bottle of dark brown foamy liquid",4,3,"glass",{"coffee","espresso","bottle"}),
-	"green potion": lambda: Potion("green potion", "A bubbling green liquid in a glass bottle",4,3,"glass",{"potion"}),
-	"red potion": lambda: Potion("red potion", "A bubbling red liquid in a glass bottle",4,3,"glass",{"potion"}),
-	"shard": lambda: Shard("glass shard","a black glass shard",1,1,"glass",["shard"])
+	"blue potion": lambda: Potion("blue potion", "A bubbling blue liquid in a glass bottle",6,3,"glass",{"potion"}),
+	"bottle": lambda: Bottle("bottle","an empty glass bottle",6,3,"glass"),
+	"coffee": lambda: Potion("bottle of coffee","A bottle of dark brown foamy liquid",6,3,"glass",{"coffee","espresso","bottle"}),
+	"green potion": lambda: Potion("green potion", "A bubbling green liquid in a glass bottle",6,3,"glass",{"potion"}),
+	"red potion": lambda: Potion("red potion", "A bubbling red liquid in a glass bottle",6,3,"glass",{"potion"}),
+	"shard": lambda: Shard("glass shard","a black glass shard",2,1,"glass",["shard"])
 }

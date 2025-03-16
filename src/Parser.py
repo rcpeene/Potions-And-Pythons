@@ -29,7 +29,7 @@ helpCounter = 0
 # takes the object name and list of matching objects
 # prints the list of objects with entry 'tags' to help the user distinguish them
 # will return when user cancels or when they select an object by name or number
-def chooseObject(name,objects):
+def chooseObject(name,objects,verb=None):
 	if objects is None or len(objects) == 0:
 		return None
 	if len(objects) == 1:
@@ -58,7 +58,8 @@ def chooseObject(name,objects):
 			strLabel = " (" + strLabel + labels[-1] + ")"
 
 		Core.Print(f"{n+1}. {object}{strLabel}",color="k")
-	Core.Print(f"\nWhich {name}?",color="k")
+	verb = f" to {verb}" if verb else ""
+	Core.Print(f"\nWhich {name}{verb}?",color="k")
 
 	invalid_count = 0
 	while True:
@@ -83,7 +84,7 @@ def chooseObject(name,objects):
 # queryPlayer and queryRoom indicate which places to look for matching objects
 # roomD and playerD are the 'degree' of the query.
 # Look at Core.py objQuery for details on query degree
-def findObjFromTerm(term,queryType="both",filter=None,roomD=1,playerD=2,reqParent=None,silent=False):
+def findObjFromTerm(term,queryType="both",verb=None,filter=None,roomD=1,playerD=2,reqParent=None,silent=False):
 	# allows for users to describe objects they possess
 	my = False
 	if term.startswith("my "):
@@ -118,7 +119,7 @@ def findObjFromTerm(term,queryType="both",filter=None,roomD=1,playerD=2,reqParen
 	elif len(matches) == 1:
 		return matches[0]
 	else:
-		return chooseObject(term,matches)
+		return chooseObject(term,matches,verb)
 
 
 # checks if a noun refers to a room, an object in the world or on the player...
@@ -1935,7 +1936,7 @@ def Throw(dobj,iobj,prep):
 	if dobj is None:
 		dobj = getNoun("What do you want to throw?")
 		if dobj in Data.cancels: return False
-	I = findObjFromTerm(dobj,"player")
+	I = findObjFromTerm(dobj,"player","throw")
 	if I is None: return False
 
 	if iobj is None:
@@ -1952,7 +1953,7 @@ def Throw(dobj,iobj,prep):
 		T = Core.world[iobj]
 		dir = Core.getDirFromDest(T)
 	else:
-		T = findObjFromTerm(iobj)
+		T = findObjFromTerm(iobj,"room",f"throw {prep}")
 		if T is None: return False
 		dirprep = getattr(T,"passprep","toward")
 		dir = f"{dirprep} {-T}"
@@ -2029,6 +2030,11 @@ def Trip(dobj,iobj,prep):
 	Core.Print("triping")
 
 
+def Try(dobj,iobj,prep):
+	Core.Print("Do or do not. There is no 'try'.")
+	return False
+
+
 def Unequip(dobj,iobj,prep):
 	if prep is not None:
 		return promptHelp("Command not understood.")
@@ -2092,13 +2098,13 @@ def Use(dobj,iobj,prep):
 	if not Core.hasMethod(I,"Use"):
 		Core.Print(f"You can't use {-I}.")
 		return False
-	print(f"You use {-I}.")
+	Core.Print(f"You use {-I}.")
 	I.Use(Core.player)
 	return True
 
 
 def Wait(dobj,iobj,prep):
-	Core.Print("waiting")
+	Core.Print("You wait...")
 	return True
 
 
@@ -2325,6 +2331,7 @@ actions = {
 "touch":Touch,
 "travel":Go,
 "trip":Trip,
+"try":Try,
 "unequip":Unequip,
 "unlock":Unlock,
 "untie":Untie,
@@ -2355,6 +2362,8 @@ actions = {
 # dive/jump/leap
 # untie
 # whip (attack)
+# activate/turn [on]
+# deactivate/turn [off]
 # dress/undress/strip
 # spit
 # ponder (the orb, to see future?)
