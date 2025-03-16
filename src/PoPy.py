@@ -91,13 +91,13 @@ if __name__ == "__main__":
 # create linked passages? if a window breaks on one side, it should break the other way too
 # add "climb" and "swim"
 # "jump off cliff"
+# add "look up" as valid. Should look at sky if not in a room?
 # add chopping tree
 # add fencing and wooden swords
 # add dull method to weapons, add blunt weapons which cant be sharpened?
 # try out using a creature as a weapon
 # restrict Read to readable objects?
 # add turn order, so you aren't the first to move when you enter a room, makes MVMT more useful
-
 
 # add basic equipment and clothing items
 # fix/add Creature.isNaked or Player.isNaked
@@ -113,6 +113,7 @@ if __name__ == "__main__":
 # add better comments to methods
 # skim/update design
 
+# knock stuff off of a table if it takes impact?
 # add total traversal limit on dlog nodes?
 # behavior
 	# create system for behavior 'regimens'
@@ -134,6 +135,7 @@ if __name__ == "__main__":
 
 # FLESH OUT MORE VERBS (and add items to go with them)
 # add "insert the key into the lock"
+	# allow restful sleep if resting by a fire?
 	# implement escape
 	# add a wait command (cant wait with enemies nearby, cuz they could just kill you)
 	# add in armor and shields and protection and test them

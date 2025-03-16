@@ -68,10 +68,18 @@ def increment(obj,attribute,num):
 
 def Launch(obj,speed,aim,launcher,target):
 	obj = spawnObject(obj,silent=True).asProjectile()
+	adverb = ""
+	p = "."
+	if speed <= 5:
+		adverb = "slowly"
+	if speed >= 10:
+		adverb = "rapidly"
 	if target is Core.player:
-		Core.Print(f"{obj.nounPhrase(det='A')} is launched at you!",color="o")
+		if adverb != "slowly":
+			p = "!"
+		Core.Print(f"{obj.nounPhrase(det='A')} is launched {adverb} at you{p}",color="o")
 	else:
-		Core.Print(f"{obj.nounPhrase(det='A')} is launched at {-target}")
+		Core.Print(f"{obj.nounPhrase(det='A')} is launched {adverb} at {-target}{p}")
 	obj.Launch(speed,aim,launcher,target)
 
 

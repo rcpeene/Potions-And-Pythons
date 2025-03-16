@@ -957,8 +957,14 @@ Purple, Lavender, Indigo, Violet
 Clear (dissolves?), Brown (burns?), Black (explodes), Grey, White
 Bronze (defense), Silver (speed), Gold (atk/dmg/crit)
 
-Also elixirs, philter (love affect?), tonic (energizing), brew (alcohol), draught,
-tincture (dyes), 
+potions - described by color.
+elixirs - highly magical, described by effect
+philter - love potion
+anti-philter - fear potion
+tonic - medicinal, nonmagicla, described by contents, energizing/antidote effects or similar
+brew - unknown brewed things
+tincture - dyes
+elixir of truth - (mark dlog nodes as lies), dlog becomes green, red if its a lie
 
 
 Fruits:
@@ -1083,7 +1089,7 @@ woundwort - heals wounds?
 ragweed - allergies
 tomeleaf
 keyflower - reveals treasure or key to fairy realm?
-indigo = dye
+indigo - dye
 fleabane - kills insects?
 starflower - causes courage?
 hoarhune - expells parasites, helps coughs
@@ -1105,6 +1111,9 @@ burdock - pairs well with dandelion in mead, wards off evil? velcro
 butterbur - sticky
 cocklebur - spiny
 tea plant
+foxfire (glowing mushrooms)
+bergamot?
+woad
 
 
 MISC ITEM IDEAS:
@@ -1125,6 +1134,13 @@ papyrus (made from plant stems)
 paper (cotton, linen, hemp, wood)
 parchment (white, vellum, purple)
 inks (black, blue, red, silver, golden)
+cochineal -> carmine
+lye, potash, brimstone
+linen, silk, cotton, wool
+yarn, loom, bolt of fabric, torn rag
+burlap, canvas, denim, tweed, flannel, fustian, russet
+bitumen (ore), pitch (liquid), naphtha,
+peat, resin, briquette
 
 
 CRAFTING/RECIPE IDEAS:
@@ -1136,6 +1152,8 @@ untanned leather: stretch -> parchment
 rag/torn cloth/cotton/linen/hemp/wood: bath in solution -> (x) pulp
 (x) pulp: strain -> (x) paper
 
+cotton fabric + blue dye (indigo or woad) -> denim -> blue jeans
+
 tea plant: pluck -> tea leaf
 tea leaf: boil -> white tea, cook -> roasted tea leaf, ground -> ground tea leaf
 roasted tea leaf: boil -> yellow tea, cook -> ash, ground -> green tea powder
@@ -1143,12 +1161,25 @@ green tea powder: boil -> green tea, cook -> ash
 ground tea leaf: boil -> brown tea, cook -> black tea powder
 black tea powder: boil -> black tea, cook -> ash
 
+green tea powder + jasmine blossoms: jasmine tea
+green tea powder + mint leaf: mint tea
+green tea powder + lotus flower: lotus tea
+black tea powder + bergamot oil: earl grey powder
+black tea powder + cinnamon + cardamom: chai powder
+black tea powder + rose: rose tea
+
 coffee tree: pluck -> coffee cherry
 coffee cherry: dry -> coffee raisin
 coffe raisin: hull -> coffee bean
 coffee bean: roast -> roasted coffee bean
 roasted coffee bean: grind -> coffee powder
 coffee powder: boil -> coffee
+
+kola plant: harvest -> kola nut
+kola nut: grind -> ground kola
+ground kola: brew/boil -> kola tonic (maybe also require a leaf or burdock and dandelion?)
+
+
 
 
 WORLD DESIGN IDEAS:
@@ -1224,6 +1255,7 @@ additional place ideas
 - a circus?
 - small peoples like the minish and maybe theyre quirky in some way
 - a zoo (royal menagerie?) in the big city
+- ophidiarium - snake aquarium
 - town called "fleet-something"
 - brothel, when you go in it gives an ellipsis and then you leave.
 
@@ -1250,7 +1282,6 @@ misc world ideas
 - label that reads "FOR SCIENTIFIC USE ONLY"
 - RICKROLL
 - the four horsemen of awesomeness (or happiness)
-- golden bug quest
 - pandora box "banishment box" which unleashes all creatures the player has ever banished with the banish spell
 - limericks/poems/poem book?
 - the mist
@@ -1261,10 +1292,15 @@ misc world ideas
 - the four humors
 - "sphinx of black quartz, judge my vow"
 - "if you see a fox in the forest, don't follow it"
+- "Abandon all hope, ye who enter here"
+- "If you listen I can tell you more about this world" - someone who only lies
 
 
 QUEST IDEAS:
 
+- golden bug quest
+- becoming an esteemed knight
+- jack and the beanstalk quest with hen and harp
 - a rabid tiger is terrorizing a town. should kill it
 - golden bug quest (collect 50 hidden bugs throughout the world) [reward??]
 - one quest for each god's temple, and the player gets rewarded with a QP for it and a word from the god.
@@ -1311,6 +1347,11 @@ CHARACTER NAMES:
 	Beowin
 	Wayland the Smith
 	Rook
+	Alahad
+	Galatea
+	Grin
+	Spiridon
+	Khartoum
 
 	polemarch,commodore,margrave,
 	thane,earl,baron,duke,burgess,
@@ -1341,12 +1382,12 @@ CHARACTER NAMES:
 	innkeeper,tavernkeeper
 	traveler,pilgrim
 
-
 	Hazelnut farmer with children named, fil, bert, hazel, and pet nut
 	Yernagate the wise 
 	The Oracle
 	Glycon the false Serpent God (secretly a puppet?)
 	Leviathan
+	The Green Goddess
 	Galigantus the giant
 	Grendel
 	Archons (regional rulers? maybe names for the giants)
@@ -1371,6 +1412,7 @@ lemmings
 stork babies
 messenger demons
 argentavis (big bird)
+mermaid (captive?)
 fey - a class of intelligent creatures
 goblins - intelligent small green bipedal creatures
 orcs - disturbing creatures that resemble large mutant humans
@@ -1380,6 +1422,9 @@ slime skeletons
 slime armor monster
 snark
 wumpus
+albatross
+muskrat
+bellbird
 
 
 
@@ -1482,7 +1527,7 @@ Maelstrom, Malaise, Manumit, Melancholy, Micturate, Mirage, Moonshot
 Nyctophobia
 Parley, Paroxysm, Parry, Penumbra, Petrify, Phantasm, Pilfer, Ponder, Prescience, Psychosis, Putrefaction
 Refection, Rend, Repast, Resurrect, Revelry, Riposte, Ruin
-Sanctuary, Scry, Serein, Shivaree, Simper, Simulacrum, Smite, Smithereens, Spangle, Squib, Sunder, Synpase
+Sanctuary, Scry, Serein, Shivaree, Simper, Simulacrum, Smite, Smithereens, Spangle, Squib, Sunder, Sunshower, Synpase
 Telekinesis, Tempest, Tether, Torrent
 Usurp
 Vamoose, Vendetta, Veritas, Volley

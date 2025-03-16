@@ -192,7 +192,7 @@
 				"__class__": "Window",
 				"name": "window",
 				"desc": "A brittle, dusty window on the northern wall of this room. You can't see through it",
-				"weight": 6,
+				"weight": 8,
 				"durability": 3,
 				"composition": "glass",
 				"aliases": ["northern window"],
@@ -210,7 +210,7 @@
 				"name": "table",
 				"desc": "A sturdy oaken kitchen table",
 				"aliases": ["kitchen table"],
-				"weight": 1,
+				"weight": 50,
 				"durability": 12,
 				"composition": "wood",
 				"items": [
@@ -244,7 +244,7 @@
 				"name": "table",
 				"desc": "A sturdy oaken kitchen table",
 				"aliases": ["kitchen table"],
-				"weight": 1,
+				"weight": 50,
 				"durability": 12,
 				"composition": "wood",
 				"items": [],
@@ -504,9 +504,10 @@
 				"composition": "steel",
 				"aliases": ["machine","pitcher"],
 				"triggers": ["Use", "Press", "Run"],
-				"effect": "Effects.Launch('shard',20,20,self,Core.player)",
+				"effect": "Effects.Launch('shard',10,50,self,Core.player)",
 				"delay": 3,
-				"maxRepeats": 5
+				"maxRepeats": 5,
+				"toggle": true
 			}
 		],
 		"creatures": []
@@ -678,10 +679,33 @@
 				"hp": 10,
 				"mp": 0,
 				"money": 10,
-				"inv": [],
+				"inv": [
+					{
+						"__class__": "Armor",
+						"name": "beret",
+						"desc": "A suspiciously robust beret",
+						"weight": 100,
+						"durability": 1000,
+						"composition": "cloth",
+						"aliases": ["hat"],
+						"prot": 1,
+						"slots": ["head"]
+					},
+					{
+						"__class__": "Armor",
+						"name": "iron tunic",
+						"desc": "A shiny iron tunic",
+						"weight": 5,
+						"durability": 30,
+						"composition": "iron",
+						"aliases": ["tunic","armor"],
+						"prot": 20,
+						"slots": ["torso"]
+					}
+				],
 				"gear": {
-					"head": null,
-					"torso": null,
+					"head": 0,
+					"torso": 1,
 					"left": null,
 					"right": null,
 					"legs": null

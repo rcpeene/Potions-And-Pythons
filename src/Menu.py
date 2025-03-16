@@ -471,9 +471,9 @@ def mainMenu():
 			if loadGame(" ".join(g[1:])):
 				return
 		elif g[0] == "delete" and len(g) == 1:
-			return delete(None)
+			delete(None)
 		elif g[0] == "delete":
-			return delete(" ".join(g[1:]))
+			delete(" ".join(g[1:]))
 		elif g[0] == "quit" and len(g) == 1:
 			Core.game.quit = 1
 			return

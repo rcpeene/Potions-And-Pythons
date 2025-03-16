@@ -323,6 +323,8 @@ def extractConditionInfo(roomCondition):
 
 # rolls n dice of range d, adds a modifier m, returns number
 def diceRoll(n,d,m=0):
+	if d < 1:
+		n = 0
 	x = 0
 	for _ in range(n):
 		x += randint(1,d)
@@ -956,6 +958,8 @@ class EmptyGear:
 	name = "[empty]"
 	aliases = set()
 	weight = 0
+	durability = 0
+	composition = None
 	prot = 0
 	might = 1
 	sleight = 0
@@ -1532,11 +1536,11 @@ class Room():
 
 	# if the given room object, dest, is in one of the rooms exits, then find the direction it is in from the room.
 	def getDirFromDest(self,dest):
-		assert dest in self.allExits.values()
 		if dest in self.allExits().values():
 			idx = list(self.allExits().values()).index(dest)
 			dir = list(self.allExits().keys())[idx]
 			return dir
+		return None
 
 
 	# returns True if the room has a status condition with given name.
@@ -1730,7 +1734,7 @@ class Item():
 
 
 	def takeDamage(self,dmg,type):
-		if self.room() is game.currentroom and dmg > 0:
+		if self.room() is game.currentroom:
 			Print(f"{+self} took {dmg} {Data.dmgtypes[type]} damage.")
 		if self.durability != -1 and dmg > self.durability:
 			return self.Break()
@@ -1745,9 +1749,7 @@ class Item():
 				missile.room().removeItem(missile)
 				self.addItem(missile)
 			else:
-				Print(f"{+missile} hits {-self}.")
-				# TODO determine damage type here
-				self.takeDamage(missile.damage(),"b")
+				missile.Collide(self)
 			return True
 		return False
 
@@ -2075,7 +2077,7 @@ class Creature():
 		if self.hp + heal > self.MXHP() and not overflow:
 			heal = self.MXHP() - self.hp
 		self.hp += heal
-		if isinstance(self,Player):
+		if self is player:
 			Print(f"You healed {heal} HP.",color="g")
 		return heal
 
@@ -2084,7 +2086,7 @@ class Creature():
 		if self.mp + mana > self.MXMP() and not overflow:
 			mana = self.MXHP() - self.mp
 		self.mp += mana
-		if isinstance(self,Player):
+		if self is player:
 			Print(f"You resurged {mana} MP.",color="b")
 		return mana
 
@@ -2486,11 +2488,8 @@ class Creature():
 				dodge = -10
 				if self.Catch(missile):
 					return True
-		if diceRoll(1,100) < bound(missile.aim-dodge,1,99):
-			self.takeDamage(missile.damage(),missile.type)
-			missile = missile.asItem()
-			# missile.parent.removeItem(missile)
-			return True
+		if diceRoll(1,100) < bound(missile.aim+missile.speed-dodge,1,99):
+			return missile.Collide(self)
 		return False
 
 
@@ -2529,9 +2528,9 @@ class Creature():
 		missile = missile.asProjectile()
 
 		if speed is None:
-			speed = diceRoll(1,self.STR(),self.STR())
+			speed = min1(diceRoll(1,self.STR()//2,self.SPD()//2))
 		aim = self.ACCU()
-		return missile.Launch(speed,aim,target)
+		return missile.Launch(speed,aim,self,target)
 
 
 	def Hide(self,I):
@@ -2649,15 +2648,21 @@ class Creature():
 		return self.conditionalMod(self.fear, modifiers, min=-100, max=100)
 
 
+	def invToll(self):
+		return min0(self.invWeight() - self.BRDN())
+	
+	def gearToll(self):
+		return min0(self.gearWeight()//4 - self.CON())
+
 	# these formulas are difficult to read, check design document for details
 	def ACCU(self): return 60 + 2*self.SKL() + self.LCK() + self.weapon.sleight
 	def ATCK(self): return diceRoll(self.STR(), self.weapon.might, self.atkmod())
 	def ATHL(self): return self.STR() + self.SKL() + self.STM()
-	def ATSP(self): return self.SPD() - min0(self.handheldWeight()//4 - self.CON())
+	def ATSP(self): return min0(self.SPD() - min0(self.handheldWeight()//4 - self.CON()))
 	def BRDN(self): return 12*self.CON() + 6*self.STR() + 3*self.FTH() + self.weight
-	def CAST(self): return self.WIS() + self.FTH() + self.INT() - min0(self.gearWeight()//4 - self.CON())
+	def CAST(self): return min0(self.WIS() + self.FTH() + self.INT() - self.gearToll())
 	def CRIT(self): return self.SKL() + self.LCK() + self.weapon.sharpness
-	def CSSP(self): return self.WIS() - min0(self.invWeight() - self.BRDN()) - min0(self.gearWeight()//4 - self.CON())
+	def CSSP(self): return min0(self.WIS() - self.invToll() - self.gearToll())
 	def DCPT(self): return 2*self.CHA() + self.INT()
 	def DFNS(self): return 2*self.CON() + self.protection()
 	def ENDR(self): return 2*self.STM() + self.CON()
@@ -2665,13 +2670,13 @@ class Creature():
 	def INVS(self): return 2*self.INT() + self.WIS()
 	def KNWL(self): return 2*self.INT() + self.LCK()
 	def LOOT(self): return 2*self.LCK() + self.FTH()
-	def MVMT(self): return self.SPD() + self.STM() + 10 - min0(self.invWeight() - self.BRDN()) - min0(self.gearWeight()//4 - self.CON())
-	def MXHP(self): return self.level()*self.CON() + self.STM()
-	def MXMP(self): return self.level()*self.WIS() + self.STM()
+	def MVMT(self): return min0(self.SPD() + self.STM() + 10 - self.invToll() - self.gearToll())
+	def MXHP(self): return self.level()*self.CON() + self.level()//10 * self.STM()
+	def MXMP(self): return self.level()*self.WIS() + self.level()//10 * self.STM()
 	def PRSD(self): return 2*self.CHA() + self.WIS()
 	def RSTN(self): return 2*self.FTH() + self.STM()
 	def RITL(self): return 2*self.FTH() + self.LCK()
-	def SLTH(self): return ( 2*self.SKL() + self.INT() - min0(self.invWeight() - self.BRDN()) ) * 2*int(self.hasCondition("hiding"))
+	def SLTH(self): return min0(2*self.SKL() + self.INT() - self.invToll()) * 2*int(self.hasCondition("hiding"))
 	def SPLS(self): return 3*self.INT()
 	def TNKR(self): return 2*self.INT() + self.SKL()
 
@@ -2777,7 +2782,7 @@ class Creature():
 
 	# returns sum of all protection values of all items in gear
 	def protection(self):
-		return sum(item.prot for item in self.gear.values() if hasattr(item, "prot"))
+		return sum(item.prot for item in self.gear.values() if hasattr(item,"prot"))
 
 
 	def hasCondition(self,name,reqDuration=None):
@@ -2970,7 +2975,7 @@ class Player(Creature):
 		else:
 			self.hp = min0(self.hp-dmg)
 		total_dmg = prevhp - self.hp
-		p = "!" if player.hasCondition("asleep") or total_dmg > self.MXHP() // 3 else "."
+		p = "!" if player.hasCondition("asleep") or total_dmg > self.MXHP() // 4 else "."
 		Print(f"You took {total_dmg} {Data.dmgtypes[type]} damage{p}",allowSilent=False,color="r")
 		if self.hp == 0:
 			return self.death()
@@ -3237,11 +3242,8 @@ class Player(Creature):
 				dodge = -10
 				if self.Catch(missile):
 					return True
-		if diceRoll(1,100) < bound(missile.aim-dodge,1,99):
-			self.takeDamage(missile.damage(),missile.type)
-			missile = missile.asItem()
-			missile.parent.removeItem(missile)
-			return True
+		if diceRoll(1,100) < bound(missile.aim+missile.speed-dodge,1,99):
+			return missile.Collide(self)
 		return False
 
 
@@ -3414,6 +3416,25 @@ class Humanoid(Creature):
 		if not game.silent:
 			Print(f"\n{self.name}'s turn!")
 		self.attack()
+
+
+	def dualAttack(self,target):
+		Print("\nDual Attack!",color="o")
+		hit = bound(self.ACCU() - target.EVSN(),1,99)
+		if diceRoll(1,100) <= hit:
+			crit = diceRoll(1,100) <= self.CRIT()
+			attack = self.ATCK()
+			if crit:
+				waitKbInput("Critical hit!",color="o")
+				self.weapon2.dull(1)
+				attack *= 2
+			damage = min0( attack - target.DFNS() )
+			target.takeDamage(damage,self.weapon2.type)
+			if not target.isAlive():
+				return
+		else:
+			Print("It missed!")
+		waitKbInput()
 
 
 	def attack(self):
@@ -3839,9 +3860,7 @@ class Passage(Fixture):
 				# Print(f"{+missile} goes {self.passprep} {-self}.")
 				self.Transfer(missile.asItem())
 			else:
-				Print(f"{+missile} hits {-self}.")
-				# TODO determine damage type here
-				self.takeDamage(missile.damage(),"b")
+				missile.Collide(self)
 			return True
 		return False
 
@@ -3903,17 +3922,43 @@ class Projectile(Item):
 
 
 	def dull(self,dec):
+		if hasMethod(self.item,"dull"):
+			return self.item.dull(dec)
 		if self.hasCondition("keen"):
 			return
 		self.sharpness = min0(self.sharpness - dec)
 
 
-	def damage(self):
+	def Collide(self,target):
+		if target is player:
+			Print(f"{+self} hits you!",color="o")
+		else:
+			Print(f"{+self} hits {-target}.",color="o")
+
 		d = self.might * self.speed
 		if diceRoll(1,100) <= self.sharpness:
 			d *= 2
+			Print("Critical hit!",color="o")
 			self.dull(1)
-		return diceRoll(0,d,d)
+		damage = diceRoll(0,d,d)
+		target.takeDamage(damage,self.type)
+
+		if self.item:
+			selfdmg = 0
+			if isinstance(target,Creature):
+				gearItems = [item for item in target.gear.values()]
+				weights = [min1(item.Weight()) for item in gearItems]
+				target = choices(gearItems,weights)[0]
+			if target.durability == -1:
+				selfdmg = self.speed * 3
+			elif target.durability > self.durability:
+				selfdmg = self.speed * (target.durability // self.durability)
+			if selfdmg > 0:
+				self.item.takeDamage(selfdmg,"b")
+		else:
+			self.parent.removeItem(self)
+
+		return True
 
 
 	def asItem(self):
