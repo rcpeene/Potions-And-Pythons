@@ -1059,8 +1059,10 @@ class Game():
 	# exits the previous room and enters the new room
 	def changeRoom(self,newroom):
 		self.clearPronouns()
-		self.prevroom = self.currentroom
-		self.currentroom = newroom
+		clearScreen()
+		if newroom != self.currentroom:
+			self.prevroom = self.currentroom
+			self.currentroom = newroom
 		return True
 
 
@@ -1486,7 +1488,6 @@ class Room():
 	def enter(self,obj):
 		# if the player is entering the room, describe the room
 		if obj is player:
-			clearScreen()
 			self.describe()
 		condsToRemove = [pair for pair in obj.status if pair[1] == -1]
 		# remove status conditions from previous room
@@ -1541,6 +1542,11 @@ class Room():
 
 	def contents(self):
 		return self.fixtures + self.items + self.creatures
+
+
+	def allCreatures(self):
+		creatures = objQuery(self,key=lambda obj: isinstance(obj,Creature),d=3)
+		return sorted(creatures, key=lambda x: x.MVMT(), reverse=True)
 
 
 	# given a direction (like 'north' or 'down)...
@@ -1701,19 +1707,19 @@ class Item():
 				self.parent.removeItem(self)			
 
 
-	def changeRoom(self,newroom):
+	def changeLocation(self,newparent):
 		# can only change rooms if not stuck inside some item
 		if type(self.parent) is not Room:
 			raise Exception(f"Can't change rooms. Stuck inside {self.parent}.")
-		prevroom = self.parent
-		if newroom is prevroom:
+		prevparent = self.parent
+		if newparent is prevparent:
 			return False
 		
-		prevroom.exit(self)
-		prevroom.removeItem(self)
-		self.parent = newroom
-		newroom.addItem(self)		
-		newroom.enter(self)
+		prevparent.exit(self)
+		prevparent.remove(self)
+		self.parent = newparent
+		newparent.add(self)		
+		newparent.enter(self)
 
 
 	def Obtain(self,creature):
@@ -1740,7 +1746,7 @@ class Item():
 			height += room.size
 			room = world[room["down"]]
 		if room != self.room():
-			self.changeRoom(room)
+			self.changeLocation(room)
 			if self.room() is game.currentroom:
 				Print(f"{+self} falls from above.")
 		self.takeDamage(height,"b")
@@ -2170,7 +2176,7 @@ class Creature():
 	def obtainItem(self,I,msg=None):
 		oldParent = I.parent
 		if self.addItem(I):
-			oldParent.removeItem(I)
+			oldParent.remove(I)
 			if msg != None:
 				Print(msg)
 			I.Obtain(self)
@@ -2398,7 +2404,7 @@ class Creature():
 			height += room.size
 			room = world[room["down"]]
 		if room != self.room():
-			self.changeRoom(room)
+			self.changeLocation(room)
 			
 		if self.hasCondition("fleetfooted"):
 			height = 0
@@ -2407,7 +2413,7 @@ class Creature():
 
 
 	def Eat(self,food):
-		food.parent.removeItem(food)
+		food.parent.remove(food)
 		food.Eat()
 
 
@@ -2435,29 +2441,29 @@ class Creature():
 
 	### Behavior ###
 
-	def changeRoom(self,newroom):
+	def changeLocation(self,newparent):
 		# can only change rooms if not stuck inside some item
 		if type(self.parent) is not Room:
 			raise Exception(f"Can't change rooms. Stuck inside {self.parent}")
 		# shouldn't be changing rooms alone if being carried
-		if self.carrier and self.carrier.parent is not newroom:
+		if self.carrier and self.carrier.parent is not newparent:
 			return False
-		prevroom = self.parent
-		if newroom is self.parent:
+		prevparent = self.parent
+		if newparent is self.parent:
 			return False
 
-		prevroom.exit(self)
-		prevroom.removeCreature(self)
-		self.parent = newroom
-		newroom.addCreature(self)		
-		newroom.enter(self)
+		prevparent.exit(self)
+		prevparent.removeCreature(self)
+		self.parent = newparent
+		newparent.addCreature(self)	
+		newparent.enter(self)
 
 		if self.carrying and self.carrying.parent is not self.parent:
-			self.carrying.changeRoom(newroom)
+			self.carrying.changeLocation(newparent)
 		if self.riding and self.riding.parent is not self.parent:
-			self.riding.changeRoom(newroom)
+			self.riding.changeLocation(newparent)
 		if self.rider and self.rider.parent is not self.parent:
-			self.rider.changeRoom(newroom)
+			self.rider.changeLocation(newparent)
 
 		assert self.carrying is None or self.carrying.parent is self.parent
 		return True
@@ -2972,26 +2978,24 @@ class Player(Creature):
 
 	### Operation ###
 
-	def changeRoom(self,newroom):
-		# can only change rooms if not stuck inside some item
-		if type(self.parent) is not Room:
-			raise Exception(f"Can't change rooms. Stuck inside {self.parent}")
+	def changeLocation(self,newparent):
 		# shouldn't be changing rooms alone if being carried
-		if self.carrier and self.carrier.parent is not newroom:
+		if self.carrier and self.carrier.parent is not newparent:
 			return False
-		prevroom = self.parent
-		if newroom is prevroom:
+		prevparent = self.parent
+		if newparent is prevparent:
 			return
 
-		prevroom.exit(self)
-		self.parent = newroom
-		game.changeRoom(newroom)
-		newroom.enter(self)
+		self.parent = newparent
+		if newparent is not game.currentroom:
+			prevparent.exit(self)
+			game.changeRoom(newparent)
+			newparent.enter(self)
 
 		if self.riding:
-			self.riding.changeRoom(newroom)
+			self.riding.changeLocation(newparent)
 		if self.carrying:
-			self.carrying.changeRoom(newroom)
+			self.carrying.changeLocation(newparent)
 		
 		assert self.carrying is None or self.carrying.parent is self.parent
 		return True
@@ -3086,7 +3090,7 @@ class Player(Creature):
 	def obtainItem(self,I,tookMsg=None,failMsg=None):
 		oldParent = I.parent
 		if self.addItem(I):
-			oldParent.removeItem(I)
+			oldParent.remove(I)
 			if tookMsg != None:
 				Print(tookMsg)
 			I.Obtain(self)
@@ -3294,7 +3298,7 @@ class Player(Creature):
 			room = world[room["down"]]
 		if room != self.room():
 			ellipsis()
-			self.changeRoom(room)
+			self.changeLocation(room)
 			
 		if self.hasCondition("fleetfooted"):
 			height = 0
@@ -3923,7 +3927,7 @@ class Passage(Fixture):
 		if traverser is player:
 			waitKbInput(f"You go {dir} the {self.name}.")
 		newroom = world[self.connections[dir]]
-		traverser.changeRoom(newroom)
+		traverser.changeLocation(newroom)
 		return True
 
 
@@ -3952,7 +3956,7 @@ class Passage(Fixture):
 			return item.Fall()
 
 		# Print(f"{+item} goes {self.passprep} {-self}.")	
-		item.changeRoom(world[self.connections[dir]])
+		item.changeLocation(world[self.connections[dir]])
 
 
 
@@ -3973,7 +3977,7 @@ class Projectile(Item):
 
 		if isinstance(target,Room):
 			self = self.asItem()
-			self.changeRoom(target)
+			self.changeLocation(target)
 			return self.Fall(speed//2)
 
 		if not target.Bombard(self):
@@ -4034,7 +4038,7 @@ class Projectile(Item):
 			if selfdmg > 0:
 				self.item.takeDamage(selfdmg,"b")
 		else:
-			self.parent.removeItem(self)
+			self.parent.remove(self)
 		return True
 
 

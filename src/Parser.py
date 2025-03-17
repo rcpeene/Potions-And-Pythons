@@ -119,7 +119,7 @@ def findObject(term,queryType="both",verb=None,filter=None,roomD=1,playerD=2,req
 			if queryType == "player" or my:
 				suffix += " in your Inventory"
 			elif queryType == "room":
-				suffix += " in your surroundings."
+				suffix += " in your surroundings"
 			Core.Print(f"There is no '{term}'{suffix}.",color="k")
 		return None
 	elif len(matches) == 1:
@@ -199,7 +199,7 @@ def replacePronoun(term):
 	return obj.nounPhrase()
 
 
-# validates user input and processes into into a command form usable by parse(),
+# validates user input and processes it into a command form usable by parse(),
 # namely, it returns a list of words without capitals, symbols, or articles
 # nounify() joins words that may only be meaningful as one term
 def processCmd(prompt,storeRawCmd=False):
@@ -488,7 +488,7 @@ def Teleport(command):
 		return
 	location = " ".join(command[1:])
 	if location in Core.world:
-		Core.player.changeRoom(Core.world[location])
+		Core.player.changeLocation(Core.world[location])
 	else:
 		Core.Print("Location not in world",color="k")
 
@@ -1078,7 +1078,7 @@ def Eat(dobj,iobj,prep):
 def Enter(dobj,iobj,prep):
 	if dobj is None and "in" in Core.game.currentroom.exits:
 		return Go("in",iobj,prep)
-	return Go(dobj,iobj,prep)
+	return Go(dobj,iobj,"in")
 
 
 def Equip(dobj,iobj,prep):
@@ -1120,7 +1120,7 @@ def Escape(dobj,iobj,prep):
 def Exit(dobj,iobj,prep):
 	if dobj is None and "out" in Core.game.currentroom.exits:
 		return Go("out",iobj,prep)
-	return Go(dobj,iobj,prep)
+	return Go(dobj,iobj,"out")
 
 
 def Feed(dobj,iobj,prep):
@@ -1182,7 +1182,7 @@ def GoVertical(dir,passage=None,dobj=None):
 	if Core.player.hasCondition("flying") and not Core.player.riding:
 		newroomname = Core.game.currentroom.allExits()[dir]
 		Core.Print(f"You fly {dir}!")
-		return Core.player.changeRoom(Core.world[newroomname])
+		return Core.player.changeLocation(Core.world[newroomname])
 
 	if passage is None and dobj is not None:
 		Core.Print(f"There is no '{dobj}' to go {dir} here.",color="k")
@@ -1223,11 +1223,18 @@ def parseGoTerms(dobj,iobj,prep):
 
 
 # parses user input to determine the intended direction, destination, and/or
-# passage. Then calls either traverse or changeroom accordingly
+# passage. Then calls either traverse or changelocation accordingly
 def Go(dobj,iobj,prep):
 	for cond in ("sitting","laying"):
 		if Core.player.hasCondition(cond) and Core.player.riding is None:
-			Core.Print(f"You can't go, you are {cond}.")
+			Core.Print(f"You can't go anywhere, you are {cond}.")
+			return False
+	if not isinstance(Core.player.parent,Core.Room):
+		if prep in ("out","outside","out of"):
+			Core.Print()
+			return Core.player.changeLocation(Core.player.parent.parent)
+		else:
+			Core.Print(f"You can't go anywhere, you are in {Core.player.parent}.")
 			return False
 
 	preps = ("away","away from","down","through","to","toward","up","in","inside","into","on","onto","out",None)
@@ -1279,7 +1286,7 @@ def Go(dobj,iobj,prep):
 		return passage.Traverse(Core.player,dir)
 	# if just dest given
 	if dest is not None:
-		return Core.player.changeRoom(Core.world[dest])
+		return Core.player.changeLocation(Core.world[dest])
 	Core.Print(f"There is no exit leading to a '{dobj}' here.",color="k")
 	return False
 
@@ -2239,9 +2246,13 @@ actions = {
 "follow":Follow,
 "fuck":Fuck,
 "get":Take,
+"get in":Enter,
+"get into":Enter,
 "get down":Dismount,
 "get off":Dismount,
 "get on":Mount,
+"get out":Exit,
+"get out of":Exit,
 "get up":Stand,
 "give":Give,
 "go":Go,

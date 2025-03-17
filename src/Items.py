@@ -116,6 +116,36 @@ class Box(Core.Item):
 		return False
 
 
+	def enter(self,traverser):
+		self.add(traverser)
+	
+
+	def exit(self,traverser):
+		self.remove(traverser)
+
+
+	def Traverse(self,traverser,dir=None,verb=None):
+		if dir not in ("in","into","inside",None):
+			if dir in ("out","outside","out of"):
+				Core.Print(f"You're not in {-self}.",color="k")
+			else:
+				Core.Print(f"{+self} does not go {dir}.",color="k")
+			return False
+		if dir is None:
+			dir = "into"
+		if verb is None:
+			verb = "get"
+		if not self.canAdd(traverser):
+			if traverser is Core.player:
+				Core.Print(f"You can't enter {-self}. There's not enough room.")
+			return False
+
+		if traverser is Core.player:
+			Core.Print(f"You {verb} {dir} {-self}.")
+		self.add(traverser)
+
+
+
 	def add(self,I):
 		if not self.canAdd(I):
 			return False	
@@ -136,6 +166,12 @@ class Box(Core.Item):
 		self.items.remove(I)
 
 
+	def passTime(self,t):
+		Core.Item.passTime(self,t)
+		for I in self.items:
+			I.passTime(t)
+
+
 	### Getters ###
 
 	def itemsWeight(self):
@@ -148,7 +184,8 @@ class Box(Core.Item):
 
 
 	def canAdd(self,I):
-		if self.itemsWeight() + I.Weight() > self.capacity:
+		w = I.weight if isinstance(I,Core.Creature) else I.weight
+		if self.itemsWeight() + w > self.capacity:
 			return False
 		return True
 
@@ -573,7 +610,7 @@ class Wall(Core.Passage):
 			Core.waitKbInput(f"You {verb} {dir} {-self}.")
 
 		if traverser.ATHL() >= self.difficulty or traverser.hasAnyCondition("clingfast","flying"):
-			traverser.changeRoom(Core.world[self.connections[dir]])
+			traverser.changeLocation(Core.world[self.connections[dir]])
 			return True
 		elif "down" in self.connections:
 			traverser.Fall(self.difficulty,room=Core.world[self.connections["down"]])
@@ -632,7 +669,7 @@ class Window(Core.Passage):
 		if traverser.hasCondition("flying"): verb = "fly"
 		elif traverser is Core.player.riding: verb = "ride"
 		Core.Print(f"You {verb} {dir} {-self}.")
-		traverser.changeRoom(Core.world[self.connections[dir]])
+		traverser.changeLocation(Core.world[self.connections[dir]])
 		return True
 
 
