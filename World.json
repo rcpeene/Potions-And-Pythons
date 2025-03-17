@@ -289,6 +289,7 @@
 				"durability": 100,
 				"composition": "bronze",
 				"open": false,
+				"capacity": 10,
 				"items": [],
 				"keyids": [-1,1],
 				"locked": true
@@ -344,6 +345,7 @@
 				"durability": 10,
 				"composition": "wood",
 				"open": false,
+				"capacity": 30,
 				"items": [
 					{
 						"__class__": "Key",
