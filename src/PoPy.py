@@ -46,7 +46,7 @@ def main(testing=False):
 		if Core.game.quit: return Menu.quit()
 
 		# creatures in current room's turn
-		for creature in Core.game.currentroom.creatures:
+		for creature in Core.game.currentroom.allCreatures():
 			if not Core.player.isAlive(): continue
 			Core.game.whoseturn = creature
 			creature.act()
@@ -54,7 +54,7 @@ def main(testing=False):
 		# creatures in nearby rooms' turn
 		Core.game.silent = True
 		for room in Core.game.nearbyRooms():
-			for creature in room.creatures:
+			for creature in room.allCreatures():
 				if not Core.player.isAlive(): continue
 				Core.game.whoseturn = creature
 				creature.act()
@@ -80,29 +80,27 @@ if __name__ == "__main__":
 
 # throw snake into chest???
 	# add ability to go into containers
-		# add container capacity
-		# put snake in chest
-			# test 'Take' when item is in container
-		# test drop/throw into chest
+		# factor "go out" out of Go function, what about being trapped in a locked chest?
+		# be able to teleport out from inside chest
+		# looking in chest while inside it
+		# include hiding ability?
+			# you are hiding (if in one)
+		# handle case when creature is inside a chest and chest changes room
+			# try a teleporting box, going into a burning room
 		# continue stand func with stand on and stand in
-		# get in/get out
-		# adjust go to handle being in something
-	# include hiding ability?
-		# you are hiding (if in one)
-	# utilize fall method
-	# make sure creatures in containers can still act
 # test throwing a person
+# add dropping into pit -> add fall damage to items.
 # make projectile subclass for creatures? maybe subclass not necessary
 # drop/throw goblin off cliff
 # throw goblin up/down stairs
 # throw snake at goblin
+# "take all from chest", to just take everything in chest
 # refactor drop into a creature method?
 # check if throwing a creature which has another riding it?
 # "throw rock east"
-# add dropping into pit -> add fall damage to items.
+# correctly factor DFNS into takeDamage (it should probably be in takeDamage method itself), but consider different damage source like collision and falling
 # add in projectile weapons?
 # throw 'grappling hook' which creates a new passage?, throw up a cliff or across a gap
-
 # fix obtaining money problem, think about other objects which won't go into inv upon obtaining
 # if something is one fire (or other condition) when entering a room, say it
 # what if the tree at "big tree" is destroyed? Some contingency to reset the room?
@@ -137,6 +135,7 @@ if __name__ == "__main__":
 
 # add total traversal limit on dlog nodes?
 # behavior
+	# make fear lowered by taking damage on player's turn, but make love go down if player does something they don't like (like restraining them)
 	# create system for behavior 'regimens'
 	# design persons and person behavior all of the RP system?
 	# add reactions to being healed or being attacked
