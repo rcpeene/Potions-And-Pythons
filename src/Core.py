@@ -1373,6 +1373,15 @@ class Room():
 		return True
 
 
+	def add(self,O):
+		if isinstance(O,Creature):
+			return self.addCreature(O)
+		elif isinstance(O,Fixture):
+			return self.addFixture(O)
+		elif isinstance(O,Item):
+			return self.addItem(O)
+
+
 	def removeItem(self,I):
 		if I in self.items:
 			self.items.remove(I)
@@ -1395,6 +1404,15 @@ class Room():
 	def removeFixture(self,F):
 		if F in self.fixtures:
 			self.fixtures.remove(F)
+
+
+	def remove(self,O):
+		if isinstance(O,Creature):
+			return self.removeCreature(O)
+		elif isinstance(O,Fixture):
+			return self.removeFixture(O)
+		elif isinstance(O,Item):
+			return self.removeItem(O)
 
 
 	def addAreaCondition(areacond):
@@ -1571,6 +1589,8 @@ class Room():
 		Print("\n" + self.desc)
 		self.describeItems()
 		self.describeCreatures()
+		# if player.carrying:
+		# 	Print(f"You are carrying {~player.carrying}.")
 
 
 	# prints all the items of the room in sentence form
@@ -1595,7 +1615,7 @@ class Room():
 # Anything in a Room that is not a Creature will be an Item
 # All items come with a name, description, weight, and durability
 class Item():
-	def __init__(self,name,desc,weight,durability,composition,aliases=None,status=None,plural=None,determiner=None,longevity=None,despawnTimer=None,scent=None,taste=None,texture=None):
+	def __init__(self,name,desc,weight,durability,composition,aliases=None,status=None,plural=None,determiner=None,pronoun="it",longevity=None,despawnTimer=None,scent=None,taste=None,texture=None):
 		self.name = name
 		self.desc = desc
 		self.weight = weight
@@ -1614,6 +1634,7 @@ class Item():
 		else:
 			self.plural = plural
 		self.determiner=determiner
+		self.pronoun = pronoun
 		self.parent = None
 
 
@@ -1743,14 +1764,7 @@ class Item():
 	def Bombard(self,missile):
 		assert isinstance(missile,Projectile)
 		if diceRoll(1,100) < bound(missile.aim+self.weight+10,1,99):
-			if getattr(self,"open",False) and missile.weight < self.weight:
-				Print(f"{+missile} goes into {-self}.")
-				missile = missile.asItem()
-				missile.room().removeItem(missile)
-				self.addItem(missile)
-			else:
-				missile.Collide(self)
-			return True
+			return missile.Collide(self)
 		return False
 
 
@@ -1914,6 +1928,7 @@ class Creature():
 		self.shield = EmptyGear()
 		self.shield2 = EmptyGear()
 
+		self.composition = "flesh"
 		self.timeOfDeath = timeOfDeath
 		# health regens very slowly
 		self.regenTimer = regenTimer
@@ -2056,6 +2071,8 @@ class Creature():
 
 	# takes incoming damage, accounts for damage vulnerability or resistance
 	def takeDamage(self,dmg,type):
+		if self.hasCondition("dead"):
+			return False
 		prevhp = self.hp
 		if(f"{type} vulnerability" in self.status): dmg *= 2
 		if(f"{type} resistance" in self.status): dmg //= 2
@@ -2067,8 +2084,9 @@ class Creature():
 		else:
 			self.hp = min0(self.hp-dmg)
 		total_dmg = prevhp - self.hp
+		dmgtype = Data.dmgtypes[type]
 		if self.room() is game.currentroom:
-			Print(f"{+self} took {total_dmg} {Data.dmgtypes[type]} damage.",color="o")
+			Print(f"{+self} took {total_dmg} {dmgtype} damage.",color="o")
 		if self.hp == 0:
 			self.death()
 
@@ -2104,6 +2122,11 @@ class Creature():
 		self.RP = bound(fearMod,-100,100)
 
 
+	def asProjectile(self):
+		comp = getattr(self,"composition","flesh")
+		return Projectile(self.name,self.desc,self.weight,self.DFNS(),comp,self.weight//4,0,"b",item=self,pronoun=self.pronoun)
+
+
 	# check if item can fit in inventory
 	def canObtain(self,I):
 		if self.invWeight() + I.Weight() > 2*self.BRDN():
@@ -2114,6 +2137,8 @@ class Creature():
 	# try to add an Item to Inventory
 	# it will fail if the inventory is too heavy
 	def addItem(self,I):
+		if isinstance(I,Creature):
+			return self.parent.add(I)
 		if not self.canObtain(I):
 			return False
 		insort(self.inv,I)
@@ -2348,6 +2373,7 @@ class Creature():
 		self.addCondition("dead",-3)
 		Print(f"{+self} died.",color="o")
 		self.descname = f"dead {self.descname}"
+		self.aliases = self.aliases | {"dead " + a for a in self.aliases}
 		n = diceRoll(3,player.LOOT(),-2)
 		self.room().addItem(Serpens(n))
 		if not game.silent:
@@ -2363,7 +2389,7 @@ class Creature():
 		Print(f"{+self} falls.",color="o")
 
 		if self.hasCondition("flying"):
-			Print(f"But {self.prep} is flying.")
+			Print(f"But {self.pronoun} is flying.")
 			return False
 
 		if room is None:
@@ -2522,6 +2548,8 @@ class Creature():
 			return False
 		self.carrier = carrier
 		self.carrier.addCarry(self)
+		self.parent.remove(self)
+		self.carrier.parent.add(self)
 		return True
 
 
@@ -2550,14 +2578,17 @@ class Creature():
 
 		missile = missile.asProjectile()
 
-		speedfactor = 10 - bound((missile.weight//4)//self.STR,1,10)
-		if speedfactor == 0:
+		# force is half STR, reduced by 1 for every 4*STR in missile weight
+		# basically, its just reduced for the amount of weight the missile has
+		force = self.STR()//2 - bound((missile.Weight()//4)//self.STR(),0,10)
+		if force == 0:
 			if self is player:
-				Print(f"{+missile} is too heavy to throw.")
+				Print(f"{+missile} is too heavy!")
+			missile.asItem().Fall()
 			return False
 
-		speed = min1(diceRoll(1,speedfactor,self.SPD()//2))
-		if speed > maxspeed:
+		speed = min1(diceRoll(1,force,self.SPD()//2))
+		if maxspeed and speed > maxspeed:
 			speed = maxspeed
 
 		aim = self.ACCU()
@@ -2596,7 +2627,7 @@ class Creature():
 		Print("Smells a little like body odor.")
 
 
-	def lick(self,licker):
+	def Lick(self,licker):
 		# TODO: make creatures evade this or try to
 		Print("Yuck!")
 
@@ -3727,7 +3758,7 @@ class Animal(Speaker):
 
 
 	def act(self):
-		if not self.timeOfDeath:
+		if self.timeOfDeath:
 			return
 		if not game.silent:
 			Print(f"\n{self.name}'s turn!")
@@ -3944,10 +3975,11 @@ class Projectile(Item):
 			self = self.asItem()
 			self.changeRoom(target)
 			return self.Fall(speed//2)
-		
+
 		if not target.Bombard(self):
-			Print("It misses!")
+			Print(f"{self.pronoun.title()} misses!")
 			self.Miss(launcher,target)
+		return True
 
 
 	def Miss(self,launcher,target):
@@ -3959,9 +3991,9 @@ class Projectile(Item):
 		victim = choices(otherObjs+[None],weights+[target.room().size*10])[0]
 		if victim is None:
 			return False
-		Print(f"It whizzes toward {-victim}!", color="o")
+		Print(f"{self.pronoun.title()} whizzes toward {-victim}!", color="o")
 		if not victim.Bombard(self):
-			Print("It misses...")
+			Print(f"{self.pronoun.title()} misses...")
 
 
 	def dull(self,dec):

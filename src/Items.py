@@ -38,22 +38,23 @@ class Bottle(Core.Item):
 	# breaks the bottle, removes it from player inventory, and generates some shards
 	def Break(self):
 		Core.Print(f"{+self} breaks.")
-		self.parent.removeItem(self)
+		self.parent.remove(self)
 		if self.weight > 2 and self.composition == "glass":
 			Core.Print("Shards of glass scatter everywhere.",color="o")
 		while self.weight > 2 and self.composition == "glass":
 			shardWeight = randint(2,4)
 			self.weight -= shardWeight
 			shard = Shard("glass shard","a sharp shard of glass",shardWeight,-1,"glass",{"shard"})
-			Core.game.currentroom.addItem(shard)
+			Core.game.currentroom.add(shard)
 		return True
 
 
 
 class Box(Core.Item):
-	def __init__(self,name,desc,weight,durability,composition,open,items,**kwargs):
+	def __init__(self,name,desc,weight,durability,composition,open,capacity,items,**kwargs):
 		Core.Item.__init__(self,name,desc,weight,durability,composition,**kwargs)
 		self.open = open
+		self.capacity = capacity
 		self.items = items
 
 
@@ -90,14 +91,35 @@ class Box(Core.Item):
 			Core.Print(f"{+self.name} cannot be broken.")
 			return False
 		Core.Print(f"{+self.name} breaks.")
-		self.parent.removeItem(self)
+		self.parent.remove(self)
 		# drop things it contains into parent
 		for item in self.items:
-			self.parent.addItem(item)
+			self.parent.add(item)
 		return True
 
 
-	def addItem(self,I):
+	def Bombard(self,missile):
+		assert isinstance(missile,Core.Projectile)
+		if Core.diceRoll(1,100) < Core.bound(missile.aim+self.weight+10,1,99):
+			if not self.open:
+				Core.Print(f"{+self} is closed.")
+				missile.Collide(self)
+			elif not self.canAdd(missile):
+				Core.Print(f"{+self} is too full.")
+				missile.Collide(self)
+			else:
+				Core.Print(f"{+missile} goes into {-self}.")
+				missile = missile.asItem()
+				missile.room().remove(missile)
+				self.add(missile)
+			return True
+		return False
+
+
+	def add(self,I):
+		if not self.canAdd(I):
+			return False	
+
 		# ensure only one bunch of Gold exists here
 		if isinstance(I,Core.Serpens):
 			for item in self.items:
@@ -110,18 +132,25 @@ class Box(Core.Item):
 		I.despawnTimer = None
 
 
-	def removeItem(self,I):
+	def remove(self,I):
 		self.items.remove(I)
 
 
 	### Getters ###
 
+	def itemsWeight(self):
+		return sum(i.Weight() for i in self.items)
+
+
 	# the weight of a box is equal to its own weight + weights of its items
 	def Weight(self):
-		w = self.weight
-		for i in self.items:
-			w += i.Weight()
-		return w
+		return self.weight + self.itemsWeight()
+
+
+	def canAdd(self,I):
+		if self.itemsWeight() + I.Weight() > self.capacity:
+			return False
+		return True
 
 	
 	def contents(self):
@@ -177,7 +206,7 @@ class Food(Core.Item):
 		if h == 0 and isinstance(eater,Core.Player):
 			Core.Print("Yummy...")
 		eater.checkHungry()
-		self.parent.removeItem(self)
+		self.parent.remove(self)
 
 
 
@@ -290,8 +319,8 @@ class Key(Core.Item):
 
 
 class Lockbox(Box):
-	def __init__(self,name,desc,weight,durability,composition,open,items,keyids,locked,**kwargs):
-		Box.__init__(self,name,desc,weight,durability,composition,open,items,**kwargs)
+	def __init__(self,name,desc,weight,durability,composition,keyids,locked,**kwargs):
+		Box.__init__(self,name,desc,weight,durability,composition,**kwargs)
 		self.keyids = keyids
 		self.locked = locked
 
@@ -364,16 +393,16 @@ class Potion(Bottle):
 	def Drink(self):
 		Core.Print(f"You drink {-self.name}.")
 		Core.player.heal(1000)
-		self.parent.removeItem(self)
-		Core.player.addItem()
+		self.parent.remove(self)
+		Core.player.add()
 
 
 	def Pour(self,obj=None):
 		if obj != None:
 			if Core.hasMethod(obj,"Drench"):
 				obj.Drench(self)
-		self.parent.removeItem(self)
-		Core.player.addItem(factory["bottle"]())
+		self.parent.remove(self)
+		Core.player.add(factory["bottle"]())
 
 
 
@@ -448,16 +477,16 @@ class Table(Core.Item):
 				Core.Print(f"{+self} cannot be broken.")
 			return False
 		Core.Print(f"{+self} breaks.")
-		self.parent.removeItem(self)
+		self.parent.remove(self)
 		# drop things it contains into parent
 		if self.items:
 			Core.Print(f"It's contents fall onto the ground.")
 		for item in self.items:
-			self.parent.addItem(item)
+			self.parent.add(item)
 		return True
 
 
-	def addItem(self,I):
+	def add(self,I):
 		# ensure only one bunch of Gold exists here
 		if isinstance(I,Core.Serpens):
 			for item in self.items:
@@ -475,7 +504,7 @@ class Table(Core.Item):
 			self.descname = f"{self.name} with things on it"
 
 
-	def removeItem(self,I):
+	def remove(self,I):
 		self.items.remove(I)
 		if len(self.items) == 1:
 			self.descname = f"{self.name} with {~self.items[0]} on it"
@@ -576,7 +605,7 @@ class Window(Core.Passage):
 			shardWeight = randint(2,4)
 			self.weight -= shardWeight
 			shard = Shard("glass shard","a sharp shard of glass",shardWeight,-1,"glass",{"shard"})
-			Core.game.currentroom.addItem(shard)
+			Core.game.currentroom.add(shard)
 		return True
 
 

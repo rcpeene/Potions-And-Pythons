@@ -81,13 +81,17 @@ if __name__ == "__main__":
 # throw snake into chest???
 	# add ability to go into containers
 		# add container capacity
+		# put snake in chest
+			# test 'Take' when item is in container
+		# test drop/throw into chest
+		# continue stand func with stand on and stand in
 		# get in/get out
 		# adjust go to handle being in something
 	# include hiding ability?
 		# you are hiding (if in one)
-	# allow put into chest
-	# test drop/throw into chest
 	# utilize fall method
+	# make sure creatures in containers can still act
+# test throwing a person
 # make projectile subclass for creatures? maybe subclass not necessary
 # drop/throw goblin off cliff
 # throw goblin up/down stairs
@@ -110,10 +114,12 @@ if __name__ == "__main__":
 	# add room property which is description of directions ("look up", "look east", "look out", etc.)
 # add chopping tree
 # add fencing and wooden swords
+# knock stuff off of a table if it takes impact?
 # add dull method to weapons, add blunt weapons which cant be sharpened?
 # try out using a creature as a weapon
 # restrict Read to readable objects?
 # add turn order, so you aren't the first to move when you enter a room, makes MVMT more useful
+# add Escape to creature behavior. Make sure that if they escape a container thats in an inventory, to put them in the room??
 
 # add basic equipment and clothing items
 # fix/add Creature.isNaked or Player.isNaked
@@ -129,7 +135,6 @@ if __name__ == "__main__":
 # add better comments to methods
 # skim/update design
 
-# knock stuff off of a table if it takes impact?
 # add total traversal limit on dlog nodes?
 # behavior
 	# create system for behavior 'regimens'

@@ -44,7 +44,11 @@ def chooseObject(name,objects,verb=None):
 				labels.append(f"{object.hp} hp")
 		if not isinstance(object.parent,(Core.Room,Core.Player)):
 			labels.append(object.parent.name)
-		if object in Core.player.gear.values():
+		if object is Core.player.carrying:
+			labels.append("carrying")
+		elif object is Core.player.riding:
+			labels.append("riding")
+		elif object in Core.player.gear.values():
 			labels.append("equipped")
 		elif object in Core.player.invSet():
 			labels.append("Inventory")
@@ -74,7 +78,7 @@ def chooseObject(name,objects,verb=None):
 				if choice == obj.nounPhrase().lower():
 					return obj
 		Core.Print("That is not one of the options.",color="k")
-		if invalid_count >= 3:
+		if invalid_count >= 2:
 			Core.Print("Type 'cancel' to undo this action.",color="k")
 		invalid_count += 1
 
@@ -84,7 +88,7 @@ def chooseObject(name,objects,verb=None):
 # queryPlayer and queryRoom indicate which places to look for matching objects
 # roomD and playerD are the 'degree' of the query.
 # Look at Core.py objQuery for details on query degree
-def findObjFromTerm(term,queryType="both",verb=None,filter=None,roomD=1,playerD=2,reqParent=None,silent=False):
+def findObject(term,queryType="both",verb=None,filter=None,roomD=1,playerD=2,reqParent=None,silent=False):
 	# allows for users to describe objects they possess
 	my = False
 	if term.startswith("my "):
@@ -94,6 +98,8 @@ def findObjFromTerm(term,queryType="both",verb=None,filter=None,roomD=1,playerD=
 	matches = []
 	if queryType == "player" or queryType == "both":
 		matches += Core.player.nameQuery(term,d=playerD)
+	if queryType == "player" and Core.nameMatch(term,Core.player.carrying):
+		matches.append(Core.player.carrying)
 	if queryType == "room" or queryType == "both":
 		matches += Core.game.nameQueryRoom(term,d=roomD)
 
@@ -113,7 +119,7 @@ def findObjFromTerm(term,queryType="both",verb=None,filter=None,roomD=1,playerD=
 			if queryType == "player" or my:
 				suffix += " in your Inventory"
 			elif queryType == "room":
-				suffix += " here"
+				suffix += " in your surroundings."
 			Core.Print(f"There is no '{term}'{suffix}.",color="k")
 		return None
 	elif len(matches) == 1:
@@ -356,7 +362,7 @@ def Get(command):
 	elif objname in ("here","room"): obj = Core.game.currentroom
 	elif objname in ("w","world"): obj = Core.world
 	elif objname in Core.world: obj = Core.world[objname]
-	else: obj = findObjFromTerm(objname,playerD=3,roomD=3)
+	else: obj = findObject(objname,playerD=3,roomD=3)
 	if obj is None:
 		Core.Print("Error: Object not found",color="k")
 		return
@@ -445,7 +451,7 @@ def Set(command):
 	elif objname in ("g","game"): obj = Core.game
 	elif objname in ("here","room"): obj = Core.game.currentroom
 	elif objname in ("w","world"): obj = Core.world
-	else: obj = findObjFromTerm(command[1],playerD=3,roomD=3)
+	else: obj = findObject(command[1],playerD=3,roomD=3)
 
 	if obj is None: return False
 	try:
@@ -631,7 +637,7 @@ def Attack(dobj,iobj,prep,target=None,weapon=None,weapon2=None):
 	if weapon is None and weapon2 is not None:
 		weapon, weapon2 = weapon2, None
 	if iobj in ("fist","hand"):
-		Core.player.unequip(Core.player.gear["right"])
+		Core.player.unequip("right")
 		weapon = Items.Hand("your hand","",4,-1,None)
 	if iobj in ("foot","leg"):
 		weapon = Items.Foot("your foot","",6,-1,None)
@@ -656,7 +662,7 @@ def Attack(dobj,iobj,prep,target=None,weapon=None,weapon2=None):
 		if dobj is None: dobj = getNoun("What will you attack?")
 		if dobj in Data.cancels: return False
 		if dobj in ("myself","me"): target = Core.player
-		else: target = findObjFromTerm(dobj,"room")
+		else: target = findObject(dobj,"room")
 		if target is None: return False
 	Core.game.setPronouns(target)
 	Core.player.removeCondition("hiding",-3)
@@ -683,7 +689,7 @@ def Bite(dobj,iobj,prep):
 		dobj = getNoun("What do you want to bite?")
 		if dobj in Data.cancels: return False
 
-	I = findObjFromTerm(dobj)
+	I = findObject(dobj)
 	if I is None: return False
 	if Core.hasMethod(I,"Eat"):
 		I.Eat()
@@ -707,7 +713,7 @@ def Break(dobj,iobj,prep):
 
 	# TODO: maybe figure out times when you will just break, not attack?
 	# for instance though, a window should be attacked
-	I = findObjFromTerm(dobj)
+	I = findObject(dobj)
 	if I is None: return False
 	Core.game.setPronouns(I)
 
@@ -726,7 +732,7 @@ def Caress(dobj,iobj,prep):
 		dobj = getNoun("What do you want to caress?")
 		if dobj in Data.cancels: return False
 
-	I = findObjFromTerm(dobj)
+	I = findObject(dobj)
 	if I is None: return False
 	Core.game.setPronouns(I)
 
@@ -780,7 +786,7 @@ def Cast(dobj,iobj,prep):
 		if iobj is None:
 			iobj = getNoun(f"What will you cast upon?")
 			if iobj in Data.cancels: return False
-		target = findObjFromTerm(iobj,"room")
+		target = findObject(iobj,"room")
 
 	return Effects.spells[dobj](target)
 
@@ -802,7 +808,7 @@ def Close(dobj,iobj,prep):
 		dobj = getNoun("What will you close?")
 		if dobj in Data.cancels: return False
 
-	I = findObjFromTerm(dobj)
+	I = findObject(dobj)
 	if I is None: return False
 	Core.game.setPronouns(I)
 
@@ -875,7 +881,7 @@ def Describe(dobj,iobj,prep):
 	if dobj == Core.game.currentroom.name or dobj in ("room","here"):
 		D = Core.game.currentroom
 	else:
-		D = findObjFromTerm(dobj)
+		D = findObject(dobj)
 	if D is None: return False
 	Core.game.setPronouns(D)
 
@@ -943,15 +949,16 @@ def Don(dobj,iobj,prep):
 		dobj = getNoun("What do you want to don?")
 		if dobj in Data.cancels: return False
 
-	I = findObjFromTerm(dobj,"player")
+	I = findObject(dobj,"player")
 	if I is None: return False
 	Core.game.setPronouns(I)
 
+	displayName = f"{-I}" if Core.player.carrying is I else f"your {I}"
 	if not isinstance(I,Core.Armor):
-		Core.Print(f"You cannot wear your {I}.")
+		Core.Print(f"You cannot wear {displayName}.")
 		return False
 	if I in Core.player.gear.values():
-		Core.Print(f"You are already wearing your {I}.")
+		Core.Print(f"You are already wearing {displayName}.")
 		return False
 	if iobj and iobj not in Core.player.gear: 
 		Core.Print(f"You aren't able to equip to '{iobj}'.")
@@ -961,7 +968,7 @@ def Don(dobj,iobj,prep):
 		return False
 	if not Core.player.equipArmor(I,iobj):
 		return False
-	Core.Print(f"You don your {I}.")
+	Core.Print(f"You don {displayName}.")
 	return True
 
 
@@ -973,7 +980,7 @@ def Drink(dobj,iobj,prep):
 		dobj = getNoun("What do you want to drink?.")
 		if dobj in Data.cancels: return False
 
-	I = findObjFromTerm(dobj)
+	I = findObject(dobj)
 	if I is None: return False
 	Core.game.setPronouns(I)
 
@@ -993,9 +1000,7 @@ def Drop(dobj,iobj,prep,I=None):
 		dobj = getNoun("What will you drop?")
 		if dobj in Data.cancels: return False
 
-	if I is None and Core.nameMatch(dobj, Core.player.carrying):
-		I = Core.player.carrying
-	if I is None: I = findObjFromTerm(dobj,"player")
+	if I is None: I = findObject(dobj,"player")
 	if I is None: return False
 	Core.game.setPronouns(I)
 
@@ -1005,7 +1010,7 @@ def Drop(dobj,iobj,prep,I=None):
 			return False
 
 	if iobj is not None:
-		R = findObjFromTerm(iobj,"room")
+		R = findObject(iobj,"room")
 		if R is None: return False
 		if isinstance(R,Core.Passage) and "down" in R.connections:
 			if getattr(R,"open",True):
@@ -1013,13 +1018,13 @@ def Drop(dobj,iobj,prep,I=None):
 					Core.player.removeCarry(I)
 				else:
 					Core.player.removeItem(I)
-					Core.game.currentroom.addItem(I)
+					Core.game.currentroom.add(I)
 				Core.Print(f"You drop {-I} {prep} {-R}.")
 				return R.Transfer(I)
 			else:
 				Core.Print(f"{+R} is closed.")
 				return False
-		elif not Core.hasMethod(R,"addItem"):
+		elif not Core.hasMethod(R,"add"):
 			Core.Print(f"You can't drop {-I} {prep} {-R}.")
 			return False
 
@@ -1028,7 +1033,7 @@ def Drop(dobj,iobj,prep,I=None):
 	else:
 		I.parent.removeItem(I)
 		Core.Print(f"You drop {-I}.")
-		Core.game.currentroom.addItem(I)
+		Core.game.currentroom.add(I)
 	return True
 
 
@@ -1040,7 +1045,7 @@ def Dump(dobj,iobj,prep):
 		dobj = getNoun("What will you dump?")
 		if dobj in Data.cancels: return False
 
-	I = findObjFromTerm(dobj,"player")
+	I = findObject(dobj,"player")
 	if I is None: return False
 	Core.game.setPronouns(I)
 
@@ -1058,7 +1063,7 @@ def Eat(dobj,iobj,prep):
 		dobj = getNoun("What do you want to eat?")
 		if dobj in Data.cancels: return False
 
-	I = findObjFromTerm(dobj)
+	I = findObject(dobj)
 	if I is None: return False
 	Core.game.setPronouns(I)
 
@@ -1087,7 +1092,7 @@ def Equip(dobj,iobj,prep):
 	if dobj.startswith("my "):
 		dobj = dobj[3:]
 
-	# uses inInv instead of findObjFromTerm because we only want top level of inv tree
+	# uses inInv instead of findObject because we only want top level of inv tree
 	matches = Core.player.inInv(dobj)
 	if len(matches) == 0:
 		Core.Print(f"There is no '{dobj}' in your Inventory",color="k")
@@ -1152,7 +1157,7 @@ def Give(dobj,iobj,prep):
 		dobj = getNoun("What will you give?")
 		if dobj in Data.cancels:
 			return False
-	I = findObjFromTerm(dobj,"player")
+	I = findObject(dobj,"player")
 	if I is None:
 		return False
 
@@ -1160,7 +1165,7 @@ def Give(dobj,iobj,prep):
 		iobj = getNoun("Who will you give to?")
 		if iobj in Data.cancels:
 			return False
-	C = findObjFromTerm(iobj,"room")
+	C = findObject(iobj,"room")
 	if C is None:
 		return False
 	
@@ -1184,7 +1189,7 @@ def GoVertical(dir,passage=None,dobj=None):
 		return False
 	if passage is None:
 		passagename = getNoun(f"What will you go {dir}?")
-		passage = findObjFromTerm(passagename,"room")
+		passage = findObject(passagename,"room")
 	if passage is None:
 		Core.Print(f"There is no '{passagename}' to go {dir} here.",color="k")
 		return False
@@ -1211,8 +1216,8 @@ def parseGoTerms(dobj,iobj,prep):
 	elif dir is None: dir = prep
 
 	# assign passage
-	if dobj is not None: passage = findObjFromTerm(dobj,"room",silent=True)
-	elif iobj is not None: passage = findObjFromTerm(iobj,"room",silent=True)
+	if dobj is not None: passage = findObject(dobj,"room",silent=True)
+	elif iobj is not None: passage = findObject(iobj,"room",silent=True)
 
 	return dir,dest,passage
 
@@ -1293,7 +1298,7 @@ def Hide(dobj,iobj,prep):
 		dobj = getNoun("What do you want to hide behind?")
 		if dobj in Data.cancels: return False
 
-	I = findObjFromTerm(dobj,"room")
+	I = findObject(dobj,"room")
 	if I is None: return False
 	Core.game.setPronouns(I)
 
@@ -1362,7 +1367,7 @@ def Lay(dobj,iobj,prep):
 	if dobj in ("nothing","ground","floor","here","room"):
 		dobj = None
 	if dobj is not None:
-		R = findObjFromTerm(dobj)
+		R = findObject(dobj)
 		if Core.hasMethod(R,"Lay"):
 			Core.player.Lay()
 			R.Lay(Core.player)
@@ -1382,12 +1387,12 @@ def Lick(dobj,iobj,prep):
 		dobj = getNoun("What do you want to lick?")
 		if dobj in Data.cancels: return False
 
-	I = findObjFromTerm(dobj)
+	I = findObject(dobj)
 	if I is None: return False
 	Core.game.setPronouns(I)
 
 	if Core.hasMethod(I,"Lick"):
-		return I.lick(Core.player)
+		return I.Lick(Core.player)
 
 	if I.composition in Data.tastes:
 		Core.Print(Data.tastes[I.composition])
@@ -1412,7 +1417,7 @@ def Lock(dobj,iobj,prep):
 		dobj = getNoun("What will you lock?")
 		if dobj in Data.cancels: return False
 
-	I = findObjFromTerm(dobj)
+	I = findObject(dobj)
 	if I is None: return False
 	Core.game.setPronouns(I)
 
@@ -1423,7 +1428,7 @@ def Lock(dobj,iobj,prep):
 	if iobj is None:
 		iobj = getNoun("What will you lock with?")
 		if iobj in Data.cancels: return False
-	K = findObjFromTerm(iobj,"player")
+	K = findObject(iobj,"player")
 	if K is None: return False
 
 	if not isinstance(K,Items.Key):
@@ -1455,7 +1460,7 @@ def Look(dobj,iobj,prep):
 	if dobj in ("up","sky","sun","moon","stars","aurora","auroras","meteor shower","eclipse","solar eclipse"):
 		return Core.game.LookUp(dobj)
 
-	L = findObjFromTerm(dobj)
+	L = findObject(dobj)
 	if L is None: return False
 	Core.game.setPronouns(L)
 
@@ -1478,7 +1483,7 @@ def Mount(dobj,iobj,prep):
 		dobj = getNoun("What will you mount?")
 		if dobj in Data.cancels: return False
 
-	C = findObjFromTerm(dobj,"room")
+	C = findObject(dobj,"room")
 	if C is None: return False
 	Core.game.setPronouns(C)
 	
@@ -1500,7 +1505,7 @@ def Open(dobj,iobj,prep):
 		dobj = getNoun("What will you open?")
 		if dobj in Data.cancels: return False
 
-	I = findObjFromTerm(dobj)
+	I = findObject(dobj)
 	if I is None: return False
 	Core.game.setPronouns(I)
 
@@ -1530,7 +1535,7 @@ def Pour(dobj,iobj,prep,I=None):
 		dobj = getNoun("What will you pour?")
 		if dobj in Data.cancels: return False
 
-	if I is None: I = findObjFromTerm(dobj,"player")
+	if I is None: I = findObject(dobj,"player")
 	if I is None: return False
 	Core.game.setPronouns(I)
 
@@ -1540,7 +1545,7 @@ def Pour(dobj,iobj,prep,I=None):
 
 	R = None
 	if iobj is not None and iobj not in ("floor","ground"):
-		R = findObjFromTerm(iobj)
+		R = findObject(iobj)
 		if R is None: return False
 
 	if prep is None: prep = "on"
@@ -1584,7 +1589,7 @@ def Put(dobj,iobj,prep):
 		dobj = getNoun("What will you put?")
 		if dobj in Data.cancels: return False
 
-	I = findObjFromTerm(dobj,"player")
+	I = findObject(dobj,"player")
 	if I is None: return False
 	Core.game.setPronouns(I)
 
@@ -1594,7 +1599,7 @@ def Put(dobj,iobj,prep):
 
 	if iobj in ("floor","ground","here"):
 		return Drop(dobj,iobj,prep,I=I)
-	R = findObjFromTerm(iobj)
+	R = findObject(iobj)
 	if R is None: return False
 
 	if isinstance(I,Core.Compass) and Core.player.countCompasses() == 1:
@@ -1605,12 +1610,15 @@ def Put(dobj,iobj,prep):
 	if isinstance(R,Core.Passage) and "down" in R.connections:
 		if getattr(R,"open",True):
 			Core.player.removeItem(I)
-			Core.game.currentroom.addItem(I)
+			Core.game.currentroom.add(I)
 			return R.Transfer(I)
 		else:
 			Core.Print(f"{+R} is closed.")
-	elif not Core.hasMethod(R,"addItem"):
+	elif not Core.hasMethod(R,"add"):
 		Core.Print(f"You can't put {-I} {prep} {-R}.")
+		return False
+	elif not R.canAdd(I):
+		Core.Print(f"You can't put {-I} {prep} {-R}. There's not enough room.")
 		return False
 	
 	idet = "your" if Core.player in I.ancestors() else 'the'
@@ -1618,8 +1626,10 @@ def Put(dobj,iobj,prep):
 	outprep = "on" if isinstance(R,Items.Table) else "in"
 	if iobj == "here": Core.Print(f"You put your {I.name} here.")
 	else: Core.Print(f"You put {idet} {I} {outprep} {rdet} {R}.")
-	I.parent.removeItem(I)
-	R.addItem(I)
+	I.parent.remove(I)
+	if I is Core.player.carrying:
+		Core.player.removeCarry(silent=True)
+	R.add(I)
 	return True
 
 
@@ -1651,7 +1661,7 @@ def Rest(dobj,iobj,prep):
 		if dobj in ("nothing","ground","floor","here","room"):
 			I = None
 		else:
-			I = findObjFromTerm(dobj)
+			I = findObject(dobj)
 			if I is None and not Core.yesno("Would you like to sleep on the ground?"):
 				return False
 		Lay(dobj,iobj,"on")
@@ -1674,7 +1684,7 @@ def Restrain(dobj,iobj,prep):
 		dobj = getNoun("What will you restrain?")
 		if dobj in Data.cancels: return False
 
-	C = findObjFromTerm(dobj,"room")
+	C = findObject(dobj,"room")
 	if C is None: return False
 	Core.game.setPronouns(C)
 
@@ -1684,7 +1694,7 @@ def Restrain(dobj,iobj,prep):
 
 	I = None
 	if iobj is not None:
-		I = findObjFromTerm(iobj,"player")
+		I = findObject(iobj,"player")
 		if I is None: return False
 		if not Core.hasMethod(I,"RestrainWith"):
 			Core.Print(f"You can't restrain with {-I}.")
@@ -1714,7 +1724,7 @@ def Rub(dobj,iobj,prep):
 		dobj = getNoun("What do you want to rub?")
 		if dobj in Data.cancels: return False
 
-	I = findObjFromTerm(dobj)
+	I = findObject(dobj)
 	if I is None: return False
 	Core.game.setPronouns(I)
 
@@ -1758,7 +1768,7 @@ def Sit(dobj,iobj,prep):
 	if dobj in ("nothing","ground","floor","here","room"):
 		dobj = None
 	if dobj is not None:
-		R = findObjFromTerm(dobj)
+		R = findObject(dobj)
 		if Core.hasMethod(R,"Sit"):
 			Core.player.Sit()
 			R.Sit(Core.player)
@@ -1778,7 +1788,7 @@ def Smell(dobj,iobj,prep):
 		dobj = getNoun("What do you want to smell?")
 		if dobj in Data.cancels: return False
 
-	I = findObjFromTerm(dobj)
+	I = findObject(dobj)
 	if I is None: return False
 	Core.game.setPronouns(I)
 
@@ -1805,7 +1815,7 @@ def Stand(dobj,iobj,prep):
 		if dobj is None: 
 			dobj = iobj
 		if dobj is not None:
-			M = findObjFromTerm(dobj)
+			M = findObject(dobj)
 			Mount(dobj,iobj,prep)
 	elif prep in ("at","by","near"):
 		Core.Print("You are there.")
@@ -1874,9 +1884,9 @@ def Take(dobj,iobj,prep):
 	if dobj in ("all","everything","it all"): return TakeAll()
 
 	if iobj in ("here", "room", None):
-		objToTake = findObjFromTerm(dobj,"room",roomD=2)
+		objToTake = findObject(dobj,"room",roomD=2)
 	else:
-		objToTake = findObjFromTerm(dobj,roomD=2,reqParent=iobj)
+		objToTake = findObject(dobj,roomD=2,reqParent=iobj)
 	if objToTake is None:
 		return False
 	Core.game.setPronouns(objToTake)
@@ -1915,7 +1925,7 @@ def Talk(dobj,iobj,prep):
 		dobj = getNoun("Who do you want to talk to?")
 		if dobj in Data.cancels: return False
 
-	target = findObjFromTerm(dobj,"room")
+	target = findObject(dobj,"room")
 	if target is None: 
 		return False
 	Core.game.setPronouns(target)
@@ -1939,10 +1949,7 @@ def Throw(dobj,iobj,prep):
 	if dobj is None:
 		dobj = getNoun("What do you want to throw?")
 		if dobj in Data.cancels: return False
-	if Core.nameMatch(dobj,Core.player.carrying):
-		I = Core.player.carrying
-	else:
-		I = findObjFromTerm(dobj,"player","throw")
+	I = findObject(dobj,"player","throw")
 	if I is None: return False
 
 	if iobj is None:
@@ -1959,18 +1966,17 @@ def Throw(dobj,iobj,prep):
 		T = Core.world[iobj]
 		dir = Core.getDirFromDest(T)
 	else:
-		T = findObjFromTerm(iobj,"room",f"throw {prep}")
+		T = findObject(iobj,"room",f"throw {prep}")
 		if T is None: return False
 		dirprep = getattr(T,"passprep","toward")
 		dir = f"{dirprep} {-T}"
 	
 	Core.player.equipInHand(I,slot="left")
 	Core.game.setPronouns(I)
-	if Core.player.Throw(I,T):
-		Core.Print(f"You throw {-I} {dir}.")
-		return True
-	else:
-		return False
+	Core.Print(f"You throw {-I} {dir}.")
+	Core.player.Throw(I,T)
+	return True
+
 
 # throw at a tree, window, goblin, pit
 # throw a rock, sword, black potion, bird, goblin
@@ -1990,10 +1996,7 @@ def Toss(dobj,iobj,prep):
 	if dobj is None:
 		dobj = getNoun("What do you want to toss?")
 		if dobj in Data.cancels: return False
-	if Core.nameMatch(dobj,Core.player.carrying):
-		I = Core.player.carrying
-	else:
-		I = findObjFromTerm(dobj,"player","toss")
+	I = findObject(dobj,"player","toss")
 	if I is None: return False
 
 	if iobj is None:
@@ -2010,18 +2013,18 @@ def Toss(dobj,iobj,prep):
 		T = Core.world[iobj]
 		dir = Core.getDirFromDest(T)
 	else:
-		T = findObjFromTerm(iobj)
+		T = findObject(iobj)
 		if T is None: return False
 		dirprep = getattr(T,"passprep","toward")
 		dir = f"{dirprep} {-T}"
 	
 	Core.player.equipInHand(I,slot="left")
 	Core.game.setPronouns(I)
+	Core.Print(f"You throw {-I} {dir}.")
 	if Core.player.Throw(I,T,0):
-		Core.Print(f"You toss {-I} {dir}.")
 		return True
-	else:
-		return False
+	Core.Print(f"{+I} is too heavy! It doesn't go far...")
+	return False
 
 
 def Touch(dobj,iobj,prep):
@@ -2032,7 +2035,7 @@ def Touch(dobj,iobj,prep):
 		dobj = getNoun("What do you want to touch?")
 		if dobj in Data.cancels: return False
 
-	I = findObjFromTerm(dobj)
+	I = findObject(dobj)
 	if I is None: return False
 	Core.game.setPronouns(I)
 
@@ -2049,7 +2052,7 @@ def Trip(dobj,iobj,prep):
 
 
 def Try(dobj,iobj,prep):
-	Core.Print("Do or do not. There is no 'try'.")
+	Core.Print("Do or do not. There is no try.")
 	return False
 
 
@@ -2066,7 +2069,7 @@ def Unequip(dobj,iobj,prep):
 		Core.Print(f"You do not have a '{dobj}' equipped.",color="k")
 		return False
 	Core.game.setPronouns(I)
-	Core.player.unequip(I)
+	Core.player.unequip(slot)
 	return True
 
 
@@ -2078,7 +2081,7 @@ def Unlock(dobj,iobj,prep):
 		dobj = getNoun("What will you unlock?")
 		if dobj in Data.cancels: return False
 
-	I = findObjFromTerm(dobj)
+	I = findObject(dobj)
 	if I is None: return False
 	Core.game.setPronouns(I)
 	if not Core.hasMethod(I,"Unlock"):
@@ -2089,7 +2092,7 @@ def Unlock(dobj,iobj,prep):
 		iobj = getNoun("What will you unlock with?")
 		if iobj in Data.cancels: return False
 
-	K = findObjFromTerm(iobj,"player")
+	K = findObject(iobj,"player")
 	if K is None: return False
 
 	if not isinstance(K,Items.Key):
@@ -2107,7 +2110,7 @@ def Use(dobj,iobj,prep):
 		dobj = getNoun("What will you use?")
 		if dobj in Data.cancels: return False
 
-	I = findObjFromTerm(dobj)
+	I = findObject(dobj)
 	if I is None: return False
 	Core.game.setPronouns(I)
 
@@ -2402,6 +2405,7 @@ actions = {
 # stare/gaze -> look
 # fart, burp
 # pick -> a lock or a berry
+# step on
 # kiss/smooch
 # shake?
 # browse/peruse -> look
