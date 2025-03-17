@@ -289,7 +289,7 @@
 				"durability": 100,
 				"composition": "bronze",
 				"open": false,
-				"capacity": 10,
+				"capacity": 50,
 				"items": [],
 				"keyids": [-1,1],
 				"locked": true

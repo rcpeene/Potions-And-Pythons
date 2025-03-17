@@ -125,11 +125,17 @@ class Box(Core.Item):
 
 
 	def Traverse(self,traverser,dir=None,verb=None):
-		if dir not in ("in","into","inside",None):
-			if dir in ("out","outside","out of"):
-				Core.Print(f"You're not in {-self}.",color="k")
+		if dir in ("out","outside","out of"):
+			if self is traverser.parent:
+				Core.Print(f"You get out of {-self}.")
+				self.remove(traverser)
+				return traverser.changeLocation(self.parent)
 			else:
-				Core.Print(f"{+self} does not go {dir}.",color="k")
+				Core.Print(f"You're not in {-self}.",color="k")
+				return False
+
+		if dir not in ("in","into","inside",None):
+			Core.Print(f"{+self} does not go {dir}.",color="k")
 			return False
 		if dir is None:
 			dir = "into"
@@ -143,6 +149,7 @@ class Box(Core.Item):
 		if traverser is Core.player:
 			Core.Print(f"You {verb} {dir} {-self}.")
 		self.add(traverser)
+		return True
 
 
 
@@ -415,6 +422,18 @@ class Lockbox(Box):
 			return True
 		Core.Print(f"{+key} won't work!")
 		return True
+
+
+	def Traverse(self,traverser,dir=None,verb=None):
+		if self.locked:
+			if traverser is Core.player:
+				if self is traverser.parent:
+					Core.Print(f"You can't get out of {-self}. It's locked!")
+				else:
+					Core.Print(f"You can't get in {-self}. It is locked.")					
+			return True
+		else:
+			return Box.Traverse(self,traverser,dir=dir,verb=verb)
 
 
 

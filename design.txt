@@ -1300,6 +1300,7 @@ misc world ideas
 QUEST IDEAS:
 
 - golden bug quest
+- whodunit mystery (one or two of these)
 - becoming an esteemed knight
 - jack and the beanstalk quest with hen and harp
 - a rabid tiger is terrorizing a town. should kill it
