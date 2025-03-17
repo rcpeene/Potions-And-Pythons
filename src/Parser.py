@@ -445,7 +445,10 @@ def Set(command):
 	attrname = command[2]
 	value = " ".join(command[3:])
 	try: value = int(value)
-	except: pass
+	except:
+		pass
+	if value in ("true","True"): value = True
+	if value in ("false","False"): value = False
 
 	if objname in ("p","player","my","self"): obj = Core.player
 	elif objname in ("g","game"): obj = Core.game
@@ -461,7 +464,7 @@ def Set(command):
 		return False
 	Core.Print(f"Setting {obj}.{attrname} to {value}",color="k")
 	setattr(obj,attrname,value)
-	
+
 
 
 def Spawn(command):
@@ -1231,10 +1234,9 @@ def Go(dobj,iobj,prep):
 			return False
 	if not isinstance(Core.player.parent,Core.Room):
 		if prep in ("out","outside","out of"):
-			Core.Print()
-			return Core.player.changeLocation(Core.player.parent.parent)
+			return Core.player.parent.Traverse(Core.player,"out")
 		else:
-			Core.Print(f"You can't go anywhere, you are in {Core.player.parent}.")
+			Core.Print(f"You can't go anywhere, you are in {~Core.player.parent}.")
 			return False
 
 	preps = ("away","away from","down","through","to","toward","up","in","inside","into","on","onto","out",None)
@@ -1516,14 +1518,13 @@ def Open(dobj,iobj,prep):
 	if I is None: return False
 	Core.game.setPronouns(I)
 
-	if not Core.hasMethod(I,"Open"):
-		Core.Print(f"{+I} doesn't open.")
+	if Core.hasMethod(I,"Open"):
+		return I.Open()
+	elif hasattr(I,"locked") and I.locked:
+		Core.Print(f"{+I} is locked.")
 		return False
-	if hasattr(I,"locked") and I.locked:
-		Core.Print(f"{+I} is locked")
-		return False
-	I.Open()
-	return True
+	Core.Print(f"{+I} doesn't open.")
+	return False
 
 
 def Play(dobj,iobj,prep):

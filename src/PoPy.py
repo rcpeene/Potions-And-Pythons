@@ -78,46 +78,50 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# throw snake into chest???
-	# add ability to go into containers
-		# factor "go out" out of Go function, what about being trapped in a locked chest?
-		# be able to teleport out from inside chest
-		# looking in chest while inside it
-		# include hiding ability?
-			# you are hiding (if in one)
-		# handle case when creature is inside a chest and chest changes room
-			# try a teleporting box, going into a burning room
-		# continue stand func with stand on and stand in
+# add ability to go into containers
+	# looking in chest while inside it (also "look around" or "look here" set to player parent)
+	# goblin shouldn't be able to attack u when ur in a box (i guess unless box is opened)
+		# add in open and close when climbing in and out of box
+	# include hiding ability?
+		# you are hiding (if in one)
+	# handle case when creature is inside a chest and chest changes room
+		# try a teleporting box, going into a burning room
+	# continue stand func with stand on and stand in
 # test throwing a person
+# throw snake into chest???
 # add dropping into pit -> add fall damage to items.
 # make projectile subclass for creatures? maybe subclass not necessary
 # drop/throw goblin off cliff
 # throw goblin up/down stairs
 # throw snake at goblin
+# "throw rock east", "throw dale east"
+# check if throwing a creature which has another riding it?
 # "take all from chest", to just take everything in chest
 # refactor drop into a creature method?
-# check if throwing a creature which has another riding it?
-# "throw rock east"
+# eliminate inv weight from calculating creature weight?
+# fix obtaining money problem, think about other objects which won't go into inv upon obtaining
+# add "look up" as valid. Should look at sky if not in a room?
+	# add room property which is description of directions ("look up", "look east", "look out", etc.)
 # correctly factor DFNS into takeDamage (it should probably be in takeDamage method itself), but consider different damage source like collision and falling
+# knock stuff off of a table if it takes impact?
 # add in projectile weapons?
 # throw 'grappling hook' which creates a new passage?, throw up a cliff or across a gap
-# fix obtaining money problem, think about other objects which won't go into inv upon obtaining
-# if something is one fire (or other condition) when entering a room, say it
-# what if the tree at "big tree" is destroyed? Some contingency to reset the room?
+# add turn order, so you aren't the first to move when you enter a room, makes MVMT more useful
+# if something is on fire (or other condition) when entering a room, say it
+# what if the tree at "big tree" is destroyed? Some contingency to reset/alter the room?
 # what if horse goes wild while riding it, doesn't obey your directions
+# give passages a capacity limit, so a dragon can't fit through a doorway?
 # create linked passages? if a window breaks on one side, it should break the other way too
 # add "climb" and "swim"
 # "jump off cliff"
-# add "look up" as valid. Should look at sky if not in a room?
-	# add room property which is description of directions ("look up", "look east", "look out", etc.)
 # add chopping tree
 # add fencing and wooden swords
-# knock stuff off of a table if it takes impact?
 # add dull method to weapons, add blunt weapons which cant be sharpened?
 # try out using a creature as a weapon
 # restrict Read to readable objects?
-# add turn order, so you aren't the first to move when you enter a room, makes MVMT more useful
-# add Escape to creature behavior. Make sure that if they escape a container thats in an inventory, to put them in the room??
+# use both items and fixtures array to contain fixtures. Just use fixtures array to determine which ones not to list and query normally. remove fixtures mention property
+# refactor Switch into just inheriting fixture and controller?
+# handle bodies of water; what about fall dammage, being wieghed down and following
 
 # add basic equipment and clothing items
 # fix/add Creature.isNaked or Player.isNaked
@@ -135,6 +139,7 @@ if __name__ == "__main__":
 
 # add total traversal limit on dlog nodes?
 # behavior
+	# add Escape to creature behavior. Make sure that if they escape a container thats in an inventory, to put them in the room??
 	# make fear lowered by taking damage on player's turn, but make love go down if player does something they don't like (like restraining them)
 	# create system for behavior 'regimens'
 	# design persons and person behavior all of the RP system?
