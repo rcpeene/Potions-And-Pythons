@@ -68,20 +68,28 @@ class Box(Core.Item):
 			Core.Print(f"You open {-self}.")
 			self.open = True
 		self.Look()
+		return True
 
 
 	# sets open bool to false
 	def Close(self):
 		self.open = False
 		Core.Print(f"You close {-self}.")
+		return True
 
 
 	def Look(self):
-		if len(self.items) == 0:
-			Core.Print("It is empty.")
-		else:
+		if Core.player not in self.items:
 			self.open = True
-			Core.Print(f"Inside there is {Core.listObjects(self.items)}.")
+		# exclude player if they are inside the box
+		displayItems = [item for item in self.items if item is not Core.player]
+		if len(displayItems) == 0:
+			text = "It is empty"
+			if Core.player in self.items:
+				text += ", apart from you"
+			Core.Print(f"{text}.")
+		else:
+			Core.Print(f"Inside there is {Core.listObjects(displayItems)}.")
 			Core.game.setPronouns(self.items[-1])
 		return True
 
@@ -117,10 +125,12 @@ class Box(Core.Item):
 
 
 	def enter(self,traverser):
+		self.open = True
 		self.add(traverser)
 	
 
 	def exit(self,traverser):
+		self.open = True
 		self.remove(traverser)
 
 
@@ -128,19 +138,20 @@ class Box(Core.Item):
 		if dir in ("out","outside","out of"):
 			if self is traverser.parent:
 				Core.Print(f"You get out of {-self}.")
-				self.remove(traverser)
+				self.exit(traverser)
 				return traverser.changeLocation(self.parent)
 			else:
 				Core.Print(f"You're not in {-self}.",color="k")
 				return False
-
 		if dir not in ("in","into","inside",None):
 			Core.Print(f"{+self} does not go {dir}.",color="k")
 			return False
+
 		if dir is None:
 			dir = "into"
 		if verb is None:
 			verb = "get"
+		self.open = True
 		if not self.canAdd(traverser):
 			if traverser is Core.player:
 				Core.Print(f"You can't enter {-self}. There's not enough room.")
@@ -148,9 +159,8 @@ class Box(Core.Item):
 
 		if traverser is Core.player:
 			Core.Print(f"You {verb} {dir} {-self}.")
-		self.add(traverser)
+		self.enter(traverser)
 		return True
-
 
 
 	def add(self,I):
@@ -166,7 +176,7 @@ class Box(Core.Item):
 
 		insort(self.items,I)
 		I.parent = self
-		I.despawnTimer = None
+		I.nullDespawn()
 
 
 	def remove(self,I):
@@ -190,11 +200,12 @@ class Box(Core.Item):
 		return self.weight + self.itemsWeight()
 
 
+	def space(self):
+		return self.capacity - self.itemsWeight()
+
+
 	def canAdd(self,I):
-		w = I.weight if isinstance(I,Core.Creature) else I.weight
-		if self.itemsWeight() + w > self.capacity:
-			return False
-		return True
+		return I.Weight() <= self.space()
 
 	
 	def contents(self):
@@ -373,27 +384,17 @@ class Lockbox(Box):
 
 	# sets open bool to true, prints its items
 	def Open(self):
-		if self.open:
-			Core.Print(f"{+self} is already open.")
-		elif self.locked:
+		if self.locked:
 			Core.Print(f"{+self} is locked.")
 			return False
-		else:
-			Core.Print(f"You open {-self}.")
-			self.open = True
-		self.Look()
-		return True
+		return Box.Open(self)
 
 
 	def Look(self):
-		if self.locked == True:
+		if self.locked == True and Core.player not in self.items:
 			Core.Print(f"{+self} is locked.")
-		elif len(self.items) == 0:
-			Core.Print(f"{+self} is empty.")
-		else:
-			self.open = True
-			Core.Print(f"Inside there is {Core.listObjects(self.items)}.")
-			Core.setPronouns(self.items[-1])
+			return False
+		return Box.Look(self)
 
 
 	def Lock(self,key):
@@ -552,7 +553,7 @@ class Table(Core.Item):
 
 		insort(self.items,I)
 		I.parent = self
-		I.despawnTimer = None
+		I.nullDespawn()
 
 		if len(self.items) == 1:
 			self.descname = f"{self.name} with {~self.items[0]} on it"

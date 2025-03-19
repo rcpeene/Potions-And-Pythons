@@ -21,9 +21,9 @@ def applyAreaEffect(effect,root,condfunc=lambda x:True):
 		effect(obj)
 
 
-def spawnObject(obj,room=None,silent=False):
-	if room is None:
-		room = Core.game.currentroom
+def spawnObject(obj,parent=None,silent=False):
+	if parent is None:
+		parent = Core.game.currentroom
 	if type(obj) is str:
 		if obj in Items.factory:
 			obj = Items.factory[obj]()
@@ -32,12 +32,10 @@ def spawnObject(obj,room=None,silent=False):
 		else:
 			raise Exception(f"object name '{obj}' not in any factory")
 
-	if isinstance(obj,Core.Creature):
-		room.addCreature(obj)
-	elif isinstance(obj,Core.Fixture):
-		room.addFixture(obj)
-	elif isinstance(obj,Core.Item):
-		room.addItem(obj)
+	if not parent.canAdd(obj):
+		Core.Print("It failed...")
+		return False
+	parent.add(obj)
 	if not Core.game.silent and not silent:
 		Core.Print(f"{obj.nounPhrase('a',cap=1)} appeared!")
 		Core.game.setPronouns(obj)

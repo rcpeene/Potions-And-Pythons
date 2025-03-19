@@ -387,7 +387,11 @@
 				"plural": "compasses"
 			}
 		],
-		"creatures": [],
+		"creatures": [
+			{
+				"__class__": "Player"
+			}
+		],
 		"status": []
 	},
 	"cliffside": {

@@ -89,6 +89,8 @@ def chooseObject(name,objects,verb=None):
 # roomD and playerD are the 'degree' of the query.
 # Look at Core.py objQuery for details on query degree
 def findObject(term,queryType="both",verb=None,filter=None,roomD=1,playerD=2,reqParent=None,silent=False):
+	if term is None:
+		return False
 	# allows for users to describe objects they possess
 	my = False
 	if term.startswith("my "):
@@ -1031,8 +1033,11 @@ def Drop(dobj,iobj,prep,I=None):
 			Core.Print(f"You can't drop {-I} {prep} {-R}.")
 			return False
 
-	if isinstance(I, Core.Creature):
+	if isinstance(I,Core.Creature):
 		Core.player.removeCarry()
+	elif not Core.player.parent.canAdd(I):
+		Core.Print(f"You can't drop {-I}. There's not enough room.")
+		return False
 	else:
 		I.parent.removeItem(I)
 		Core.Print(f"You drop {-I}.")
@@ -1254,7 +1259,6 @@ def Go(dobj,iobj,prep):
 	if prep not in preps or (dobj,iobj,prep) == (None,None,None):
 		return promptHelp("Command not understood.")
 
-
 	# get dir, dest, and passage and validate them
 	dir,dest,passage = parseGoTerms(dobj,iobj,prep)
 	if (dir,dest,passage) == (None,None,None):
@@ -1269,8 +1273,14 @@ def Go(dobj,iobj,prep):
 		passage = Core.game.currentroom.getPassageFromDir(dir)
 	if (dest,passage) == (None,None):
 		if dir is not None and dir not in Core.game.currentroom.allExits():
-			Core.Print(f"There is no exit leading '{dir}' here.",color="k")
-			return False
+			if dir in ("in","into","inside"):
+				dobj = getNoun("What will you go into?")
+				passage = findObject(dobj,"room")
+				if passage is None:
+					return False
+			else:
+				Core.Print(f"There is no exit leading '{dir}' here.",color="k")
+				return False
 	if passage is None and Core.nameMatch(dest,Core.game.currentroom):
 		Core.Print(f"You are already there!")
 		return False
@@ -1456,23 +1466,26 @@ def Look(dobj,iobj,prep):
 		dobj = getNoun("What will you look at?")
 		if dobj in Data.cancels: return False
 
-	if dobj in ("around","here","room") or dobj == Core.game.currentroom.name.lower():
+	if dobj in ("room",Core.game.currentroom.name.lower()):
 		Core.game.currentroom.describe()
 		return True
 	if dobj in ("me","myself",Core.player.name):
 		Core.Print(f"You are {Core.player.desc}")
 		return True
 	if dobj in ("down","ground"):
-		Core.Print("Not much to see on the ground at your feet.")
+		Core.Print("Not much to see down at your feet.")
 		return True
 	# TODO: Add something room specific if they look up or down?
 	if dobj in ("up","sky","sun","moon","stars","aurora","auroras","meteor shower","eclipse","solar eclipse"):
 		return Core.game.LookUp(dobj)
 
-	L = findObject(dobj)
-	if L is None: return False
-	Core.game.setPronouns(L)
+	if dobj in ("around","here"):
+		L = Core.player.parent
+	else:
+		L = findObject(dobj)
+		if L is None: return False
 
+	Core.game.setPronouns(L)
 	L.describe()
 	if Core.hasMethod(L,"Look"):
 		L.Look()
@@ -1871,13 +1884,14 @@ def TakeAllRecur(objToTake):
 	return Core.player.obtainItem(objToTake,tookMsg,failMsg) or takenAny
 
 
-def TakeAll():
-	if len(Core.game.currentroom.items) == 0:
+def TakeAll(parent):
+	if len(parent.items) == 0:
 		Core.Print("There are no items to take.")
 		return False
-	takenAny = False
-	for obj in sorted(Core.game.currentroom.items, key=lambda x: x.Weight()):
-		takenAny = TakeAllRecur(obj) or takenAny
+	takenAny = TakeAllRecur(parent)
+	# takenAny = False
+	# for obj in sorted(parent.items, key=lambda x: x.Weight()):
+	# 	takenAny = TakeAllRecur(obj) or takenAny
 	return takenAny
 
 
@@ -1889,9 +1903,15 @@ def Take(dobj,iobj,prep):
 		dobj = getNoun("What will you take?")
 		if dobj in Data.cancels: return False
 
-	if dobj in ("all","everything","it all"): return TakeAll()
+	if dobj in ("all","everything","it all"):
+		print(dobj,iobj)
+		if iobj in ("here","room",None):
+			takeFrom = Core.player.parent
+		else:
+			takeFrom = findObject(iobj,"room")
+		return TakeAll(takeFrom)
 
-	if iobj in ("here", "room", None):
+	if iobj in ("here","room",None):
 		objToTake = findObject(dobj,"room",roomD=2)
 	else:
 		objToTake = findObject(dobj,roomD=2,reqParent=iobj)
@@ -1947,7 +1967,7 @@ def Talk(dobj,iobj,prep):
 
 
 def Throw(dobj,iobj,prep):
-	if prep not in ("at","down","into","off","on","onto","out","through","to","toward","up",None):
+	if prep not in ("at","down","in","into","off","on","onto","out","through","to","toward","up",None):
 		return promptHelp("Command not understood.")
 	if prep in ("to","toward"):
 		return Toss(dobj,iobj,prep)
@@ -1965,7 +1985,7 @@ def Throw(dobj,iobj,prep):
 		if iobj in Data.cancels: return False
 	dir = None
 	if iobj in ("down","floor","ground","here","room","up"):
-		T = Core.game.currentroom
+		T = Core.player.parent
 		dir = "up" if iobj == "up" else "down"
 	elif iobj.lower() in Core.game.currentroom.exits.keys():
 		T = Core.world[Core.game.currentroom.exits[iobj]]
@@ -1978,7 +1998,11 @@ def Throw(dobj,iobj,prep):
 		if T is None: return False
 		dirprep = getattr(T,"passprep","toward")
 		dir = f"{dirprep} {-T}"
-	
+
+	if not Core.player.parent.canAdd(I):
+		Core.Print(f"You can't throw {-I}. There's not enough room.",color="k")
+		return False
+
 	Core.player.equipInHand(I,slot="left")
 	Core.game.setPronouns(I)
 	Core.Print(f"You throw {-I} {dir}.")
@@ -2249,6 +2273,7 @@ actions = {
 "get":Take,
 "get in":Enter,
 "get into":Enter,
+"get inside":Enter,
 "get down":Dismount,
 "get off":Dismount,
 "get on":Mount,

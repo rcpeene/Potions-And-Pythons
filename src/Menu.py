@@ -49,6 +49,8 @@ class worldEncoder(json.JSONEncoder):
 		JSONprimitives = {dict,list,str,int,float,bool,None}
 		if type(objToWrite) is set:
 			return {"__class__":"set","setdata":list(objToWrite)}
+		elif type(objToWrite) is Core.Player:
+			return {"__class__": "Player"}
 		# elif type(objToWrite) == Room:
 		# 	return objToWrite.__dict__
 		elif Core.hasMethod(objToWrite,"convertToJSON"):
@@ -80,7 +82,6 @@ def serialize_safe(obj, encoder_class):
 
 
 def find_problematic_subobject(obj):
-	"""Recursively traverse the object to find the problematic part."""
 	if isinstance(obj, dict):
 		for key, value in obj.items():
 			result, error = serialize_safe(value, worldEncoder)
@@ -105,13 +106,13 @@ def find_problematic_subobject(obj):
 			print(f"Error: {error}")
 
 
-def writeJSON(filename,World):
+def writeWorld(filename,World):
 	global visitedobjects
 	visitedobjects = set()
 
 	try:
 		with open(filename, "w") as fd:
-				json.dump(World, fd, cls=worldEncoder, indent="\t")
+			json.dump(World, fd, cls=worldEncoder, indent="\t")
 	except Exception as e:
 		print("Error while serializing object to JSON:")
 		print(f"Error: {e}")
@@ -123,6 +124,23 @@ def writeJSON(filename,World):
 		raise  # Re-raise the exception for further handling
 
 
+def writePlayer(filename,Player):
+	global visitedobjects
+	visitedobjects = set()
+
+	try:
+		with open(filename, "w") as fd:
+			json.dump(Player.convertToJSON(), fd, cls=worldEncoder, indent="\t")
+	except Exception as e:
+		print("Error while serializing object to JSON:")
+		print(f"Error: {e}")
+		
+		# Now we try to isolate the problematic sub-object in World
+		print("Attempting to find the problematic sub-object...")
+		find_problematic_subobject(Player)
+		
+		raise  # Re-raise the exception for further handling
+
 
 
 #########################
@@ -130,7 +148,7 @@ def writeJSON(filename,World):
 #########################
 	
 
-def worldDecoder(jsonDict):
+def objDecoder(jsonDict):
 	# print("==== converting object of type: " + str(type(jsonDict)))
 	if "__class__" in jsonDict:
 		objClassname = jsonDict["__class__"]
@@ -144,7 +162,7 @@ def worldDecoder(jsonDict):
 			return Items.factory[jsonDict["name"]]()
 		objClass = Core.strToClass(objClassname,["Core","Creatures","Items"])
 		if objClass == None:
-			raise Exception("Could not find class for world key:",objClassname)
+			raise Exception("Could not find class for classname in world:",objClassname)
 		objAttributes = jsonDict
 		# print("========: " + jsonDict["name"] + " " + str(objAttributes))
 		if objClassname == "Room":
@@ -161,6 +179,13 @@ def worldDecoder(jsonDict):
 			raise Exception("ERROR in decoding JSON object class type: " + objClassname)
 	else:
 		return jsonDict
+
+
+def worldDecoder(jsonDict):
+	if jsonDict.get("__class__",None) == "Player":
+		return Core.player
+	else:
+		return objDecoder(jsonDict)
 
 
 def readJSON(filename,object_hook=None):
@@ -206,8 +231,8 @@ def quickSave(savename):
 	# create save directory if it doesn't exist
 	os.makedirs(f"saves/{savename}",exist_ok=True)
 	os.chdir(f"saves/{savename}")
-	writeJSON("world.json", Core.world)
-	writeJSON("player.json", Core.player)
+	writeWorld("world.json", Core.world)
+	writePlayer("player.json", Core.player)
 	writeGame("game.txt", Core.game, Core.world)
 	Core.game.lastsave = Core.game.time
 	os.chdir("../..")
@@ -252,8 +277,8 @@ def saveGame(savename=None):
 
 	# write world, player, and game files
 	os.chdir(savename)
-	writeJSON("world.json", Core.world)
-	writeJSON("player.json", Core.player)
+	writeWorld("world.json", Core.world)
+	writePlayer("player.json", Core.player)
 	writeGame("game.txt", Core.game, Core.world)
 	os.chdir("../..")
 	sleep(1)
@@ -293,7 +318,7 @@ def loadGame(filename=None):
 	os.chdir(savename)
 	# try to load the player, world, and game objects
 	# try:
-	Core.player = readJSON("player.json",object_hook=worldDecoder)
+	Core.player = readJSON("player.json",object_hook=objDecoder)
 	Core.world = readJSON("world.json",object_hook=worldDecoder)
 	dlogDict = readDialogue("../../Dialogue.json")
 	Core.game = readGame("game.txt",Core.world,dlogDict)
@@ -393,10 +418,10 @@ def createCharacter():
 
 # starts a new game and returns player, world, and game objects
 def newGame():
-	# tries to load a clean new world from initial world file
-	Core.world = readJSON("World.json",object_hook=worldDecoder)
 	# initializes from the character creation screen
 	Core.player = createCharacter()
+	# tries to load a clean new world from initial world file
+	Core.world = readJSON("World.json",object_hook=worldDecoder)
 	# initializes the game at the "cave" room
 	dlogDict = readDialogue("Dialogue.json")
 	Core.game = Core.Game(0,Core.world["cave"],Core.world["cave"],0,set(),dlogDict,Creatures.factory)

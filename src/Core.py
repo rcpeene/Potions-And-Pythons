@@ -415,9 +415,6 @@ def assignRefsRecur(parent):
 # also assigns parents for all world objects (read objQuery() comments)
 # also assigns dialogue trees for speakers and validates them
 def buildWorld():
-	player.assignParent(game.currentroom)
-	assignRefsRecur(player)
-
 	namesToDelete = []
 	for room in world.values():
 		assert isinstance(room, Room)
@@ -1371,11 +1368,13 @@ class Room():
 					return
 		insort(self.items,I)
 		I.parent = self
-		I.despawnTimer = I.longevity
+		I.timeDespawn()
 		return True
 
 
 	def add(self,O):
+		if not self.canAdd(O):
+			return False
 		if isinstance(O,Creature):
 			return self.addCreature(O)
 		elif isinstance(O,Fixture):
@@ -1404,6 +1403,7 @@ class Room():
 
 
 	def removeFixture(self,F):
+		# TODO: should this even be possible? fixtures are fixed...
 		if F in self.fixtures:
 			self.fixtures.remove(F)
 
@@ -1512,6 +1512,16 @@ class Room():
 
 	### Getters ###
 
+	def canAdd(self,I):
+		# TODO: maybe make rooms have a capacity? perhaps 10*size
+		return True
+
+
+	def space(self):
+		# TODO: maybe make rooms have a capacity? perhaps 10*size
+		return 10000
+
+
 	# returns dict of exits, where keys are directions and values are room names
 	def allExits(self):
 		exits = {}
@@ -1609,7 +1619,8 @@ class Room():
 
 	# prints all the creatures in the room in sentence form
 	def describeCreatures(self):
-		listCreatures = [creature for creature in self.creatures if creature is not player.riding and creature is not player.carrying]
+		select = lambda creature: creature not in (player, player.carrying, player.riding)
+		listCreatures = [creature for creature in self.creatures if select(creature)]
 		if len(listCreatures) != 0:
 			Print(f"There is {listObjects(listCreatures)}.")
 		for creature in listCreatures:
@@ -1774,6 +1785,14 @@ class Item():
 		return False
 
 
+	def nullDespawn(self):
+		self.despawnTimer = None
+		
+
+	def timeDespawn(self):
+		self.despawnTimer = self.longevity
+
+
 	def addCondition(self,name,dur,stackable=False):
 		if self.hasCondition(name) and not stackable:
 			return False
@@ -1884,7 +1903,7 @@ class Item():
 # Creatures have 10 base stats, called traits
 # They also have abilities; stats which are derived from traits through formulas
 class Creature():
-	def __init__(self,name,desc,weight,traits,hp,mp=0,money=0,inv=None,gear=None,love=0,fear=0,carrying=None,carrier=None,riding=None,rider=None,memories=None,appraisal=None,status=None,descname=None,aliases=None,plural=None,determiner=None,pronoun="it",timeOfDeath=None,lastAte=0,lastSlept=0,regenTimer=0,alert=False,seesPlayer=False,sawPlayer=-1):
+	def __init__(self,name,desc,weight,traits,hp,mp=0,money=0,inv=None,gear=None,love=0,fear=0,carrying=None,carrier=None,riding=None,rider=None,composition="flesh",memories=None,appraisal=None,status=None,descname=None,aliases=None,plural=None,determiner=None,pronoun="it",timeOfDeath=None,lastAte=0,lastSlept=0,regenTimer=0,alert=False,seesPlayer=False,sawPlayer=-1):
 		self.name = name
 		self.desc = desc
 		self.descname = descname if descname else name
@@ -1934,7 +1953,7 @@ class Creature():
 		self.shield = EmptyGear()
 		self.shield2 = EmptyGear()
 
-		self.composition = "flesh"
+		self.composition = composition
 		self.timeOfDeath = timeOfDeath
 		# health regens very slowly
 		self.regenTimer = regenTimer
@@ -2149,7 +2168,7 @@ class Creature():
 			return False
 		insort(self.inv,I)
 		I.parent = self
-		I.despawnTimer = None
+		I.nullDespawn()
 		return True
 
 
@@ -2164,8 +2183,7 @@ class Creature():
 		self.inv.remove(I)
 		if hasMethod(I,"Drop"):
 			I.Drop(self)
-		if self.invWeight() < self.BRDN():
-			self.removeCondition("hindered",-3)
+		self.checkHindered()
 
 
 	# takes an item from a source location
@@ -2317,6 +2335,14 @@ class Creature():
 					self.status.remove([name,duration])
 
 
+	def nullDespawn(self):
+		pass
+		
+
+	def timeDespawn(self):
+		pass
+
+
 	def passTime(self,t):
 		for condition in self.status:
 			# if condition is has a special duration, ignore it
@@ -2442,9 +2468,6 @@ class Creature():
 	### Behavior ###
 
 	def changeLocation(self,newparent):
-		# can only change rooms if not stuck inside some item
-		if type(self.parent) is not Room:
-			raise Exception(f"Can't change rooms. Stuck inside {self.parent}")
 		# shouldn't be changing rooms alone if being carried
 		if self.carrier and self.carrier.parent is not newparent:
 			return False
@@ -2547,7 +2570,7 @@ class Creature():
 	def Carry(self,carrier):
 		if self.checkTetherLoop(carrier,self,"carry"):
 			return False
-		if self.Weight() > carrier.BRDN():
+		if self.Weight() > carrier.BRDN()//2:
 			Print(f"{+self} is too heavy to carry.")
 			return False
 		if not self.Restrain(carrier):
@@ -2575,6 +2598,9 @@ class Creature():
 
 
 	def Throw(self,missile,target,maxspeed=None):
+		if not self.parent.canAdd(missile):
+			return False
+
 		if missile is self.carrying:
 			self.removeCarry(silent=True)
 		else:
@@ -2586,14 +2612,15 @@ class Creature():
 
 		# force is half STR, reduced by 1 for every 4*STR in missile weight
 		# basically, its just reduced for the amount of weight the missile has
-		force = self.STR()//2 - bound((missile.Weight()//4)//self.STR(),0,10)
-		if force == 0:
+		force = min1(self.STR()//2) - bound((missile.Weight()//4)//self.STR(),0,10)
+		if force <= 0:
 			if self is player:
 				Print(f"{+missile} is too heavy!")
 			missile.asItem().Fall()
 			return False
 
-		speed = min1(diceRoll(1,force,self.SPD()//2))
+		# bound by SPD; can only throw as fast as you can move
+		speed = bound(diceRoll(1,force),1,self.SPD()+2)
 		if maxspeed and speed > maxspeed:
 			speed = maxspeed
 
@@ -2611,7 +2638,7 @@ class Creature():
 	def Ride(self,rider):
 		if self.checkTetherLoop(rider,self,"ride"):
 			return False
-		if rider.Weight() > self.BRDN():
+		if rider.Weight() > self.BRDN()//2:
 			Print(f"You are too heavy to ride {-self}")
 			return False
 		contest = not self.isFriendly() and self.canMove()
@@ -2718,9 +2745,11 @@ class Creature():
 
 	def invToll(self):
 		return min0(self.invWeight() - self.BRDN())
-	
+
+
 	def gearToll(self):
 		return min0(self.gearWeight()//4 - self.CON())
+
 
 	# these formulas are difficult to read, check design document for details
 	def ACCU(self): return 60 + 2*self.SKL() + self.LCK() + self.weapon.sleight
@@ -2752,7 +2781,7 @@ class Creature():
 	def Weight(self):
 		riderWeight = 0 if self.rider is None else self.rider.Weight()
 		carryWeight = 0 if self.carrying is None else self.carrying.Weight()
-		return self.weight + self.invWeight() + riderWeight + carryWeight
+		return (self.weight + self.CON()) + riderWeight + carryWeight
 
 
 	def contents(self):
@@ -2986,9 +3015,11 @@ class Player(Creature):
 		if newparent is prevparent:
 			return
 
-		self.parent = newparent
 		if newparent is not game.currentroom:
 			prevparent.exit(self)
+			prevparent.removeCreature(self)
+			self.parent = newparent
+			newparent.addCreature(self)	
 			game.changeRoom(newparent)
 			newparent.enter(self)
 
@@ -3518,8 +3549,9 @@ class Humanoid(Creature):
 	def attack(self):
 		if not self.canMove():
 			return
-		targets = [creature for creature in self.room().creatures if creature is not self]
-		if self.room() is player.room():
+		select = lambda obj: isinstance(obj,Creature) and obj is not self
+		targets = [obj for obj in self.parent.contents() if select(obj)]
+		if self.parent is player.parent:
 			targets += [player]
 		if len(targets) > 0:
 			target = choice(targets)
