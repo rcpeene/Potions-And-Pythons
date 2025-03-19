@@ -1126,6 +1126,7 @@ strange milk - makes you high, made from cows fed certain mushrooms
 Catgut
 ambergris
 star jelly
+royal jelly
 alembic
 lodestone
 wooden spoon
@@ -1140,7 +1141,7 @@ linen, silk, cotton, wool
 yarn, loom, bolt of fabric, torn rag
 burlap, canvas, denim, tweed, flannel, fustian, russet
 bitumen (ore), pitch (liquid), naphtha,
-peat, resin, briquette
+peat, lignin, resin, briquette
 
 
 CRAFTING/RECIPE IDEAS:
@@ -1310,7 +1311,7 @@ QUEST IDEAS:
 - fighting bones malone and the spooky boys
 
 
-CHARACTER NAMES:
+CHARACTER NAME IDEAS:
 	Orion - boss
 	Pax - person
 	giant swamp crocodile
@@ -1333,6 +1334,7 @@ CHARACTER NAMES:
 	Mr.Oliphant
 	Ike
 	Uther
+	Kess
 	Roach
 	Mito
 	A mage named Greengage
@@ -1389,6 +1391,8 @@ CHARACTER NAMES:
 	Hazelnut farmer with children named, fil, bert, hazel, and pet nut
 	Yernagate the wise 
 	The Oracle
+	Dovregubben (the mountain king) from Peer Gynt. Rescuing three dairy maids?
+	Boyg - from Peer Gynt, gigantic troll serpent
 	Glycon the false Serpent God (secretly a puppet?)
 	Leviathan
 	The Green Goddess
@@ -1396,7 +1400,7 @@ CHARACTER NAMES:
 	Grendel
 	Archons (regional rulers? maybe names for the giants)
 	Polemarch (archon of war)
-	The Benevolent Frog King (looking for his son the frog prince?)
+	The Benevolent Frog King (looking for his son the frog prince?) - Vodyantsar?
 	one bbeg is the world serpent called Aeormungand (Leviathan?), also called Demiurge
 	another bbg (Behemoth)
 	also an evil wizard ofc
@@ -1415,13 +1419,16 @@ stoats
 lemmings
 stork babies
 messenger demons
+biblically accurate angels
+Troll?
+the questing beast - Glatisant (giraffe)
 argentavis (big bird)
 mermaid (captive?)
 fey - a class of intelligent creatures
 goblins - intelligent small green bipedal creatures
 orcs - disturbing creatures that resemble large mutant humans
 dragons - large majestic serpentine winged creatrues
-Vodyanoys and Vodyantsar (where the 'kappa horn' item would be)
+Vodyanoys and Vodyantsar (where the 'kappa horn' item would be) ("The Hasterman")
 slime skeletons
 slime armor monster
 snark

@@ -79,13 +79,23 @@ if __name__ == "__main__":
 # CURRENT TASKS
 
 # add ability to go into containers
-	# looking in chest while inside it (also "look around" or "look here" set to player parent)
-	# goblin shouldn't be able to attack u when ur in a box (i guess unless box is opened)
-		# add in open and close when climbing in and out of box
-	# include hiding ability?
-		# you are hiding (if in one)
+	# adjust findObject and nameQuery to handle players being in container now.
+		# probably make three query types? player, room, and parent
+	# how is saving the game with player inside a container....
+		# should player exist in items array?
+	# "take all from chest", to only take everything in chest
+		# refactor taking search when inside an object...
+			# should player really be added to a chests items thing? yes
+			# 'matches' should be a set
+			# might require refactoring findObject function?
+	# try destroying the chestfrom inside
+	# now redo projectiles without the assumption they must be in a room (they can be launched at a target within a box?)
+		# shouldn't have space to throw if available space isn't big enough
+	# can something fall when its in a container? what if the container is falling?
 	# handle case when creature is inside a chest and chest changes room
 		# try a teleporting box, going into a burning room
+	# include hiding ability?
+		# you are hiding (if in one)
 	# continue stand func with stand on and stand in
 # test throwing a person
 # throw snake into chest???
@@ -95,16 +105,19 @@ if __name__ == "__main__":
 # throw goblin up/down stairs
 # throw snake at goblin
 # "throw rock east", "throw dale east"
+# "you attack the goblin with your your hand!"
+# readjust throw force formula; compare to BRDN (shouldn't be able to throw heavier than you can have in inv, or more than you can carry in hands?
 # check if throwing a creature which has another riding it?
-# "take all from chest", to just take everything in chest
+# handle "get on" to mount or get on a table (wb get on table while on a horse?)
 # refactor drop into a creature method?
-# eliminate inv weight from calculating creature weight?
 # fix obtaining money problem, think about other objects which won't go into inv upon obtaining
 # add "look up" as valid. Should look at sky if not in a room?
 	# add room property which is description of directions ("look up", "look east", "look out", etc.)
 # correctly factor DFNS into takeDamage (it should probably be in takeDamage method itself), but consider different damage source like collision and falling
+# try out using a creature as a weapon
 # knock stuff off of a table if it takes impact?
 # add in projectile weapons?
+# add in a whip or hook which is a projectile that allows you to grab an item?
 # throw 'grappling hook' which creates a new passage?, throw up a cliff or across a gap
 # add turn order, so you aren't the first to move when you enter a room, makes MVMT more useful
 # if something is on fire (or other condition) when entering a room, say it
@@ -117,11 +130,15 @@ if __name__ == "__main__":
 # add chopping tree
 # add fencing and wooden swords
 # add dull method to weapons, add blunt weapons which cant be sharpened?
-# try out using a creature as a weapon
+# try "boom" effect. It will only effect current room/container (unless container breaks or is open?)
 # restrict Read to readable objects?
+# if describing something in own inventory, also print the lore tip in grey (or other color)
 # use both items and fixtures array to contain fixtures. Just use fixtures array to determine which ones not to list and query normally. remove fixtures mention property
 # refactor Switch into just inheriting fixture and controller?
 # handle bodies of water; what about fall dammage, being wieghed down and following
+# try to pull creature off of its mount?
+# make items have an invisibility property? but what about if a missed projectile hits something invisible?
+# add in crafting recipes. Probably store this as a JSON?
 
 # add basic equipment and clothing items
 # fix/add Creature.isNaked or Player.isNaked
@@ -135,13 +152,14 @@ if __name__ == "__main__":
 	# make a list of all possible uses and inputs for each action and systematically test them. Revise the world to accomodate them
 # add asserts to most class methods
 # add better comments to methods
-# skim/update design
+# skim/update design doc
 
 # add total traversal limit on dlog nodes?
 # behavior
 	# add Escape to creature behavior. Make sure that if they escape a container thats in an inventory, to put them in the room??
 	# make fear lowered by taking damage on player's turn, but make love go down if player does something they don't like (like restraining them)
 	# create system for behavior 'regimens'
+	# make sure creatures can see/select targets from open containers as well
 	# design persons and person behavior all of the RP system?
 	# add reactions to being healed or being attacked
 	# figure out animal behavior
