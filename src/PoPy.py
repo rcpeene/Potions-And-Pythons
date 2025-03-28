@@ -78,6 +78,7 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
+# refactor findObj to getNoun if given None for term
 # add ability to go into containers
 	# adjust findObject and nameQuery to handle players being in container now.
 		# probably make three query types? player, room, and parent
@@ -97,6 +98,7 @@ if __name__ == "__main__":
 	# include hiding ability?
 		# you are hiding (if in one)
 	# continue stand func with stand on and stand in
+		# try "get on bed", redirect Mounting an obj to stand
 # test throwing a person
 # throw snake into chest???
 # add dropping into pit -> add fall damage to items.
@@ -105,7 +107,7 @@ if __name__ == "__main__":
 # throw goblin up/down stairs
 # throw snake at goblin
 # "throw rock east", "throw dale east"
-# "you attack the goblin with your your hand!"
+# "you attack the goblin with your your hand!" is what shows up on attack
 # readjust throw force formula; compare to BRDN (shouldn't be able to throw heavier than you can have in inv, or more than you can carry in hands?
 # check if throwing a creature which has another riding it?
 # handle "get on" to mount or get on a table (wb get on table while on a horse?)
@@ -141,6 +143,7 @@ if __name__ == "__main__":
 # add in crafting recipes. Probably store this as a JSON?
 
 # add basic equipment and clothing items
+# make sure Touch method is called when player 'takes' an item (unless they use a hook or smth?)
 # fix/add Creature.isNaked or Player.isNaked
 # add link nodes and effect nodes to dialogue after all
 	# for instance, continue conversation if a truesight person speaks to invisible player, or if a goddess spirit gives you blessing
