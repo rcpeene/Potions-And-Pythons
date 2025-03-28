@@ -1239,13 +1239,17 @@ class Game():
 		clearScreen()
 		player.printStats()
 		Print()
-		self.currentroom.describe()
+		self.describeRoom()
 		game.checkDaytime()
 		game.checkAstrology(update=True)
 
 
 	def describeRoom(self):
 		self.currentroom.describe()
+		if not isinstance(player.parent,Room):
+			Print(f"You are in {-player.parent}.")
+		# if player.carrying:
+		# 	Print(f"You are carrying {~player.carrying}.")
 
 
 	def checkDaytime(self):
@@ -1605,8 +1609,6 @@ class Room():
 		Print("\n" + self.desc)
 		self.describeItems()
 		self.describeCreatures()
-		# if player.carrying:
-		# 	Print(f"You are carrying {~player.carrying}.")
 
 
 	# prints all the items of the room in sentence form
@@ -1729,7 +1731,7 @@ class Item():
 		prevparent.exit(self)
 		prevparent.remove(self)
 		self.parent = newparent
-		newparent.add(self)		
+		newparent.add(self)
 		newparent.enter(self)
 
 
@@ -2047,8 +2049,8 @@ class Creature():
 			elif item is EmptyGear():
 				cGear[slot] = None
 			else:
-				cGear[slot] = item
-		return cGear			
+				cGear[slot] = self.inv.index(item)
+		return cGear
 
 
 	def compressTethers(self):
@@ -2154,6 +2156,8 @@ class Creature():
 
 	# check if item can fit in inventory
 	def canObtain(self,I):
+		if isinstance(I,Creature):
+			return False
 		if self.invWeight() + I.Weight() > 2*self.BRDN():
 			return False
 		return True
