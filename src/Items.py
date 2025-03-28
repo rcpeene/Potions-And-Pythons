@@ -126,12 +126,14 @@ class Box(Core.Item):
 
 	def enter(self,traverser):
 		self.open = True
+		traverser.parent.remove(traverser)
 		self.add(traverser)
-	
+
 
 	def exit(self,traverser):
 		self.open = True
 		self.remove(traverser)
+		self.parent.add(traverser)
 
 
 	def Traverse(self,traverser,dir=None,verb=None):
@@ -139,7 +141,7 @@ class Box(Core.Item):
 			if self is traverser.parent:
 				Core.Print(f"You get out of {-self}.")
 				self.exit(traverser)
-				return traverser.changeLocation(self.parent)
+				return True
 			else:
 				Core.Print(f"You're not in {-self}.",color="k")
 				return False

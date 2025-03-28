@@ -78,10 +78,7 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# refactor findObj to getNoun if given None for term
 # add ability to go into containers
-	# adjust findObject and nameQuery to handle players being in container now.
-		# probably make three query types? player, room, and parent
 	# how is saving the game with player inside a container....
 		# should player exist in items array?
 	# "take all from chest", to only take everything in chest
@@ -95,10 +92,12 @@ if __name__ == "__main__":
 	# can something fall when its in a container? what if the container is falling?
 	# handle case when creature is inside a chest and chest changes room
 		# try a teleporting box, going into a burning room
+	# what about including a passage within a container? does buildWorld work? or trying to go through
 	# include hiding ability?
 		# you are hiding (if in one)
 	# continue stand func with stand on and stand in
 		# try "get on bed", redirect Mounting an obj to stand
+	# limit ability to interact with room objects when in a chest
 # test throwing a person
 # throw snake into chest???
 # add dropping into pit -> add fall damage to items.

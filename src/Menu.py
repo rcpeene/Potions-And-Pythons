@@ -251,7 +251,7 @@ def saveGame(savename=None):
 		# player names their save
 		Core.columnPrint(saves,10,10,delay=None,color="k")
 		savename = Core.Input("\nWhat name will you give this save file?",delay=None,color="k").lower()
-	if savename in ("", "all", "autosave", "quicksave"):
+	if savename in ("", "all", "autosave", "quicksave") or savename in Data.cancels:
 		if savename == "":
 			Core.Print(f"Save name cannot be empty.",delay=None,color="k")
 		else:
@@ -289,14 +289,14 @@ def saveGame(savename=None):
 
 # load a game from a save directory
 def loadGame(filename=None):
-	Core.clearScreen()
 	if not (os.path.exists("saves")) or len(os.listdir("./saves")) == 0:
 		Core.Print("\nThere are no save files.\n",delay=None,color="k")
 		Core.waitKbInput()
 		return False
 	os.chdir("saves")
 
-	if filename == None:
+	if filename is None:
+		Core.clearScreen()
 		# split save names into a list and display them
 		Core.Print("Save files: ",delay=None,color="k")
 		saves = os.listdir()
@@ -361,14 +361,14 @@ def deleteAll():
 
 # deletes a save file whose name is given by the user
 def delete(filename):
-	Core.clearScreen()
 	if not os.path.exists("saves") or len(os.listdir("./saves")) == 0:
 		Core.Print("\nThere are no save files.\n",delay=None,color="k")
 		Core.waitKbInput()
 		return
 	os.chdir("saves")
 
-	if filename == None:
+	if filename is None:
+		Core.clearScreen()
 		# split save names into a list and display them
 		Core.Print("Save files: ",delay=None,color="k")
 		saves = os.listdir()
