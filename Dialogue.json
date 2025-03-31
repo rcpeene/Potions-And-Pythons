@@ -21,6 +21,7 @@
 				"children": [
 					{
 						"rapportReq": 1,
+						"visitLimit": 1,
 						"remark": "Well shucks... I could sure use a fresh cold brew right about now..."						
 					}
 				]

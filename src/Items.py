@@ -67,7 +67,8 @@ class Box(Core.Item):
 		else:
 			Core.Print(f"You open {-self}.")
 			self.open = True
-		self.Look()
+		if Core.player not in self.items:
+			self.Look()
 		return True
 
 
@@ -98,11 +99,15 @@ class Box(Core.Item):
 		if self.durability == -1:
 			Core.Print(f"{+self.name} cannot be broken.")
 			return False
-		Core.Print(f"{+self.name} breaks.")
 		self.parent.remove(self)
+		Core.Print(f"{+self} breaks.")
+		if len(self.items) > 0:
+			Core.Print("Its contents spill out.")
 		# drop things it contains into parent
 		for item in self.items:
 			self.parent.add(item)
+			if item is Core.player:
+				Core.Print(f"You are no longer in {-self}.")
 		return True
 
 
@@ -112,13 +117,15 @@ class Box(Core.Item):
 			if not self.open:
 				Core.Print(f"{+self} is closed.")
 				missile.Collide(self)
+			elif missile.item.parent is self:
+				missile.Collide(self)				
 			elif not self.canAdd(missile):
 				Core.Print(f"{+self} is too full.")
 				missile.Collide(self)
 			else:
 				Core.Print(f"{+missile} goes into {-self}.")
 				missile = missile.asItem()
-				missile.room().remove(missile)
+				missile.parent.remove(missile)
 				self.add(missile)
 			return True
 		return False
@@ -677,7 +684,7 @@ class Window(Core.Passage):
 			if len(set(self.connections.values())) == 1:
 				dir = list(self.connections.keys())[0]
 			else:
-				msg = f"Which direction will you go on the {self.name}?\n> "
+				msg = f"Which direction will you go on the {self.name}?"
 				dir = input(msg).lower()
 		if dir in Data.cancels:
 			return False

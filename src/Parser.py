@@ -32,6 +32,7 @@ helpCounter = 0
 def chooseObject(name,objects,verb=None):
 	if objects is None or len(objects) == 0:
 		return None
+	objects = list(objects)
 	if len(objects) == 1:
 		return objects[0]
 	Core.Print()
@@ -44,6 +45,8 @@ def chooseObject(name,objects,verb=None):
 				labels.append(f"{object.hp} hp")
 		if not isinstance(object.parent,(Core.Room,Core.Player)):
 			labels.append(object.parent.name)
+		if object is Core.player:
+			labels.append("you")
 		if object is Core.player.carrying:
 			labels.append("carrying")
 		elif object is Core.player.riding:
@@ -62,25 +65,18 @@ def chooseObject(name,objects,verb=None):
 			strLabel = " (" + strLabel + labels[-1] + ")"
 
 		Core.Print(f"{n+1}. {object}{strLabel}",color="k")
-	verb = f" to {verb}" if verb else ""
-	Core.Print(f"\nWhich {name}{verb}?",color="k")
-
-	invalid_count = 0
-	while True:
-		choice = Core.Input().lower()
-		if choice == "": continue
-		if choice in Data.cancels: return None
-
+	
+	def acceptKey(inp):
 		try:
-			return objects[int(choice)-1]
+			return objects[int(inp)-1]
 		except:
 			for obj in objects:
-				if choice == obj.nounPhrase().lower():
+				if inp == obj.nounPhrase().lower():
 					return obj
-		Core.Print("That is not one of the options.",color="k")
-		if invalid_count >= 2:
-			Core.Print("Type 'cancel' to undo this action.",color="k")
-		invalid_count += 1
+
+	prompt = f"\nWhich {name}{f' to {verb}' if verb else ''}?"
+	choice = Core.InputLoop(prompt,acceptKey=acceptKey,color="k")
+	return choice
 
 
 # return an object in player inv or room based on player input
@@ -100,44 +96,43 @@ def findObject(term,verb,queryType="both",filter=None,roomD=1,playerD=2,reqParen
 		term = term[3:]
 		my = True
 
-	matches = []
+	matches = set()
 	if queryType == "player" or queryType == "both":
-		matches += Core.player.nameQuery(term,d=playerD)
-	if queryType == "player" and Core.nameMatch(term,Core.player.carrying):
-		matches.append(Core.player.carrying)
+		matches |= Core.player.nameQuery(term,d=playerD)
 	if queryType == "room" or queryType == "both":
-		matches += Core.game.nameQueryRoom(term,d=roomD)
+		matches |= Core.game.nameQuery(term,d=roomD)
+	if queryType == "player" and Core.nameMatch(term,Core.player.carrying):
+		matches.add(Core.player.carrying)
+	if term in ("me","myself"):
+		matches.add(Core.player)
+	if term in ("room","floor","ground",Core.game.currentroom.name):
+		matches.add(Core.game.currentroom)
+	if term in ("here"):
+		matches.add(Core.player.parent)
 
 	if filter:
-		matches = [match for match in matches if filter(match)]
+		matches = {match for match in matches if filter(match)}
 	if reqParent:
-		matches = [match for match in matches if Core.nameMatch(reqParent, match.parent)]
+		matches = {match for match in matches if Core.nameMatch(reqParent, match.parent)}
 	if my:
-		matches = [match for match in matches if Core.player in match.ancestors() or match.determiner == "your"]
+		matches = {match for match in matches if Core.player in match.ancestors() or match.determiner == "your"}
 
-	if len(matches) == 0:
-		if term in ("me","myself"):
-			return Core.player
-		if term in ("room","floor","ground",Core.game.currentroom.name):
-			return Core.game.currentroom
-		if term in ("here"):
-			return Core.game.player.parent
-
-		suffix = ""
-		if not silent:
-			if reqParent:
-				det = "an" if reqParent[0] in Data.vowels else 'a'
-				suffix += f" in {det} '{reqParent}'"
-			if queryType == "player" or my:
-				suffix += " in your Inventory"
-			elif queryType == "room":
-				suffix += " in your surroundings"
-			Core.Print(f"There is no '{term}'{suffix}.",color="k")
-		return None
-	elif len(matches) == 1:
-		return matches[0]
-	else:
+	if len(matches) > 1:
 		return chooseObject(term,matches,verb)
+	elif len(matches) == 1:
+		return matches.pop()
+
+	suffix = ""
+	if not silent:
+		if reqParent:
+			det = "an" if reqParent[0] in Data.vowels else 'a'
+			suffix += f" in {det} '{reqParent}'"
+		if queryType == "player" or my:
+			suffix += " in your Inventory"
+		elif queryType == "room":
+			suffix += " in your surroundings"
+		Core.Print(f"There is no '{term}'{suffix}.",color="k")
+	return None
 
 
 # checks if a noun refers to a room, an object in the world or on the player...
@@ -215,6 +210,7 @@ def replacePronoun(term):
 # namely, it returns a list of words without capitals, symbols, or articles
 # nounify() joins words that may only be meaningful as one term
 def processCmd(prompt,storeRawCmd=False):
+	Core.flushInput()
 	rawcommand = Core.Input(prompt,low=False)
 	# take input until input has any non-whitespace characters in it
 	while not any(i not in "\t " for i in rawcommand):
@@ -753,7 +749,7 @@ def CarryCreature(creature):
 	carrying = Core.player.carrying
 	
 	if carrying:
-		Core.Print(f"You're already carrying {-carrying}")
+		Core.Print(f"You're already carrying {-carrying}.")
 	if not isinstance(creature,Core.Creature):
 		Core.Print(f"You can't carry {-creature}")
 		return False
@@ -888,7 +884,7 @@ def Dismount(dobj,iobj,prep):
 	if iobj is not None:
 		dobj = iobj
 	if dobj is not None:
-		matches = Core.game.nameQueryRoom(dobj)
+		matches = Core.game.nameQuery(dobj)
 		if Core.player.riding not in matches:
 			Core.Print(f"You're not riding a '{dobj}'",color="k")
 			return False
@@ -995,7 +991,7 @@ def Drop(dobj,iobj,prep,I=None):
 				if isinstance(I,Core.Creature):
 					Core.player.removeCarry(I)
 				else:
-					Core.player.removeItem(I)
+					Core.player.remove(I)
 					Core.game.currentroom.add(I)
 				Core.Print(f"You drop {-I} {prep} {-R}.")
 				return R.Transfer(I)
@@ -1012,7 +1008,7 @@ def Drop(dobj,iobj,prep,I=None):
 		Core.Print(f"You can't drop {-I}. There's not enough room.")
 		return False
 	else:
-		I.parent.removeItem(I)
+		I.parent.remove(I)
 		Core.Print(f"You drop {-I}.")
 		Core.game.currentroom.add(I)
 	return True
@@ -1233,7 +1229,8 @@ def Go(dobj,iobj,prep):
 	if (dest,passage) == (None,None):
 		if dir is not None and dir not in Core.game.currentroom.allExits():
 			if dir in ("in","into","inside"):
-				dobj = getNoun("What will you go into?")
+				if dobj is None:
+					dobj = getNoun("What will you go into?")
 				passage = findObject(dobj,"go into","room")
 				if passage is None:
 					return False
@@ -1435,7 +1432,7 @@ def Mount(dobj,iobj,prep):
 		return promptHelp("Command not understood.")
 
 	if Core.player.riding is not None:
-		Core.Print(f"You're already riding {~Core.player.riding}")
+		Core.Print(f"You're already riding {~Core.player.riding}.")
 		return False
 
 	if dobj is None: dobj = iobj
@@ -1552,7 +1549,7 @@ def Put(dobj,iobj,prep):
 
 	if isinstance(R,Core.Passage) and "down" in R.connections:
 		if getattr(R,"open",True):
-			Core.player.removeItem(I)
+			Core.player.remove(I)
 			Core.game.currentroom.add(I)
 			return R.Transfer(I)
 		else:
@@ -1765,6 +1762,8 @@ def Swim(dobj,iobj,prep):
 
 # if an item is a container, take each of its contents before taking it
 def TakeAllRecur(objToTake):
+	if objToTake is Core.player:
+		return False
 	takenAny = False
 	if hasattr(objToTake, "contents"):
 		contents = sorted(objToTake.contents(), key=lambda x: x.Weight())
@@ -1788,10 +1787,9 @@ def TakeAll(parent):
 	if len(parent.items) == 0:
 		Core.Print("There are no items to take.")
 		return False
-	takenAny = TakeAllRecur(parent)
-	# takenAny = False
-	# for obj in sorted(parent.items, key=lambda x: x.Weight()):
-	# 	takenAny = TakeAllRecur(obj) or takenAny
+	takenAny = False
+	for obj in sorted(parent.items, key=lambda x: x.Weight()):
+		takenAny = TakeAllRecur(obj) or takenAny
 	return takenAny
 
 
@@ -1808,7 +1806,7 @@ def Take(dobj,iobj,prep):
 		if iobj in ("here","room",None):
 			takeFrom = Core.player.parent
 		else:
-			takeFrom = findObject(iobj,"take from","room")
+			takeFrom = findObject(iobj,"take from")
 		return TakeAll(takeFrom)
 
 	if iobj in ("here","room",None):
@@ -1896,6 +1894,13 @@ def Throw(dobj,iobj,prep):
 		dirprep = getattr(T,"passprep","toward")
 		dir = f"{dirprep} {-T}"
 
+	if not getattr(Core.player.parent,"open",True):
+		if isinstance(T,Core.Room):
+			Core.Print(f"{+Core.player.parent} is closed. There's no path {dir}.")
+			return False
+		elif Core.player.parent not in (T, getattr(T,"parent",None)):
+			Core.Print(f"{+Core.player.parent} is closed. There's no path to {-T}.")
+			return False
 	if not Core.player.parent.canAdd(I):
 		Core.Print(f"You can't throw {-I}. There's not enough room.",color="k")
 		return False

@@ -410,7 +410,7 @@ def createCharacter():
 	name = Core.Input("What is your name?",delay=None,color="k").title()
 	while len(name) == 0:
 		name = Core.Input(delay=None,color="k").title()
-	desc = Core.Input("Describe yourself.",cue="\nYou are ",delay=None,color="k")
+	desc = Core.InputLoop("Describe yourself.",cue="You are ",delay=None,color="k")
 	while len(desc) == 0:
 		desc = Core.Input(cue="\nYou are ",delay=None,color="k")
 	return Core.Player(name,desc,29,[1]*10,2,2,0,0)
