@@ -185,15 +185,41 @@ def Input(text="",cue="\n> ",low=True,delay=0.005,color=None):
 	return ret
 
 
+def InputLoop(prompt,cue="> ",acceptKey=None,escapeKey=None,refuseMsg="",helpMsg="Type 'cancel' to undo.",color=None,delay=0.005):
+	if acceptKey is None:
+		acceptKey = lambda inp: inp
+	if escapeKey is None:
+		escapeKey = lambda inp: inp in Data.cancels
+	invalid_count = 0
+	inp = Input(prompt,"\n"+cue,color=color,delay=delay)
+	if refuseMsg != "":
+		refuseMsg += "\n"
+	while True:
+		if inp in ("","\n"):
+			inp = Input("",cue)
+			continue
+		if escapeKey(inp):
+			return None
+		acceptInp = acceptKey(inp) 
+		if acceptInp is not None:
+			return acceptInp
+		invalid_count += 1
+		if invalid_count >= 3:
+			Print(helpMsg,color="k",delay=delay)
+		inp = Input(refuseMsg,cue,color="k",delay=delay)
+
+
 # prints a question, gets a yes or no, returns True or False respectively
 def yesno(question,delay=0.005,color=None):
-	while True:
-		command = Input(question,delay=delay,color=color).lower()
-		if command in Data.yesses:
+	def acceptKey(inp):
+		if inp in Data.yesses:
 			return True
-		elif command in Data.noes:
+		elif inp in Data.noes:
 			return False
-		Print("Enter yes or no",delay=delay,color=color)
+		else:
+			return None
+	refuseMsg = "Enter yes or no."
+	return InputLoop(question,acceptKey=acceptKey,escapeKey=None,helpMsg="",refuseMsg=refuseMsg)
 
 
 # prints a timed ellipsis, used for dramatic transitions
@@ -378,18 +404,18 @@ def bound(n,min,max): return min if n < min else (max if n > max else n)
 
 # this function is a wrapper for objQueryRecur()
 def objQuery(root,key=lambda obj:True,d=0):
-	matches = objQueryRecur(root,[],key,d)
+	matches = objQueryRecur(root,set(),key,d)
 	return matches
 
 
 def objQueryRecur(node,matches,key,d):
 	# if node is terminal: return
-	if not hasMethod(node, 'contents'):
+	if not hasMethod(node,'contents'):
 		return matches
 
 	for obj in node.contents():
 		# check if obj is a match
-		if key(obj): matches.append(obj)
+		if key(obj): matches.add(obj)
 		# depending on the degree, may skip closed, locked, or creature objects
 		if d == 0 and hasattr(obj,"open") and not obj.open: continue
 		elif (d <= 1) and isinstance(obj,Creature): continue
@@ -677,22 +703,18 @@ class DialogueNode():
 	# try to visit the child corresponding to the user-chosen dialogue reply
 	# users can end the dialogue by inputting a cancel command
 	def replyHop(self):
+		Print()
 		for i, reply in enumerate(self.replies):
-			Print(f'{i+1}. {reply}\n')
+			Print(f'{i+1}. {reply}')
 
-		while True:
-			choice = input("\n> ").lower()
-			if choice == "":
-				continue
-			if choice in Data.cancels: 
+		def acceptKey(inp):
+			try:
+				return self.children[int(inp)-1]
+			except:
 				return None
 
-			try:
-				# note that this does *not* hop(); it ignores child's visitLimit, rapportReq, guardCase
-				return self.children[int(choice)-1]
-			except:
-				Print("That is not one of the options. Input a number or type 'cancel'")
-				continue
+		refuseMsg = "That is not one of the options. Input a number or type 'cancel'."
+		return InputLoop("",acceptKey=acceptKey,refuseMsg=refuseMsg)
 
 
 	def hop(self,speaker,**kwargs):
@@ -734,7 +756,7 @@ class DialogueNode():
 		if self.cases:
 			nextNode = self.conditionalHop(speaker,**kwargs)
 		elif self.replies:
-			nextNode = self.replyHop(speaker)
+			nextNode = self.replyHop()
 		else:
 			for child in self.children:
 				if child.hop(speaker,**kwargs):
@@ -743,8 +765,6 @@ class DialogueNode():
 
 		# count this node as successfully visited
 		speaker.dlogtree.countVisit(self.id)
-		if self.rapportReq != None:
-			speaker.rapport += 1
 
 		# reaching a node can change the speaker's love or fear for the player
 		speaker.updateLove(self.loveMod)
@@ -923,6 +943,8 @@ class DialogueTree():
 		for branch in (self.quest,self.colloquy,self.chatter):
 			if branch.hop(speaker):
 				if self.visitBranch(branch,speaker):
+					if branch is self.colloquy:
+						speaker.rapport += 1
 					return True
 
 		return False
@@ -938,6 +960,7 @@ class DialogueTree():
 
 	# resets all nodes for new parley
 	def newParley(self):
+		print("new parley!")
 		self.checkpoint = None
 		self.visitCounts = {}
 
@@ -1162,11 +1185,11 @@ class Game():
 	def getAllObjects(self):
 		allObjects = []
 		for room in self.renderedRooms():
-			allObjects += objQuery(room,key=lambda x:True,d=3)
+			allObjects |= objQuery(room,key=lambda x:True,d=3)
 		return allObjects
 
 
-	def nameQueryRoom(self,term,d=3,room=None):
+	def nameQuery(self,term,d=3,room=None):
 		term = term.lower()
 		key = lambda obj: nameMatch(term,obj)
 		return self.queryRoom(room=room,key=key,d=d)
@@ -1352,6 +1375,18 @@ class Room():
 
 	def __str__(self):
 		return self.name
+
+
+	def __neg__(self):
+		return "the " + self.name
+
+
+	def __pos__(self):
+		return "The " + self.name
+	
+
+	def __invert__(self):
+		return "a " + self.name
 
 
 	### Operation ###
@@ -1560,7 +1595,7 @@ class Room():
 
 	def allCreatures(self):
 		creatures = objQuery(self,key=lambda obj: isinstance(obj,Creature),d=3)
-		return sorted(creatures, key=lambda x: x.MVMT(), reverse=True)
+		return sorted(list(creatures), key=lambda x: x.MVMT(), reverse=True)
 
 
 	# given a direction (like 'north' or 'down)...
@@ -1717,7 +1752,7 @@ class Item():
 		if self.despawnTimer is not None:
 			self.despawnTimer -= t
 			if self.despawnTimer <= 0 and self.parent is not game.currentroom:
-				self.parent.removeItem(self)			
+				self.parent.remove(self)			
 
 
 	def changeLocation(self,newparent):
@@ -1745,7 +1780,7 @@ class Item():
 				Print(f"{+self} cannot be broken.")
 			return False
 		Print(f"{+self} breaks.")
-		self.parent.removeItem(self)
+		self.parent.remove(self)
 		return True
 
 
@@ -2122,6 +2157,8 @@ class Creature():
 	def heal(self,heal,overflow=False):
 		if self.hp + heal > self.MXHP() and not overflow:
 			heal = self.MXHP() - self.hp
+		if heal <= 0:
+			return 0
 		self.hp += heal
 		if self is player:
 			Print(f"You healed {heal} HP.",color="g")
@@ -2130,7 +2167,9 @@ class Creature():
 
 	def resurge(self,mana,overflow=False):
 		if self.mp + mana > self.MXMP() and not overflow:
-			mana = self.MXHP() - self.mp
+			mana = min0(self.MXHP() - self.mp)
+		if mana <= 0:
+			return 0
 		self.mp += mana
 		if self is player:
 			Print(f"You resurged {mana} MP.",color="b")
@@ -2165,7 +2204,7 @@ class Creature():
 
 	# try to add an Item to Inventory
 	# it will fail if the inventory is too heavy
-	def addItem(self,I):
+	def add(self,I):
 		if isinstance(I,Creature):
 			return self.parent.add(I)
 		if not self.canObtain(I):
@@ -2180,7 +2219,7 @@ class Creature():
 	# if it was equipped, unequip it
 	# if it has a Drop() method, call that
 	# check if still hindered
-	def removeItem(self,I,silent=False):
+	def remove(self,I,silent=False):
 		for slot,obj in self.gear.items():
 			if I is obj:
 				self.unequip(slot,silent=silent)
@@ -2197,7 +2236,7 @@ class Creature():
 	# finally, check if the new inventory weight has hindered the creature
 	def obtainItem(self,I,msg=None):
 		oldParent = I.parent
-		if self.addItem(I):
+		if self.add(I):
 			oldParent.remove(I)
 			if msg != None:
 				Print(msg)
@@ -2411,7 +2450,7 @@ class Creature():
 		self.descname = f"dead {self.descname}"
 		self.aliases = self.aliases | {"dead " + a for a in self.aliases}
 		n = diceRoll(3,player.LOOT(),-2)
-		self.room().addItem(Serpens(n))
+		self.parent.add(Serpens(n))
 		if not game.silent:
 			Print(f"Dropped $ {n}.",color="g")
 		if game.whoseturn is player:
@@ -2609,8 +2648,8 @@ class Creature():
 			self.removeCarry(silent=True)
 		else:
 			self.equipInHand(missile)
-			self.removeItem(missile,silent=True)
-			self.room().addItem(missile)
+			self.remove(missile,silent=True)
+			self.parent.add(missile)
 
 		missile = missile.asProjectile()
 
@@ -2772,8 +2811,8 @@ class Creature():
 	def KNWL(self): return 2*self.INT() + self.LCK()
 	def LOOT(self): return 2*self.LCK() + self.FTH()
 	def MVMT(self): return min0(self.SPD() + self.STM() + 10 - self.invToll() - self.gearToll())
-	def MXHP(self): return self.level()*self.CON() + self.level()//10 * self.STM()
-	def MXMP(self): return self.level()*self.WIS() + self.level()//10 * self.STM()
+	def MXHP(self): return self.level()*self.CON() + (self.level()//10+1) * self.STM() + 1
+	def MXMP(self): return self.level()*self.WIS() + (self.level()//10+1) * self.STM() + 1
 	def PRSD(self): return 2*self.CHA() + self.WIS()
 	def RSTN(self): return 2*self.FTH() + self.STM()
 	def RITL(self): return 2*self.FTH() + self.LCK()
@@ -2998,7 +3037,7 @@ class Player(Creature):
 
 
 	def __neg__(self):
-		return "you"
+		return "yourself"
 
 
 	def __pos__(self):
@@ -3006,7 +3045,7 @@ class Player(Creature):
 	
 
 	def __invert__(self):
-		return "you"
+		return "yourself"
 
 
 	### Operation ###
@@ -3021,9 +3060,9 @@ class Player(Creature):
 
 		if newparent is not game.currentroom:
 			prevparent.exit(self)
-			prevparent.removeCreature(self)
+			prevparent.remove(self)
 			self.parent = newparent
-			newparent.addCreature(self)	
+			newparent.add(self)	
 			game.changeRoom(newparent)
 			newparent.enter(self)
 
@@ -3124,7 +3163,7 @@ class Player(Creature):
 
 	def obtainItem(self,I,tookMsg=None,failMsg=None):
 		oldParent = I.parent
-		if self.addItem(I):
+		if self.add(I):
 			oldParent.remove(I)
 			if tookMsg != None:
 				Print(tookMsg)
@@ -3695,7 +3734,7 @@ class Speaker(Creature):
 		elif self.dlogtree.react("Give",self,I=I):
 			# if we fail to obtain item for whatever reason, drop it into room
 			if not self.obtainItem(I):
-				game.currentroom.addItem(I)
+				game.currentroom.add(I)
 		else:
 			Print(f"{+self} ignores your offer.")			
 		return True
@@ -3952,10 +3991,10 @@ class Passage(Fixture):
 			if len(set(self.connections.values())) == 1:
 				dir = list(self.connections.keys())[0]
 			else:
-				msg = f"Which direction will you go on the {self.name}?\n> "
-				dir = Input(msg)
-		if dir in Data.cancels:
-			return False
+				msg = f"Which direction will you go on the {self.name}?"
+				dir = InputLoop(msg)
+				if dir is None:
+					return False
 		if dir not in self.connections:
 			Print(f"The {self.name} does not go '{dir}'.")
 			return False
@@ -4007,7 +4046,6 @@ class Projectile(Item):
 
 
 	def Launch(self,speed,aim,launcher,target):
-		assert isinstance(self.item.parent,Room), "Launched item must be in a room"
 		self.speed = speed
 		self.aim = 90 if self.hasCondition("homing") and aim < 90 else aim
 
@@ -4015,6 +4053,11 @@ class Projectile(Item):
 			self = self.asItem()
 			self.changeLocation(target)
 			return self.Fall(speed//2)
+		if self.item.parent not in (target,target.parent):
+			if not getattr(self.item.parent,"open",True):
+				return self.item.parent.Bombard(self)
+			self.item.parent.remove(self.item)
+			target.parent.add(self.item)
 
 		if not target.Bombard(self):
 			Print(f"{self.pronoun.title()} misses!")
@@ -4024,13 +4067,22 @@ class Projectile(Item):
 
 	def Miss(self,launcher,target):
 		self.aim = -10 if self.asItem().hasCondition("homing") else min1(self.aim-10)
+		parent = self.item.parent
 
 		# have a chance to randomly hit a different object in room
-		otherObjs = [obj for obj in target.room().contents() if obj not in (self,self.item,launcher,target)]
+		otherObjs = [obj for obj in parent.contents() if obj not in (self,self.item,launcher,target)]
 		weights = [obj.weight for obj in otherObjs]
-		victim = choices(otherObjs+[None],weights+[target.room().size*10])[0]
+		if isinstance(parent,Room):
+			otherObjs += [None]
+			weights += [parent.size*10]
+		else:
+			otherObjs += [parent]
+			weights += [parent.weight]
+		victim = choices(otherObjs,weights)[0]
 		if victim is None:
 			return False
+		if victim is target.parent:
+			return victim.Bombard(self)
 		Print(f"{self.pronoun.title()} whizzes toward {-victim}!", color="o")
 		if not victim.Bombard(self):
 			Print(f"{self.pronoun.title()} misses...")

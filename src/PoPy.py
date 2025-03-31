@@ -79,16 +79,6 @@ if __name__ == "__main__":
 # CURRENT TASKS
 
 # add ability to go into containers
-	# how is saving the game with player inside a container....
-		# should player exist in items array?
-	# "take all from chest", to only take everything in chest
-		# refactor taking search when inside an object...
-			# should player really be added to a chests items thing? yes
-			# 'matches' should be a set
-			# might require refactoring findObject function?
-	# try destroying the chestfrom inside
-	# now redo projectiles without the assumption they must be in a room (they can be launched at a target within a box?)
-		# shouldn't have space to throw if available space isn't big enough
 	# can something fall when its in a container? what if the container is falling?
 	# handle case when creature is inside a chest and chest changes room
 		# try a teleporting box, going into a burning room
@@ -175,6 +165,7 @@ if __name__ == "__main__":
 # add portal object, which is basically a passage that isn't a fixture, (but still can't be taken?)
 # add dialect processor to tritepool output?
 # add possession? (so you can say 'break goblin's sword', 'take his food')... these could be easily restructured as "break sword from goblin", "take food from him"
+# add a coin purse? which holds your money? required to collect money?
 
 # sift through TODOs
 
