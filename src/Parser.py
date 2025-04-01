@@ -1004,7 +1004,7 @@ def Drop(dobj,iobj,prep,I=None):
 
 	if isinstance(I,Core.Creature):
 		Core.player.removeCarry()
-	elif not Core.player.parent.canAdd(I):
+	elif not Core.player.parent.canAdd(I) and I not in Core.player.parent.contents():
 		Core.Print(f"You can't drop {-I}. There's not enough room.")
 		return False
 	else:
@@ -1557,7 +1557,7 @@ def Put(dobj,iobj,prep):
 	elif not Core.hasMethod(R,"add"):
 		Core.Print(f"You can't put {-I} {prep} {-R}.")
 		return False
-	elif not R.canAdd(I):
+	elif not R.canAdd(I) and I not in R.contents():
 		Core.Print(f"You can't put {-I} {prep} {-R}. There's not enough room.")
 		return False
 	
@@ -1869,7 +1869,7 @@ def Throw(dobj,iobj,prep):
 		return promptHelp("Command not understood.")
 	if prep in ("to","toward"):
 		return Toss(dobj,iobj,prep)
-	
+
 	if prep in ("down","up") and iobj is None:
 		iobj = prep
 	I = findObject(dobj,"throw","player")
@@ -1901,7 +1901,7 @@ def Throw(dobj,iobj,prep):
 		elif Core.player.parent not in (T, getattr(T,"parent",None)):
 			Core.Print(f"{+Core.player.parent} is closed. There's no path to {-T}.")
 			return False
-	if not Core.player.parent.canAdd(I):
+	if not Core.player.parent.canAdd(I) and I not in Core.player.parent.contents():
 		Core.Print(f"You can't throw {-I}. There's not enough room.",color="k")
 		return False
 
@@ -2075,6 +2075,7 @@ shortactions = {
 "abilities":Core.Player.printAbility,
 "back":Return,
 "back up":Return,
+"carrying":Core.player.printCarrying,
 "commands":Commands,
 "examples":Examples,
 "exits":Exits,

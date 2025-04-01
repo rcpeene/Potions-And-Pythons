@@ -166,6 +166,8 @@ class Box(Core.Item):
 				Core.Print(f"You can't enter {-self}. There's not enough room.")
 			return False
 
+		if not self.open:
+			self.Open()
 		if traverser is Core.player:
 			Core.Print(f"You {verb} {dir} {-self}.")
 		self.enter(traverser)
