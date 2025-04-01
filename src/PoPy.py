@@ -79,6 +79,8 @@ if __name__ == "__main__":
 # CURRENT TASKS
 
 # add ability to go into containers
+	# fix ability to enter containers while carrying/riding things, right now they don't follow
+		# test out "throw snake north" when in the chest
 	# can something fall when its in a container? what if the container is falling?
 	# handle case when creature is inside a chest and chest changes room
 		# try a teleporting box, going into a burning room
@@ -88,6 +90,7 @@ if __name__ == "__main__":
 	# continue stand func with stand on and stand in
 		# try "get on bed", redirect Mounting an obj to stand
 	# limit ability to interact with room objects when in a chest
+# add "in" operator to objects
 # test throwing a person
 # throw snake into chest???
 # add dropping into pit -> add fall damage to items.

@@ -2079,7 +2079,7 @@ class Creature():
 	def compressGear(self):
 		cGear = {}
 		for slot, item in self.gear.items():			
-			if type(item) is Creature:
+			if isinstance(item,Creature):
 				cGear[slot] = "carrying"
 			elif item is EmptyGear():
 				cGear[slot] = None
