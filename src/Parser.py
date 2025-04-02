@@ -84,8 +84,8 @@ def chooseObject(name,objects,verb=None):
 # queryPlayer and queryRoom indicate which places to look for matching objects
 # roomD and playerD are the 'degree' of the query.
 # Look at Core.py objQuery for details on query degree
-def findObject(term,verb,queryType="both",filter=None,roomD=1,playerD=2,reqParent=None,silent=False):
-	if term is None and not silent:
+def findObject(term,verb=None,queryType="both",filter=None,roomD=1,playerD=2,reqParent=None,silent=False):
+	if term is None and not silent and verb is not None:
 		term = getNoun(f"What will you {verb}?")
 	if term in Data.cancels or term is None or term == "nothing":
 		return None
@@ -1171,16 +1171,14 @@ def parseGoTerms(dobj,iobj,prep):
 	if iobj in Core.game.currentroom.allExits().values(): dest = iobj
 	elif Core.nameMatch(iobj,Core.game.currentroom): dest = iobj
 
-	# assign dir
+	# assign dir and passage
 	if dobj in Data.directions.values(): dir = dobj
+	elif dobj is not None: passage = findObject(dobj,f"go {prep}","room",silent=True)
 	elif iobj in Data.directions.values(): dir = iobj
 	elif dobj in Core.game.currentroom.allExits().keys(): dir = dobj
 	elif iobj in Core.game.currentroom.allExits().keys(): dir = dobj
-	elif dir is None: dir = prep
-
-	# assign passage
-	if dobj is not None: passage = findObject(dobj,f"go {prep}","room",silent=True)
 	elif iobj is not None: passage = findObject(iobj,f"go {prep}","room",silent=True)
+	elif dir is None: dir = prep
 
 	return dir,dest,passage
 
@@ -1459,7 +1457,7 @@ def Open(dobj,iobj,prep):
 	Core.game.setPronouns(I)
 
 	if Core.hasMethod(I,"Open"):
-		return I.Open()
+		return I.Open(Core.player)
 	elif hasattr(I,"locked") and I.locked:
 		Core.Print(f"{+I} is locked.")
 		return False
@@ -2075,7 +2073,7 @@ shortactions = {
 "abilities":Core.Player.printAbility,
 "back":Return,
 "back up":Return,
-"carrying":Core.player.printCarrying,
+"carrying":Core.Player.printCarrying,
 "commands":Commands,
 "examples":Examples,
 "exits":Exits,

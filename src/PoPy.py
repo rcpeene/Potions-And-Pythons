@@ -79,8 +79,6 @@ if __name__ == "__main__":
 # CURRENT TASKS
 
 # add ability to go into containers
-	# fix ability to enter containers while carrying/riding things, right now they don't follow
-		# test out "throw snake north" when in the chest
 	# can something fall when its in a container? what if the container is falling?
 	# handle case when creature is inside a chest and chest changes room
 		# try a teleporting box, going into a burning room

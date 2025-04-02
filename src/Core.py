@@ -1016,6 +1016,10 @@ class EmptyGear:
 		return ""
 
 
+	def untetheredWeight(self):
+		return 0
+
+
 	def Weight(self):
 		return 0
 
@@ -1078,11 +1082,12 @@ class Game():
 
 	# exits the previous room and enters the new room
 	def changeRoom(self,newroom):
-		self.clearPronouns()
-		clearScreen()
 		if newroom != self.currentroom:
+			self.clearPronouns()
+			clearScreen()
 			self.prevroom = self.currentroom
 			self.currentroom = newroom
+		newroom.describe()
 		return True
 
 
@@ -1525,13 +1530,7 @@ class Room():
 
 	# describe the room, and apply any room effects to the obj entering
 	def enter(self,obj):
-		# if the player is entering the room, describe the room
-		if obj is player:
-			self.describe()
-		condsToRemove = [pair for pair in obj.status if pair[1] == -1]
-		# remove status conditions from previous room
-		for cond,dur in condsToRemove:
-			obj.removeCondition(cond,-1)
+		self.add(obj)
 		# add status conditions from this room
 		for cond,dur in self.status:
 			applyCond = False
@@ -1546,7 +1545,11 @@ class Room():
 
 	# remove any room effects from the obj exiting
 	def exit(self,obj):
-		pass
+		# remove status conditions from this room
+		condsToRemove = [pair for pair in obj.status if pair[1] == -1]
+		for cond,dur in condsToRemove:
+			obj.removeCondition(cond,-1)
+		self.remove(obj)
 
 
 	### Getters ###
@@ -1756,17 +1759,11 @@ class Item():
 
 
 	def changeLocation(self,newparent):
-		# can only change rooms if not stuck inside some item
-		if type(self.parent) is not Room:
-			raise Exception(f"Can't change rooms. Stuck inside {self.parent}.")
 		prevparent = self.parent
 		if newparent is prevparent:
 			return False
 		
 		prevparent.exit(self)
-		prevparent.remove(self)
-		self.parent = newparent
-		newparent.add(self)
 		newparent.enter(self)
 
 
@@ -1848,6 +1845,11 @@ class Item():
 
 
 	### Getters ###
+
+	# this is a meaningful method for Creatures, for Items it is same as Weight
+	def untetheredWeight(self):
+		return self.weight
+
 
 	def Weight(self):
 		return self.weight
@@ -2519,9 +2521,6 @@ class Creature():
 			return False
 
 		prevparent.exit(self)
-		prevparent.removeCreature(self)
-		self.parent = newparent
-		newparent.addCreature(self)	
 		newparent.enter(self)
 
 		if self.carrying and self.carrying.parent is not self.parent:
@@ -2641,12 +2640,12 @@ class Creature():
 
 
 	def Throw(self,missile,target,maxspeed=None):
-		if not self.parent.canAdd(missile):
-			return False
-
 		if missile is self.carrying:
 			self.removeCarry(silent=True)
 		else:
+			if not self.parent.canAdd(missile):
+				return False
+
 			self.equipInHand(missile)
 			self.remove(missile,silent=True)
 			self.parent.add(missile)
@@ -2821,10 +2820,14 @@ class Creature():
 	def TNKR(self): return 2*self.INT() + self.SKL()
 
 
+	def untetheredWeight(self):
+		return self.weight + self.CON()
+
+
 	def Weight(self):
 		riderWeight = 0 if self.rider is None else self.rider.Weight()
 		carryWeight = 0 if self.carrying is None else self.carrying.Weight()
-		return (self.weight + self.CON()) + riderWeight + carryWeight
+		return self.untetheredWeight() + riderWeight + carryWeight
 
 
 	def contents(self):
@@ -3058,13 +3061,10 @@ class Player(Creature):
 		if newparent is prevparent:
 			return
 
-		if newparent is not game.currentroom:
-			prevparent.exit(self)
-			prevparent.remove(self)
-			self.parent = newparent
-			newparent.add(self)	
-			game.changeRoom(newparent)
-			newparent.enter(self)
+		prevparent.exit(self)
+		if isinstance(newparent,Room):
+			game.changeRoom(newparent)				
+		newparent.enter(self)
 
 		if self.riding:
 			self.riding.changeLocation(newparent)
@@ -3477,15 +3477,15 @@ class Player(Creature):
 			Print(val)
 
 
-	def printCarrying(self, *args):
-		if self.carrying:
+	def printCarrying(self,*args):
+		if self.carrying is not None:
 			Print(f"Carrying {~self.carrying}")
 			Print(f"Weight: {self.carrying.Weight()}")
 		else:
 			Print("Carrying nothing")
 
 
-	def printRiding(self, *args):
+	def printRiding(self,*args):
 		if self.riding:
 			Print(f"Riding {~self.riding}")
 		else:

@@ -61,14 +61,15 @@ class Box(Core.Item):
 	### Operation ###
 
 	# sets open bool to true, prints its items
-	def Open(self):
-		if self.open:
-			Core.Print(f"{+self} is already open.")
-		else:
-			Core.Print(f"You open {-self}.")
-			self.open = True
-		if Core.player not in self.items:
-			self.Look()
+	def Open(self,opener):
+		if opener is Core.player:
+			if self.open:
+				Core.Print(f"{+self} is already open.")
+			else:
+				Core.Print(f"You open {-self}.")
+			if Core.player not in self.items:
+				self.Look()
+		self.open = True
 		return True
 
 
@@ -132,22 +133,26 @@ class Box(Core.Item):
 
 
 	def enter(self,traverser):
+		if traverser in self.contents():
+			return False
 		self.open = True
-		traverser.parent.remove(traverser)
 		self.add(traverser)
 
 
 	def exit(self,traverser):
+		if traverser not in self.contents():
+			return False
 		self.open = True
 		self.remove(traverser)
-		self.parent.add(traverser)
 
 
 	def Traverse(self,traverser,dir=None,verb=None):
 		if dir in ("out","outside","out of"):
 			if self is traverser.parent:
+				if not self.open:
+					self.Open(traverser)
 				Core.Print(f"You get out of {-self}.")
-				self.exit(traverser)
+				traverser.changeLocation(self.parent)
 				return True
 			else:
 				Core.Print(f"You're not in {-self}.",color="k")
@@ -167,17 +172,14 @@ class Box(Core.Item):
 			return False
 
 		if not self.open:
-			self.Open()
+			self.Open(traverser)
 		if traverser is Core.player:
 			Core.Print(f"You {verb} {dir} {-self}.")
-		self.enter(traverser)
+		traverser.changeLocation(self)
 		return True
 
 
 	def add(self,I):
-		if not self.canAdd(I):
-			return False	
-
 		# ensure only one bunch of Gold exists here
 		if isinstance(I,Core.Serpens):
 			for item in self.items:
@@ -203,7 +205,7 @@ class Box(Core.Item):
 	### Getters ###
 
 	def itemsWeight(self):
-		return sum(i.Weight() for i in self.items)
+		return sum(i.untetheredWeight() for i in self.items)
 
 
 	# the weight of a box is equal to its own weight + weights of its items
@@ -218,7 +220,7 @@ class Box(Core.Item):
 	def canAdd(self,I):
 		return I.Weight() <= self.space()
 
-	
+
 	def contents(self):
 		return self.items
 
@@ -394,11 +396,11 @@ class Lockbox(Box):
 	### Operation ###
 
 	# sets open bool to true, prints its items
-	def Open(self):
+	def Open(self,opener):
 		if self.locked:
 			Core.Print(f"{+self} is locked.")
 			return False
-		return Box.Open(self)
+		return Box.Open(self,opener)
 
 
 	def Look(self):
@@ -725,7 +727,7 @@ class Door(Window):
 
 
 	# sets open bool to true, prints its items
-	def Open(self):
+	def Open(self,opener):
 		if self.open:
 			Core.Print(f"{+self} is already open.")
 		else:
