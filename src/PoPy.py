@@ -79,6 +79,8 @@ if __name__ == "__main__":
 # CURRENT TASKS
 
 # add ability to go into containers
+	# prevent findObj from getting items outside container if container is closed??
+		# give items and room a nameQuery method. in findObj, when mode is "room", first pick the root as the highest ancestor of player, going through non-closed items
 	# can something fall when its in a container? what if the container is falling?
 	# handle case when creature is inside a chest and chest changes room
 		# try a teleporting box, going into a burning room
@@ -97,11 +99,13 @@ if __name__ == "__main__":
 # throw goblin up/down stairs
 # throw snake at goblin
 # "throw rock east", "throw dale east"
-# "you attack the goblin with your your hand!" is what shows up on attack
+
 # readjust throw force formula; compare to BRDN (shouldn't be able to throw heavier than you can have in inv, or more than you can carry in hands?
 # check if throwing a creature which has another riding it?
 # handle "get on" to mount or get on a table (wb get on table while on a horse?)
 # refactor drop into a creature method?
+
+# "you attack the goblin with your your hand!" is what shows up on attack
 # fix obtaining money problem, think about other objects which won't go into inv upon obtaining
 # add "look up" as valid. Should look at sky if not in a room?
 	# add room property which is description of directions ("look up", "look east", "look out", etc.)

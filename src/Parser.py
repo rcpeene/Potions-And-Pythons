@@ -53,7 +53,7 @@ def chooseObject(name,objects,verb=None):
 			labels.append("riding")
 		elif object in Core.player.gear.values():
 			labels.append("equipped")
-		elif object in Core.player.invSet():
+		elif object in Core.player.objTree():
 			labels.append("Inventory")
 		elif object.determiner:
 			labels.append(object.determiner)
@@ -133,6 +133,15 @@ def findObject(term,verb=None,queryType="both",filter=None,roomD=1,playerD=2,req
 			suffix += " in your surroundings"
 		Core.Print(f"There is no '{term}'{suffix}.",color="k")
 	return None
+
+
+def enforceVerbScope(verb,obj):
+	parent = Core.player.parent
+	# print(parent, parent.objTree())
+	tree = parent.objTree()
+	if obj not in tree:
+		Core.Print(f"You can't {verb} {-obj}, you're {parent.passprep} {-parent}.")
+		return True
 
 
 # checks if a noun refers to a room, an object in the world or on the player...
@@ -472,6 +481,8 @@ def Set(command):
 		return False
 	Core.Print(f"Setting {obj}.{attrname} to {value}",color="k")
 	setattr(obj,attrname,value)
+	if isinstance(obj,Core.Creature):
+		obj.checkConditions()
 
 
 
@@ -1817,16 +1828,17 @@ def Take(dobj,iobj,prep):
 	if objToTake.parent is Core.player:
 		Core.Print(f"You can't take from your own Inventory.")
 		return False
-
-	if isinstance(objToTake,Core.Creature): 
-		return CarryCreature(objToTake)
+	if enforceVerbScope("take",objToTake):
+		return False
 	if isinstance(objToTake,Core.Fixture):
 		Core.Print(f"You can't take {objToTake}.")
 		return False
+	if isinstance(objToTake,Core.Creature): 
+		return CarryCreature(objToTake)
 
 	parent = objToTake.parent
 	# if it is in a non-player inventory, it will have to be stolen
-	if any(isinstance(anc,Core.Creature) for anc in objToTake.ancestors()) and objToTake not in Core.player.invSet():
+	if any(isinstance(anc,Core.Creature) for anc in objToTake.ancestors()) and objToTake not in Core.player.objTree():
 		return Steal(dobj,iobj,prep,I=objToTake)
 	count = parent.itemNames().count(objToTake.name)
 

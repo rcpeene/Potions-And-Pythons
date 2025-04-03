@@ -216,11 +216,11 @@
 				"items": [
 					{
 						"__class__": "factoryItem",
-						"name": "red potion"
+						"name": "blue potion"
 					},
 					{
 						"__class__": "factoryItem",
-						"name": "blue potion"
+						"name": "green potion"
 					},
 					{
 						"__class__": "factoryItem",
@@ -258,7 +258,7 @@
 				"__class__": "Controller",
 				"name": "coffee machine",
 				"desc": "A stainless steel nespresso with a bright red button.",
-				"weight": 25,
+				"weight": 1,
 				"durability": 100,
 				"composition": "steel",
 				"aliases": ["button","machine","coffee machine","nespresso"],

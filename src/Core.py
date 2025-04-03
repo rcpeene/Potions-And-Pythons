@@ -121,8 +121,7 @@ def displayLength(text):
 	return l
 
 
-def Print(*args,end="\n",sep="",delay=0.005,color=None,allowSilent=True):
-	sys.stdout.flush()
+def Print(*args,end="\n",sep="",delay=0.002,color=None,allowSilent=True):
 	if game.silent and allowSilent:
 		return
 	if len(args) > 1 and sep=="":
@@ -134,6 +133,10 @@ def Print(*args,end="\n",sep="",delay=0.005,color=None,allowSilent=True):
 	if game.mode == 1 or delay is None:
 		print(*args,end=end,sep=sep)
 		return printLength
+
+	sleep(delay)
+	sys.stdout.flush()
+	sleep(delay)
 	for arg in args:
 		for char in str(arg):
 			if kbInput():
@@ -404,7 +407,10 @@ def bound(n,min,max): return min if n < min else (max if n > max else n)
 
 # this function is a wrapper for objQueryRecur()
 def objQuery(root,key=lambda obj:True,d=0):
-	matches = objQueryRecur(root,set(),key,d)
+	matches = set()
+	if key(root):
+		matches.add(root)
+	matches = objQueryRecur(root,matches,key,d)
 	return matches
 
 
@@ -1087,7 +1093,7 @@ class Game():
 			clearScreen()
 			self.prevroom = self.currentroom
 			self.currentroom = newroom
-		newroom.describe()
+			newroom.describe()
 		return True
 
 
@@ -1356,7 +1362,7 @@ class Game():
 # directed graph, facilitated by the world dict, where the exits dict specifies
 # the edges from a given node to its neighboring nodes.
 class Room():
-	def __init__(self,name,domain,desc,exits,fixtures,items,creatures,size=10,type=None,altitude=0,status=None):
+	def __init__(self,name,domain,desc,exits,fixtures,items,creatures,size=10,type=None,altitude=0,passprep=None,status=None):
 		self.name = name
 		self.domain = domain
 		self.desc = desc
@@ -1369,7 +1375,9 @@ class Room():
 		self.type = type
 		# 0 for outdoors, -1 for indoors, <-1 for underground, >0 for in the sky
 		self.altitude = altitude
+		self.passprep = "at" if passprep is None else passprep
 		self.status = status if status else []
+		self.parent = None
 
 
 	### Dunder Methods ###
@@ -1599,6 +1607,12 @@ class Room():
 	def allCreatures(self):
 		creatures = objQuery(self,key=lambda obj: isinstance(obj,Creature),d=3)
 		return sorted(list(creatures), key=lambda x: x.MVMT(), reverse=True)
+
+
+	def objTree(self):
+		matches = objQuery(self,d=3)
+		matches.remove(self)
+		return matches
 
 
 	# given a direction (like 'north' or 'down)...
@@ -1863,6 +1877,13 @@ class Item():
 			ancestor = ancestor.parent
 			ancs.append(ancestor)
 		return ancs
+
+
+	# should be empty for items that aren't containers
+	def objTree(self):
+		matches = objQuery(self,d=3)
+		matches.remove(self)
+		return matches
 
 
 	def room(self):
@@ -2199,6 +2220,10 @@ class Creature():
 	def canObtain(self,I):
 		if isinstance(I,Creature):
 			return False
+		if I in self.ancestors():
+			return False
+		if isinstance(I,Serpens):
+			return True
 		if self.invWeight() + I.Weight() > 2*self.BRDN():
 			return False
 		return True
@@ -2209,8 +2234,8 @@ class Creature():
 	def add(self,I):
 		if isinstance(I,Creature):
 			return self.parent.add(I)
-		if not self.canObtain(I):
-			return False
+		if isinstance(I,Serpens):
+			return True
 		insort(self.inv,I)
 		I.parent = self
 		I.nullDespawn()
@@ -2238,8 +2263,9 @@ class Creature():
 	# finally, check if the new inventory weight has hindered the creature
 	def obtainItem(self,I,msg=None):
 		oldParent = I.parent
-		if self.add(I):
-			oldParent.remove(I)
+		if self.canObtain(I):
+			if self.add(I):
+				oldParent.remove(I)
 			if msg != None:
 				Print(msg)
 			I.Obtain(self)
@@ -2432,7 +2458,7 @@ class Creature():
 		carryWeight = 0 if self.carrying is None else self.carrying.Weight()
 		if self.invWeight() + carryWeight > self.BRDN():
 			self.addCondition("hindered",-3)
-		if self.invWeight() + + carryWeight <= self.BRDN():
+		if self.invWeight() + carryWeight <= self.BRDN():
 			self.removeCondition("hindered")
 
 
@@ -2442,6 +2468,12 @@ class Creature():
 
 	def checkTired(self):
 		return False
+
+
+	def checkConditions(self):
+		self.checkHindered()
+		self.checkHungry()
+		self.checkTired()
 
 
 	# called when a creature's hp hits 0
@@ -2835,9 +2867,10 @@ class Creature():
 
 
 	# wrapper for objQuery()
-	# returns player Inventory as a set of all items in the Item Tree
-	def invSet(self):
-		return objQuery(self,d=2)
+	def objTree(self):
+		matches = objQuery(self,d=3)
+		matches.remove(self)
+		return matches
 
 
 	# wrapper for objQuery, sets the degree of the query to 2 by default
@@ -3163,8 +3196,9 @@ class Player(Creature):
 
 	def obtainItem(self,I,tookMsg=None,failMsg=None):
 		oldParent = I.parent
-		if self.add(I):
-			oldParent.remove(I)
+		if self.canObtain(I):
+			if self.add(I):
+				oldParent.remove(I)
 			if tookMsg != None:
 				Print(tookMsg)
 			I.Obtain(self)
