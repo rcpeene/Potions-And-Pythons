@@ -1174,20 +1174,11 @@ class Game():
 		return R
 
 
-	# returns a list of objects in current room which fit a certain condition
-	# key is a function which identifies a condition about the obj
-	# d is the 'degree' of the query. See objQuery() for details
-	def queryRoom(self,room=None,key=lambda x:True,d=3):
-		if room == None:
-			room = self.currentroom
-		return objQuery(room,key=key,d=d)
-
-
 	# returns a list of objects in rendered rooms which fit a certain condition
 	def queryRooms(self,key=lambda x:True,d=3):
 		matchingObjects = []
 		for room in self.renderedRooms():
-			matchingObjects += self.queryRoom(room,key=key,d=d)
+			matchingObjects += room.query(key=key,d=d)
 		return matchingObjects
 
 
@@ -1198,12 +1189,6 @@ class Game():
 		for room in self.renderedRooms():
 			allObjects |= objQuery(room,key=lambda x:True,d=3)
 		return allObjects
-
-
-	def nameQuery(self,term,d=3,room=None):
-		term = term.lower()
-		key = lambda obj: nameMatch(term,obj)
-		return self.queryRoom(room=room,key=key,d=d)
 
 
 	# True if there's an object in rendered rooms whose name matches objname
@@ -1609,6 +1594,18 @@ class Room():
 		return sorted(list(creatures), key=lambda x: x.MVMT(), reverse=True)
 
 
+	# wrapper for objQuery, sets the degree of the query to 2 by default
+	def query(self,key=None,d=2):
+		matches = objQuery(self,key=key,d=d)
+		return matches
+
+
+	def nameQuery(self,term,d=2):
+		term = term.lower()
+		key = lambda obj: nameMatch(term,obj)
+		return self.query(key=key,d=d)
+
+
 	def objTree(self):
 		matches = objQuery(self,d=3)
 		matches.remove(self)
@@ -1808,7 +1805,13 @@ class Item():
 			self.changeLocation(room)
 			if self.room() is game.currentroom:
 				Print(f"{+self} falls from above.")
+				
+		# contents might spill out if item breaks
+		contents = self.contents().copy()
 		self.takeDamage(height,"b")
+		for obj in contents:
+			# TODO, revise how damage is mitigated here based on composition/durability?
+			obj.takeDamage(height//3,"b")
 		return True
 
 
@@ -1820,7 +1823,7 @@ class Item():
 
 
 	def takeDamage(self,dmg,type):
-		if self.room() is game.currentroom:
+		if self in player.surroundings().objTree():
 			Print(f"{+self} took {dmg} {Data.dmgtypes[type]} damage.")
 		if self.durability != -1 and dmg > self.durability:
 			return self.Break()
@@ -1869,6 +1872,25 @@ class Item():
 		return self.weight
 
 
+	# should be empty for items that aren't containers
+	def objTree(self):
+		matches = objQuery(self,d=3)
+		matches.remove(self)
+		return matches
+
+
+	# wrapper for objQuery, sets the degree of the query to 2 by default
+	def query(self,key=None,d=2):
+		matches = objQuery(self,key=key,d=d)
+		return matches
+
+
+	def nameQuery(self,term,d=2):
+		term = term.lower()
+		key = lambda obj: nameMatch(term,obj)
+		return self.query(key=key,d=d)
+
+
 	def ancestors(self):
 		ancs = []
 		ancestor = self.parent
@@ -1877,13 +1899,6 @@ class Item():
 			ancestor = ancestor.parent
 			ancs.append(ancestor)
 		return ancs
-
-
-	# should be empty for items that aren't containers
-	def objTree(self):
-		matches = objQuery(self,d=3)
-		matches.remove(self)
-		return matches
 
 
 	def room(self):
@@ -2565,7 +2580,7 @@ class Creature():
 		assert self.carrying is None or self.carrying.parent is self.parent
 		return True
 
-			
+
 	def Teleport(self,newroom):
 		prevroom = self.parent
 		prevroom.exit(self)
@@ -2897,6 +2912,15 @@ class Creature():
 
 	def room(self):
 		return self.ancestors()[-1]
+
+
+	# gets the first ancestor that isn't open, or the final ancestor (room)
+	# used to determine the 'root' of a Creature's available surroundings
+	def surroundings(self):
+		for anc in self.ancestors():
+			if not getattr(anc,"open",True):
+				return anc
+		return self.room()
 
 
 	# TODO: add logic here for conditions which improve atkmod
@@ -3909,6 +3933,13 @@ class Animal(Speaker):
 
 	def attack(self):
 		Print(f"{self.name} attack?")
+		matches = self.parent.nameQuery('chest')
+		if len(matches) == 1:
+			chest = matches.pop()
+			if player in chest.contents():
+				print('player in chest')
+				cliff = self.parent.nameQuery('cliff').pop()
+				cliff.Transfer(chest)
 
 
 	def climb():

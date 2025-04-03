@@ -100,14 +100,14 @@ def findObject(term,verb=None,queryType="both",filter=None,roomD=1,playerD=2,req
 	if queryType == "player" or queryType == "both":
 		matches |= Core.player.nameQuery(term,d=playerD)
 	if queryType == "room" or queryType == "both":
-		matches |= Core.game.nameQuery(term,d=roomD)
+		matches |= Core.player.surroundings().nameQuery(term,d=roomD)
 	if queryType == "player" and Core.nameMatch(term,Core.player.carrying):
 		matches.add(Core.player.carrying)
 	if term in ("me","myself"):
 		matches.add(Core.player)
-	if term in ("room","floor","ground",Core.game.currentroom.name):
+	if term in ("room",Core.game.currentroom.name):
 		matches.add(Core.game.currentroom)
-	if term in ("here"):
+	if term in ("here","floor","ground"):
 		matches.add(Core.player.parent)
 
 	if filter:
@@ -895,7 +895,7 @@ def Dismount(dobj,iobj,prep):
 	if iobj is not None:
 		dobj = iobj
 	if dobj is not None:
-		matches = Core.game.nameQuery(dobj)
+		matches = Core.player.surroundings().nameQuery(dobj)
 		if Core.player.riding not in matches:
 			Core.Print(f"You're not riding a '{dobj}'",color="k")
 			return False

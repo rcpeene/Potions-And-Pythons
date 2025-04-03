@@ -4,7 +4,7 @@
 
 
 from bisect import insort
-from random import randint
+from random import randint, choice
 
 import Effects
 import Core
@@ -107,9 +107,9 @@ class Box(Core.Item):
 			Core.Print("Its contents spill out.")
 		# drop things it contains into parent
 		for item in self.items:
-			self.parent.add(item)
 			if item is Core.player:
-				Core.Print(f"You are no longer in {-self}.")
+				Core.waitKbInput(f"You are no longer in {-self}.")
+			item.changeLocation(self.parent)
 		return True
 
 
@@ -652,6 +652,21 @@ class Wall(Core.Passage):
 			traverser.Fall(self.difficulty)
 		return True
 
+
+	def Transfer(self,item):
+		if isinstance(item,Core.Creature):
+			return self.Traverse(item,dir="down")
+
+		if "down" in self.connections:
+			return item.Fall(height=self.difficulty,room=Core.world[self.connections["down"]])
+
+		# item can't randomly go up
+		dir = choice([dir for dir in self.connections])
+		if self.connections[dir] == self.connections.get("up",None):
+			return item.Fall()
+
+		# Print(f"{+item} goes {self.passprep} {-self}.")	
+		item.changeLocation(Core.world[self.connections[dir]])
 
 
 class Window(Core.Passage):
