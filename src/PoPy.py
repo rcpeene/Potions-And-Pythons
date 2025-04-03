@@ -79,9 +79,8 @@ if __name__ == "__main__":
 # CURRENT TASKS
 
 # add ability to go into containers
-	# prevent findObj from getting items outside container if container is closed??
-		# give items and room a nameQuery method. in findObj, when mode is "room", first pick the root as the highest ancestor of player, going through non-closed items
 	# can something fall when its in a container? what if the container is falling?
+		# right now, the chest doesn't take damage because it falls from 0 alt to 0 alt
 	# handle case when creature is inside a chest and chest changes room
 		# try a teleporting box, going into a burning room
 	# what about including a passage within a container? does buildWorld work? or trying to go through
@@ -104,6 +103,7 @@ if __name__ == "__main__":
 # check if throwing a creature which has another riding it?
 # handle "get on" to mount or get on a table (wb get on table while on a horse?)
 # refactor drop into a creature method?
+# make player.aware(I) method, which instead of using currentroom, checks if I in player.surroundings.objTree
 
 # "you attack the goblin with your your hand!" is what shows up on attack
 # fix obtaining money problem, think about other objects which won't go into inv upon obtaining
