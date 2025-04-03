@@ -51,11 +51,12 @@ class Bottle(Core.Item):
 
 
 class Box(Core.Item):
-	def __init__(self,name,desc,weight,durability,composition,open,capacity,items,**kwargs):
+	def __init__(self,name,desc,weight,durability,composition,open,capacity,items,passprep=None,**kwargs):
 		Core.Item.__init__(self,name,desc,weight,durability,composition,**kwargs)
 		self.open = open
 		self.capacity = capacity
 		self.items = items
+		self.passprep = "in" if passprep is None else passprep
 
 
 	### Operation ###
