@@ -420,7 +420,7 @@ def createCharacter():
 def newGame():
 	# initializes from the character creation screen
 	Core.player = createCharacter()
-	# tries to load a clean new world from initial world file
+	# tries to load a clean new world from initial world file, must be defined after player
 	Core.world = readJSON("World.json",object_hook=worldDecoder)
 	# initializes the game at the "cave" room
 	dlogDict = readDialogue("Dialogue.json")
@@ -441,12 +441,14 @@ def newGame():
 
 # automatically starts a new game with a premade character for easy testing
 def testGame():
-	Core.world = readJSON("World.json",object_hook=worldDecoder)
-
 	inv = [Core.Compass("compass","a plain steel compass with a red arrow",2,10,"steel",plural="compasses")]
 	status = [["fireproof",-1], ["poisoned",5], ["cursed",-2], ["immortal",-1],
 	["sharpshooter",50], ["invisible",15], ["poisoned",-1], ["flying",5]]
-	Core.player = Core.Player("Norman","a hero",50,[4]*10,24,24,1000,50,inv=inv,love=100,fear=100,spells=[],status=status)
+	Core.player = Core.Player("Norman","a hero",10,[4]*10,100,100,1000,50,inv=inv,love=100,fear=100,spells=[],status=status)
+
+	# world must be defined after player
+	Core.world = readJSON("World.json",object_hook=worldDecoder)
+
 	dlogDict = readDialogue("Dialogue.json")
 	Core.game = Core.Game(0,Core.world["cave"],Core.world["tunnel"],0,set(),dlogDict,Creatures.factory)
 	
@@ -649,7 +651,7 @@ def makeNewBubbles(logoArray,n,rows):
 # joins 2d array of characters into list of strings
 # then joins list of strings into one string with newlines, then prints it
 def printLogoArray(logoArray):
-	Core.clearScreen()
+	Core.clearScreen(delay=0)
 	print("\n".join(["".join(line) for line in logoArray]))
 
 
@@ -693,7 +695,7 @@ def dynamicBubbleAnimation(t,b,n):
 
 # prints the static logo and flushes keyboard input at the end of the intro
 def endIntro():
-	Core.clearScreen()
+	Core.clearScreen(delay=0)
 	print(Data.logo)
 	Core.flushInput()
 
@@ -720,12 +722,12 @@ def gameIntro():
 	for i in range(l-4):	#stops at the fourth line from the top
 		if Core.kbInput():	return endIntro()
 		tempLines[l-i-1] = Data.popyLines[l-i-1]
-		Core.clearScreen()
+		Core.clearScreen(delay=0)
 		for line in tempLines:
 			print(line)
 		sleep(0.125)
 		tempLines[l-i-1] = Data.logoLines[l-i-1]
-	Core.clearScreen()
+	Core.clearScreen(delay=0)
 	print(Data.logo+"\n"*7)
 	sleep(0.625)
 	endIntro()

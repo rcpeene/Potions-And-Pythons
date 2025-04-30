@@ -294,6 +294,24 @@ GEAR - a dict of many pairs, each one representing a slot in which an item can b
 
 STATUS - a set of all status effects currently affecting the player
 
+CHARACTER CREATION:
+
+Gender:
+Man +1 STR
+Woman +1 CHA
+Other + LCK
+
+Age: (affects socialization)
+Young +1 STM
+Mature +1 INT
+Aged +1 WIS
+Elderly +1 FTH
+
+Build: (affects base weight)
+Lean +1 SPD
+Medium +1 SKL
+Hefty +1 CON
+
 
 
 LEVELING:
@@ -853,8 +871,8 @@ Norman's etc.
 
 WEAPONS:
 Estoc
-other boomerangs
 The Master Boomerang - (always comes back no matter what u do with it)
+other boomerangs
 blade of healing (useless mostly)
 Raygun (that deals E damage)
 Paragon Blade
@@ -864,6 +882,9 @@ Tyrfing (Cursed)
 Shamshir (Poisonous)
 Carnwennan (Shadow Dagger)
 Sword with the same name as a princess (sounds like Eilonwy maybe)
+Swords Gram and Mimung (from Wayland)
+Courtain - shortsword owned by Ogier or Karaheut
+Joyeuse - sparkling rainbow sword, owned by Baligant
 
 
 GEAR:
@@ -880,14 +901,21 @@ the magic map
 Magic Teapot (or just a normal teapot idk)
 Astra - from hindu myth, divine projectiles
 Olifant - magic horn
+glyph totem (or rune totem?)
 
 
 MISC EQUIPMENT:
+shovel, trowel, spade
 Evil eye - wards off spirits
 Pantalon
 Step Reckoner
+Abacus
+Amphora
 Shrunken heads
 dunce hat
+hourglass item (actually does something useful?)
+map item (maybe at any given room, tells u direction toward a destination)
+deck of card with suits: swords, stars, flowers, something else?
 
 
 Sci-fi set
@@ -961,7 +989,7 @@ potions - described by color.
 elixirs - highly magical, described by effect
 philter - love potion
 anti-philter - fear potion
-tonic - medicinal, nonmagicla, described by contents, energizing/antidote effects or similar
+tonic - medicinal, nonmagical, described by contents, energizing/antidote effects or similar
 brew - unknown brewed things
 tincture - dyes
 elixir of truth - (mark dlog nodes as lies), dlog becomes green, red if its a lie
@@ -997,38 +1025,39 @@ Grape
 Grapefruit - temporarily raises MXMP
 Guava
 Huckleberry
-Juniperberry
+Jujube
 
+Juniperberry
 Kiwi
 Kumquat - something with mp
 Lemon - improved spells
 Lime - improved spells some other way
-Loquat
 
+Loquat
 Lychee
 Mango
 Mulberry - immune to bleed?
 Muskmelon - immune to poison
-Olive
 
+Olive
 Passionfruit - bonus to social interaction (love stat)
 Peach
 Pear
 Persimmon
-Pitanga
 
+Pitanga
 Plum
 Pricklepear - thornshield
 Pineapple
 Pomegranate
-Quince
 
+Quince
 Raspberry
 Seaberry - water breathing
 Starfruit
 Strawberry
-Tangerine - double regen of MP
 
+Tangerine - double regen of MP
 Watermelon - water walking?
 
 
@@ -1039,12 +1068,13 @@ mushrooms - glowing ones too
 poisonwood
 juniper - gin, oil, wood
 myrtle - oil/scent
+cork trees - to make cork
 boxwood
 hawthorn
 blackthorn
 gorse
 firethorn
-buckthorn
+buckthorn - yields jujube
 wormwood
 cotton
 hemp - rope, paper, cannabis?
@@ -1078,6 +1108,7 @@ vervaine - protection and love
 hyssop - biblical mint, purification
 spearmint - flavor
 peppermint
+peppercorns
 thyme - embalming, gives courage?
 clover - lucky, makes honey?
 holygrass - used for ceremonies
@@ -1089,7 +1120,6 @@ woundwort - heals wounds?
 ragweed - allergies
 tomeleaf
 keyflower - reveals treasure or key to fairy realm?
-indigo - dye
 fleabane - kills insects?
 starflower - causes courage?
 hoarhune - expells parasites, helps coughs
@@ -1107,27 +1137,60 @@ bishopwort - mint family, considered highly protective, holy water, ointment?
 valerian - catnip, causes sleep?
 goatweed - aphrodisiac?
 flax
+fireweed
 burdock - pairs well with dandelion in mead, wards off evil? velcro
 butterbur - sticky
 cocklebur - spiny
 tea plant
 foxfire (glowing mushrooms)
 bergamot?
-woad
+woad - dye
+weld - dye
+madder - dye
+
+
+MINERALS/CHEMICALs:
+peat, lignite, coal, charcoal, glass/frit,
+flint, granite, chert, sandstone, shale, slate, feldspar, soapstone, greywacke, pitrock,
+blackstone, bluestone, whitestone, whinstone, cinder, fieldstone, lodestone
+marble, basalt, quartz, serpentine, jade, 
+orpiment, realgar, verdigris, amber, azurite, corundum,
+bone ash, grey ash -> potash -> pearl ash, salt ash or natron -> soda ash -> lye
+whitestone or chalk -> quicklyme (burns) -> mortar or plaster
+saltpeter, brimstone, coal coke
+gravel, sand, silt, clay, loam,
+
+sticklac (from lacbug) -> seedlac -> shellac
+shellac -> candy glaze
+shellac -> lacquer
+certain sap -> lacquer
+benzoin, mastic, pine resin, hashish, bdellion, turpentine, myrhh, balsam
+gesso
+
+burning seaweed or saltwort -> soda ash, also known as natron
+coal coke, grey ash, bone ash are used for iron and steel
 
 
 MISC ITEM IDEAS:
 cadeuceus
 uroboros
 holy water
+something called "ersatz ___"
+something called "tentacular __"
+congerie
 molasses
+cassone
+wainscot
 elixir of immortality (also requires venom)
 strange milk - makes you high, made from cows fed certain mushrooms
 Catgut
 ambergris
+chaff - inedible plant matter
 star jelly
 royal jelly
+grass jelly
 alembic
+something called "vim"
 lodestone
 wooden spoon
 crocs - made from crocodile
@@ -1135,13 +1198,12 @@ papyrus (made from plant stems)
 paper (cotton, linen, hemp, wood)
 parchment (white, vellum, purple)
 inks (black, blue, red, silver, golden)
-cochineal -> carmine
-lye, potash, brimstone
+lacbug -> carmine
 linen, silk, cotton, wool
 yarn, loom, bolt of fabric, torn rag
 burlap, canvas, denim, tweed, flannel, fustian, russet
 bitumen (ore), pitch (liquid), naphtha,
-peat, lignin, resin, briquette
+peat, lignite, resin, briquette
 
 
 CRAFTING/RECIPE IDEAS:
@@ -1150,10 +1212,76 @@ scrollreed: harvest -> reed stems
 reed stems: glue -> papyrus
 hide/pelt: wash in solution -> untanned leather
 untanned leather: stretch -> parchment
-rag/torn cloth/cotton/linen/hemp/wood: bath in solution -> (x) pulp
-(x) pulp: strain -> (x) paper
+rag/torn cloth/cotton/linen/hemp/wood: bath in solution -> [x] pulp
+[x] pulp: strain -> [x] paper
 
-cotton fabric + blue dye (indigo or woad) -> denim -> blue jeans
+	CLOTHES:
+
+thread types:
+hemp (midweight, strong, rough)
+linen (midweight, tempered, mid)
+cotton (light, weak, soft)
+wool (heavy, tempered, soft)
+silk (light, strong, soft)
+^^^ each of these threads can be spun on a spinning wheel from the raw fibers
+
+hemp thread: ply -> twine (nets)
+linen thread: ply -> linen string (bows fishing)
+cotton thread: ply -> cotton string (wicks, yoyos, cotton swab?)
+silk threads: ply -> silk string (bows, fishing)
+
+yarn: knit -> hodden
+twine: ply -> hemp rope
+silk string: ply -> silk rope
+
+plain weave:
+hemp + hemp -> sackcloth
+linen + linen -> coarse linen (cheap light clothes, cloths/towels)
+cotton + cotton -> sailcloth (sails, tent, canvases)
+wool + wool -> hodden (cheap warm clothes)
+hemp + any -> sackloth
+linen + cotton -> buckram (hats, books, bandages)
+linen + wool -> broadcloath (upholstery)
+cotton + wool -> russet (cheap mid clothes)
+
+twill weave:
+linen + linen -> linen (standard light cloth)
+cotton + cotton -> denim (durable)
+wool + wool -> tweed
+linen + cotton -> fustian (well rounded)
+linen + wool -> serge (protective)
+cotton + wool -> flannel (warm)
+
+satin weave:
+linen + linen -> fine linen (light)
+cotton + cotton -> sateen (shiny, soft but weaker than satin)
+wool + wool -> cassimere (very warm and soft)
+silk + silk -> satin (most prized)
+linen + cotton -> cambric (small fine items)
+linen + wool -> gabardine (officer uniforms, grey formal)
+cotton + wool -> poplin (wedding dress, light formal)
+silk + linen -> linsilk (wizard clothes)
+silk + cotton -> velvet (soft and delicate)
+silk + wool -> bombasine (dark formal)
+
+^^^ any cloth can be torn into its equivalent "rags"
+rags, or some wood and plant fibers can be dissolved and beaten into their fiber pulp in 
+a certain solution. rags of silk and cotton turn into least amount o pulp. pulp can also be 
+pressed into paper in a paper press. perhaps pulp needs to be treated to change its quality:
+(brown paper, white paper)
+
+non woven fabrics:
+pigskin, goatskin, fleece, cowhide, horsehide
+^^^ these can be cut and sewn directly into hide clothes, or turned to leather
+any hide: lime bath -> rawhide
+rawhide: tannen bath -> leather
+^^^ can be cut and sewn into leather armor
+rawhide: stretching+cutting -> parchment/vellum
+
+
+cotton fabric + blue dye (woad) -> denim -> blue jeans
+
+	BREWS:
 
 tea plant: pluck -> tea leaf
 tea leaf: boil -> white tea, cook -> roasted tea leaf, ground -> ground tea leaf
@@ -1180,6 +1308,33 @@ kola plant: harvest -> kola nut
 kola nut: grind -> ground kola
 ground kola: brew/boil -> kola tonic (maybe also require a leaf or burdock and dandelion?)
 
+crimson + clover: brew -> philter, maybe a crimson flower instead of lacbug?
+
+red/yellow clay: heat 1000c -> earthenware
+red/yellow clay: heat 1500c+ -> shatters
+
+grey/black clay: heat 1000c -> bisqueware (can be glazed and refired @ low temp)
+grey/black clay: heat 1500c -> stoneware
+grey/black clay: heat 2000c+ -> shatters
+
+white clay: heat 1000c -> white bisqueware (can be glazed and refired @ low temp)
+white clay: heat 1500c -> white stoneware
+white clay: heat 2000c -> porcelain
+
+^^^ these can be mixed with grog (crushed shards), sand, or frit (glass)
+any mixed with frit becomes fritware
+if mixed with silt or loam, it will shatter
+different kilns reach different heats, "dragon kiln" will get it to 2000
+red clay: filter -> yellow clay + silt
+black clay: filter -> grey clay + silt
+glazes: celadon (green glaze), faience, bucchero, lusterware, majolica
+
+
+woad leaf: grind -> woad leaf powder: soak -> woad pulp: dry -> indigo (powder): brew -> blue dye
+madder root: grind -> madder powder: boil -> alizarin (powder): brew -> red dye
+weld flower: boil -> yellow dye
+^^^ can get green from mixing blue and yellow, or from another plant
+red + yellow/blue makes brown dye; purple and orange are from their own sources
 
 
 
@@ -1213,6 +1368,8 @@ so these dungeons are generally just clusters of room nodes in the world graph t
 - hunt the wumpus map, with a WUMPUS!!! and traps and whatnot
 - at the bottom of the pit, a temple to the imprisoned god uramut.
 	Uramut manages to possess someone in the world and they gouge their eyes out and have one yellow eye on their head, Uramut wants to be released.
+- hell: tartatus, hades, sheol, gehinnom, abaddon, kur, kigal, ersetu, cocytus, duzakh (house of lies)
+	- palace Ganzir,
 
 several settlements exist in the world (aim for like at least 9)
 - Folkston/Folksvale
@@ -1221,7 +1378,7 @@ several settlements exist in the world (aim for like at least 9)
 - Bellfort
 - Dandelot
 
-thirteen historical cities
+HISTORICAL CITY IDEAS:
 phillopolos (feldiv/pilov) - still exists
 jericho (ariha) - still exists, has an ancient tree 
 catalhoyuk (kadala) - razed by first empire
@@ -1236,7 +1393,8 @@ cahokia - unknown
 norte chico - unknown
 chichen itza - unknown
 
-additional place ideas
+ADDITIONAL PLACE IDEAS:
+- the burgage (rented complex)
 - brigadoon (disappearing village)
 - apple forest (early quest setting)
 - seawall
@@ -1261,8 +1419,19 @@ additional place ideas
 - town called "___-burn"
 - brothel, when you go in it gives an ellipsis and then you leave.
 
+INSTITUTIONS:
+- royal messengers (mages that maintain teleportation)
+- royal guard (spellswords)
+- clothier's guild
+- alchemist's guild
+- builder's guild
+- smiths are unguilded (independent)
+- ranger's guild (robinhood types?)
+- raveneers (Neurtal mercenaries/adventurers/assassins)
+- frith guild
+- beghards and beguines
 
-misc world ideas
+MISC WORLD IDEAS:
 - witengamot
 - "omens aghast" as a greeting
 - grimoire, book of spells
@@ -1272,7 +1441,8 @@ misc world ideas
 - giant eternal clock
 - a story legend of a hero who masters magic in an underground empire, called "ZORK"
 - monolith/obelisk
-- magic nail
+- magic nail (like golden railroad nail?)
+- fighting ur nega/anti self
 - sign that says "no philandering!"
 - gnomes
 - magic art museum?
@@ -1296,11 +1466,16 @@ misc world ideas
 - "if you see a fox in the forest, don't follow it"
 - "Abandon all hope, ye who enter here"
 - "If you listen I can tell you more about this world" - someone who only lies
+- seven wonders: lighthouse, colossus, gardens, citadel/castle, mountain sanctuary, 
+	mausoleum, giant tree, huge obelisk, giant cavern/stone temple, island palace,
+	giant library (Athenaeum), cathedral, tower of some kind, colosseum/arena, 
+	catacombs/necropolis, pavilion, stonehenge type (the __ stones)
+- obelisks at different leylines, maybe they're called leystones or monoliths
+
+
 
 
 QUEST IDEAS:
-
-- golden bug quest
 - whodunit mystery (one or two of these)
 - becoming an esteemed knight
 - jack and the beanstalk quest with hen and harp
@@ -1309,55 +1484,64 @@ QUEST IDEAS:
 - one quest for each god's temple, and the player gets rewarded with a QP for it and a word from the god.
 - bone faeries which will give you money for bones
 - fighting bones malone and the spooky boys
+- impersonating someone to gain entry to a place
 
 
 CHARACTER NAME IDEAS:
-	Orion - boss
-	Pax - person
-	giant swamp crocodile
-	Lilith - demon lady? (Secretly a demon lady???)
-	Mammon - demon representing greed?
-	Somnus
 	The zodiac signs
 	The Lady of the Lake
 	Enchantress of Number(Numeral)
-	Master of Ravens
 	All-knowing demon that follows you (Laplace's Demon)
 	villain king of people
 	villain king of monsters
 	villain king of beasts
+	giant swamp crocodile
+	Lilith - demon lady? (Secretly a demon lady???)
+	Mammon - demon representing greed?
+	Glycon the false Serpent God (secretly a puppet?)
 	Balthazar the Wizard
-	Tyro
-	Cogg
-	Garl
-	Sir Tom Knight (Sir Tom the Hero!)
-	Mr.Oliphant
-	Ike
-	Uther
-	Kess
-	Roach
-	Mito
 	A mage named Greengage
 	Demons named null and void
+	Master of Ravens
+	Sir Tom Knight (Sir Tom the Hero!)
+	Mr.Oliphant
 	Sir Bors
-	Lugh
-	Muriel
-	Eadmer
-	Godfrey
-	Einhard
-	Vixen
 	Gremlaw the Goblin
-	Aloy
-	The Frog Prince
-	Eilonwy
-	Beowin
-	Wayland the Smith
-	Rook
-	Alahad
-	Galatea
-	Grin
-	Spiridon
-	Khartoum
+	The Oracle
+	Yernagate the wise 
+	Boyg - from Peer Gynt, gigantic troll serpent
+	Leviathan
+	Swan Maiden
+	Gog and Magog - maybe evil?
+	one bbeg is the world serpent called Aeormungand (Leviathan?), also called Demiurge
+	The Green Goddess
+	Galigantus the giant
+	Grendel
+	Pergynt - from myth, maybe an ex-hero guy
+	Archons (regional rulers? maybe names for the giants)
+	Ashaver - Wandering eternal old man, was a cobbler
+	Saint guinefort - holy dog
+	Gelert, another good dog
+	Dovregubben (the mountain king) from Peer Gynt. Rescuing three dairy maids?
+	Polemarch (archon of war)
+	Hazelnut farmer with children named, fil, bert, hazel, and pet nut
+	The Benevolent Frog King (looking for his son the frog prince?) - Vodyantsar?
+	The Frog Prince (vodyanoy)
+	Frog Wizard - Zazmoze
+	another bbg (Behemoth)
+	also an evil wizard ofc
+	a cultist of Uramut who becomes possessed and tries to unleash him
+	a fighter/warrior warlord
+	a mob boss criminal type
+	King Nidhad,
+	Wayland the Smith/Volund the Smith
+	Egil the Archer (from myth)
+	Dietrich Von ___ hero, along with Regin Smith, Heimir, Wittich
+	Drythelm
+
+	Somnus, Orion, Pax, Tyro, Cogg, Garl, Ike, Uther, Kess, Roach, Mito, Lugh, Muriel
+	Eadmer, Godfrey, Einhard, Vixen, Aloy, Eilonwy, Beowin, Rook, Alahad, Galatea, Grin
+	Spiridon, Khartoum, Heironymus, Gundahar, Wace, Leofwyn
 
 	polemarch,commodore,margrave,
 	thane,earl,baron,duke,burgess,
@@ -1380,33 +1564,14 @@ CHARACTER NAME IDEAS:
 	blacksmith,brownsmith,whitesmith,goldsmith,silversmith,locksmith,gunsmith
 	carpenter,mason,glassmaker,wainwright,sawyer
 	cooper,potter,chandler,fletcher,bowyer,luthier
-	tanner,tailor,weaver,seamstress,cobbler,hatter,parchminer
+	fuller,tanner,tailor,weaver,seamstress,cobbler,hatter,parchminer
 	fisherman,huntsman,woodsman
 	beekeeper,aviarist,falconist,ratcatcher,
 	rancher,stablekeeper,cowboy,shepherd,ostler
 	farmer,gardener,sweeper,yeoman
 	innkeeper,tavernkeeper
-	traveler,pilgrim
-
-	Hazelnut farmer with children named, fil, bert, hazel, and pet nut
-	Yernagate the wise 
-	The Oracle
-	Dovregubben (the mountain king) from Peer Gynt. Rescuing three dairy maids?
-	Boyg - from Peer Gynt, gigantic troll serpent
-	Glycon the false Serpent God (secretly a puppet?)
-	Leviathan
-	The Green Goddess
-	Galigantus the giant
-	Grendel
-	Archons (regional rulers? maybe names for the giants)
-	Polemarch (archon of war)
-	The Benevolent Frog King (looking for his son the frog prince?) - Vodyantsar?
-	one bbeg is the world serpent called Aeormungand (Leviathan?), also called Demiurge
-	another bbg (Behemoth)
-	also an evil wizard ofc
-	a cultist of Uramut who becomes possessed and tries to unleash him
-	a fighter/warrior warlord
-	a mob boss criminal type
+	traveler,pilgrim,
+	ragpicker/junkman,confectioner,collier
 
 
 
@@ -1517,7 +1682,7 @@ Locust, Cicada, Mayfly, Moth, Bumblebee,
 Aphid, Louse, Weevil, Lady Beetle, Tiger Beetle,
 Pillbug, Bedbug, Mealybug, Scarab Beetle, Tick,
 Snail, Earthworm, Slug, Seaslug, Glowworm,
-Centipede, Millipede, Leafhopper, Lovebug, Beholderfly,
+Centipede, Millipede, Leafhopper, Lovebug, Lacbug,
 Goblinmite, Brainworm, Orc Beetle, Mimicbug, Waterbear
 
 
@@ -1530,15 +1695,15 @@ Delirium, Deluge, Dessicate, Discord
 Effervesce, Eidolon, Enchant, Ennervation, Enthrall, Expectorate, Expell
 Facade, Facsimile, Feast, Festoon, Fib, Fireball, Fizz, Flare, Frostbite
 Galvanize, Gambit, Glower, Goad, Gorgonize, Gravitas
-Halo, Harmony, Haste, Haunt, Hex, Hypnosis
+Halo, Harmony, Haste, Haunt, Hayfever Hex, Hypnosis
 Immolate, Invigorate, Invisibility, Iridescence
 Jackpot, Jamboree, Jargon, Jeopardy, Judgement
 Lampoon, Lash, Lethargy, Levitate, Lignify, Limerence, Lure
-Maelstrom, Malaise, Manumit, Melancholy, Micturate, Mirage, Moonshot
+Maelstrom, Malaise, Manumit, Melancholy, Micturate, Miracle (random effect), Mirage, Moonshot
 Nyctophobia
 Parley, Paroxysm, Parry, Penumbra, Petrify, Phantasm, Pilfer, Ponder, Prescience, Psychosis, Putrefaction
 Refection, Rend, Repast, Resurrect, Revelry, Riposte, Ruin
-Sanctuary, Scry, Serein, Shivaree, Simper, Simulacrum, Smite, Smithereens, Spangle, Squib, Sunder, Sunshower, Synpase
+Sanctuary, Scintillate, Scry, Serein, Shivaree, Simper, Simulacrum, Smite, Smithereens, Spangle, Squib, Sunder, Sunshower, Synapse
 Telekinesis, Tempest, Tether, Torrent
 Usurp
 Vamoose, Vendetta, Veritas, Volley

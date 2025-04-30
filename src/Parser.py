@@ -43,11 +43,13 @@ def chooseObject(name,objects,verb=None):
 				labels.append("dead")
 			else:
 				labels.append(f"{object.hp} hp")
-		if not isinstance(object.parent,(Core.Room,Core.Player)):
+		if not isinstance(object.parent,(type(None),Core.Room,Core.Player)):
 			labels.append(object.parent.name)
 		if object is Core.player:
 			labels.append("you")
-		if object is Core.player.carrying:
+		elif isinstance(object,Core.Room):
+			labels.append("here")
+		elif object is Core.player.carrying:
 			labels.append("carrying")
 		elif object is Core.player.riding:
 			labels.append("riding")
@@ -306,6 +308,8 @@ def parse():
 			if len(command) != 1:
 				return promptHelp(f"The '{verb}' command can only be one word.")
 			if verb == "here":
+				return Core.player.parent.describe()
+			if verb == "room":
 				return Core.game.currentroom.describe()
 			if verb in Data.abilities:
 				return Core.player.printAbility(verb.upper())
@@ -376,7 +380,8 @@ def Get(command):
 
 	if objname in ("p","player","my","self"): obj = Core.player
 	elif objname in ("g","game"): obj = Core.game
-	elif objname in ("here","room"): obj = Core.game.currentroom
+	elif objname == "here": obj = Core.player.parent
+	elif objname == "room": obj = Core.game.currentroom
 	elif objname in ("w","world"): obj = Core.world
 	elif objname in Core.world: obj = Core.world[objname]
 	else: obj = findObject(objname,"get",playerD=3,roomD=3)
@@ -469,7 +474,8 @@ def Set(command):
 
 	if objname in ("p","player","my","self"): obj = Core.player
 	elif objname in ("g","game"): obj = Core.game
-	elif objname in ("here","room"): obj = Core.game.currentroom
+	elif objname == "here": obj = Core.player.parent
+	elif objname == "room": obj = Core.game.currentroom
 	elif objname in ("w","world"): obj = Core.world
 	else: obj = findObject(command[1],"set",playerD=3,roomD=3)
 
@@ -573,8 +579,7 @@ def Examples(*args):
 
 
 def Exits(*args):
-	exitText = []
-	for key, val in Core.game.currentroom.allExits().items():
+	for key, val in Core.player.parent.allExits().items():
 		Core.Print(f"{key}:	{val}",color="k")
 
 
@@ -1003,7 +1008,7 @@ def Drop(dobj,iobj,prep,I=None):
 					Core.player.removeCarry(I)
 				else:
 					Core.player.remove(I)
-					Core.game.currentroom.add(I)
+					Core.player.parent.add(I)
 				Core.Print(f"You drop {-I} {prep} {-R}.")
 				return R.Transfer(I)
 			else:
@@ -1021,7 +1026,7 @@ def Drop(dobj,iobj,prep,I=None):
 	else:
 		I.parent.remove(I)
 		Core.Print(f"You drop {-I}.")
-		Core.game.currentroom.add(I)
+		Core.player.parent.add(I)
 	return True
 
 
@@ -1056,8 +1061,6 @@ def Eat(dobj,iobj,prep):
 
 
 def Enter(dobj,iobj,prep):
-	if dobj is None and "in" in Core.game.currentroom.exits:
-		return Go("in",iobj,prep)
 	return Go(dobj,iobj,"in")
 
 
@@ -1098,7 +1101,7 @@ def Escape(dobj,iobj,prep):
 
 
 def Exit(dobj,iobj,prep):
-	if dobj is None and "out" in Core.game.currentroom.exits:
+	if dobj is None and "out" in Core.player.parent.allDirs():
 		return Go("out",iobj,prep)
 	return Go(dobj,iobj,"out")
 
@@ -1156,7 +1159,7 @@ def Give(dobj,iobj,prep):
 # called when the user wants to go "up" or "down"
 def GoVertical(dir,passage=None,dobj=None):
 	if Core.player.hasCondition("flying") and not Core.player.riding:
-		newroomname = Core.game.currentroom.allExits()[dir]
+		newroomname = Core.game.currentroom.allExits()[dir,passage]
 		Core.Print(f"You fly {dir}!")
 		return Core.player.changeLocation(Core.world[newroomname])
 
@@ -1176,21 +1179,35 @@ def GoVertical(dir,passage=None,dobj=None):
 def parseGoTerms(dobj,iobj,prep):
 	dir,dest,passage = None,None,None
 
+	parentExits = Core.player.parent.allExits()
 	# assign dest
-	if dobj in Core.game.currentroom.allExits().values(): dest = dobj
-	elif Core.nameMatch(dobj,Core.game.currentroom): dest = dobj
-	if iobj in Core.game.currentroom.allExits().values(): dest = iobj
-	elif Core.nameMatch(iobj,Core.game.currentroom): dest = iobj
+	if dobj in parentExits.values(): dest = dobj
+	elif Core.nameMatch(dobj,Core.player.parent): dest = dobj
+	if iobj in parentExits.values(): dest = iobj
+	elif Core.nameMatch(iobj,Core.player.parent): dest = iobj
+
+	def getDirAndPassage(term):
+		for dir,passage in parentExits.keys():
+			if term == dir:
+				return dir,passage
+		return None, None
 
 	# assign dir and passage
-	if dobj in Data.directions.values(): dir = dobj
-	elif dobj is not None: passage = findObject(dobj,f"go {prep}","room",silent=True)
-	elif iobj in Data.directions.values(): dir = iobj
-	elif dobj in Core.game.currentroom.allExits().keys(): dir = dobj
-	elif iobj in Core.game.currentroom.allExits().keys(): dir = dobj
-	elif iobj is not None: passage = findObject(iobj,f"go {prep}","room",silent=True)
-	elif dir is None: dir = prep
+	if dir is None and dobj in Data.directions.values(): dir = dobj
+	elif dir is None and iobj in Data.directions.values(): dir = iobj
+	else: dir = prep
 
+	if dobj is not None:
+		dir,passage = getDirAndPassage(dir)
+	elif iobj is not None:
+		dir2,passage2 = getDirAndPassage(dir)	
+		if dir is None:
+			dir = dir2
+		if passage is None:
+			passage = passage2
+
+	if passage is None: passage = findObject(dobj,f"go {prep}","room",silent=True)
+	if passage is None: passage = findObject(iobj,f"go {prep}","room",silent=True)
 	return dir,dest,passage
 
 
@@ -1200,12 +1217,6 @@ def Go(dobj,iobj,prep):
 	for cond in ("sitting","laying"):
 		if Core.player.hasCondition(cond) and Core.player.riding is None:
 			Core.Print(f"You can't go anywhere, you are {cond}.")
-			return False
-	if not isinstance(Core.player.parent,Core.Room):
-		if prep in ("out","outside","out of"):
-			return Core.player.parent.Traverse(Core.player,"out")
-		else:
-			Core.Print(f"You can't go anywhere, you are in {~Core.player.parent}.")
 			return False
 
 	preps = ("away","away from","down","through","to","toward","up","in","inside","into","on","onto","out",None)
@@ -1229,24 +1240,20 @@ def Go(dobj,iobj,prep):
 		Core.Print(f"There is no exit leading to a '{dobj}' here.",color="k")
 		return False
 	if dir is None:
-		dir = Core.game.currentroom.getDirFromDest(dest)
+		dir = Core.player.parent.getDirFromDest(dest)
 	if (dest,passage) == (None,None):
-		if dir in Core.game.currentroom.allExits():
-			dest = Core.game.currentroom.allExits()[dir]
-	if passage is None and dir not in Core.game.currentroom.exits:
-		passage = Core.game.currentroom.getPassageFromDir(dir)
+		if dir in Core.player.parent.exits:
+			dest = Core.player.parent.exits[dir]
+	if passage is None and dir not in Core.player.parent.exits:
+		passages = Core.player.parent.getPassagesFromDir(dir)
+		passage = chooseObject("way",passages,"go")
+		# this means player cancelled the choice
+		if len(passages) > 0 and passage is None:
+			return False
 	if (dest,passage) == (None,None):
-		if dir is not None and dir not in Core.game.currentroom.allExits():
-			if dir in ("in","into","inside"):
-				if dobj is None:
-					dobj = getNoun("What will you go into?")
-				passage = findObject(dobj,"go into","room")
-				if passage is None:
-					return False
-			else:
-				Core.Print(f"There is no exit leading '{dir}' here.",color="k")
-				return False
-	if passage is None and Core.nameMatch(dest,Core.game.currentroom):
+		Core.Print(f"There is no exit leading '{dir}' here.",color="k")
+		return False
+	if passage is None and Core.nameMatch(dest,Core.player.parent):
 		Core.Print(f"You are already there!")
 		return False
 

@@ -222,7 +222,7 @@ def yesno(question,delay=0.005,color=None):
 		else:
 			return None
 	refuseMsg = "Enter yes or no."
-	return InputLoop(question,acceptKey=acceptKey,escapeKey=None,helpMsg="",refuseMsg=refuseMsg)
+	return InputLoop(question,acceptKey=acceptKey,escapeKey=None,helpMsg="",refuseMsg=refuseMsg,color=color,delay=delay)
 
 
 # prints a timed ellipsis, used for dramatic transitions
@@ -436,6 +436,7 @@ def assignRefsRecur(parent):
 	if not hasMethod(parent,'contents'):
 		return
 	for obj in parent.contents():
+
 		# everything in the world or player inv should be Item or Creature
 		assert isinstance(obj, (Item, Creature)), f"object is not Item or Creature: {obj}, it is type {type(obj)}"
 		obj.assignParent(parent)
@@ -447,34 +448,39 @@ def assignRefsRecur(parent):
 # also assigns parents for all world objects (read objQuery() comments)
 # also assigns dialogue trees for speakers and validates them
 def buildWorld():
-	namesToDelete = []
+	for roomName in world.copy():
+		room = world[roomName]
+		del world[roomName]
+		if room.name.lower() in world:
+			raise Exception("Room name exists in world already... two rooms may not have the same name.")
+		world[room.name.lower()] = room
+
 	for room in world.values():
 		assert isinstance(room, Room)
 		assignRefsRecur(room)
 
+		# exitsToDelete = []
 		for direction in room.exits:
-			connection = room.exits[direction]
-			if connection not in world:
-				namesToDelete.append(connection)
+			dest = room.exits[direction]
+			if dest not in world:
+				raise Exception("Room exit not in world:",room,direction,dest)
+		# 		exitsToDelete.append(connection)
+		# for exit in exitsToDelete:
+		# 	del room.exits[exit]
 
 		for passage in room.getPassages():
-			connectionsToDelete = []
-			for connection in passage.connections:
-				roomname = passage.connections[connection]
-				if roomname not in world:
-					connectionsToDelete.append(connection)
-
-			for connection in connectionsToDelete:
-				del passage.connections[connection]
+			# connectionsToDelete = []
+			for direction in passage.connections:
+				dest = passage.connections[direction]
+				if dest not in world:
+					raise Exception("Passage connection not in world:",room,passage,direction,dest)
+			# 		connectionsToDelete.append(connection)
+			# for connection in connectionsToDelete:
+			# 	del passage.connections[connection]
 
 		# assign the dialogue trees for all creatures and validate them
 		for creature in objQuery(room, d=3, key=lambda x: isinstance(x,Speaker)):
 			creature.buildDialogue()
-
-	# this is done in a separate loop to prevent errors caused by...
-	# deleting elements from dict while iterating over the dict
-	for name in namesToDelete:
-		del world[name]
 
 
 
@@ -1103,7 +1109,6 @@ class Game():
 		prev_hour = self.hour()
 		self.time += t
 		self.silent = player.hasAnyCondition("asleep","dead")
-		player.passTime(t)
 		for room in self.renderedRooms():
 			self.silent = room is not self.currentroom or player.hasAnyCondition("asleep","dead")
 			room.passTime(t)
@@ -1150,7 +1155,7 @@ class Game():
 	def roomFinder(self,n,Sroom,pathlen,foundrooms):
 		if pathlen >= n:
 			return
-		adjacentRooms = [world[name] for name in Sroom.allExits().values()]
+		adjacentRooms = [world[name] for name in Sroom.worldExits()]
 		for room in adjacentRooms:
 			foundrooms.add(room)
 			self.roomFinder(n,room,pathlen+1,foundrooms)
@@ -1527,10 +1532,12 @@ class Room():
 		# add status conditions from this room
 		for cond,dur in self.status:
 			applyCond = False
-			if cond.startswith("ITEM") and isinstance(obj,Item):
+			if cond.startswith("AREA"):
 				applyCond = True
-			if cond.startswith("AREA") and isinstance(obj,Creature):
-				applyCond = True				
+			elif cond.startswith("ITEM") and isinstance(obj,Item):
+				applyCond = True
+			elif cond.startswith("CREATURE") and isinstance(obj,Creature):
+				applyCond = True
 			if applyCond:
 				[name,dur] = extractConditionInfo(cond)
 				obj.addCondition(name,dur)
@@ -1557,19 +1564,24 @@ class Room():
 		return 10000
 
 
-	# returns dict of exits, where keys are directions and values are room names
-	def allExits(self):
+	# returns dict of exits, where keys are (direction,portal) and values are room names
+	def allExits(self,d=3):
 		exits = {}
 		for dir in self.exits:
-			exits[dir] = self.exits[dir]
-		# get a list of passages in the room
-		passages = self.getPassages()
-		# for each passage, add its connections to exits
-		for passage in passages:
-			for dir in passage.connections:
-				if dir not in exits:
-					exits[dir] = passage.connections[dir]
+			exits[(dir,None)] = self.exits[dir]
+		# for each portal, add its connections to exits
+		for portal in self.query(key=lambda x: isinstance(x,Portal),d=d):
+			for dir in portal.connections:
+				exits[(dir,portal)] = portal.connections[dir]
 		return exits
+
+
+	def allDirs(self):
+		return (tuple[0] for tuple in self.allExits())
+
+
+	def worldExits(self):
+		return (exit for exit in self.allExits().values() if type(exit) is str)
 
 
 	def itemNames(self):
@@ -1578,7 +1590,7 @@ class Room():
 
 	# returns a list of Passage objects within the room's items
 	def getPassages(self):
-		return [item for item in self.contents() if isinstance(item,Passage)]
+		return [item for item in self.query(key=lambda x: isinstance(x,Passage))]
 
 
 	def creatureNames(self):
@@ -1614,19 +1626,19 @@ class Room():
 
 	# given a direction (like 'north' or 'down)...
 	# return the first Passage object with that direction in its connections
-	def getPassageFromDir(self,dir):
-		for passage in self.getPassages():
-			if dir in passage.connections:
-				return passage
-		return None
+	def getPassagesFromDir(self,dir):
+		passages = []
+		for thisDir, passage in self.allExits(d=0):
+			if dir == thisDir:
+				passages.append(passage)
+		return passages
 
 
 	# if the given room object, dest, is in one of the rooms exits, then find the direction it is in from the room.
 	def getDirFromDest(self,dest):
-		if dest in self.allExits().values():
-			idx = list(self.allExits().values()).index(dest)
-			dir = list(self.allExits().keys())[idx]
-			return dir
+		for (dir,passage), thisDest in self.allExits().items():
+			if thisDest == dest:
+				return dir
 		return None
 
 
@@ -1806,12 +1818,7 @@ class Item():
 			if self.room() is game.currentroom:
 				Print(f"{+self} falls from above.")
 				
-		# contents might spill out if item breaks
-		contents = self.contents().copy()
 		self.takeDamage(height,"b")
-		for obj in contents:
-			# TODO, revise how damage is mitigated here based on composition/durability?
-			obj.takeDamage(height//3,"b")
 		return True
 
 
@@ -3188,7 +3195,7 @@ class Player(Creature):
 		while QP > 0:
 			self.printTraits()
 			Print(f"\nQuality Points:	{QP}")
-			trait = Input("What trait will you improve?\n> ")
+			trait = Input("What trait will you improve?")
 			Print()
 			if trait not in Data.traits:
 				continue
@@ -3937,9 +3944,7 @@ class Animal(Speaker):
 		if len(matches) == 1:
 			chest = matches.pop()
 			if player in chest.contents():
-				print('player in chest')
-				cliff = self.parent.nameQuery('cliff').pop()
-				cliff.Transfer(chest)
+				chest.changeLocation(world['phlegethon'])
 
 
 	def climb():
@@ -4020,6 +4025,112 @@ Set status
 
 '''
 
+
+# Portals are guaranteed to have a traverse and transfer method and a connections and passprep attribute
+class Portal(Item):
+	def __init__(self,name,desc,weight,durability,composition,connections,descname,passprep="into",**kwargs):
+		Item.__init__(self,name,desc,weight,durability,composition,**kwargs)
+		self.connections = connections
+		self.exits = self.connections
+		self.descname = descname
+		self.passprep = passprep
+
+
+	### Operation ###
+
+	# method for creatures travelling through the portal
+	def Traverse(self,traverser,dir=None):
+		if dir == None or dir not in self.connections:
+			if len(set(self.connections.values())) == 1:
+				dir = list(self.connections.keys())[0]
+			else:
+				msg = f"Which direction will you go on the {self.name}?"
+				dir = InputLoop(msg)
+				if dir is None:
+					return False
+		if dir not in self.connections:
+			Print(f"The {self.name} does not go '{dir}'.")
+			return False
+
+		if traverser is player:
+			waitKbInput(f"You go {dir} the {self.name}.")
+		newroom = world[self.connections[dir]]
+		traverser.changeLocation(newroom)
+		return True
+
+
+	# method for items travelling through portal
+	def Transfer(self,item):
+		if isinstance(item,Creature):
+			return self.Traverse(item,dir="down")
+
+		if "down" in self.connections:
+			return item.Fall(room=world[self.connections["down"]])
+
+		# item can't randomly go up
+		dir = choice([dir for dir in self.connections])
+		if self.connections[dir] == self.connections.get("up",None):
+			return item.Fall()
+
+		# Print(f"{+item} goes {self.passprep} {-self}.")	
+		item.changeLocation(world[self.connections[dir]])
+
+
+	def Bombard(self,missile):
+		assert isinstance(missile,Projectile)
+		if diceRoll(1,100) < bound(missile.aim+self.weight+10,1,99):
+			if getattr(self,"open",True):
+				# Print(f"{+missile} goes {self.passprep} {-self}.")
+				self.Transfer(missile.asItem())
+			else:
+				missile.Collide(self)
+			return True
+		return False
+
+
+	# returns dict of exits, where keys are directions and values are room names
+	def allExits(self,d=3):
+		exits = {}
+		for dir in self.connections:
+			exits[(dir,None)] = self.connections[dir]
+		# get a list of passages in the room
+		portals = self.query(key=lambda x: isinstance(x,Portal),d=d)
+		# for each portal, add its connections to exits
+		for portal in portals:
+			for dir in portal.connections:
+				if dir not in exits:
+					exits[(dir,portal)] = portal.connections[dir]
+		return exits
+
+
+	def getPassages(self):
+		return [item for item in self.query(key=lambda x: isinstance(x,Passage))]
+
+
+	# given a direction (like 'north' or 'down)...
+	# return the first Passage object with that direction in its connections
+	def getPassagesFromDir(self,dir):
+		passages = []
+		for thisDir, passage in self.allExits(d=0):
+			if dir == thisDir:
+				passages.append(passage)
+		return passages
+
+
+	# if the given room object, dest, is in one of the rooms exits, then find the direction it is in from the room.
+	def getDirFromDest(self,dest):
+		for (dir,passage), thisDest in self.allExits().items():
+			if thisDest == dest:
+				return dir
+		return None
+
+
+	def allDirs(self):
+		return (tuple[0] for tuple in self.allExits())
+
+
+
+
 # almost identical to the item class, but fixtures may not be removed from their initial location.
 class Fixture(Item):
 	def __init__(self,name,desc,weight,durability,composition,mention=False,**kwargs):
@@ -4041,7 +4152,7 @@ class Fixture(Item):
 
 
 
-class Passage(Fixture):
+class Passage(Portal,Fixture):
 	def __init__(self,name,desc,weight,durability,composition,connections,descname,passprep="into",mention=False,**kwargs):
 		Fixture.__init__(self,name,desc,weight,durability,composition,mention=mention,**kwargs)
 		self.connections = connections
@@ -4049,54 +4160,6 @@ class Passage(Fixture):
 		self.passprep = passprep
 
 
-	### Operation ###
-
-	def Traverse(self,traverser,dir=None):
-		if dir == None or dir not in self.connections:
-			if len(set(self.connections.values())) == 1:
-				dir = list(self.connections.keys())[0]
-			else:
-				msg = f"Which direction will you go on the {self.name}?"
-				dir = InputLoop(msg)
-				if dir is None:
-					return False
-		if dir not in self.connections:
-			Print(f"The {self.name} does not go '{dir}'.")
-			return False
-
-		if traverser is player:
-			waitKbInput(f"You go {dir} the {self.name}.")
-		newroom = world[self.connections[dir]]
-		traverser.changeLocation(newroom)
-		return True
-
-
-	def Bombard(self,missile):
-		assert isinstance(missile,Projectile)
-		if diceRoll(1,100) < bound(missile.aim+self.weight+10,1,99):
-			if getattr(self,"open",True):
-				# Print(f"{+missile} goes {self.passprep} {-self}.")
-				self.Transfer(missile.asItem())
-			else:
-				missile.Collide(self)
-			return True
-		return False
-
-
-	def Transfer(self,item):
-		if isinstance(item,Creature):
-			return self.Traverse(item,dir="down")
-
-		if "down" in self.connections:
-			return item.Fall(room=world[self.connections["down"]])
-
-		# item can't randomly go up
-		dir = choice([dir for dir in self.connections])
-		if self.connections[dir] == self.connections.get("up",None):
-			return item.Fall()
-
-		# Print(f"{+item} goes {self.passprep} {-self}.")	
-		item.changeLocation(world[self.connections[dir]])
 
 
 

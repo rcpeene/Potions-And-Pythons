@@ -12,9 +12,37 @@
 		"creatures": [],
 		"status": []
 	},
-	"big tree": {
+	"big stump": {
 		"__class__": "Room",
-		"name": "Big Tree",
+		"name": "Big Stump",
+		"domain": "Woodlands",
+		"desc": "There is a flat, dark tree stump here. It is larger than any of the other trees nearby. To the north, there is a reddish-brown structure near the base of a cliff. To the east, there is a clearing and a grassy hill.",
+		"exits": {
+			"north": "cliffside",
+			"east": "glen"
+		},
+		"fixtures": [],
+		"items": [
+			{
+				"__class__": "Axe",
+				"name": "iron hatchet",
+				"desc": "a small one-handed axe that is slightly dulled from use",
+				"aliases": ["axe","hatchet"],
+				"weight": 4,
+				"durability": 10,
+				"composition": "iron",
+				"might": 4,
+				"sleight": 0,
+				"sharpness": 1,
+				"range": 0,
+				"type": "s"
+			}
+		],
+		"creatures": []
+	},
+	"big oak": {
+		"__class__": "Room",
+		"name": "Big Oak",
 		"domain": "Woodlands",
 		"desc": "A very large oak tree stands before you. Much larger than any trees in the surrounding forest. It's vast height and cold shade feel imposing. To the north, a clearing can be seen in the distance. To the south, there a clearing with a grassy hill. To the east and west, more woods.",
 		"exits": {
@@ -40,13 +68,13 @@
 	},
 	"boulder": {
 		"__class__": "Room",
-		"name": "boulder",
+		"name": "Boulder",
 		"domain": "Woodlands",
 		"desc": "Here there is a big grey boulder the size of an elephant. It has dark green moss growing on the south side. A clearing can be seen in the distant north. To the east there is a very wide tree.",
 		"exits": {
 			"north": "treeline",
 			"south": "pond",
-			"west": "big tree"
+			"west": "big oak"
 		},
 		"fixtures": [],
 		"items": [],
@@ -59,7 +87,7 @@
 		"domain": "Woodlands",
 		"desc": "A softly babbling brook flows here. Only a few feet wide, it rolls past moist rocks and a muddy bank. In the north there is a large tree. The brook flows to the east. To the south is a clearing with a grassy hill. To the west, a man-made structure can be seen through the trees.",
 		"exits": {
-			"north": "big tree",
+			"north": "big oak",
 			"east": "pond",
 			"south": "glen",
 			"west": "cliffside"
@@ -360,6 +388,21 @@
 					{
 						"__class__": "Serpens",
 						"value": 12
+					},
+					{
+						"__class__": "Passage",
+						"name": "fiery portal",
+						"desc": "A blazing orange portal that hangs in the air, rippling",
+						"weight": 2,
+						"durability": 1000,
+						"composition": "fire",
+						"connections": {
+							"in": "burning shore"
+						},
+						"passprep": "into",
+						"mention": true,
+						"descname": "blazing orange portal",
+						"aliases": ["portal"]
 					}
 				]
 			}
@@ -525,9 +568,9 @@
 		"desc": "A small grassy glen, surrounded on most sides by a dense forest. To the north, you see no end to the trees. To the east there is a rocky ridge. The grassy hill on the south shows a gaping cave entrance. To the west, a small stream flows.",
 		"exits": {
 			"north": "brook",
-			"east": "pit",
-			"rocky ridge": "pit",
-			"ridge": "pit",
+			"east": "large pit",
+			"rocky ridge": "large pit",
+			"ridge": "large pit",
 			"south": "tunnel",
 			"west": "big stump",
 			"up": "above the woods"
@@ -557,6 +600,19 @@
 		"creatures": [],
 		"status": []
 	},
+	"burning shore": {
+		"__class__": "Room",
+		"name": "Burning Shore",
+		"domain": "Inferno",
+		"desc": "A searing blood red sandy island within a blazing sea of fire. The smell is putrid. The distance is covered by a yellow fog, and the only light from above is a single point showing in the pitch black ceiling. There is no way out.",
+		"exits": {
+			"up": "large pit"
+		},
+		"fixtures": [],
+		"items": [],
+		"creatures": [],
+		"status": [["AREA burning -1",10]]
+	},
 	"mound": {
 		"__class__": "Room",
 		"name": "Mound",
@@ -564,7 +620,7 @@
 		"desc": "Here there is a soft grass-covered mound a few metres on each side. To the north, a clearing can be seen in the distance. There is a large tree to the east. There is a wooden cabin through the trees in the south.",
 		"exits": {
 			"north": "treeline",
-			"east": "big tree",
+			"east": "big oak",
 			"south": "cliffside"
 		},
 		"fixtures": [],
@@ -573,7 +629,7 @@
 	},
 	"pit": {
 		"__class__": "Room",
-		"name": "Pit",
+		"name": "Large Pit",
 		"domain": "Woodlands",
 		"desc": "You are surrounded by insurmountable crags on the east and south. Here there is a deep black pit, big enough for a horse. You cannot see the bottom. To the north, the ground gets muddier. To the west, the treeline is broken.",
 		"exits": {
@@ -589,10 +645,10 @@
 				"durability": -1,
 				"composition": null,
 				"connections": {
-					"down": "cave",
-					"in": "cave"
+					"down": "burning shore",
+					"in": "burning shore"
 				},
-				"descname": "dark deep pit",
+				"descname": "dark pit",
 				"difficulty": 100
 			}
 		],
@@ -606,39 +662,11 @@
 		"desc": "A babbling brook flows from the west into a medium pond here. Lilypads and small green fish can be seen floating in the sparkling waters. To the north, the forest continues. There is a craggy area to the south.",
 		"exits": {
 			"north": "boulder",
-			"south": "pit",
+			"south": "large pit",
 			"west": "brook"
 		},
 		"fixtures": [],
 		"items": [],
-		"creatures": []
-	},
-	"big stump": {
-		"__class__": "Room",
-		"name": "Big Stump",
-		"domain": "Woodlands",
-		"desc": "There is a flat, dark tree stump here. It is larger than any of the other trees nearby. To the north, there is a reddish-brown structure near the base of a cliff. To the east, there is a clearing and a grassy hill.",
-		"exits": {
-			"north": "cliffside",
-			"east": "glen"
-		},
-		"fixtures": [],
-		"items": [
-			{
-				"__class__": "Axe",
-				"name": "iron hatchet",
-				"desc": "a small one-handed axe that is slightly dulled from use",
-				"aliases": ["axe","hatchet"],
-				"weight": 4,
-				"durability": 10,
-				"composition": "iron",
-				"might": 4,
-				"sleight": 0,
-				"sharpness": 1,
-				"range": 0,
-				"type": "s"
-			}
-		],
 		"creatures": []
 	},
 	"treeline": {
@@ -649,7 +677,7 @@
 		"exits": {
 			"north": "field",
 			"southeast": "boulder",
-			"south": "big tree",
+			"south": "big oak",
 			"southwest": "mound"
 		},
 		"fixtures": [],
