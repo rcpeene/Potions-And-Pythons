@@ -79,16 +79,14 @@ if __name__ == "__main__":
 # CURRENT TASKS
 
 # add ability to go into containers
-	# can something fall when its in a container? what if the container is falling?
-		# right now, the chest doesn't take damage because it falls from 0 alt to 0 alt
-	# handle case when creature is inside a chest and chest changes room
-		# try a teleporting box, going into a burning room
-	# what about including a passage within a container? does buildWorld work? or trying to go through
+	# > get out of chest... not working
+		# exit chest also
 	# include hiding ability?
 		# you are hiding (if in one)
 	# continue stand func with stand on and stand in
 		# try "get on bed", redirect Mounting an obj to stand
-	# limit ability to interact with room objects when in a chest
+# make player.aware(I) method, which instead of using currentroom, checks if I in player.surroundings.objTree
+	# replace references to currentroom with player.parent when needed
 # add "in" operator to objects
 # test throwing a person
 # throw snake into chest???
@@ -98,12 +96,11 @@ if __name__ == "__main__":
 # throw goblin up/down stairs
 # throw snake at goblin
 # "throw rock east", "throw dale east"
-
+# 	> get it chest
 # readjust throw force formula; compare to BRDN (shouldn't be able to throw heavier than you can have in inv, or more than you can carry in hands?
 # check if throwing a creature which has another riding it?
 # handle "get on" to mount or get on a table (wb get on table while on a horse?)
 # refactor drop into a creature method?
-# make player.aware(I) method, which instead of using currentroom, checks if I in player.surroundings.objTree
 
 # "you attack the goblin with your your hand!" is what shows up on attack
 # fix obtaining money problem, think about other objects which won't go into inv upon obtaining
@@ -135,6 +132,7 @@ if __name__ == "__main__":
 # try to pull creature off of its mount?
 # make items have an invisibility property? but what about if a missed projectile hits something invisible?
 # add in crafting recipes. Probably store this as a JSON?
+# add in "knockback"?, if you get hit on top of the cliff, have a chance to fall off?
 
 # add basic equipment and clothing items
 # make sure Touch method is called when player 'takes' an item (unless they use a hook or smth?)

@@ -50,16 +50,36 @@ class Bottle(Core.Item):
 
 
 
-class Box(Core.Item):
+class Box(Core.Portal):
 	def __init__(self,name,desc,weight,durability,composition,open,capacity,items,passprep=None,**kwargs):
-		Core.Item.__init__(self,name,desc,weight,durability,composition,**kwargs)
+		Core.Portal.__init__(self,name,desc,weight,durability,composition,{},name,None,**kwargs)
+		self.parent = None
+		self.passprep = "in" if passprep is None else passprep
+		self.connections = {self.passprep:self, "out":self}
 		self.open = open
 		self.capacity = capacity
 		self.items = items
-		self.passprep = "in" if passprep is None else passprep
 
 
 	### Operation ###
+
+	def addCondition(self,name,dur,stackable=False):
+		if Core.Item.addCondition(self,name,dur,stackable):
+			for item in self.items:
+				item.addCondition(name,dur,stackable)
+
+
+	def changeLocation(self,newparent):
+		prevparent = self.parent
+		if newparent is prevparent:
+			return False
+
+		if Core.player in self.items:
+			Core.Print(f"{+self} rumbles for a moment...")
+
+		prevparent.exit(self)
+		newparent.enter(self)
+
 
 	# sets open bool to true, prints its items
 	def Open(self,opener):
@@ -153,11 +173,16 @@ class Box(Core.Item):
 				if not self.open:
 					self.Open(traverser)
 				Core.Print(f"You get out of {-self}.")
+				if self.parent is not Core.game.currentroom:
+					Core.waitKbInput()
 				traverser.changeLocation(self.parent)
 				return True
 			else:
 				Core.Print(f"You're not in {-self}.",color="k")
 				return False
+		if traverser.parent is self:
+			Core.Print(f"You're already in {-self}.")
+			return False
 		if dir not in ("in","into","inside",None):
 			Core.Print(f"{+self} does not go {dir}.",color="k")
 			return False
@@ -201,6 +226,16 @@ class Box(Core.Item):
 		Core.Item.passTime(self,t)
 		for I in self.items:
 			I.passTime(t)
+
+
+	def Fall(self,height=0,room=None):
+		# contents might spill out if item breaks
+		contents = self.contents().copy()
+		Core.Item.Fall(self,height,room)
+		for obj in contents:
+			# TODO, revise how damage is mitigated here based on composition/durability?
+			obj.takeDamage(height//3,"b")
+		return True
 
 
 	### Getters ###

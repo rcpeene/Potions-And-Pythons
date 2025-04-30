@@ -54,14 +54,14 @@ def destroyObject(obj):
 
 
 def increment(obj,attribute,num):
-    if hasattr(obj, attribute):
-        current_value = getattr(obj, attribute)
-        if isinstance(current_value, int):
-            setattr(obj, attribute, current_value + increment)
-        else:
-            raise TypeError(f"The attribute '{attribute}' is not an integer.")
-    else:
-        raise AttributeError(f"The object {obj} has no attribute '{attribute}'.")
+	if hasattr(obj, attribute):
+		current_value = getattr(obj, attribute)
+		if isinstance(current_value, int):
+			setattr(obj, attribute, current_value + increment)
+		else:
+			raise TypeError(f"The attribute '{attribute}' is not an integer.")
+	else:
+		raise AttributeError(f"The object {obj} has no attribute '{attribute}'.")
 
 
 def Launch(obj,speed,aim,launcher,target):
