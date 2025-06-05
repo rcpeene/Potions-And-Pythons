@@ -891,8 +891,18 @@ GEAR:
 Cloak of Bees
 Nebula Shroud/Cloak
 
+Hauberk, Hauburgeon, Cuirass 
+Jerkin, Tabard, Surcoat, Gambeson
+Brigandine, Splintmail, Chaimail,
+Vambrace, Greaves, Sabatons,
+Burnoose
+Tam-o-shanter
+Kirtle
+Liripipe
+
 
 MAGIC ITEMS:
+Pomander
 Camphor Staff (or sm othr tree idk) Gingko Staff? etc,
 willow staff, banyan, aspen, birch, baobab, elm, sycamore, oak, pine, cyprus
 nimbus rod, cumulus rod, stratus rod
@@ -1147,6 +1157,9 @@ bergamot?
 woad - dye
 weld - dye
 madder - dye
+potherb
+rhubarb
+bulrush
 
 
 MINERALS/CHEMICALs:
@@ -1158,7 +1171,14 @@ orpiment, realgar, verdigris, amber, azurite, corundum,
 bone ash, grey ash -> potash -> pearl ash, salt ash or natron -> soda ash -> lye
 whitestone or chalk -> quicklyme (burns) -> mortar or plaster
 saltpeter, brimstone, coal coke
-gravel, sand, silt, clay, loam,
+gravel, sand, silt, clay, loam, soot
+calrete (kind of limestone)
+firestone (pyrite, source of iron and brimstone)
+leadglance (galena)
+alabaster, jet, bloodstone, onyx, pitchblende -> yellowcake
+copper, tin (found amongst granite), silver, gold, titanium, cobalt
+borax, calamine
+
 
 sticklac (from lacbug) -> seedlac -> shellac
 shellac -> candy glaze
@@ -1180,15 +1200,16 @@ something called "tentacular __"
 congerie
 molasses
 cassone
+brine (can get salt/salmiac from it?)
+albumen (egg whites)
 wainscot
 elixir of immortality (also requires venom)
 strange milk - makes you high, made from cows fed certain mushrooms
 Catgut
 ambergris
 chaff - inedible plant matter
-star jelly
-royal jelly
-grass jelly
+volcano snail teeth (strongest biological substance)
+urim and thummim
 alembic
 something called "vim"
 lodestone
@@ -1199,21 +1220,38 @@ paper (cotton, linen, hemp, wood)
 parchment (white, vellum, purple)
 inks (black, blue, red, silver, golden)
 lacbug -> carmine
+credenza
+star jelly
+grass jelly
+royal jelly
+skep (beekeping)
+beeswax, honeycomb, honey
+spider silk
+golden orb weaver silk
 linen, silk, cotton, wool
 yarn, loom, bolt of fabric, torn rag
 burlap, canvas, denim, tweed, flannel, fustian, russet
 bitumen (ore), pitch (liquid), naphtha,
 peat, lignite, resin, briquette
+horn, ivory, tortoiseshell (from carapace)
 
 
 CRAFTING/RECIPE IDEAS:
 
+boiling bones/hoofs/horns/talons -> glue
 scrollreed: harvest -> reed stems
 reed stems: glue -> papyrus
 hide/pelt: wash in solution -> untanned leather
-untanned leather: stretch -> parchment
+untanned leather: stretch/dye/cut -> parchment
 rag/torn cloth/cotton/linen/hemp/wood: bath in solution -> [x] pulp
 [x] pulp: strain -> [x] paper
+soot + treegum/glue -> black ink
+woodgall: crush/leach -> gallwater (tannic acid)
+gallwater + green vitriol -> blue ink (iron gall ink)
+gallwater also used to tan leather
+also red ink (blood or carmine?), silver ink, and gold ink
+treegum: -> shoe polish
+
 
 	CLOTHES:
 
@@ -1271,7 +1309,7 @@ pressed into paper in a paper press. perhaps pulp needs to be treated to change 
 (brown paper, white paper)
 
 non woven fabrics:
-pigskin, goatskin, fleece, cowhide, horsehide
+pigskin, goatskin, fleece, cowhide, horsehide, ermine, squirrel skin
 ^^^ these can be cut and sewn directly into hide clothes, or turned to leather
 any hide: lime bath -> rawhide
 rawhide: tannen bath -> leather
@@ -1280,6 +1318,7 @@ rawhide: stretching+cutting -> parchment/vellum
 
 
 cotton fabric + blue dye (woad) -> denim -> blue jeans
+
 
 	BREWS:
 
@@ -1310,6 +1349,10 @@ ground kola: brew/boil -> kola tonic (maybe also require a leaf or burdock and d
 
 crimson + clover: brew -> philter, maybe a crimson flower instead of lacbug?
 
+elderflower tonic (cordial)
+
+	POTTERY:
+
 red/yellow clay: heat 1000c -> earthenware
 red/yellow clay: heat 1500c+ -> shatters
 
@@ -1325,10 +1368,16 @@ white clay: heat 2000c -> porcelain
 any mixed with frit becomes fritware
 if mixed with silt or loam, it will shatter
 different kilns reach different heats, "dragon kiln" will get it to 2000
+fire pit, bonfire, kiln, sagger kiln, bloomery, furnace
 red clay: filter -> yellow clay + silt
 black clay: filter -> grey clay + silt
+leaching ash in water makes a basic glaze foundation
+mixing basic glaze with minerals creates colored glazed
 glazes: celadon (green glaze), faience, bucchero, lusterware, majolica
+can mix with sienna, umber, red ochre, gold ochre
+delftware is made with faience
 
+	PIGMENTS:
 
 woad leaf: grind -> woad leaf powder: soak -> woad pulp: dry -> indigo (powder): brew -> blue dye
 madder root: grind -> madder powder: boil -> alizarin (powder): brew -> red dye
@@ -1336,6 +1385,38 @@ weld flower: boil -> yellow dye
 ^^^ can get green from mixing blue and yellow, or from another plant
 red + yellow/blue makes brown dye; purple and orange are from their own sources
 
+vermilion fromm cinnabar
+carmine from cochineal
+ultramarine from skystone (lapis lazuli)
+
+plant-based pigments require mixing with alum to make into useful dye
+indigo is an exception, it requires urine
+mineral pigments make good paint but not dye
+
+	ALCHEMY:
+
+leaching dung (calcium nitrate) with potash -> saltpeter + chalk (calcium carbonate)
+roasting alumen (found amongst shale) -> alum
+roasting/leaching yellow clay + potash -> alum
+roasting/leaching white clay + brimstone -> alum
+
+roasting grey, black, red, yellow clay -> sienna, umber, red ochre, gold ochre
+
+green vitriol - made from leaching firestone or brimstone + iron with water and air
+oil of vitriol (sulfuric acid)
+ether (made from alcoohl and oil of vitriol)
+aqua fortis - green vitriol + nitre
+aqua regia (strongest acid) salmiac + aqua fortis
+
+	METALLURGY:
+
+tin + ??? -> pewter
+tin + copper -> bronze
+iron + carbon -> steel
+
+	COOKING:
+
+drying fish -> stockfish
 
 
 WORLD DESIGN IDEAS:
@@ -1426,7 +1507,7 @@ INSTITUTIONS:
 - alchemist's guild
 - builder's guild
 - smiths are unguilded (independent)
-- ranger's guild (robinhood types?)
+- ranger's guild (robinhood types? not a real guild?)
 - raveneers (Neurtal mercenaries/adventurers/assassins)
 - frith guild
 - beghards and beguines
@@ -1445,6 +1526,8 @@ MISC WORLD IDEAS:
 - fighting ur nega/anti self
 - sign that says "no philandering!"
 - gnomes
+- chantry, alms, heriot
+- midden (old garbage heap?)
 - magic art museum?
 - wicklewort trees
 - something called "The Wizard's Fee"
@@ -1534,20 +1617,22 @@ CHARACTER NAME IDEAS:
 	a fighter/warrior warlord
 	a mob boss criminal type
 	King Nidhad,
+	Blind King
 	Wayland the Smith/Volund the Smith
 	Egil the Archer (from myth)
 	Dietrich Von ___ hero, along with Regin Smith, Heimir, Wittich
-	Drythelm
 
 	Somnus, Orion, Pax, Tyro, Cogg, Garl, Ike, Uther, Kess, Roach, Mito, Lugh, Muriel
 	Eadmer, Godfrey, Einhard, Vixen, Aloy, Eilonwy, Beowin, Rook, Alahad, Galatea, Grin
-	Spiridon, Khartoum, Heironymus, Gundahar, Wace, Leofwyn
+	Spiridon, Khartoum, Heironymus, Gundahar, Wace, Leofwyn, Drythelm, Hengran, Hardeck
+	Harcourt, Aecury, Aelfwyne
+
 
 	polemarch,commodore,margrave,
 	thane,earl,baron,duke,burgess,
-	reeve,magistrate,warden,alderman,franklin,manciple
+	reeve,magistrate,warden,alderman,franklin,manciple,chamberlain,seneschal
 	dame,lady,"hostess",courtesan,
-	bailiff,steward,sheriff,guard,watchman
+	bailiff,steward,sheriff,guard,watchman,usher
 	knight,archer,cavalier,squire,page,knave,
 	boatman,sailor,pilot,ferryman,shipman,
 	messenger,envoy,herald,cryer
@@ -1561,7 +1646,7 @@ CHARACTER NAME IDEAS:
 	undertaker,groundskeeper
 	baker,butcher,miller,brewer,vintner,cheesemonger,spiceman,milkmaid
 	merchant,trader,peddler,salesmen,jeweler
-	blacksmith,brownsmith,whitesmith,goldsmith,silversmith,locksmith,gunsmith
+	blacksmith,brownsmith,whitesmith,goldsmith,silversmith,locksmith,gunsmith,puddler
 	carpenter,mason,glassmaker,wainwright,sawyer
 	cooper,potter,chandler,fletcher,bowyer,luthier
 	fuller,tanner,tailor,weaver,seamstress,cobbler,hatter,parchminer
@@ -1601,6 +1686,8 @@ wumpus
 albatross
 muskrat
 bellbird
+horses: palfrey, destier, "bony nag", bay horse, palomino
+dormouse (known for sleep)
 
 
 
@@ -1674,7 +1761,7 @@ a flower?
 
 GOLDEN BUG QUEST:
 50 golden bugs that can be found around the world
-Spider, Termite, Cocoon, Scorpion, Butterfly,
+Spider (golden orb weaver?), Termite, Cocoon, Scorpion, Butterfly,
 Roach, Horsefly, Hornet, Ant, Mantis,
 Cricket, Dragonfly, Stinkbug, Earwig, Flea,
 Stickbug, Mosquito, Silkworm, Firefly, Silverfish,
@@ -1688,9 +1775,9 @@ Goblinmite, Brainworm, Orc Beetle, Mimicbug, Waterbear
 
 
 SPELL NAME IDEAS:
-Abjure, Aliment, Amphibify, Anathema, Armistice, Aspersion, Asterism, Avulsion
+Abjure, Aliment, Amphibify, Anathema, Armistice, Aspersion, Asterism, Ataxia, Avulsion
 Bamboozle, Bang, Banish, Banquet, Beacon, Bellow, Bolster, Boogaloo, Boom, Busk
-Cacophony, Catharsis, Celeritas, Chutzpah, Clemency, Collapse, Conjure
+Cacophony, Catharsis, Celeritas, Chutzpah, Clemency, Cloudburst, Collapse, Conjure
 Delirium, Deluge, Dessicate, Discord
 Effervesce, Eidolon, Enchant, Ennervation, Enthrall, Expectorate, Expell
 Facade, Facsimile, Feast, Festoon, Fib, Fireball, Fizz, Flare, Frostbite
@@ -1703,7 +1790,7 @@ Maelstrom, Malaise, Manumit, Melancholy, Micturate, Miracle (random effect), Mir
 Nyctophobia
 Parley, Paroxysm, Parry, Penumbra, Petrify, Phantasm, Pilfer, Ponder, Prescience, Psychosis, Putrefaction
 Refection, Rend, Repast, Resurrect, Revelry, Riposte, Ruin
-Sanctuary, Scintillate, Scry, Serein, Shivaree, Simper, Simulacrum, Smite, Smithereens, Spangle, Squib, Sunder, Sunshower, Synapse
+Sanctuary, Sequester, Scintillate, Scry, Serein, Shivaree, Simper, Simulacrum, Smite, Smithereens, Spangle, Squib, Sunder, Sunshower, Synapse
 Telekinesis, Tempest, Tether, Torrent
 Usurp
 Vamoose, Vendetta, Veritas, Volley
