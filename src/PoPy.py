@@ -79,8 +79,6 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# quicksave gives circular reference...
-# when two similarly named portals in one room, doesnt give option to choose which one
 # going through a portal to the current location prints no indication of this
 # "theres no exit leading to a 'north' here"
 # add ability to go into containers
