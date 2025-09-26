@@ -159,6 +159,20 @@
 				"aliases": ["helm","iron helm"],
 				"slots": "head",
 				"prot": 3
+			},
+			{
+				"__class__": "Portal",
+				"name": "Cracked Mirror",
+				"desc": "A cracked mirror that shimmers slightly. It doesn't appear to reflect anything, but instead shows dark rippling shadows.",
+				"weight": 2,
+				"durability": 10,
+				"composition": "glass",
+				"links": {
+					"in": 0
+				},
+				"passprep": "into",
+				"descname": "cracked mirror",
+				"aliases": ["mirror"]
 			}
 		],
 		"creatures": [],
@@ -566,7 +580,7 @@
 				"durability": 10,
 				"composition": "glass",
 				"links": {
-					"in": "cave"
+					"in": 0
 				},
 				"passprep": "into",
 				"descname": "warped mirror",

@@ -78,6 +78,8 @@ def chooseObject(name,objects,verb=None):
 
 	prompt = f"\nWhich {name}{f' to {verb}' if verb else ''}?"
 	choice = Core.InputLoop(prompt,acceptKey=acceptKey,color="k")
+	if choice is None:
+		return False # this indicates the user cancelled
 	return choice
 
 
@@ -1181,7 +1183,6 @@ def GoVertical(dir,passage=None,dobj=None):
 # infers direction, destination, and passage (if they exist) from input terms
 def parseGoTerms(dobj,iobj,prep):
 	dir,dest,passage = None,None,None
-
 	parentExits = Core.player.parent.allExits()
 	# assign dest
 	if dobj in parentExits.values(): dest = dobj
@@ -1190,9 +1191,15 @@ def parseGoTerms(dobj,iobj,prep):
 	elif Core.nameMatch(iobj,Core.player.parent): dest = iobj
 
 	def getDirAndPassage(term):
+		pairs = set()
 		for dir,passage in parentExits.keys():
-			if term == dir:
-				return dir,passage
+			if term == dir or Core.nameMatch(term,passage):
+				pairs.add((dir,passage))
+		if len(pairs) > 1:
+			passage = chooseObject("direction",[pair[1] for pair in pairs],"go with")
+			return None, passage
+		elif len(pairs) == 1:
+			return pairs.pop()
 		return None, None
 
 	# assign dir and passage
@@ -1201,16 +1208,17 @@ def parseGoTerms(dobj,iobj,prep):
 	else: dir = prep
 
 	if dobj is not None:
-		dir,passage = getDirAndPassage(dir)
+		dir,passage = getDirAndPassage(dobj)
 	elif iobj is not None:
-		dir2,passage2 = getDirAndPassage(dir)	
+		dir2,passage2 = getDirAndPassage(iobj)	
 		if dir is None:
 			dir = dir2
 		if passage is None:
 			passage = passage2
 
-	if passage is None: passage = findObject(dobj,f"go {prep}","room",silent=True)
-	if passage is None: passage = findObject(iobj,f"go {prep}","room",silent=True)
+	# if prep is None: prep = "with"
+	# if passage is None: passage = findObject(dobj,f"go {prep}","room",silent=True)
+	# if passage is None: passage = findObject(iobj,f"go {prep}","room",silent=True)
 	return dir,dest,passage
 
 
@@ -1239,6 +1247,9 @@ def Go(dobj,iobj,prep):
 
 	# get dir, dest, and passage and validate them
 	dir,dest,passage = parseGoTerms(dobj,iobj,prep)
+	# print(dir,dest,passage)
+	if passage is False: # if player cancelled passage choice
+		return False
 	if (dir,dest,passage) == (None,None,None):
 		Core.Print(f"There is no exit leading to a '{dobj}' here.",color="k")
 		return False
