@@ -79,8 +79,6 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# going through a portal to the current location prints no indication of this
-# "theres no exit leading to a 'north' here"
 # add ability to go into containers
 	# > get out of chest... not working
 		# exit chest also
@@ -88,9 +86,6 @@ if __name__ == "__main__":
 		# you are hiding (if in one)
 	# continue stand func with stand on and stand in
 		# try "get on bed", redirect Mounting an obj to stand
-# make player.aware(I) method, which instead of using currentroom, checks if I in player.surroundings.objTree
-	# replace references to currentroom with player.parent when needed
-# add "in" operator to objects
 # test throwing a person
 # throw snake into chest???
 # add dropping into pit -> add fall damage to items.
@@ -100,10 +95,14 @@ if __name__ == "__main__":
 # throw snake at goblin
 # "throw rock east", "throw dale east"
 # 	> get it chest
+# throw into a portal, and drop down a portal
 # readjust throw force formula; compare to BRDN (shouldn't be able to throw heavier than you can have in inv, or more than you can carry in hands?
 # check if throwing a creature which has another riding it?
 # handle "get on" to mount or get on a table (wb get on table while on a horse?)
 # refactor drop into a creature method?
+# make player.aware(I) method, which instead of using currentroom, checks if I in player.surroundings.objTree
+	# replace references to currentroom with player.parent when needed
+# add "in" operator to objects
 
 # "you attack the goblin with your your hand!" is what shows up on attack
 # fix obtaining money problem, think about other objects which won't go into inv upon obtaining
