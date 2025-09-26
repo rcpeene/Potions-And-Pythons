@@ -282,6 +282,10 @@ class Box(Core.Portal):
 		return [item.name for item in self.items]
 
 
+	# get the links dict to use in the parent's allLinks method
+	def getLinksForParent(self):
+		return {self.passprep:self}
+
 
 class Controller(Core.Item):
 	def __init__(self,name,desc,weight,durability,composition,triggers,effect,**kwargs):

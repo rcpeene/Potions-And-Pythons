@@ -32,7 +32,7 @@ helpCounter = 0
 def chooseObject(name,objects,verb=None):
 	if objects is None or len(objects) == 0:
 		return None
-	objects = list(objects)
+	objects = list(set(objects))
 	if len(objects) == 1:
 		return objects[0]
 	Core.Print()
@@ -584,7 +584,7 @@ def Examples(*args):
 
 
 def Exits(*args):
-	for key, val in Core.player.parent.allExits().items():
+	for key, val in Core.player.parent.allLinks().items():
 		Core.Print(f"{key}:	{val}",color="k")
 
 
@@ -1164,7 +1164,7 @@ def Give(dobj,iobj,prep):
 # called when the user wants to go "up" or "down"
 def GoVertical(dir,passage=None,dobj=None):
 	if Core.player.hasCondition("flying") and not Core.player.riding:
-		newroom = Core.game.currentroom.allExits()[dir,passage]
+		newroom = Core.game.currentroom.allLinks()[dir,passage]
 		Core.Print(f"You fly {dir}!")
 		return Core.player.changeLocation(newroom)
 
@@ -1183,7 +1183,7 @@ def GoVertical(dir,passage=None,dobj=None):
 # infers direction, destination, and passage (if they exist) from input terms
 def parseGoTerms(dobj,iobj,prep):
 	dir,dest,passage = None,None,None
-	parentExits = Core.player.parent.allExits()
+	parentExits = Core.player.parent.allLinks()
 	# assign dest
 	if dobj in parentExits.values(): dest = dobj
 	elif Core.nameMatch(dobj,Core.player.parent): dest = dobj
@@ -1202,11 +1202,7 @@ def parseGoTerms(dobj,iobj,prep):
 			return pairs.pop()
 		return None, None
 
-	# assign dir and passage
-	if dir is None and dobj in Data.directions.values(): dir = dobj
-	elif dir is None and iobj in Data.directions.values(): dir = iobj
-	else: dir = prep
-
+	# print(dobj,iobj,dir,dest,passage)
 	if dobj is not None:
 		dir,passage = getDirAndPassage(dobj)
 	elif iobj is not None:
@@ -1215,6 +1211,11 @@ def parseGoTerms(dobj,iobj,prep):
 			dir = dir2
 		if passage is None:
 			passage = passage2
+	
+	# assign dir and passage
+	if dir is None and dobj in Data.directions.values(): dir = dobj
+	elif dir is None and iobj in Data.directions.values(): dir = iobj
+	else: dir = prep
 
 	# if prep is None: prep = "with"
 	# if passage is None: passage = findObject(dobj,f"go {prep}","room",silent=True)
@@ -1843,7 +1844,7 @@ def Take(dobj,iobj,prep):
 		objToTake = findObject(dobj,"take","room",roomD=2)
 	else:
 		objToTake = findObject(dobj,"take",roomD=2,reqParent=iobj)
-	if objToTake is None:
+	if objToTake is not True: # False or None
 		return False
 	Core.game.setPronouns(objToTake)
 	if objToTake.parent is Core.player:

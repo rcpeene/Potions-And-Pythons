@@ -1079,12 +1079,12 @@ class Game():
 
 	# exits the previous room and enters the new room
 	def changeRoom(self,newroom):
-		if newroom != self.currentroom:
-			self.clearPronouns()
-			clearScreen()
-			self.prevroom = self.currentroom
-			self.currentroom = newroom
-			newroom.describe()
+		# if newroom != self.currentroom:
+		self.clearPronouns()
+		clearScreen()
+		self.prevroom = self.currentroom
+		self.currentroom = newroom
+		newroom.describe()
 		return True
 
 
@@ -1140,7 +1140,7 @@ class Game():
 	def roomFinder(self,n,Sroom,pathlen,foundrooms):
 		if pathlen >= n:
 			return
-		adjacentRooms = [room for room in Sroom.allExits().values() if isinstance(room,Room)]
+		adjacentRooms = [room for room in Sroom.allLinks().values() if isinstance(room,Room)]
 		for room in adjacentRooms:
 			foundrooms.add(room)
 			self.roomFinder(n,room,pathlen+1,foundrooms)
@@ -1390,7 +1390,6 @@ class Room():
 
 
 	def convertToJSON(self):
-		self.already_converted = True
 		jsonDict = self.__dict__.copy()
 		jsonDict["exits"] = {}
 		for dir, dest in self.exits.items():
@@ -1572,7 +1571,7 @@ class Room():
 
 
 	# returns dict of exits, where keys are (direction,portal) and values are room/object names
-	def allExits(self,d=3):
+	def allLinks(self,d=3):
 		exits = {}
 		for dir in self.exits:
 			exits[(dir,None)] = self.exits[dir]
@@ -1584,7 +1583,7 @@ class Room():
 
 
 	def allDirs(self):
-		return (tuple[0] for tuple in self.allExits())
+		return (tuple[0] for tuple in self.allLinks())
 
 
 	def itemNames(self):
@@ -1631,7 +1630,7 @@ class Room():
 	# return the first portal object with that direction in its links
 	def getPortalsFromDir(self,dir):
 		portals = []
-		for thisDir, portal in self.allExits(d=0):
+		for thisDir, portal in self.allLinks(d=0):
 			if dir == thisDir:
 				portals.append(portal)
 		return portals
@@ -1639,7 +1638,7 @@ class Room():
 
 	# if the given room object, dest, is in one of the rooms exits, then find the direction it is in from the room.
 	def getDirFromDest(self,dest):
-		for (dir,passage), room in self.allExits().items():
+		for (dir,passage), room in self.allLinks().items():
 			if nameMatch(dest,room):
 				return dir
 		return None
@@ -1786,8 +1785,6 @@ class Item():
 
 	def changeLocation(self,newparent):
 		prevparent = self.parent
-		if newparent is prevparent:
-			return False
 		
 		prevparent.exit(self)
 		newparent.enter(self)
@@ -2573,20 +2570,22 @@ class Creature():
 	### Behavior ###
 
 	def changeLocation(self,newparent):
-		# shouldn't be changing rooms alone if being carried
+		# shouldn't be changing rooms alone if riding or being carried
 		if self.carrier and self.carrier.parent is not newparent:
 			return False
+		if self.riding and self.riding.parent is not newparent:
+			return self.riding.changeLocation(newparent)
+
 		prevparent = self.parent
-		if newparent is self.parent:
-			return False
 
 		prevparent.exit(self)
+		if self is player and isinstance(newparent,Room):
+			game.changeRoom(newparent)
 		newparent.enter(self)
 
+		# propagate location change to creatures riding or being carried
 		if self.carrying and self.carrying.parent is not self.parent:
 			self.carrying.changeLocation(newparent)
-		if self.riding and self.riding.parent is not self.parent:
-			self.riding.changeLocation(newparent)
 		if self.rider and self.rider.parent is not self.parent:
 			self.rider.changeLocation(newparent)
 
@@ -3122,28 +3121,6 @@ class Player(Creature):
 
 
 	### Operation ###
-
-	def changeLocation(self,newparent):
-		# shouldn't be changing rooms alone if being carried
-		if self.carrier and self.carrier.parent is not newparent:
-			return False
-		prevparent = self.parent
-		if newparent is prevparent:
-			return
-
-		prevparent.exit(self)
-		if isinstance(newparent,Room):
-			game.changeRoom(newparent)				
-		newparent.enter(self)
-
-		if self.riding:
-			self.riding.changeLocation(newparent)
-		if self.carrying:
-			self.carrying.changeLocation(newparent)
-		
-		assert self.carrying is None or self.carrying.parent is self.parent
-		return True
-
 
 	def awaken(self,wellRested=True):
 		game.silent = False
@@ -4078,37 +4055,39 @@ class Portal(Item):
 
 
 	def assignLinkIDs(self,pairportal,linkid):
-		if not hasattr(self, "jsonLinks"):
-			self.jsonLinks = self.links.copy()
+		if not hasattr(self, "compressedLinks"):
+			self.compressedLinks = self.links.copy()
 
-		assert pairportal in self.jsonLinks.values()
-		for dir, dest in self.jsonLinks.items():
+		assert pairportal in self.compressedLinks.values()
+		for dir, dest in self.compressedLinks.items():
 			if dest is pairportal:
-				self.jsonLinks[dir] = linkid
+				self.compressedLinks[dir] = linkid
 
 
 	def convertToJSON(self):
 		# must copy links for saving to JSON so real links remain intact if game continues
-		if not hasattr(self, "jsonLinks"):
-			self.jsonLinks = self.links.copy()
+		if not hasattr(self, "compressedLinks"):
+			self.compressedLinks = self.links.copy()
 
 		# convert room links to strings, and portal links to unique link ids
-		for portal in {v for v in self.jsonLinks.values() if isinstance(v,Portal)}:
+		for portal in {v for v in self.compressedLinks.values() if isinstance(v,Portal)}:
 			linkId = game.portallinks
 			self.assignLinkIDs(portal,linkId)
 			portal.assignLinkIDs(self,linkId)
 			game.portallinks += 1
 
-		jsonDict = self.__dict__.copy()
-		for dir, dest in jsonDict["jsonLinks"].items():
+		for dir, dest in self.compressedLinks.items():
 			if isinstance(dest,Room):
-				jsonDict["jsonLinks"][dir] = dest.name.lower()
-
-		jsonDict["links"] = jsonDict["jsonLinks"]
-		del jsonDict["jsonLinks"]
-
+				self.compressedLinks[dir] = dest.name.lower()
 		# all links should now be either strings or ints
-		assert all([isinstance(dest,(str,int)) for dest in jsonDict["links"].values()])
+		assert all([isinstance(dest,(str,int)) for dest in self.compressedLinks.values()])
+
+		jsonDict = self.__dict__.copy()
+		jsonDict["links"] = jsonDict["compressedLinks"]
+		del jsonDict["compressedLinks"]
+		print(jsonDict)
+		if "exits" in jsonDict:
+			del jsonDict["exits"]
 		return jsonDict
 
 
@@ -4135,12 +4114,12 @@ class Portal(Item):
 			Print(f"The {self.name} does not go '{dir}'.")
 			return False
 
-		if isinstance(self.links[dir],Room):
-			newloc = self.links[dir]
-		elif isinstance(self.links[dir], Portal):
-			newloc = self.links[dir].parent
+		newloc = self.links[dir]
+		if isinstance(newloc, Portal):
+			newloc = newloc.parent
 			if isinstance(newloc,Creature):
 				newloc = newloc.parent
+			# TODO: potentially unindent so this also applies to rooms
 			if not newloc.canAdd(traverser):
 				if traverser is player:
 					Print(f"You can't enter {-self}. There's not enough room.")
@@ -4193,8 +4172,10 @@ class Portal(Item):
 		return False
 
 
+	### Getters ###
+
 	# returns dict of exits, where keys are directions and values are room names
-	def allExits(self,d=3):
+	def allLinks(self,d=3):
 		exits = {}
 		for dir in self.links:
 			exits[(dir,None)] = self.links[dir]
@@ -4202,10 +4183,15 @@ class Portal(Item):
 		portals = self.query(key=lambda x: isinstance(x,Portal),d=d)
 		# for each portal, add its connections to exits
 		for portal in portals:
-			for dir in portal.links:
+			for dir in portal.getLinksForParent():
 				if dir not in exits:
 					exits[(dir,portal)] = portal.links[dir]
 		return exits
+
+
+	# get the links dict to use in the parent's allLinks method
+	def getLinksForParent(self):
+		return self.links
 
 
 	def getPassages(self):
@@ -4216,7 +4202,7 @@ class Portal(Item):
 	# return the first Passage object with that direction in its connections
 	def getPortalsFromDir(self,dir):
 		passages = []
-		for thisDir, passage in self.allExits(d=0):
+		for thisDir, passage in self.allLinks(d=0):
 			if dir == thisDir and passage is not None:
 				passages.append(passage)
 		return passages
@@ -4224,14 +4210,14 @@ class Portal(Item):
 
 	# if the given room object, dest, is in one of the rooms exits, then find the direction it is in from the room.
 	def getDirFromDest(self,dest):
-		for (dir,passage), room in self.allExits().items():
+		for (dir,passage), room in self.allLinks().items():
 			if nameMatch(dest,room):
 				return dir
 		return None
 
 
 	def allDirs(self):
-		return (tuple[0] for tuple in self.allExits())
+		return (tuple[0] for tuple in self.allLinks())
 
 
 
