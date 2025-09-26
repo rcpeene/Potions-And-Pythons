@@ -436,18 +436,18 @@ def assignRefsRecur(parent):
 	if not hasMethod(parent,'contents'):
 		return
 	for obj in parent.contents():
-
 		# everything in the world or player inv should be Item or Creature
 		assert isinstance(obj, (Item, Creature)), f"object is not Item or Creature: {obj}, it is type {type(obj)}"
-		obj.assignParent(parent)
+		obj.assignRefs(parent)
 		assignRefsRecur(obj)
 
 
-# removes any room connection values which don't exist in the world
+# removes any room links values which don't exist in the world
 # to prevent errors if the world file was written incorrectly
 # also assigns parents for all world objects (read objQuery() comments)
 # also assigns dialogue trees for speakers and validates them
 def buildWorld():
+	# ensure all room names are stored as lowercase
 	for roomName in world.copy():
 		room = world[roomName]
 		del world[roomName]
@@ -457,26 +457,8 @@ def buildWorld():
 
 	for room in world.values():
 		assert isinstance(room, Room)
+		room.assignRefs()
 		assignRefsRecur(room)
-
-		# exitsToDelete = []
-		for direction in room.exits:
-			dest = room.exits[direction]
-			if dest not in world:
-				raise Exception("Room exit not in world:",room,direction,dest)
-		# 		exitsToDelete.append(connection)
-		# for exit in exitsToDelete:
-		# 	del room.exits[exit]
-
-		for passage in room.getPassages():
-			# connectionsToDelete = []
-			for direction in passage.connections:
-				dest = passage.connections[direction]
-				if dest not in world:
-					raise Exception("Passage connection not in world:",room,passage,direction,dest)
-			# 		connectionsToDelete.append(connection)
-			# for connection in connectionsToDelete:
-			# 	del passage.connections[connection]
 
 		# assign the dialogue trees for all creatures and validate them
 		for creature in objQuery(room, d=3, key=lambda x: isinstance(x,Speaker)):
@@ -1089,6 +1071,9 @@ class Game():
 		# 14 days in a month
 		self.monthlength = 14 * self.daylength
 
+		# used for saving portals in the world with unique links
+		self.portallinks = 0
+
 
 	### Operation ###
 
@@ -1155,7 +1140,7 @@ class Game():
 	def roomFinder(self,n,Sroom,pathlen,foundrooms):
 		if pathlen >= n:
 			return
-		adjacentRooms = [world[name] for name in Sroom.worldExits()]
+		adjacentRooms = [room for room in Sroom.allExits().values() if isinstance(room,Room)]
 		for room in adjacentRooms:
 			foundrooms.add(room)
 			self.roomFinder(n,room,pathlen+1,foundrooms)
@@ -1373,7 +1358,7 @@ class Room():
 	### Dunder Methods ###
 
 	def __repr__(self):
-		return f"Room({self.name}, {tuple(self.exits.values())}...)"
+		return f"Room({self.name}, {room.name for room in self.exits.values()}...)"
 
 
 	def __str__(self):
@@ -1392,12 +1377,32 @@ class Room():
 		return "a " + self.name
 
 
+	### File I/O ###
+
+	def assignRefs(self):
+		for dir, dest in self.exits.items():
+			if isinstance(dest,str) and dest in world:
+				self.exits[dir] = world[dest]
+			else:
+				raise Exception(f"Error: Room {self.name} has a connection to unknown destination '{dest}'.")
+
+		assert all(isinstance(dest,Room) for dest in self.exits.values()), f"Error: Room {self.name} has a exit to non-Room '{dest}'."
+
+
+	def convertToJSON(self):
+		jsonDict = self.__dict__.copy()
+		for dir, dest in jsonDict["exits"].items():
+			assert isinstance(dest, Room), f"Trying to save room {self.name} with exit to non-Room '{dest}'."
+			jsonDict["exits"][dir] = dest.name.lower()
+		return jsonDict
+
+
 	### Operation ###
 
-	# add one-way connection to a neighboring Room
-	# to ensure a bidirectional connectiom between Rooms...
+	# add one-way link to a neighboring Room
+	# to ensure a bidirectional link between Rooms...
 	# this method would have to be called once on each room.
-	def addConnection(self,dir,loc):
+	def addLink(self,dir,loc):
 		self.exits[dir] = loc
 
 
@@ -1459,20 +1464,20 @@ class Room():
 			return self.removeItem(O)
 
 
-	def addAreaCondition(areacond):
+	def addAreaCondition(self,areacond):
 		cond,dur = extractConditionInfo(areacond)
 		key = lambda x: isinstance(x,Creature)
-		for creature in game.queryRoom(key=key):
+		for creature in self.query(key=key):
 			creature.addCondition(cond,dur)
 
 
-	def removeAreaCondition(areacond):
+	def removeAreaCondition(self,areacond):
 		cond,dur = extractConditionInfo(areacond)
 		# depending on how you want room conditions to work, perhaps remove this
 		if dur != -1:
 			return
 		key = lambda x: isinstance(x,Creature)
-		for creature in game.queryRoom(key=key):
+		for creature in self.query(key=key):
 			creature.removeCondition(cond,-1)
 
 
@@ -1564,24 +1569,20 @@ class Room():
 		return 10000
 
 
-	# returns dict of exits, where keys are (direction,portal) and values are room names
+	# returns dict of exits, where keys are (direction,portal) and values are room/object names
 	def allExits(self,d=3):
 		exits = {}
 		for dir in self.exits:
 			exits[(dir,None)] = self.exits[dir]
-		# for each portal, add its connections to exits
+		# for each portal, add its links to exits
 		for portal in self.query(key=lambda x: isinstance(x,Portal),d=d):
-			for dir in portal.connections:
-				exits[(dir,portal)] = portal.connections[dir]
+			for dir in portal.links:
+				exits[(dir,portal)] = portal.links[dir]
 		return exits
 
 
 	def allDirs(self):
 		return (tuple[0] for tuple in self.allExits())
-
-
-	def worldExits(self):
-		return (exit for exit in self.allExits().values() if type(exit) is str)
 
 
 	def itemNames(self):
@@ -1625,19 +1626,19 @@ class Room():
 
 
 	# given a direction (like 'north' or 'down)...
-	# return the first Passage object with that direction in its connections
-	def getPassagesFromDir(self,dir):
-		passages = []
-		for thisDir, passage in self.allExits(d=0):
+	# return the first portal object with that direction in its links
+	def getPortalsFromDir(self,dir):
+		portals = []
+		for thisDir, portal in self.allExits(d=0):
 			if dir == thisDir:
-				passages.append(passage)
-		return passages
+				portals.append(portal)
+		return portals
 
 
 	# if the given room object, dest, is in one of the rooms exits, then find the direction it is in from the room.
 	def getDirFromDest(self,dest):
-		for (dir,passage), thisDest in self.allExits().items():
-			if thisDest == dest:
+		for (dir,passage), room in self.allExits().items():
+			if nameMatch(dest,room):
 				return dir
 		return None
 
@@ -1720,7 +1721,7 @@ class Item():
 
 	### File I/O ###
 
-	def assignParent(self,parent):
+	def assignRefs(self,parent):
 		self.parent = parent
 
 
@@ -1758,7 +1759,7 @@ class Item():
 
 
 	def __hash__(self):
-		return hash(frozenset(self.__dict__)) * hash(id(self))
+		return hash(id(self))
 
 
 	### Operation ###
@@ -1812,7 +1813,7 @@ class Item():
 
 		while room.altitude != 0 and "down" in room.exits:
 			height += room.size
-			room = world[room["down"]]
+			room = room["down"]
 		if room != self.room():
 			self.changeLocation(room)
 			if self.room() is game.currentroom:
@@ -2022,7 +2023,7 @@ class Creature():
 		self.memories = memories if memories else set()
 		self.appraisal = appraisal if appraisal else set()
 		
-		# this gets decompressed or reassigned by assignParent
+		# this gets decompressed or reassigned by assignRefs
 		self.parent = None
 		self.riding = riding
 		self.rider = rider
@@ -2079,7 +2080,7 @@ class Creature():
 
 
 	def __hash__(self):
-		return hash(frozenset(self.__dict__)) * hash(id(self))
+		return hash(id(self))
 
 
 	def __lt__(self,other):
@@ -2090,7 +2091,7 @@ class Creature():
 
 	### File I/O ###
 	
-	def assignParent(self,parent):
+	def assignRefs(self,parent):
 		self.parent = parent
 
 		def uncompressTether(idx):
@@ -2157,21 +2158,24 @@ class Creature():
 		# convert the gear dict to a form more easily writable in a JSON object
 		compressedGear = self.compressGear()
 		tethers = self.compressTethers()
-		d = self.__dict__.copy()
-		dictkeys = list(d.keys())
+		jsonDict = self.__dict__.copy()
+		dictkeys = list(jsonDict.keys())
 		# these attributes do not get stored between saves (except gear)
 		for key in dictkeys:
 			if key.lower() in Data.traits or key in {"gear","carrying","riding","carrier","rider","weapon","weapon2","shield","shield2"}:
-				del d[key]
-		d["gear"] = compressedGear
+				del jsonDict[key]
+		jsonDict["gear"] = compressedGear
 		# convert traits to a form more easily writable in a JSON object
-		d["traits"] = [self.str,self.skl,self.spd,self.stm,self.con,self.cha,self.int,self.wis,self.fth,self.lck]
-		# TODO: swap the following lines for Python 3.9
-		# d = {"__class__":self.__class__.__name__} | d
-		d |= tethers
-		d = {"__class__":self.__class__.__name__, **d}
-		del d["parent"]
-		return d
+		jsonDict["traits"] = [self.str,self.skl,self.spd,self.stm,self.con,self.cha,self.int,self.wis,self.fth,self.lck]
+		jsonDict |= tethers
+
+		# these lines seem redundant (the menu functions handle parent and __class__ attributes)
+		# but they're required specifically for reading/writing the Player object
+		# they're in Creature class because otherwise I'd have to copy a nearly identical method
+		if "parent" in jsonDict:
+			del jsonDict["parent"]
+		jsonDict["__class__"] = self.__class__.__name__
+		return jsonDict
 
 
 	### Operation ###
@@ -2527,7 +2531,7 @@ class Creature():
 			room = self.room()
 		while room.altitude != 0 and "down" in room.exits:
 			height += room.size
-			room = world[room["down"]]
+			room = room["down"]
 		if room != self.room():
 			self.changeLocation(room)
 			
@@ -3434,7 +3438,7 @@ class Player(Creature):
 			room = self.room()
 		while room.altitude != 0 and "down" in room.exits:
 			height += room.size
-			room = world[room["down"]]
+			room = room["down"]
 		if room != self.room():
 			ellipsis()
 			self.changeLocation(room)
@@ -3885,7 +3889,6 @@ class Animal(Speaker):
 
 
 	def buildDialogue(self):
-		savedDlogData = self.dlogtree
 		savedDlogData = {} if self.dlogtree is None else self.dlogtree
 
 		# dlogName must either be the name of a tree or a trite
@@ -4026,35 +4029,105 @@ Set status
 '''
 
 
-# Portals are guaranteed to have a traverse and transfer method and a connections and passprep attribute
+# Portals are guaranteed to have a traverse and transfer method and a links and passprep attribute
 class Portal(Item):
-	def __init__(self,name,desc,weight,durability,composition,connections,descname,passprep="into",**kwargs):
+	def __init__(self,name,desc,weight,durability,composition,links,descname,passprep="into",**kwargs):
 		Item.__init__(self,name,desc,weight,durability,composition,**kwargs)
-		self.connections = connections
-		self.exits = self.connections
+		self.links = links
+		self.exits = self.links
 		self.descname = descname
 		self.passprep = passprep
+
+
+	### File I/O ###
+
+	# search in world for the portal that has a link with the same pairkey
+	# and link that portal to self
+	def linkPortals(self, pairkey):
+		pairedPortals = {}
+		for room in world.values():
+			pairedPortals |= objQuery(room,key=lambda x: isinstance(x,Portal) and pairkey in x.links.values(),d=3)
+		if len(pairedPortals) != 1:
+			raise Exception(f"Error: Portal {self.name} has an ambiguous connection for '{pairkey}'. Found {len(pairedPortals)} matches.")
+		pairedPortal = next(pairedPortals)
+		# link paired portal to self
+		for dir, dest in self.links.items():
+			if dest == pairkey:
+				self.links[dir] = pairedPortal
+		# link self to the paired portal
+		for dir, dest in pairedPortal.links.items():
+			if dest == pairkey:
+				pairedPortal.links[dir] = self
+
+
+	def assignRefs(self,parent):
+		self.parent = parent
+
+		for dir, dest in self.links.items():
+			if isinstance(dest,str) and dest in world:
+				self.links[dir] = world[dest]
+			elif isinstance(dest,int):
+				self.linkPortals(dest)
+			elif isinstance(dest,Room) or isinstance(dest,Portal):
+				continue
+			else:
+				raise Exception(f"Error: Portal {self.name} has a connection to unknown destination '{dest}'.")
+
+
+	def assignLinkIDs(self,pairportal,linkid):
+		if not hasattr(self, "jsonLinks"):
+			self.jsonLinks = self.links.copy()
+
+		assert pairportal in self.jsonLinks.values()
+		for dir, dest in self.jsonLinks.items():
+			if dest is pairportal:
+				self.jsonLinks[dir] = linkid
+
+
+	def convertToJSON(self):
+		# must copy links for saving to JSON so real links remain intact if game continues
+		if not hasattr(self, "jsonLinks"):
+			self.jsonLinks = self.links.copy()
+
+		# convert room links to strings, and portal links to unique link ids
+		for portal in {v for v in self.jsonLinks.values() if isinstance(v,Portal)}:
+			linkId = game.portallinks
+			self.assignLinkIDs(portal,linkId)
+			portal.assignLinkIDs(self,linkId)
+			game.portallinks += 1
+
+		jsonDict = self.__dict__.copy()
+		for dir, dest in jsonDict["jsonLinks"].items():
+			if isinstance(dest,Room):
+				jsonDict["jsonLinks"][dir] = dest.name.lower()
+
+		jsonDict["links"] = jsonDict["jsonLinks"]
+		del jsonDict["jsonLinks"]
+
+		# all links should now be either strings or ints
+		assert all([isinstance(dest,(str,int)) for dest in jsonDict["links"].values()])
+		return jsonDict
 
 
 	### Operation ###
 
 	# method for creatures travelling through the portal
 	def Traverse(self,traverser,dir=None):
-		if dir == None or dir not in self.connections:
-			if len(set(self.connections.values())) == 1:
-				dir = list(self.connections.keys())[0]
+		if dir == None or dir not in self.links:
+			if len(set(self.links.values())) == 1:
+				dir = list(self.links.keys())[0]
 			else:
 				msg = f"Which direction will you go on the {self.name}?"
 				dir = InputLoop(msg)
 				if dir is None:
 					return False
-		if dir not in self.connections:
+		if dir not in self.links:
 			Print(f"The {self.name} does not go '{dir}'.")
 			return False
 
 		if traverser is player:
 			waitKbInput(f"You go {dir} the {self.name}.")
-		newroom = world[self.connections[dir]]
+		newroom = self.links[dir]
 		traverser.changeLocation(newroom)
 		return True
 
@@ -4064,16 +4137,16 @@ class Portal(Item):
 		if isinstance(item,Creature):
 			return self.Traverse(item,dir="down")
 
-		if "down" in self.connections:
-			return item.Fall(room=world[self.connections["down"]])
+		if "down" in self.links:
+			return item.Fall(room=self.links["down"])
 
 		# item can't randomly go up
-		dir = choice([dir for dir in self.connections])
-		if self.connections[dir] == self.connections.get("up",None):
+		dir = choice([dir for dir in self.links])
+		if self.links[dir] == self.links.get("up",None):
 			return item.Fall()
 
 		# Print(f"{+item} goes {self.passprep} {-self}.")	
-		item.changeLocation(world[self.connections[dir]])
+		item.changeLocation(self.links[dir])
 
 
 	def Bombard(self,missile):
@@ -4091,15 +4164,15 @@ class Portal(Item):
 	# returns dict of exits, where keys are directions and values are room names
 	def allExits(self,d=3):
 		exits = {}
-		for dir in self.connections:
-			exits[(dir,None)] = self.connections[dir]
+		for dir in self.links:
+			exits[(dir,None)] = self.links[dir]
 		# get a list of passages in the room
 		portals = self.query(key=lambda x: isinstance(x,Portal),d=d)
 		# for each portal, add its connections to exits
 		for portal in portals:
-			for dir in portal.connections:
+			for dir in portal.links:
 				if dir not in exits:
-					exits[(dir,portal)] = portal.connections[dir]
+					exits[(dir,portal)] = portal.links[dir]
 		return exits
 
 
@@ -4109,7 +4182,7 @@ class Portal(Item):
 
 	# given a direction (like 'north' or 'down)...
 	# return the first Passage object with that direction in its connections
-	def getPassagesFromDir(self,dir):
+	def getPortalsFromDir(self,dir):
 		passages = []
 		for thisDir, passage in self.allExits(d=0):
 			if dir == thisDir:
@@ -4119,8 +4192,8 @@ class Portal(Item):
 
 	# if the given room object, dest, is in one of the rooms exits, then find the direction it is in from the room.
 	def getDirFromDest(self,dest):
-		for (dir,passage), thisDest in self.allExits().items():
-			if thisDest == dest:
+		for (dir,passage), room in self.allExits().items():
+			if nameMatch(dest,room):
 				return dir
 		return None
 
@@ -4153,9 +4226,9 @@ class Fixture(Item):
 
 
 class Passage(Portal,Fixture):
-	def __init__(self,name,desc,weight,durability,composition,connections,descname,passprep="into",mention=False,**kwargs):
+	def __init__(self,name,desc,weight,durability,composition,links,descname,passprep="into",mention=False,**kwargs):
 		Fixture.__init__(self,name,desc,weight,durability,composition,mention=mention,**kwargs)
-		self.connections = connections
+		self.links = links
 		self.descname = descname
 		self.passprep = passprep
 
@@ -4286,7 +4359,6 @@ class Serpens(Item):
 	# this object instance as a JSON object when saving the game
 	def convertToJSON(self):
 		return {
-			"__class__": self.__class__.__name__,
 			"value": self.value,
 			"status": self.status
 		}

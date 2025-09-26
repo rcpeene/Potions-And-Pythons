@@ -47,9 +47,9 @@ blah
 \set
 \set p
 \set p blah
-\set my STR
-\set p STR blah
-\set p STR 20
+\set my str
+\set p str blah
+\set p str 20
 \set room blah
 \set room name testroom
 here

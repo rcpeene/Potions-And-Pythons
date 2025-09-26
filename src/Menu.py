@@ -37,14 +37,9 @@ def writeGame(filename,Game,World):
 visitedobjects = set()
 class worldEncoder(json.JSONEncoder):
 	def default(self,objToWrite):
-		# if type(objToWrite) is set and tuple(objToWrite) in visitedobjects:
-		# 	raise Exception(f"{objToWrite} already visited")
-		# elif objToWrite in visitedobjects:
-		# 	raise Exception(f"{objToWrite} already visited")
-		# if type(objToWrite) is not set:
-		# 	visitedobjects.add(objToWrite)
-		# if type(objToWrite) is set:
-		# 	visitedobjects.add(tuple(objToWrite))
+		print(objToWrite)
+		if objToWrite in visitedobjects:
+			raise Exception(f"{objToWrite} already visited")
 		
 		JSONprimitives = {dict,list,str,int,float,bool,None}
 		if type(objToWrite) is set:
@@ -55,6 +50,7 @@ class worldEncoder(json.JSONEncoder):
 		# 	return objToWrite.__dict__
 		elif Core.hasMethod(objToWrite,"convertToJSON"):
 			jsonDict = objToWrite.convertToJSON()
+			jsonDict = {"__class__": objToWrite.__class__.__name__, **jsonDict}
 			if "parent" in jsonDict:
 				del jsonDict["parent"]
 			return jsonDict
@@ -82,6 +78,8 @@ def serialize_safe(obj, encoder_class):
 
 
 def find_problematic_subobject(obj):
+	global visitedobjects
+	visitedobjects = set()
 	if isinstance(obj, dict):
 		for key, value in obj.items():
 			result, error = serialize_safe(value, worldEncoder)
@@ -102,7 +100,7 @@ def find_problematic_subobject(obj):
 		# Base case for other types (e.g., int, str)
 		result, error = serialize_safe(obj, worldEncoder)
 		if result is None:
-			print(f"Problematic object: {obj}")
+			print(f"Problematic object: {repr(obj)}")
 			print(f"Error: {error}")
 
 
@@ -156,6 +154,8 @@ def objDecoder(jsonDict):
 		del jsonDict["__class__"]
 		if objClassname == "set":
 			return set(jsonDict["setdata"])
+		if objClassname == "DialogueTree":
+			return jsonDict
 		if objClassname == "factoryCreature":
 			return Creatures.factory[jsonDict["name"]]()
 		elif objClassname == "factoryItem":
@@ -174,7 +174,7 @@ def objDecoder(jsonDict):
 				return objClass(**objAttributes)
 			except TypeError as e:
 				attributeStr = "\n".join(f"{key}: {value}" for key, value in objAttributes.items())
-				raise TypeError(f"Failed to instantiate object: '{objClassname}' from JSON with attributes above", e)
+				raise TypeError(f"Failed to instantiate object: '{objClassname}' from JSON with attributes above: {attributeStr}", e)
 		else:
 			raise Exception("ERROR in decoding JSON object class type: " + objClassname)
 	else:

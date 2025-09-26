@@ -111,7 +111,7 @@
 				"weight": -1,
 				"durability": -1,
 				"composition": "wood",
-				"connections": {
+				"links": {
 					"up": "cabin hallway",
 					"out": "cabin hallway"
 				},
@@ -184,7 +184,7 @@
 				"weight": -1,
 				"durability": -1,
 				"composition": "wood",
-				"connections": {
+				"links": {
 					"up": "cabin quarters",
 					"down": "cabin basement"
 				},
@@ -224,7 +224,7 @@
 				"durability": 3,
 				"composition": "glass",
 				"aliases": ["northern window"],
-				"connections": {
+				"links": {
 					"out": "cliffside",
 					"through": "cliffside",
 					"into": "cliffside"
@@ -347,7 +347,7 @@
 				"durability": -1,
 				"composition": "wood",
 				"mention": true,
-				"connections": {
+				"links": {
 					"down": "cabin hallway",
 					"out": "cabin hallway"
 				},
@@ -396,7 +396,7 @@
 						"weight": 2,
 						"durability": 1000,
 						"composition": "fire",
-						"connections": {
+						"links": {
 							"in": "burning shore"
 						},
 						"passprep": "into",
@@ -459,7 +459,7 @@
 				"composition": "earth",
 				"aliases": ["cliffside","pale cliff"],
 				"difficulty": 30,
-				"connections": {
+				"links": {
 					"up": "clifftop"
 				},
 				"descname": "pale cliff"
@@ -485,7 +485,7 @@
 				"composition": "earth",
 				"aliases": ["cliffside","white cliff"],
 				"difficulty": 30,
-				"connections": {
+				"links": {
 					"down": "cliffside"
 				},
 				"descname": "pale cliff",
@@ -644,7 +644,7 @@
 				"weight": -1,
 				"durability": -1,
 				"composition": null,
-				"connections": {
+				"links": {
 					"down": "burning shore",
 					"in": "burning shore"
 				},

@@ -9,8 +9,10 @@ punch gobln
 kick goblin
 attack goblin with sword
 \tpt cabin kitchen
+\set my str 100
 break table
 1
+
 break table with sword
 
 quit
