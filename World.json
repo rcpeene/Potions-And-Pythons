@@ -318,7 +318,22 @@
 				"composition": "bronze",
 				"open": false,
 				"capacity": 50,
-				"items": [],
+				"items": [
+					{
+						"__class__": "Portal",
+						"name": "fiery portal",
+						"desc": "A blazing orange portal that hangs in the air, rippling",
+						"weight": 2,
+						"durability": 1000,
+						"composition": "fire",
+						"links": {
+							"in": "burning shore"
+						},
+						"passprep": "into",
+						"descname": "blazing orange portal",
+						"aliases": ["portal"]
+					}
+				],
 				"keyids": [-1,1],
 				"locked": true
 			}
@@ -388,21 +403,6 @@
 					{
 						"__class__": "Serpens",
 						"value": 12
-					},
-					{
-						"__class__": "Passage",
-						"name": "fiery portal",
-						"desc": "A blazing orange portal that hangs in the air, rippling",
-						"weight": 2,
-						"durability": 1000,
-						"composition": "fire",
-						"links": {
-							"in": "burning shore"
-						},
-						"passprep": "into",
-						"mention": true,
-						"descname": "blazing orange portal",
-						"aliases": ["portal"]
 					}
 				]
 			}
@@ -557,6 +557,20 @@
 				"delay": 3,
 				"maxRepeats": 5,
 				"toggle": true
+			},
+			{
+				"__class__": "Portal",
+				"name": "Warped Mirror",
+				"desc": "A warped mirror that seems to glow. You can't make out any reflection but dark twisted shapes.",
+				"weight": 2,
+				"durability": 10,
+				"composition": "glass",
+				"links": {
+					"in": "cave"
+				},
+				"passprep": "into",
+				"descname": "warped mirror",
+				"aliases": ["mirror"]
 			}
 		],
 		"creatures": []

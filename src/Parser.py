@@ -483,7 +483,7 @@ def Set(command):
 	try:
 		getattr(obj,attrname)
 	except:
-		Core.Print(f"{obj} has no attribute",color="k")
+		Core.Print(f"{obj} has no attribute {attrname}",color="k")
 		return False
 	if type(getattr(obj,attrname)) is int and type(value) is not int:
 		Core.Print(f"Can't step {attrname} to {value}. Attribute {attrname} is an integer",color="k")
