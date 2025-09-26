@@ -60,6 +60,7 @@ class Box(Core.Portal):
 		self.capacity = capacity
 		self.items = items
 
+
 	### File I/O ###
 
 	def convertToJSON(self):
@@ -177,6 +178,13 @@ class Box(Core.Portal):
 
 
 	def Traverse(self,traverser,dir=None,verb=None):
+		if self in traverser.objTree():
+			if traverser is Core.player:
+				Core.Print(f"You can't enter {-self}. It's within your Inventory.")
+			else:
+				Core.Print(f"{+traverser} can't enter {-self}. It's within {-traverser}'s Inventory.")
+			return False
+
 		if dir in ("out","outside","out of"):
 			if self is traverser.parent:
 				if not self.open:
@@ -263,7 +271,7 @@ class Box(Core.Portal):
 
 
 	def canAdd(self,I):
-		return I.Weight() <= self.space()
+		return I.Weight() <= self.space() and self not in I.objTree()
 
 
 	def contents(self):

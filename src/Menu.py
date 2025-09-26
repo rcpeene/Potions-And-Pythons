@@ -105,9 +105,6 @@ def find_problematic_subobject(obj):
 
 
 def writeWorld(filename,World):
-	global visitedobjects
-	visitedobjects = set()
-
 	try:
 		with open(filename, "w") as fd:
 			json.dump(World, fd, cls=worldEncoder, indent="\t")

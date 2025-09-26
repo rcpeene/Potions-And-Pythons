@@ -1358,7 +1358,7 @@ class Room():
 	### Dunder Methods ###
 
 	def __repr__(self):
-		return f"Room({self.name}, {room.name for room in self.exits.values()}...)"
+		return f"Room({self.name}, {[room.name for room in self.exits.values()]})"
 
 
 	def __str__(self):
@@ -1390,8 +1390,10 @@ class Room():
 
 
 	def convertToJSON(self):
+		self.already_converted = True
 		jsonDict = self.__dict__.copy()
-		for dir, dest in jsonDict["exits"].items():
+		jsonDict["exits"] = {}
+		for dir, dest in self.exits.items():
 			assert isinstance(dest, Room), f"Trying to save room {self.name} with exit to non-Room '{dest}'."
 			jsonDict["exits"][dir] = dest.name.lower()
 		return jsonDict
@@ -2221,7 +2223,7 @@ class Creature():
 			return 0
 		self.mp += mana
 		if self is player:
-			Print(f"You resurged {mana} MP.",color="b")
+			Print(f"You regained {mana} MP.",color="b")
 		return mana
 
 
@@ -3493,10 +3495,10 @@ class Player(Creature):
 
 
 	def printAbility(self,ability=None):
-		if ability == "atck":
-			Print(f"atck: {self.STR} - {self.weapon.might*self.STR}")
-		elif ability == "brdn":
-			Print(f"brdn: {self.invWeight()}/{self.BRDN()}")
+		if ability == "ATCK":
+			Print(f"ATCK: {self.STR()} - {self.weapon.might*self.STR()}")
+		elif ability == "BRDN":
+			Print(f"BRDN: {self.invWeight()}/{self.BRDN()}")
 		elif ability is not None:
 			Print(f"{ability}: {getattr(self,ability)()}")
 		else:
@@ -4044,12 +4046,13 @@ class Portal(Item):
 	# search in world for the portal that has a link with the same pairkey
 	# and link that portal to self
 	def linkPortals(self, pairkey):
-		pairedPortals = {}
+		pairedPortals = set()
 		for room in world.values():
 			pairedPortals |= objQuery(room,key=lambda x: isinstance(x,Portal) and pairkey in x.links.values(),d=3)
+		pairedPortals.remove(self)
 		if len(pairedPortals) != 1:
 			raise Exception(f"Error: Portal {self.name} has an ambiguous connection for '{pairkey}'. Found {len(pairedPortals)} matches.")
-		pairedPortal = next(pairedPortals)
+		pairedPortal = list(pairedPortals)[0]
 		# link paired portal to self
 		for dir, dest in self.links.items():
 			if dest == pairkey:
@@ -4113,6 +4116,13 @@ class Portal(Item):
 
 	# method for creatures travelling through the portal
 	def Traverse(self,traverser,dir=None):
+		if self in traverser.objTree():
+			if traverser is player:
+				Print(f"You can't enter {-self}. It's within your Inventory.")
+			else:
+				Print(f"{+traverser} can't enter {-self}. It's within {-traverser}'s Inventory.")
+			return False
+
 		if dir == None or dir not in self.links:
 			if len(set(self.links.values())) == 1:
 				dir = list(self.links.keys())[0]
@@ -4125,10 +4135,20 @@ class Portal(Item):
 			Print(f"The {self.name} does not go '{dir}'.")
 			return False
 
+		if isinstance(self.links[dir],Room):
+			newloc = self.links[dir]
+		elif isinstance(self.links[dir], Portal):
+			newloc = self.links[dir].parent
+			if isinstance(newloc,Creature):
+				newloc = newloc.parent
+			if not newloc.canAdd(traverser):
+				if traverser is player:
+					Print(f"You can't enter {-self}. There's not enough room.")
+				return False
+
 		if traverser is player:
 			waitKbInput(f"You go {dir} the {self.name}.")
-		newroom = self.links[dir]
-		traverser.changeLocation(newroom)
+		traverser.changeLocation(newloc)
 		return True
 
 
@@ -4136,6 +4156,9 @@ class Portal(Item):
 	def Transfer(self,item):
 		if isinstance(item,Creature):
 			return self.Traverse(item,dir="down")
+		if self in item.objTree():
+			Print(f"{+item} can't enter {-self}. It's within {-item}'s contents.")
+			return False
 
 		if "down" in self.links:
 			return item.Fall(room=self.links["down"])
@@ -4146,14 +4169,23 @@ class Portal(Item):
 			return item.Fall()
 
 		# Print(f"{+item} goes {self.passprep} {-self}.")	
-		item.changeLocation(self.links[dir])
+		if isinstance(self.links[dir],Room):
+			newloc = self.links[dir]
+		elif isinstance(self.links[dir], Portal):
+			newloc = self.links[dir].parent
+			if isinstance(newloc,Creature):
+				newloc = newloc.parent
+			if not newloc.canAdd(item):
+				return False
+
+		item.changeLocation(newloc)
 
 
 	def Bombard(self,missile):
 		assert isinstance(missile,Projectile)
 		if diceRoll(1,100) < bound(missile.aim+self.weight+10,1,99):
 			if getattr(self,"open",True):
-				# Print(f"{+missile} goes {self.passprep} {-self}.")
+				Print(f"{+missile} goes {self.passprep} {-self}.")
 				self.Transfer(missile.asItem())
 			else:
 				missile.Collide(self)
@@ -4185,7 +4217,7 @@ class Portal(Item):
 	def getPortalsFromDir(self,dir):
 		passages = []
 		for thisDir, passage in self.allExits(d=0):
-			if dir == thisDir:
+			if dir == thisDir and passage is not None:
 				passages.append(passage)
 		return passages
 
