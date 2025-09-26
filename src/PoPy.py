@@ -14,9 +14,10 @@ import Parser
 
 def main(testing=False):
 	# formatting the prompt window
-	os.system("mode con: lines=32")
+	# os.system("mode con: lines=32")
 	os.system("title Potions ^& Pythons")
 	os.system("color 0F")
+	if "src" in os.getcwd(): os.chdir("..")
 
 	if not testing:
 		logger = Core.TeeLogger("./transcript.log")
@@ -77,6 +78,9 @@ if __name__ == "__main__":
 ################################################################################
 
 # CURRENT TASKS
+
+# how to save portal connections? they can't be strings but they also can't be references (circular refs)
+	# save them as room names or integers, then convert to references on load
 
 # add ability to go into containers
 	# > get out of chest... not working

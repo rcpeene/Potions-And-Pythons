@@ -485,6 +485,9 @@ def Set(command):
 	except:
 		Core.Print(f"{obj} has no attribute",color="k")
 		return False
+	if type(getattr(obj,attrname)) is int and type(value) is not int:
+		Core.Print(f"Can't step {attrname} to {value}. Attribute {attrname} is an integer",color="k")
+		return False
 	Core.Print(f"Setting {obj}.{attrname} to {value}",color="k")
 	setattr(obj,attrname,value)
 	if isinstance(obj,Core.Creature):
@@ -514,7 +517,7 @@ def Teleport(command):
 	if len(command) < 2:
 		Core.Print("Error: no location given",color="k")
 		return
-	location = " ".join(command[1:])
+	location = " ".join(command[1:]).lower()
 	if location in Core.world:
 		Core.player.changeLocation(Core.world[location])
 	else:
@@ -1002,7 +1005,7 @@ def Drop(dobj,iobj,prep,I=None):
 	if iobj is not None:
 		R = findObject(iobj,"drop into","room")
 		if R is None: return False
-		if isinstance(R,Core.Passage) and "down" in R.connections:
+		if isinstance(R,Core.Passage) and "down" in R.links:
 			if getattr(R,"open",True):
 				if isinstance(I,Core.Creature):
 					Core.player.removeCarry(I)
@@ -1159,9 +1162,9 @@ def Give(dobj,iobj,prep):
 # called when the user wants to go "up" or "down"
 def GoVertical(dir,passage=None,dobj=None):
 	if Core.player.hasCondition("flying") and not Core.player.riding:
-		newroomname = Core.game.currentroom.allExits()[dir,passage]
+		newroom = Core.game.currentroom.allExits()[dir,passage]
 		Core.Print(f"You fly {dir}!")
-		return Core.player.changeLocation(Core.world[newroomname])
+		return Core.player.changeLocation(newroom)
 
 	if passage is None and dobj is not None:
 		Core.Print(f"There is no '{dobj}' to go {dir} here.",color="k")
@@ -1240,12 +1243,12 @@ def Go(dobj,iobj,prep):
 		Core.Print(f"There is no exit leading to a '{dobj}' here.",color="k")
 		return False
 	if dir is None:
-		dir = Core.player.parent.getDirFromDest(dest)
+		dir = Core.player.parent.getDirFromDest(dest) # TODO: this will lead to an error if parent is not a room
 	if (dest,passage) == (None,None):
 		if dir in Core.player.parent.exits:
-			dest = Core.player.parent.exits[dir]
+			dest = Core.player.parent.exits[dir].name.lower()
 	if passage is None and dir not in Core.player.parent.exits:
-		passages = Core.player.parent.getPassagesFromDir(dir)
+		passages = Core.player.parent.getPortalsFromDir(dir)
 		passage = chooseObject("way",passages,"go")
 		# this means player cancelled the choice
 		if len(passages) > 0 and passage is None:
@@ -1563,7 +1566,7 @@ def Put(dobj,iobj,prep):
 		if not Core.yesno(q):
 			return False
 
-	if isinstance(R,Core.Passage) and "down" in R.connections:
+	if isinstance(R,Core.Passage) and "down" in R.links:
 		if getattr(R,"open",True):
 			Core.player.remove(I)
 			Core.game.currentroom.add(I)
@@ -1902,9 +1905,8 @@ def Throw(dobj,iobj,prep):
 	elif iobj.lower() in Core.game.currentroom.exits.keys():
 		T = Core.world[Core.game.currentroom.exits[iobj]]
 		dir = iobj
-	elif iobj in Core.game.currentroom.exits.values():
-		T = Core.world[iobj]
-		dir = Core.getDirFromDest(T)
+	elif Core.player.parent.getDirFromDest(iobj):
+		dir = Core.player.parent.getDirFromDest(iobj)
 	else:
 		T = findObject(iobj,f"throw {prep}","room")
 		if T is None: return False
@@ -1957,9 +1959,8 @@ def Toss(dobj,iobj,prep):
 	elif iobj.lower() in Core.game.currentroom.exits.keys():
 		T = Core.world[Core.game.currentroom.exits[iobj]]
 		dir = iobj
-	elif iobj in Core.game.currentroom.exits.values():
-		T = Core.world[iobj]
-		dir = Core.getDirFromDest(T)
+	elif Core.player.parent.getDirFromDest(iobj):
+		dir = Core.player.parent.getDirFromDest(iobj)
 	else:
 		T = findObject(iobj,"toss to","room")
 		if T is None: return False

@@ -55,10 +55,19 @@ class Box(Core.Portal):
 		Core.Portal.__init__(self,name,desc,weight,durability,composition,{},name,None,**kwargs)
 		self.parent = None
 		self.passprep = "in" if passprep is None else passprep
-		self.connections = {self.passprep:self, "out":self}
+		self.links = {self.passprep:self, "out":self}
 		self.open = open
 		self.capacity = capacity
 		self.items = items
+
+	### File I/O ###
+
+	def convertToJSON(self):
+		jsonDict = self.__dict__.copy()
+		del jsonDict["links"]
+		del jsonDict["descname"]
+		del jsonDict["exits"]
+		return jsonDict
 
 
 	### Operation ###
@@ -282,7 +291,6 @@ class Controller(Core.Item):
 		jsonDict = self.__dict__.copy()
 		for trigger in self.triggers:
 			del jsonDict[trigger]
-		jsonDict = {"__class__":self.__class__.__name__, **jsonDict}
 		return jsonDict
 
 
@@ -648,21 +656,21 @@ class Table(Core.Item):
 
 
 class Wall(Core.Passage):
-	def __init__(self,name,desc,weight,durability,composition,connections,descname,difficulty,**kwargs):
-		Core.Passage.__init__(self,name,desc,weight,durability,composition,connections,descname,**kwargs)
+	def __init__(self,name,desc,weight,durability,composition,links,descname,difficulty,**kwargs):
+		Core.Passage.__init__(self,name,desc,weight,durability,composition,links,descname,**kwargs)
 		self.difficulty = difficulty
 
 
 	def Traverse(self,traverser,dir=None,verb="climb"):
 		if dir == None:
-			if len(set(self.connections.values())) == 1:
-				dir = list(self.connections.keys())[0]
+			if len(set(self.links.values())) == 1:
+				dir = list(self.links.keys())[0]
 			else:
 				msg = f"Which direction will you go on the {self.name}?"
 				dir = Core.Input(msg).lower()
 		if dir in Data.cancels:
 			return False
-		if dir not in self.connections:
+		if dir not in self.links:
 			Core.Print(f"{+self} does not go '{dir}'.")
 			return False
 
@@ -679,10 +687,10 @@ class Wall(Core.Passage):
 			Core.waitKbInput(f"You {verb} {dir} {-self}.")
 
 		if traverser.ATHL() >= self.difficulty or traverser.hasAnyCondition("clingfast","flying"):
-			traverser.changeLocation(Core.world[self.connections[dir]])
+			traverser.changeLocation(self.links[dir])
 			return True
-		elif "down" in self.connections:
-			traverser.Fall(self.difficulty,room=Core.world[self.connections["down"]])
+		elif "down" in self.links:
+			traverser.Fall(self.difficulty,room=self.links["down"])
 		else:
 			traverser.Fall(self.difficulty)
 		return True
@@ -692,21 +700,21 @@ class Wall(Core.Passage):
 		if isinstance(item,Core.Creature):
 			return self.Traverse(item,dir="down")
 
-		if "down" in self.connections:
-			return item.Fall(height=self.difficulty,room=Core.world[self.connections["down"]])
+		if "down" in self.links:
+			return item.Fall(height=self.difficulty,room=self.links["down"])
 
 		# item can't randomly go up
-		dir = choice([dir for dir in self.connections])
-		if self.connections[dir] == self.connections.get("up",None):
+		dir = choice([dir for dir in self.links])
+		if self.links[dir] == self.links.get("up",None):
 			return item.Fall()
 
 		# Print(f"{+item} goes {self.passprep} {-self}.")	
-		item.changeLocation(Core.world[self.connections[dir]])
+		item.changeLocation(self.links[dir])
 
 
 class Window(Core.Passage):
-	def __init__(self,name,desc,weight,durability,composition,connections,descname,open=False,broken=False,passprep="through",**kwargs):
-		Core.Passage.__init__(self,name,desc,weight,durability,composition,connections,descname,passprep=passprep,**kwargs)
+	def __init__(self,name,desc,weight,durability,composition,links,descname,open=False,broken=False,passprep="through",**kwargs):
+		Core.Passage.__init__(self,name,desc,weight,durability,composition,links,descname,passprep=passprep,**kwargs)
 		self.descname = descname
 		self.open = open
 		if not self.open:
@@ -736,14 +744,14 @@ class Window(Core.Passage):
 			return False
 
 		if dir == None:
-			if len(set(self.connections.values())) == 1:
-				dir = list(self.connections.keys())[0]
+			if len(set(self.links.values())) == 1:
+				dir = list(self.links.keys())[0]
 			else:
 				msg = f"Which direction will you go on the {self.name}?"
 				dir = input(msg).lower()
 		if dir in Data.cancels:
 			return False
-		if dir not in self.connections:
+		if dir not in self.links:
 			Core.Print(f"{+self} does not go '{dir}'.")
 			return False
 
@@ -753,7 +761,7 @@ class Window(Core.Passage):
 		if traverser.hasCondition("flying"): verb = "fly"
 		elif traverser is Core.player.riding: verb = "ride"
 		Core.Print(f"You {verb} {dir} {-self}.")
-		traverser.changeLocation(Core.world[self.connections[dir]])
+		traverser.changeLocation(self.links[dir])
 		return True
 
 
@@ -771,8 +779,8 @@ class Window(Core.Passage):
 
 
 class Door(Window):
-	def __init__(self,name,desc,weight,durability,composition,connections,descname,open=False,**kwargs):
-		Window.__init__(self,name,desc,weight,durability,composition,connections,descname,**kwargs)
+	def __init__(self,name,desc,weight,durability,composition,links,descname,open=False,**kwargs):
+		Window.__init__(self,name,desc,weight,durability,composition,links,descname,**kwargs)
 		self.descname = descname
 		self.open = open
 
