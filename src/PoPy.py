@@ -80,8 +80,6 @@ if __name__ == "__main__":
 # CURRENT TASKS
 
 # add ability to go into containers
-	# > get out of chest... not working
-		# exit chest also
 	# include hiding ability?
 		# you are hiding (if in one)
 	# continue stand func with stand on and stand in

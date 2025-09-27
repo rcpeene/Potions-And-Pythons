@@ -1215,7 +1215,7 @@ def parseGoTerms(dobj,iobj,prep):
 	# assign dir and passage
 	if dir is None and dobj in Data.directions.values(): dir = dobj
 	elif dir is None and iobj in Data.directions.values(): dir = iobj
-	else: dir = prep
+	elif dir is None: dir = prep
 
 	# if prep is None: prep = "with"
 	# if passage is None: passage = findObject(dobj,f"go {prep}","room",silent=True)

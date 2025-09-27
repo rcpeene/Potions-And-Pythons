@@ -37,7 +37,7 @@ def writeGame(filename,Game,World):
 visitedobjects = set()
 class worldEncoder(json.JSONEncoder):
 	def default(self,objToWrite):
-		print(objToWrite)
+		# print(objToWrite)
 		if objToWrite in visitedobjects:
 			raise Exception(f"{objToWrite} already visited")
 		
