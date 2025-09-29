@@ -4,6 +4,7 @@ test
 take sword
 go n
 attack python with sword
+attack python
 \tpt treeline
 punch gobln
 kick goblin
