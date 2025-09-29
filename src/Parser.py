@@ -1257,7 +1257,7 @@ def Go(dobj,iobj,prep):
 		Core.Print(f"There is no exit leading to a '{dobj}' here.",color="k")
 		return False
 	if dir is None:
-		dir = Core.player.parent.getDirFromDest(dest) # TODO: this will lead to an error if parent is not a room
+		dir, passage = Core.player.parent.getDirPassagePair(dest)
 	if (dest,passage) == (None,None):
 		if dir in Core.player.parent.exits:
 			dest = Core.player.parent.exits[dir].name.lower()
@@ -1924,13 +1924,15 @@ def Throw(dobj,iobj,prep):
 	elif iobj.lower() in Core.game.currentroom.exits.keys():
 		T = Core.world[Core.game.currentroom.exits[iobj]]
 		dir = iobj
-	elif Core.player.parent.getDirFromDest(iobj):
-		dir = Core.player.parent.getDirFromDest(iobj)
+	elif Core.player.parent.getDirPassagePair(iobj)[0]:
+		dir, T = Core.player.parent.getDirPassagePair(iobj)
 	else:
 		T = findObject(iobj,f"throw {prep}","room")
 		if T is None: return False
 		dirprep = getattr(T,"passprep","toward")
 		dir = f"{dirprep} {-T}"
+	if T is None:
+		T = Core.player.parent
 
 	if not getattr(Core.player.parent,"open",True):
 		if isinstance(T,Core.Room):
@@ -1978,14 +1980,16 @@ def Toss(dobj,iobj,prep):
 	elif iobj.lower() in Core.game.currentroom.exits.keys():
 		T = Core.world[Core.game.currentroom.exits[iobj]]
 		dir = iobj
-	elif Core.player.parent.getDirFromDest(iobj):
-		dir = Core.player.parent.getDirFromDest(iobj)
+	elif Core.player.parent.getDirPassagePair(iobj)[0]:
+		dir, T = Core.player.parent.getDirPassagePair(iobj)
 	else:
 		T = findObject(iobj,"toss to","room")
 		if T is None: return False
 		dirprep = getattr(T,"passprep","toward")
 		dir = f"{dirprep} {-T}"
-	
+	if T is None:
+		T = Core.player.parent
+
 	Core.player.equipInHand(I,slot="left")
 	Core.game.setPronouns(I)
 	Core.Print(f"You throw {-I} {dir}.")

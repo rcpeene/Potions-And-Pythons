@@ -1638,11 +1638,11 @@ class Room():
 
 
 	# if the given room object, dest, is in one of the rooms exits, then find the direction it is in from the room.
-	def getDirFromDest(self,dest):
+	def getDirPassagePair(self,dest):
 		for (dir,passage), room in self.allLinks().items():
 			if nameMatch(dest,room):
-				return dir
-		return None
+				return dir, passage
+		return None, None
 
 
 	# returns True if the room has a status condition with given name.
@@ -4211,12 +4211,12 @@ class Portal(Item):
 		return passages
 
 
-	# if the given room object, dest, is in one of the rooms exits, then find the direction it is in from the room.
-	def getDirFromDest(self,dest):
+	# if the given room object, dest, is in one of the rooms exits, then find the direction and passage it is in from the room.
+	def getDirPassagePair(self,dest):
 		for (dir,passage), room in self.allLinks().items():
 			if nameMatch(dest,room):
-				return dir
-		return None
+				return dir, passage
+		return None, None
 
 
 	def allDirs(self):
