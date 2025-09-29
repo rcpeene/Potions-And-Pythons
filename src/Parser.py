@@ -662,7 +662,7 @@ def Attack(dobj,iobj,prep,target=None,weapon=None,weapon2=None):
 		elif Core.player.gear["right"] == Core.EmptyGear() and Core.player.gear["left"] == Core.EmptyGear():
 			iobj = getNoun("What will you attack with?")
 			if iobj in Data.cancels: return False
-	if iobj.startswith("my "):
+	if iobj is not None and iobj.startswith("my "):
 		iobj = iobj[3:]
 
 	# assigning weapons based on input and what is in player's hand
@@ -685,9 +685,9 @@ def Attack(dobj,iobj,prep,target=None,weapon=None,weapon2=None):
 			else: weapon = chooseObject(iobj,weapons)
 			if weapon is None: return False
 	else:
-		if Core.player.gear["right"] != Core.Empty():
+		if Core.player.gear["right"] != Core.EmptyGear():
 			weapon = Core.player.gear["right"]
-		elif Core.player.gear["left"] != Core.Empty():
+		elif Core.player.gear["left"] != Core.EmptyGear():
 			weapon = Core.player.gear["right"]
 
 	if target is None:
@@ -905,6 +905,8 @@ def Dismount(dobj,iobj,prep):
 	if iobj is not None:
 		dobj = iobj
 	if dobj is not None:
+		if dobj.startswith("my "):
+			dobj = dobj[3:]
 		matches = Core.player.surroundings().nameQuery(dobj)
 		if Core.player.riding not in matches:
 			Core.Print(f"You're not riding a '{dobj}'",color="k")
@@ -1007,7 +1009,7 @@ def Drop(dobj,iobj,prep,I=None):
 	if iobj is not None:
 		R = findObject(iobj,"drop into","room")
 		if R is None: return False
-		if isinstance(R,Core.Passage) and "down" in R.links:
+		if isinstance(R,Core.Portal) and "down" in R.links:
 			if getattr(R,"open",True):
 				if isinstance(I,Core.Creature):
 					Core.player.removeCarry(I)
@@ -1057,7 +1059,7 @@ def Eat(dobj,iobj,prep):
 	if I is None: return False
 	Core.game.setPronouns(I)
 
-	if not Core.hasMethod(I,"Eat"):
+	if not isinstance(I,Items.Food):
 		Core.Print(f"You can't eat {-I}.")
 		return False
 
@@ -1108,7 +1110,7 @@ def Escape(dobj,iobj,prep):
 def Exit(dobj,iobj,prep):
 	if dobj is None and "out" in Core.player.parent.allDirs():
 		return Go("out",iobj,prep)
-	return Go(dobj,iobj,"out")
+	return Go(None,iobj,"out")
 
 
 def Feed(dobj,iobj,prep):
@@ -1259,6 +1261,8 @@ def Go(dobj,iobj,prep):
 	if (dest,passage) == (None,None):
 		if dir in Core.player.parent.exits:
 			dest = Core.player.parent.exits[dir].name.lower()
+		if dir == "out" and len(Core.player.parent.allLinks()) == 1:
+			dest = list(Core.player.parent.allLinks().values())[0].name.lower()
 	if passage is None and dir not in Core.player.parent.exits:
 		passages = Core.player.parent.getPortalsFromDir(dir)
 		passage = chooseObject("way",passages,"go")
@@ -1578,10 +1582,13 @@ def Put(dobj,iobj,prep):
 		if not Core.yesno(q):
 			return False
 
-	if isinstance(R,Core.Passage) and "down" in R.links:
+	if isinstance(R,Core.Portal) and "down" in R.links:
 		if getattr(R,"open",True):
-			Core.player.remove(I)
-			Core.game.currentroom.add(I)
+			if isinstance(I,Core.Creature):
+					Core.player.removeCarry(I)
+			else:
+				Core.player.remove(I)
+				Core.player.parent.add(I)
 			return R.Transfer(I)
 		else:
 			Core.Print(f"{+R} is closed.")
@@ -1844,7 +1851,7 @@ def Take(dobj,iobj,prep):
 		objToTake = findObject(dobj,"take","room",roomD=2)
 	else:
 		objToTake = findObject(dobj,"take",roomD=2,reqParent=iobj)
-	if objToTake is not True: # False or None
+	if objToTake is None: # None
 		return False
 	Core.game.setPronouns(objToTake)
 	if objToTake.parent is Core.player:

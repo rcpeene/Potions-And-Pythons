@@ -319,7 +319,7 @@ class Food(Core.Item):
 		Core.Item.__init__(self,name,desc,weight,durability,composition,**kwargs)
 		self.heal = heal
 
-	# heals 'heal' hp to the player, removes food from inventory
+	# heals hp to the player, removes food from inventory
 	def Eat(self,eater):
 		if isinstance(eater,Core.Player):
 			Core.Print(f"You consume {-self}.")
@@ -517,10 +517,10 @@ class Potion(Bottle):
 
 	# heals the player hp 1000, replaces potion with an empty bottle
 	def Drink(self):
-		Core.Print(f"You drink {-self.name}.")
+		Core.Print(f"You drink {-self}.")
 		Core.player.heal(1000)
 		self.parent.remove(self)
-		Core.player.add()
+		Core.player.add(factory["bottle"])
 
 
 	def Pour(self,obj=None):

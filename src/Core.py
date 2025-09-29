@@ -231,6 +231,7 @@ def ellipsis(n=3,color=None):
 		sleep(1)
 		Print(".",color=color)
 	sleep(1)
+	flushInput()
 
 
 # prints a list of strings, l, into n columns of width w characters
@@ -2065,7 +2066,7 @@ class Creature():
 
 	def __pos__(self):
 		return self.nounPhrase('the',cap=1)
-	
+
 
 	def __invert__(self):
 		return self.nounPhrase('a')
@@ -2275,7 +2276,10 @@ class Creature():
 		for slot,obj in self.gear.items():
 			if I is obj:
 				self.unequip(slot,silent=silent)
-		self.inv.remove(I)
+		if I is self.carrying:
+			self.removeCarry(silent=silent)
+		if I in self.inv:
+			self.inv.remove(I)
 		if hasMethod(I,"Drop"):
 			I.Drop(self)
 		self.checkHindered()
@@ -2533,7 +2537,7 @@ class Creature():
 			room = room["down"]
 		if room != self.room():
 			self.changeLocation(room)
-			
+
 		if self.hasCondition("fleetfooted"):
 			height = 0
 		self.takeDamage(height,"b")
@@ -3109,7 +3113,7 @@ class Player(Creature):
 
 
 	def __neg__(self):
-		return "yourself"
+		return "yourself" if game.whoseturn is self else "you"
 
 
 	def __pos__(self):
@@ -3117,7 +3121,7 @@ class Player(Creature):
 	
 
 	def __invert__(self):
-		return "yourself"
+		return "yourself" if game.whoseturn is self else "you"
 
 
 	### Operation ###
@@ -3651,7 +3655,7 @@ class Humanoid(Creature):
 
 
 	def attackCreature(self,target):
-		Print(f"{+self} tries to attack {-target}",color="o")
+		Print(f"{+self} tries to attack {-target}.",color="o")
 
 		n = min1( self.ATSP() // min1(target.ATSP()) )
 		if n > 1:
@@ -4085,7 +4089,6 @@ class Portal(Item):
 		jsonDict = self.__dict__.copy()
 		jsonDict["links"] = jsonDict["compressedLinks"]
 		del jsonDict["compressedLinks"]
-		print(jsonDict)
 		if "exits" in jsonDict:
 			del jsonDict["exits"]
 		return jsonDict
@@ -4264,6 +4267,26 @@ class Projectile(Item):
 		self.item = item
 
 
+	### Dunder Methods ###
+
+	def __str__(self):
+		return str(self) if self.item else self.name
+
+
+	def __neg__(self):
+		return super().__neg__() if self.item else "the " + self.name
+
+
+	def __pos__(self):
+		return super().__pos__() if self.item else "The " + self.name
+
+
+	def __invert__(self):
+		return super().__invert__() if self.item else "a " + self.name
+
+
+	### Operation ###
+	
 	def Launch(self,speed,aim,launcher,target):
 		self.speed = speed
 		self.aim = 90 if self.hasCondition("homing") and aim < 90 else aim
