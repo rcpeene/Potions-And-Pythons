@@ -4,7 +4,7 @@
 		"name": "Above the Woods",
 		"domain": "Woodlands",
 		"desc": "High above the forest, there is one tree that stands much taller than the others. To the east is a light-colored cliff.",
-		"exits": {
+		"links": {
 			"down": "glen"
 		},
 		"fixtures": [],
@@ -17,7 +17,7 @@
 		"name": "Big Stump",
 		"domain": "Woodlands",
 		"desc": "There is a flat, dark tree stump here. It is larger than any of the other trees nearby. To the north, there is a reddish-brown structure near the base of a cliff. To the east, there is a clearing and a grassy hill.",
-		"exits": {
+		"links": {
 			"north": "cliffside",
 			"east": "glen"
 		},
@@ -45,7 +45,7 @@
 		"name": "Big Oak",
 		"domain": "Woodlands",
 		"desc": "A very large oak tree stands before you. Much larger than any trees in the surrounding forest. It's vast height and cold shade feel imposing. To the north, a clearing can be seen in the distance. To the south, there a clearing with a grassy hill. To the east and west, more woods.",
-		"exits": {
+		"links": {
 			"north": "treeline",
 			"east": "boulder",
 			"south": "brook",
@@ -71,7 +71,7 @@
 		"name": "Boulder",
 		"domain": "Woodlands",
 		"desc": "Here there is a big grey boulder the size of an elephant. It has dark green moss growing on the south side. A clearing can be seen in the distant north. To the east there is a very wide tree.",
-		"exits": {
+		"links": {
 			"north": "treeline",
 			"south": "pond",
 			"west": "big oak"
@@ -86,7 +86,7 @@
 		"name": "Brook",
 		"domain": "Woodlands",
 		"desc": "A softly babbling brook flows here. Only a few feet wide, it rolls past moist rocks and a muddy bank. In the north there is a large tree. The brook flows to the east. To the south is a clearing with a grassy hill. To the west, a man-made structure can be seen through the trees.",
-		"exits": {
+		"links": {
 			"north": "big oak",
 			"east": "pond",
 			"south": "glen",
@@ -102,7 +102,7 @@
 		"name": "Cabin Basement",
 		"domain": "Cabin",
 		"desc": "A damp, decrepit basement with a stone floor, covered in mud and moss from untold years of neglect. There is a creaky wooden stairway leading to above ground.",
-		"exits": {},
+		"links": {},
 		"fixtures": [
 			{
 				"__class__": "Passage",
@@ -168,7 +168,7 @@
 				"durability": 10,
 				"composition": "glass",
 				"links": {
-					"in": 0
+					"in": "port:mirror"
 				},
 				"passprep": "into",
 				"descname": "cracked mirror",
@@ -183,7 +183,7 @@
 		"name": "Cabin Hallway",
 		"domain": "Cabin",
 		"desc": "The entrance to a dusty old cabin. Plants sprout through cracks in the floor and vines creep up the walls which were once painted white. The north and south walls of this hallway each have a doorway, and there is a creaky stairway at the end, which leads both up and down.",
-		"exits": {
+		"links": {
 			"north": "cabin kitchen",
 			"east": "cliffside",
 			"south": "cabin privy",
@@ -215,7 +215,7 @@
 		"name": "Cabin Kitchen",
 		"domain": "Cabin",
 		"desc": "A room with a grey stone hearth, still blackened with ash. Light beams in from a northern window.",
-		"exits": {
+		"links": {
 			"south": "cabin hallway",
 			"out": "cabin hallway",
 			"doorway": "cabin hallway"
@@ -241,7 +241,8 @@
 				"links": {
 					"out": "cliffside",
 					"through": "cliffside",
-					"into": "cliffside"
+					"into": "cliffside",
+					"in": "cliffside"
 				},
 				"descname": "dusty window"
 			}
@@ -315,7 +316,7 @@
 		"name": "Cabin Privy",
 		"domain": "Cabin",
 		"desc": "A room with dark wooden floors and a low ceiling. There is a smooth wooden bench installed in the wall that has round hole cut out.",
-		"exits": {
+		"links": {
 			"north": "cabin hallway",
 			"out": "cabin hallway",
 			"doorway": "cabin hallway"
@@ -365,7 +366,7 @@
 		"name": "Cabin Quarters",
 		"domain": "Cabin",
 		"desc": "A small room with walls with torn floral wallpaper and a leaky ceiling.",
-		"exits": {},
+		"links": {},
 		"fixtures": [
 			{
 				"__class__": "Passage",
@@ -429,7 +430,7 @@
 		"name": "Cave",
 		"domain": "Woodlands",
 		"desc": "A wet cave. You are surrounded by stalactites above and stalagmites around. Dripping sounds can be heard echoing throughout the cave. A dim light can be seen down a tunnel to the north.",
-		"exits": {
+		"links": {
 			"north": "tunnel"
 		},
 		"fixtures": [],
@@ -456,7 +457,7 @@
 		"name": "Cliffside",
 		"domain": "Woodlands",
 		"desc": "A small log cabin resides here. Moss and vines cover what may have once been a reddish colored home. Rays of light peak through the canopy, landing on the dusty roof. There is also a wooden shed no taller than a person. In the north and south, there are more woods. A stream flows eastward. The west side of this cabin is guarded by a tall pale cliff.",
-		"exits": {
+		"links": {
 			"north": "mound",
 			"east": "brook",
 			"south": "big stump",
@@ -474,7 +475,7 @@
 				"aliases": ["cliffside","pale cliff"],
 				"difficulty": 30,
 				"links": {
-					"up": "clifftop"
+					"up": "port:white cliff"
 				},
 				"descname": "pale cliff"
 			}
@@ -488,7 +489,7 @@
 		"name": "Clifftop",
 		"domain": "Woodlands",
 		"desc": "Atop the edge of a rocky white cliff facing east. In the distance you can see plains stretching to the horizon past the forest below. At the base of this cliff is a brook flowing beside a cabin.",
-		"exits": {},
+		"links": {},
 		"fixtures": [
 			{
 				"__class__": "Wall",
@@ -500,7 +501,7 @@
 				"aliases": ["cliffside","white cliff"],
 				"difficulty": 30,
 				"links": {
-					"down": "cliffside"
+					"down": "port:white cliff"
 				},
 				"descname": "pale cliff",
 				"passprep": "down"
@@ -553,7 +554,7 @@
 		"name": "Field",
 		"domain": "Plains",
 		"desc": "A vast open field spans around you. To the south is a treeline.",
-		"exits": {
+		"links": {
 			"south": "treeline"
 		},
 		"fixtures": [],
@@ -580,7 +581,7 @@
 				"durability": 10,
 				"composition": "glass",
 				"links": {
-					"in": 0
+					"in": "port:mirror"
 				},
 				"passprep": "into",
 				"descname": "warped mirror",
@@ -594,7 +595,7 @@
 		"name": "Glen",
 		"domain": "Woodlands",
 		"desc": "A small grassy glen, surrounded on most sides by a dense forest. To the north, you see no end to the trees. To the east there is a rocky ridge. The grassy hill on the south shows a gaping cave entrance. To the west, a small stream flows.",
-		"exits": {
+		"links": {
 			"north": "brook",
 			"east": "large pit",
 			"rocky ridge": "large pit",
@@ -633,7 +634,7 @@
 		"name": "Burning Shore",
 		"domain": "Inferno",
 		"desc": "A searing blood red sandy island within a blazing sea of fire. The smell is putrid. The distance is covered by a yellow fog, and the only light from above is a single point showing in the pitch black ceiling. There is no way out.",
-		"exits": {
+		"links": {
 			"up": "large pit"
 		},
 		"fixtures": [],
@@ -646,7 +647,7 @@
 		"name": "Mound",
 		"domain": "Woodlands",
 		"desc": "Here there is a soft grass-covered mound a few metres on each side. To the north, a clearing can be seen in the distance. There is a large tree to the east. There is a wooden cabin through the trees in the south.",
-		"exits": {
+		"links": {
 			"north": "treeline",
 			"east": "big oak",
 			"south": "cliffside"
@@ -660,7 +661,7 @@
 		"name": "Large Pit",
 		"domain": "Woodlands",
 		"desc": "You are surrounded by insurmountable crags on the east and south. Here there is a deep black pit, big enough for a horse. You cannot see the bottom. To the north, the ground gets muddier. To the west, the treeline is broken.",
-		"exits": {
+		"links": {
 			"north": "pond",
 			"west": "glen"
 		},
@@ -688,7 +689,7 @@
 		"name": "Pond",
 		"domain": "Woodlands",
 		"desc": "A babbling brook flows from the west into a medium pond here. Lilypads and small green fish can be seen floating in the sparkling waters. To the north, the forest continues. There is a craggy area to the south.",
-		"exits": {
+		"links": {
 			"north": "boulder",
 			"south": "large pit",
 			"west": "brook"
@@ -702,7 +703,7 @@
 		"name": "Treeline",
 		"domain": "Woodlands",
 		"desc": "The forest abruptly ends here to meet a vast open field stretching out northward. The trees guard the southeast, south, and southwest.",
-		"exits": {
+		"links": {
 			"north": "field",
 			"southeast": "boulder",
 			"south": "big oak",
@@ -783,7 +784,7 @@
 		"name": "Tunnel",
 		"domain": "Woodlands",
 		"desc": "A long tunnel. To the north, a bright opening can be seen. To the south, a dark cave beckons.",
-		"exits": {
+		"links": {
 			"north": "glen",
 			"south": "cave"
 		},

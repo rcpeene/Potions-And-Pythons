@@ -80,8 +80,6 @@ if __name__ == "__main__":
 # CURRENT TASKS
 
 # add ability to go into containers
-	# include hiding ability?
-		# you are hiding (if in one)
 	# continue stand func with stand on and stand in
 		# try "get on bed", redirect Mounting an obj to stand
 # test throwing a person
@@ -100,6 +98,9 @@ if __name__ == "__main__":
 # refactor drop into a creature method?
 # make player.aware(I) method, which instead of using currentroom, checks if I in player.surroundings.objTree
 	# replace references to currentroom with player.parent when needed
+	# include hiding ability?
+	# you are hiding (if in one)
+
 # add "in" operator to objects
 
 # "you attack the goblin with your your hand!" is what shows up on attack

@@ -55,7 +55,7 @@ class Box(Core.Portal):
 		Core.Portal.__init__(self,name,desc,weight,durability,composition,{},name,None,**kwargs)
 		self.parent = None
 		self.passprep = "in" if passprep is None else passprep
-		self.links = {self.passprep:self, "out":self}
+		self.links = {self.passprep:self}
 		self.open = open
 		self.capacity = capacity
 		self.items = items
@@ -67,7 +67,6 @@ class Box(Core.Portal):
 		jsonDict = self.__dict__.copy()
 		del jsonDict["links"]
 		del jsonDict["descname"]
-		del jsonDict["exits"]
 		return jsonDict
 
 
@@ -81,8 +80,6 @@ class Box(Core.Portal):
 
 	def changeLocation(self,newparent):
 		prevparent = self.parent
-		if newparent is prevparent:
-			return False
 
 		if Core.player in self.items:
 			Core.Print(f"{+self} rumbles for a moment...")
@@ -164,6 +161,7 @@ class Box(Core.Portal):
 
 
 	def enter(self,traverser):
+		self.links["out"] = self.parent
 		if traverser in self.contents():
 			return False
 		self.open = True
@@ -668,8 +666,8 @@ class Table(Core.Item):
 
 
 class Wall(Core.Passage):
-	def __init__(self,name,desc,weight,durability,composition,links,descname,difficulty,**kwargs):
-		Core.Passage.__init__(self,name,desc,weight,durability,composition,links,descname,**kwargs)
+	def __init__(self,name,desc,weight,durability,composition,links,descname,difficulty,passprep="onto",**kwargs):
+		Core.Passage.__init__(self,name,desc,weight,durability,composition,links,descname,passprep=passprep,**kwargs)
 		self.difficulty = difficulty
 
 
@@ -678,7 +676,7 @@ class Wall(Core.Passage):
 			if len(set(self.links.values())) == 1:
 				dir = list(self.links.keys())[0]
 			else:
-				msg = f"Which direction will you go on the {self.name}?"
+				msg = f"Which direction on the {self.name}?"
 				dir = Core.Input(msg).lower()
 		if dir in Data.cancels:
 			return False
@@ -699,10 +697,10 @@ class Wall(Core.Passage):
 			Core.waitKbInput(f"You {verb} {dir} {-self}.")
 
 		if traverser.ATHL() >= self.difficulty or traverser.hasAnyCondition("clingfast","flying"):
-			traverser.changeLocation(self.links[dir])
+			traverser.changeLocation(self.getNewLocation(dir))
 			return True
 		elif "down" in self.links:
-			traverser.Fall(self.difficulty,room=self.links["down"])
+			traverser.Fall(self.difficulty,room=self.getNewLocation("down"))
 		else:
 			traverser.Fall(self.difficulty)
 		return True
@@ -710,7 +708,7 @@ class Wall(Core.Passage):
 
 	def Transfer(self,item):
 		if isinstance(item,Core.Creature):
-			return self.Traverse(item,dir="down")
+			return self.Traverse(item,dir=self.getDefaultDir())
 
 		if "down" in self.links:
 			return item.Fall(height=self.difficulty,room=self.links["down"])
@@ -759,7 +757,7 @@ class Window(Core.Passage):
 			if len(set(self.links.values())) == 1:
 				dir = list(self.links.keys())[0]
 			else:
-				msg = f"Which direction will you go on the {self.name}?"
+				msg = f"Which direction on the {self.name}?"
 				dir = input(msg).lower()
 		if dir in Data.cancels:
 			return False
@@ -770,10 +768,15 @@ class Window(Core.Passage):
 		if traverser.riding:
 			return self.Traverse(traverser.riding,dir=dir)
 
+		newloc = self.getNewLocation(dir)
+		if not newloc.canAdd(traverser):
+			if traverser is Core.player:
+				Core.Print(f"You can't enter {-self}. There's not enough room.")
+			return False
 		if traverser.hasCondition("flying"): verb = "fly"
 		elif traverser is Core.player.riding: verb = "ride"
 		Core.Print(f"You {verb} {dir} {-self}.")
-		traverser.changeLocation(self.links[dir])
+		traverser.changeLocation(newloc)
 		return True
 
 
