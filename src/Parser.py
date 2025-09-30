@@ -159,7 +159,7 @@ def isMeaningful(noun):
 	noun in Data.hellos or \
 	noun in Data.goodbyes or \
 	noun in Data.prepositions or \
-	noun in Core.game.currentroom.exits.keys() or \
+	noun in Core.game.currentroom.links.keys() or \
 	noun in Items.factory or \
 	noun in Creatures.factory or \
 	Core.game.inWorld(noun) or \
@@ -766,11 +766,13 @@ def Caress(dobj,iobj,prep):
 # this is not intended to be called directly from Parse
 # but rather from the Take action function
 def CarryCreature(creature):
-	Core.game.setPronouns(creature)	
+	Core.game.setPronouns(creature)
 	carrying = Core.player.carrying
 	
 	if carrying:
 		Core.Print(f"You're already carrying {-carrying}.")
+		if carrying is creature:
+			return False
 	if not isinstance(creature,Core.Creature):
 		Core.Print(f"You can't carry {-creature}")
 		return False
@@ -1185,16 +1187,16 @@ def GoVertical(dir,passage=None,dobj=None):
 # infers direction, destination, and passage (if they exist) from input terms
 def parseGoTerms(dobj,iobj,prep):
 	dir,dest,passage = None,None,None
-	parentExits = Core.player.parent.allLinks()
+	parentLinks = Core.player.parent.allLinks()
 	# assign dest
-	if dobj in parentExits.values(): dest = dobj
+	if dobj in parentLinks.values(): dest = dobj
 	elif Core.nameMatch(dobj,Core.player.parent): dest = dobj
-	if iobj in parentExits.values(): dest = iobj
+	if iobj in parentLinks.values(): dest = iobj
 	elif Core.nameMatch(iobj,Core.player.parent): dest = iobj
 
 	def getDirAndPassage(term):
 		pairs = set()
-		for dir,passage in parentExits.keys():
+		for dir,passage in parentLinks.keys():
 			if term == dir or Core.nameMatch(term,passage):
 				pairs.add((dir,passage))
 		if len(pairs) > 1:
@@ -1248,29 +1250,34 @@ def Go(dobj,iobj,prep):
 	if prep not in preps or (dobj,iobj,prep) == (None,None,None):
 		return promptHelp("Command not understood.")
 
+	locReminder = "" if Core.player.parent is Core.game.currentroom else f" You are in {~Core.player.parent}."
 	# get dir, dest, and passage and validate them
 	dir,dest,passage = parseGoTerms(dobj,iobj,prep)
 	# print(dir,dest,passage)
 	if passage is False: # if player cancelled passage choice
 		return False
 	if (dir,dest,passage) == (None,None,None):
-		Core.Print(f"There is no exit leading to a '{dobj}' here.",color="k")
+		Core.Print(f"There is no exit leading to a '{dobj}' here.{locReminder}",color="k")
 		return False
 	if dir is None:
-		dir, passage = Core.player.parent.getDirPassagePair(dest)
+		dir, passage = Core.player.parent.getDirPortalPair(dest)
+	# print(dir, dest, passage)
 	if (dest,passage) == (None,None):
-		if dir in Core.player.parent.exits:
-			dest = Core.player.parent.exits[dir].name.lower()
+		if dir in Core.player.parent.links:
+			if isinstance(Core.player.parent,Core.Room):
+				dest = Core.player.parent.links[dir].name.lower()
+			else:
+				passage = Core.player.parent
 		if dir == "out" and len(Core.player.parent.allLinks()) == 1:
 			dest = list(Core.player.parent.allLinks().values())[0].name.lower()
-	if passage is None and dir not in Core.player.parent.exits:
+	if passage is None and dir not in Core.player.parent.links:
 		passages = Core.player.parent.getPortalsFromDir(dir)
 		passage = chooseObject("way",passages,"go")
 		# this means player cancelled the choice
 		if len(passages) > 0 and passage is None:
 			return False
 	if (dest,passage) == (None,None):
-		Core.Print(f"There is no exit leading '{dir}' here.",color="k")
+		Core.Print(f"There is no exit leading '{dir}' here.{locReminder}",color="k")
 		return False
 	if passage is None and Core.nameMatch(dest,Core.player.parent):
 		Core.Print(f"You are already there!")
@@ -1290,7 +1297,7 @@ def Go(dobj,iobj,prep):
 	# if just dest given
 	if dest is not None:
 		return Core.player.changeLocation(Core.world[dest])
-	Core.Print(f"There is no exit leading to a '{dobj}' here.",color="k")
+	Core.Print(f"There is no exit leading to a '{dobj}' here.{locReminder}",color="k")
 	return False
 
 
@@ -1903,7 +1910,8 @@ def Talk(dobj,iobj,prep):
 	return True
 
 
-def Throw(dobj,iobj,prep):
+def Throw(dobj,iobj,prep,maxspeed=None):
+	verb = "toss" if maxspeed == 0 else "throw"
 	if prep not in ("at","down","in","into","off","on","onto","out","through","to","toward","up",None):
 		return promptHelp("Command not understood.")
 	if prep in ("to","toward"):
@@ -1915,19 +1923,19 @@ def Throw(dobj,iobj,prep):
 	if I is None: return False
 
 	if iobj is None:
-		iobj = getNoun("What will you throw at?")
+		iobj = getNoun(f"What will you {verb} {prep}?")
 		if iobj in Data.cancels: return False
 	dir = None
 	if iobj in ("down","floor","ground","here","room","up"):
 		T = Core.player.parent
 		dir = "up" if iobj == "up" else "down"
-	elif iobj.lower() in Core.game.currentroom.exits.keys():
-		T = Core.world[Core.game.currentroom.exits[iobj]]
+	elif iobj.lower() in Core.game.currentroom.links.keys():
+		T = Core.game.currentroom.links[iobj]
 		dir = iobj
-	elif Core.player.parent.getDirPassagePair(iobj)[0]:
-		dir, T = Core.player.parent.getDirPassagePair(iobj)
+	elif Core.player.parent.getDirPortalPair(iobj)[0]:
+		dir, T = Core.player.parent.getDirPortalPair(iobj)
 	else:
-		T = findObject(iobj,f"throw {prep}","room")
+		T = findObject(iobj,f"{verb} {prep}","room")
 		if T is None: return False
 		dirprep = getattr(T,"passprep","toward")
 		dir = f"{dirprep} {-T}"
@@ -1942,13 +1950,13 @@ def Throw(dobj,iobj,prep):
 			Core.Print(f"{+Core.player.parent} is closed. There's no path to {-T}.")
 			return False
 	if not Core.player.parent.canAdd(I) and I not in Core.player.parent.contents():
-		Core.Print(f"You can't throw {-I}. There's not enough room.",color="k")
+		Core.Print(f"You can't {verb} {-I}. There's not enough room.",color="k")
 		return False
 
 	Core.player.equipInHand(I,slot="left")
 	Core.game.setPronouns(I)
-	Core.Print(f"You throw {-I} {dir}.")
-	Core.player.Throw(I,T)
+	Core.Print(f"You {verb} {-I} {dir}.")
+	Core.player.Throw(I,T,maxspeed=maxspeed)
 	return True
 
 
@@ -1962,41 +1970,7 @@ def Tie(dobj,iobj,prep):
 
 
 def Toss(dobj,iobj,prep):
-	if prep not in ("at","down","into","off","on","onto","out","through","to","toward","up",None):
-		return promptHelp("Command not understood.")
-
-	if prep in ("down","up") and iobj is None:
-		iobj = prep
-	I = findObject(dobj,"toss","player")
-	if I is None: return False
-
-	if iobj is None:
-		iobj = getNoun("What will you toss to?")
-		if iobj in Data.cancels: return False
-	dir = None
-	if iobj in ("down","floor","ground","here","room","up"):
-		T = Core.game.currentroom
-		dir = "up" if iobj == "up" else "down"
-	elif iobj.lower() in Core.game.currentroom.exits.keys():
-		T = Core.world[Core.game.currentroom.exits[iobj]]
-		dir = iobj
-	elif Core.player.parent.getDirPassagePair(iobj)[0]:
-		dir, T = Core.player.parent.getDirPassagePair(iobj)
-	else:
-		T = findObject(iobj,"toss to","room")
-		if T is None: return False
-		dirprep = getattr(T,"passprep","toward")
-		dir = f"{dirprep} {-T}"
-	if T is None:
-		T = Core.player.parent
-
-	Core.player.equipInHand(I,slot="left")
-	Core.game.setPronouns(I)
-	Core.Print(f"You throw {-I} {dir}.")
-	if Core.player.Throw(I,T,0):
-		return True
-	Core.Print(f"{+I} is too heavy! It doesn't go far...")
-	return False
+	return Throw(dobj,iobj,prep,maxspeed=0)
 
 
 def Touch(dobj,iobj,prep):

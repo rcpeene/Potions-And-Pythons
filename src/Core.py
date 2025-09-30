@@ -1078,8 +1078,10 @@ class Game():
 
 	### Operation ###
 
-	# exits the previous room and enters the new room
+	# exits  the previous room and enters the new room
 	def changeRoom(self,newroom):
+		if newroom is self.currentroom:
+			return
 		# if newroom != self.currentroom:
 		self.clearPronouns()
 		clearScreen()
@@ -1328,21 +1330,21 @@ class Game():
 # The world dict, consists of key:value pairs of the form,
 # room name:room object
 
-# Importantly, each room contains an exits dict, whose keys are directions...
+# Importantly, each room contains an links dict, whose keys are directions...
 # such as 'north', 'up', or 'beyond', and whose values are the string names...
 # of the room that it leads to.
 
 # Thus, from any room, there are some directions which will yield a room name, # which can be plugged into the world dict to yield the neighboring room object
 
 # In this way, every Room object can be thought of like a node in a large...
-# directed graph, facilitated by the world dict, where the exits dict specifies
+# directed graph, facilitated by the world dict, where the links dict specifies
 # the edges from a given node to its neighboring nodes.
 class Room():
-	def __init__(self,name,domain,desc,exits,fixtures,items,creatures,size=10,type=None,altitude=0,passprep=None,status=None):
+	def __init__(self,name,domain,desc,links,fixtures,items,creatures,size=10,type=None,altitude=0,passprep=None,status=None):
 		self.name = name
 		self.domain = domain
 		self.desc = desc
-		self.exits = exits
+		self.links = links
 		self.fixtures = fixtures
 		self.items = items
 		self.creatures = creatures
@@ -1359,7 +1361,7 @@ class Room():
 	### Dunder Methods ###
 
 	def __repr__(self):
-		return f"Room({self.name}, {[room.name for room in self.exits.values()]})"
+		return f"Room({self.name}, {[room.name for room in self.links.values()]})"
 
 
 	def __str__(self):
@@ -1381,21 +1383,21 @@ class Room():
 	### File I/O ###
 
 	def assignRefs(self):
-		for dir, dest in self.exits.items():
+		for dir, dest in self.links.items():
 			if isinstance(dest,str) and dest in world:
-				self.exits[dir] = world[dest]
+				self.links[dir] = world[dest]
 			else:
 				raise Exception(f"Error: Room {self.name} has a connection to unknown destination '{dest}'.")
 
-		assert all(isinstance(dest,Room) for dest in self.exits.values()), f"Error: Room {self.name} has a exit to non-Room '{dest}'."
+		assert all(isinstance(dest,Room) for dest in self.links.values()), f"Error: Room {self.name} has a exit to non-Room '{dest}'."
 
 
 	def convertToJSON(self):
 		jsonDict = self.__dict__.copy()
-		jsonDict["exits"] = {}
-		for dir, dest in self.exits.items():
+		jsonDict["links"] = {}
+		for dir, dest in self.links.items():
 			assert isinstance(dest, Room), f"Trying to save room {self.name} with exit to non-Room '{dest}'."
-			jsonDict["exits"][dir] = dest.name.lower()
+			jsonDict["links"][dir] = dest.name.lower()
 		return jsonDict
 
 
@@ -1405,7 +1407,7 @@ class Room():
 	# to ensure a bidirectional link between Rooms...
 	# this method would have to be called once on each room.
 	def addLink(self,dir,loc):
-		self.exits[dir] = loc
+		self.links[dir] = loc
 
 
 	def addItem(self,I):
@@ -1571,16 +1573,16 @@ class Room():
 		return 10000
 
 
-	# returns dict of exits, where keys are (direction,portal) and values are room/object names
+	# returns dict of links, where keys are (direction,portal) and values are room/object names
 	def allLinks(self,d=3):
-		exits = {}
-		for dir in self.exits:
-			exits[(dir,None)] = self.exits[dir]
-		# for each portal, add its links to exits
+		links = {}
+		for dir in self.links:
+			links[(dir,None)] = self.links[dir]
+		# for each portal, add its links to links
 		for portal in self.query(key=lambda x: isinstance(x,Portal),d=d):
-			for dir in portal.links:
-				exits[(dir,portal)] = portal.links[dir]
-		return exits
+			for dir in portal.getLinksForParent():
+				links[(dir,portal)] = portal.links[dir]
+		return links
 
 
 	def allDirs(self):
@@ -1637,11 +1639,11 @@ class Room():
 		return portals
 
 
-	# if the given room object, dest, is in one of the rooms exits, then find the direction it is in from the room.
-	def getDirPassagePair(self,dest):
-		for (dir,passage), room in self.allLinks().items():
+	# if the given room object, dest, is in one of the rooms links, then find the direction it is in from the room.
+	def getDirPortalPair(self,dest):
+		for (dir,portal), room in self.allLinks().items():
 			if nameMatch(dest,room):
-				return dir, passage
+				return dir, portal
 		return None, None
 
 
@@ -1811,7 +1813,7 @@ class Item():
 		if self.room() is game.currentroom:
 			Print(f"{+self} falls down.")
 
-		while room.altitude != 0 and "down" in room.exits:
+		while room.altitude != 0 and "down" in room.links:
 			height += room.size
 			room = room["down"]
 		if room != self.room():
@@ -2532,7 +2534,7 @@ class Creature():
 
 		if room is None:
 			room = self.room()
-		while room.altitude != 0 and "down" in room.exits:
+		while room.altitude != 0 and "down" in room.links:
 			height += room.size
 			room = room["down"]
 		if room != self.room():
@@ -3419,7 +3421,7 @@ class Player(Creature):
 
 		if room is None:
 			room = self.room()
-		while room.altitude != 0 and "down" in room.exits:
+		while room.altitude != 0 and "down" in room.links:
 			height += room.size
 			room = room["down"]
 		if room != self.room():
@@ -4017,7 +4019,7 @@ class Portal(Item):
 	def __init__(self,name,desc,weight,durability,composition,links,descname,passprep="into",**kwargs):
 		Item.__init__(self,name,desc,weight,durability,composition,**kwargs)
 		self.links = links
-		self.exits = self.links
+		self.links = self.links
 		self.descname = descname
 		self.passprep = passprep
 
@@ -4050,6 +4052,8 @@ class Portal(Item):
 		for dir, dest in self.links.items():
 			if isinstance(dest,str) and dest in world:
 				self.links[dir] = world[dest]
+			elif isinstance(dest,str) and dest.startswith("port:"):
+				self.linkPortals(dest)
 			elif isinstance(dest,int):
 				self.linkPortals(dest)
 			elif isinstance(dest,Room) or isinstance(dest,Portal):
@@ -4089,12 +4093,29 @@ class Portal(Item):
 		jsonDict = self.__dict__.copy()
 		jsonDict["links"] = jsonDict["compressedLinks"]
 		del jsonDict["compressedLinks"]
-		if "exits" in jsonDict:
-			del jsonDict["exits"]
+		if "links" in jsonDict:
+			del jsonDict["links"]
 		return jsonDict
 
 
 	### Operation ###
+
+	def getDefaultDir(self):
+		if len(set(self.links.values())) == 1:
+			return list(self.links.keys())[0]
+		elif "down" in self.links:
+			return "down"
+		return choice(self.links)
+
+
+	def getNewLocation(self,dir):
+		newloc = self.links[dir]
+		if isinstance(newloc, Portal):
+			newloc = newloc.parent
+			if isinstance(newloc,Creature):
+				newloc = newloc.parent
+		return newloc
+
 
 	# method for creatures travelling through the portal
 	def Traverse(self,traverser,dir=None):
@@ -4109,7 +4130,7 @@ class Portal(Item):
 			if len(set(self.links.values())) == 1:
 				dir = list(self.links.keys())[0]
 			else:
-				msg = f"Which direction will you go on the {self.name}?"
+				msg = f"Which direction on the {self.name}?"
 				dir = InputLoop(msg)
 				if dir is None:
 					return False
@@ -4117,16 +4138,11 @@ class Portal(Item):
 			Print(f"The {self.name} does not go '{dir}'.")
 			return False
 
-		newloc = self.links[dir]
-		if isinstance(newloc, Portal):
-			newloc = newloc.parent
-			if isinstance(newloc,Creature):
-				newloc = newloc.parent
-			# TODO: potentially unindent so this also applies to rooms
-			if not newloc.canAdd(traverser):
-				if traverser is player:
-					Print(f"You can't enter {-self}. There's not enough room.")
-				return False
+		newloc = self.getNewLocation(dir)
+		if not newloc.canAdd(traverser):
+			if traverser is player:
+				Print(f"You can't enter {-self}. There's not enough room.")
+			return False
 
 		if traverser is player:
 			waitKbInput(f"You go {dir} the {self.name}.")
@@ -4137,7 +4153,7 @@ class Portal(Item):
 	# method for items travelling through portal
 	def Transfer(self,item):
 		if isinstance(item,Creature):
-			return self.Traverse(item,dir="down")
+			return self.Traverse(item,dir=self.getDefaultDir())
 		if self in item.objTree():
 			Print(f"{+item} can't enter {-self}. It's within {-item}'s contents.")
 			return False
@@ -4151,14 +4167,9 @@ class Portal(Item):
 			return item.Fall()
 
 		# Print(f"{+item} goes {self.passprep} {-self}.")	
-		if isinstance(self.links[dir],Room):
-			newloc = self.links[dir]
-		elif isinstance(self.links[dir], Portal):
-			newloc = self.links[dir].parent
-			if isinstance(newloc,Creature):
-				newloc = newloc.parent
-			if not newloc.canAdd(item):
-				return False
+		newloc = self.getNewLocation(dir)
+		if not newloc.canAdd(item):
+			return False
 
 		item.changeLocation(newloc)
 
@@ -4177,19 +4188,19 @@ class Portal(Item):
 
 	### Getters ###
 
-	# returns dict of exits, where keys are directions and values are room names
+	# returns dict of links, where keys are directions and values are room names
 	def allLinks(self,d=3):
-		exits = {}
+		links = {}
 		for dir in self.links:
-			exits[(dir,None)] = self.links[dir]
+			links[(dir,None)] = self.links[dir]
 		# get a list of passages in the room
 		portals = self.query(key=lambda x: isinstance(x,Portal),d=d)
-		# for each portal, add its connections to exits
+		# for each portal, add its connections to links
 		for portal in portals:
 			for dir in portal.getLinksForParent():
-				if dir not in exits:
-					exits[(dir,portal)] = portal.links[dir]
-		return exits
+				if dir not in links:
+					links[(dir,portal)] = portal.links[dir]
+		return links
 
 
 	# get the links dict to use in the parent's allLinks method
@@ -4202,20 +4213,19 @@ class Portal(Item):
 
 
 	# given a direction (like 'north' or 'down)...
-	# return the first Passage object with that direction in its connections
+	# return the first portal object with that direction in its connections
 	def getPortalsFromDir(self,dir):
-		passages = []
-		for thisDir, passage in self.allLinks(d=0):
-			if dir == thisDir and passage is not None:
-				passages.append(passage)
-		return passages
+		portals = []
+		for thisDir, portal in self.allLinks(d=0):
+			if dir == thisDir and portal is not None:
+				portals.append(portal)
+		return portals
 
-
-	# if the given room object, dest, is in one of the rooms exits, then find the direction and passage it is in from the room.
-	def getDirPassagePair(self,dest):
-		for (dir,passage), room in self.allLinks().items():
+	# if the given room object, dest, is in one of the rooms links, then find the direction and portal it is in from the room.
+	def getDirPortalPair(self,dest):
+		for (dir,portal), room in self.allLinks().items():
 			if nameMatch(dest,room):
-				return dir, passage
+				return dir, portal
 		return None, None
 
 
@@ -4249,9 +4259,9 @@ class Fixture(Item):
 class Passage(Portal,Fixture):
 	def __init__(self,name,desc,weight,durability,composition,links,descname,passprep="into",mention=False,**kwargs):
 		Fixture.__init__(self,name,desc,weight,durability,composition,mention=mention,**kwargs)
+		self.passprep = passprep
 		self.links = links
 		self.descname = descname
-		self.passprep = passprep
 
 
 
