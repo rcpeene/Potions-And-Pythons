@@ -811,10 +811,10 @@ class Door(Window):
 
 
 factory = {
-	"blue potion": lambda: Potion("blue potion", "A bubbling blue liquid in a glass bottle",6,3,"glass",{"potion"}),
+	"blue potion": lambda: Potion("blue potion", "A bubbling blue liquid in a glass bottle",6,3,"glass",None,["potion"]),
 	"bottle": lambda: Bottle("bottle","an empty glass bottle",6,3,"glass"),
-	"coffee": lambda: Potion("bottle of coffee","A bottle of dark brown foamy liquid",6,3,"glass",{"coffee","espresso","bottle"}),
-	"green potion": lambda: Potion("green potion", "A bubbling green liquid in a glass bottle",6,3,"glass",{"potion"}),
-	"red potion": lambda: Potion("red potion", "A bubbling red liquid in a glass bottle",6,3,"glass",{"potion"}),
+	"coffee": lambda: Potion("bottle of coffee","A bottle of dark brown foamy liquid",6,3,"glass",None,["coffee","espresso","bottle"]),
+	"green potion": lambda: Potion("green potion", "A bubbling green liquid in a glass bottle",6,3,"glass",None,["potion"]),
+	"red potion": lambda: Potion("red potion", "A bubbling red liquid in a glass bottle",6,3,"glass",None,["potion"]),
 	"shard": lambda: Shard("glass shard","a black glass shard",2,1,"glass",["shard"])
 }

@@ -448,6 +448,7 @@ def assignRefsRecur(parent):
 # also assigns parents for all world objects (read objQuery() comments)
 # also assigns dialogue trees for speakers and validates them
 def buildWorld():
+	# assign all room links to existing rooms
 	# ensure all room names are stored as lowercase
 	for roomName in world.copy():
 		room = world[roomName]
@@ -456,6 +457,20 @@ def buildWorld():
 			raise Exception("Room name exists in world already... two rooms may not have the same name.")
 		world[room.name.lower()] = room
 
+	# register all objects that already have an ID
+	for room in world.values():
+		for obj in room.objTree():
+			if obj.id is not None:
+				game.registerObject(obj)
+
+	# assign IDs to all items and creatures that don't have one
+	for room in world.values():
+		for obj in room.objTree():
+			if obj.id is None:
+				obj.id = game.getNextID()
+				game.registerObject(obj)
+
+	# assign references for all rooms and objects, and assign dialogue trees
 	for room in world.values():
 		assert isinstance(room, Room)
 		room.assignRefs()
@@ -464,7 +479,6 @@ def buildWorld():
 		# assign the dialogue trees for all creatures and validate them
 		for creature in objQuery(room, d=3, key=lambda x: isinstance(x,Speaker)):
 			creature.buildDialogue()
-
 
 
 
@@ -1075,8 +1089,24 @@ class Game():
 		# used for saving portals in the world with unique links
 		self.portallinks = 0
 
+		# references to all objects in the world, each obj.id should be its key here
+		self.objRegistry = {None: None}
+		self.nextObjId = 0
+
 
 	### Operation ###
+
+	def getNextID(self):
+		while self.nextObjId in self.objRegistry:
+			self.nextObjId += 1
+		return self.nextObjId
+
+
+	def registerObject(self,obj):
+		if obj.id in self.objRegistry:
+			raise Exception(f"Object ID {obj.id} already exists in registry")
+		self.objRegistry[obj.id] = obj
+
 
 	# exits  the previous room and enters the new room
 	def changeRoom(self,newroom):
@@ -1700,7 +1730,7 @@ class Room():
 # Anything in a Room that is not a Creature will be an Item
 # All items come with a name, description, weight, and durability
 class Item():
-	def __init__(self,name,desc,weight,durability,composition,aliases=None,status=None,plural=None,determiner=None,pronoun="it",longevity=None,despawnTimer=None,scent=None,taste=None,texture=None):
+	def __init__(self,name,desc,weight,durability,composition,id=None,aliases=None,status=None,plural=None,determiner=None,pronoun="it",longevity=None,despawnTimer=None,scent=None,taste=None,texture=None):
 		self.name = name
 		self.desc = desc
 		self.weight = weight
@@ -1721,6 +1751,7 @@ class Item():
 		self.determiner=determiner
 		self.pronoun = pronoun
 		self.parent = None
+		self.id = id
 
 
 	### File I/O ###
@@ -1802,7 +1833,8 @@ class Item():
 			if not game.silent:
 				Print(f"{+self} cannot be broken.")
 			return False
-		Print(f"{+self} breaks.")
+		if self.room() is game.currentroom:
+			Print(f"{+self} breaks.")
 		self.parent.remove(self)
 		return True
 
@@ -1948,7 +1980,10 @@ class Item():
 	### User Output ###
 
 	def nounPhrase(self,det="",n=-1,plural=False,cap=0):
-		strname = getattr(self,"descname",self.name)
+		if det.lower() == "the":
+			strname = self.name
+		else:
+			strname = getattr(self,"descname",self.name)
 		if len(strname) == 0:
 			return ""
 		if n > 1:
@@ -1981,6 +2016,12 @@ class Item():
 		Print(f"{self.desc}.")
 
 
+	def reflexive(self):
+		if self.pronoun in Data.reflexives:
+			return Data.reflexives[self.pronoun]
+		else:
+			return "itself"
+
 
 # The Creature class is the main class for anything in the game that can act
 # Anything in a Room that is not an Item will be a Creature
@@ -1988,7 +2029,7 @@ class Item():
 # Creatures have 10 base stats, called traits
 # They also have abilities; stats which are derived from traits through formulas
 class Creature():
-	def __init__(self,name,desc,weight,traits,hp,mp=0,money=0,inv=None,gear=None,love=0,fear=0,carrying=None,carrier=None,riding=None,rider=None,composition="flesh",memories=None,appraisal=None,status=None,descname=None,aliases=None,plural=None,determiner=None,pronoun="it",timeOfDeath=None,lastAte=0,lastSlept=0,regenTimer=0,alert=False,seesPlayer=False,sawPlayer=-1):
+	def __init__(self,name,desc,weight,traits,hp,id=None,mp=0,money=0,inv=None,gear=None,love=0,fear=0,carrying=None,carrier=None,riding=None,rider=None,composition="flesh",memories=None,appraisal=None,status=None,descname=None,aliases=None,plural=None,determiner=None,pronoun="it",timeOfDeath=None,lastAte=0,lastSlept=0,regenTimer=0,alert=False,seesPlayer=False,sawPlayer=-1):
 		self.name = name
 		self.desc = desc
 		self.descname = descname if descname else name
@@ -2027,6 +2068,7 @@ class Creature():
 		
 		# this gets decompressed or reassigned by assignRefs
 		self.parent = None
+		self.id = id
 		self.riding = riding
 		self.rider = rider
 		self.carrying = carrying
@@ -2096,23 +2138,17 @@ class Creature():
 	def assignRefs(self,parent):
 		self.parent = parent
 
-		def uncompressTether(idx):
-			if idx is None:
-				return None
-			elif idx == "player":
-				return player
-			else:
-				return self.parent.contents()[idx]
-
-		self.carrying = uncompressTether(self.carrying)
-		self.carrier = uncompressTether(self.carrier)
-		self.riding = uncompressTether(self.riding)
-		self.rider = uncompressTether(self.rider)
+		self.carrying = game.objRegistry[self.carrying]
+		self.carrier = game.objRegistry[self.carrier]
+		self.riding = game.objRegistry[self.riding]
+		self.rider = game.objRegistry[self.rider]
 
 		uncompGear = {}
 		for slot, idx in self.gear.items():
 			if idx == "carrying":
 				uncompGear[slot] = self.carrying
+				if uncompGear[slot] is None:
+					uncompGear[slot] = EmptyGear()
 			elif idx is None:
 				uncompGear[slot] = EmptyGear()
 			else:
@@ -2126,7 +2162,7 @@ class Creature():
 	# if the gear slot is empty, replaces it with -1
 	def compressGear(self):
 		cGear = {}
-		for slot, item in self.gear.items():			
+		for slot, item in self.gear.items():
 			if isinstance(item,Creature):
 				cGear[slot] = "carrying"
 			elif item is EmptyGear():
@@ -2136,40 +2172,25 @@ class Creature():
 		return cGear
 
 
-	def compressTethers(self):
-		def compressTether(obj):
-			if obj is None:
-				return None
-			elif obj is player:
-				return "player"
-			else:
-				return self.parent.contents().index(obj)
-
-		tethers = {
-			"carrying": compressTether(self.carrying),
-			"carrier": compressTether(self.carrier),
-			"riding": compressTether(self.riding),
-			"rider": compressTether(self.rider)
-		}
-		return tethers
-
-
 	# returns a dict which contains all the necessary information to store...
 	# this object instance as a JSON object when saving the game
 	def convertToJSON(self):
 		# convert the gear dict to a form more easily writable in a JSON object
 		compressedGear = self.compressGear()
-		tethers = self.compressTethers()
+		self.carrying = self.carrying.id if self.carrying else None
+		self.carrier = self.carrier.id if self.carrier else None
+		self.riding = self.riding.id if self.riding else None
+		self.rider = self.rider.id if self.rider else None
+
 		jsonDict = self.__dict__.copy()
 		dictkeys = list(jsonDict.keys())
 		# these attributes do not get stored between saves (except gear)
 		for key in dictkeys:
-			if key.lower() in Data.traits or key in {"gear","carrying","riding","carrier","rider","weapon","weapon2","shield","shield2"}:
+			if key.lower() in Data.traits or key in {"gear","weapon","weapon2","shield","shield2"}:
 				del jsonDict[key]
 		jsonDict["gear"] = compressedGear
 		# convert traits to a form more easily writable in a JSON object
 		jsonDict["traits"] = [self.str,self.skl,self.spd,self.stm,self.con,self.cha,self.int,self.wis,self.fth,self.lck]
-		jsonDict |= tethers
 
 		# these lines seem redundant (the menu functions handle parent and __class__ attributes)
 		# but they're required specifically for reading/writing the Player object
@@ -2705,6 +2726,8 @@ class Creature():
 
 
 	def Throw(self,missile,target,maxspeed=None):
+		if missile is target:
+			return False
 		if missile is self.carrying:
 			self.removeCarry(silent=True)
 		else:
@@ -2959,6 +2982,9 @@ class Creature():
 		return sum(item.Weight() for item in self.inv)
 
 
+	def carryWeight(self):
+		return 0 if self.carrying is None else self.carrying.Weight()
+
 	# returns a list of names of all items in player inventory
 	def invNames(self):
 		return [item.nounPhrase() if isinstance(item,Creature) else item.name for item in self.inv]
@@ -3103,6 +3129,12 @@ class Creature():
 		Print(f"It's {~self}.")
 		Print(f"{self.desc}.")
 
+
+	def reflexive(self):
+		if self.pronoun in Data.reflexives:
+			return Data.reflexives[self.pronoun]
+		else:
+			return "itself"
 
 
 # the class representing the player, contains all player stats
@@ -3283,12 +3315,11 @@ class Player(Creature):
 
 
 	def checkHindered(self):
-		carryWeight = 0 if self.carrying is None else self.carrying.Weight()
-		if self.invWeight() + carryWeight > self.BRDN():
+		if self.invWeight() + self.carryWeight() > self.BRDN():
 			if not self.hasCondition("hindered"):
 				Print("Your Inventory grows heavy.")
 				self.addCondition("hindered",-3)
-		if self.invWeight() + carryWeight <= self.BRDN():
+		if self.invWeight() + self.carryWeight() <= self.BRDN():
 			if self.hasCondition("hindered"):
 				Print("Your Inventory feels lighter.")
 				self.removeCondition("hindered",-3)
@@ -3508,16 +3539,15 @@ class Player(Creature):
 
 	# prints player inventory
 	def printInv(self, *args):
-		color = "w"
-		if self.invWeight() > self.BRDN():
-			color = "r"
-		elif self.invWeight() / self.BRDN() > 0.85:
-			color = "o"
-		Print(f"Weight: {self.invWeight()}/{self.BRDN()}", color=color)
+		W = self.invWeight() + self.carryWeight()
+		color = "o" if W / self.BRDN() > 0.80 else "w"
+		color = "r" if W > self.BRDN() else color
 		if len(self.inv) == 0:
 			Print("\nYour Inventory is empty.")
 		else:
 			columnPrint(self.invNames(),8,16)
+		self.printCarrying(silent=True)
+		Print(f"Weight: {W}/{self.BRDN()}", color=color)
 
 
 	# print each player gear slot and the items equipped in them
@@ -3531,18 +3561,18 @@ class Player(Creature):
 			Print(val)
 
 
-	def printCarrying(self,*args):
+	def printCarrying(self,silent=False,*args):
 		if self.carrying is not None:
 			Print(f"Carrying {~self.carrying}")
-			Print(f"Weight: {self.carrying.Weight()}")
-		else:
+			# Print(f"Weight: {self.carrying.Weight()}")
+		elif silent is False:
 			Print("Carrying nothing")
 
 
-	def printRiding(self,*args):
+	def printRiding(self,silent=False,*args):
 		if self.riding:
 			Print(f"Riding {~self.riding}")
-		else:
+		elif silent is False:
 			Print("Riding nothing")
 
 
@@ -4019,7 +4049,6 @@ class Portal(Item):
 	def __init__(self,name,desc,weight,durability,composition,links,descname,passprep="into",**kwargs):
 		Item.__init__(self,name,desc,weight,durability,composition,**kwargs)
 		self.links = links
-		self.links = self.links
 		self.descname = descname
 		self.passprep = passprep
 
@@ -4093,8 +4122,6 @@ class Portal(Item):
 		jsonDict = self.__dict__.copy()
 		jsonDict["links"] = jsonDict["compressedLinks"]
 		del jsonDict["compressedLinks"]
-		if "links" in jsonDict:
-			del jsonDict["links"]
 		return jsonDict
 
 
@@ -4153,7 +4180,10 @@ class Portal(Item):
 	# method for items travelling through portal
 	def Transfer(self,item):
 		if isinstance(item,Creature):
-			return self.Traverse(item,dir=self.getDefaultDir())
+			dir = self.getDefaultDir()
+			if dir == "down":
+				return item.Fall(1,room=self.getNewLocation("down"))
+			return self.Traverse(item,dir=dir)
 		if self in item.objTree():
 			Print(f"{+item} can't enter {-self}. It's within {-item}'s contents.")
 			return False

@@ -1911,14 +1911,18 @@ def Talk(dobj,iobj,prep):
 
 
 def Throw(dobj,iobj,prep,maxspeed=None):
-	verb = "toss" if maxspeed == 0 else "throw"
 	if prep not in ("at","down","in","into","off","on","onto","out","through","to","toward","up",None):
 		return promptHelp("Command not understood.")
 	if prep in ("to","toward"):
-		return Toss(dobj,iobj,prep)
+		maxspeed = 0
+	verb = "toss" if maxspeed == 0 else "throw"
 
-	if prep in ("down","up") and iobj is None:
-		iobj = prep
+	if prep in ("down","up","in","out"):
+		if iobj is None:
+			iobj = prep
+		prep = None
+	if prep is None:
+		prep = "at"
 	I = findObject(dobj,"throw","player")
 	if I is None: return False
 
@@ -1941,6 +1945,9 @@ def Throw(dobj,iobj,prep,maxspeed=None):
 		dir = f"{dirprep} {-T}"
 	if T is None:
 		T = Core.player.parent
+	if T is I:
+		Core.Print(f"You can't {verb} {-I} at {I.reflexive()}.",color="k")
+		return False
 
 	if not getattr(Core.player.parent,"open",True):
 		if isinstance(T,Core.Room):
