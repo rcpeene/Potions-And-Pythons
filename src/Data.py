@@ -67,6 +67,8 @@ prepositions = {"above","across","at","away","away from","behind","below","benea
 
 pronouns = {"she","he","they","her","him","them","it"}
 
+reflexives = {"she":"herself","he":"himself","they":"themselves","it":"itself","me":"myself","you":"yourself"}
+
 compounds = {"downstairs":["down","stairs"], "upstairs":["up","stairs"]}
 
 # used in nounify() in Parser.py to combine multiple words that might have a single meaning as a whole term

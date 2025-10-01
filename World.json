@@ -770,12 +770,30 @@
 				"gear": {
 					"head": 0,
 					"torso": 1,
-					"left": null,
+					"left": "carrying",
 					"right": null,
 					"legs": null
 				}
+			},
+			{
+				"__class__": "Animal",
+				"name": "blue jay",
+				"desc": "A small blue and white bird",
+				"aliases": ["bird","jay"],
+				"species": "bird",
+				"weight": 0.1,
+				"traits": [1,1,1,1,1,1,1,1,1,1],
+				"hp": 2,
+				"mp": 0,
+				"money": 0,
+				"inv": [],
+				"gear": {
+					"tail": null,
+					"head": null,
+					"mouth": null
+				},
+				"dlogName": "silent"
 			}
-
 		],
 		"status": []
 	},

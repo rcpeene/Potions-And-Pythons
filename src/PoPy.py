@@ -82,16 +82,6 @@ if __name__ == "__main__":
 # add ability to go into containers
 	# continue stand func with stand on and stand in
 		# try "get on bed", redirect Mounting an obj to stand
-# test throwing a person
-# throw snake into chest???
-# add dropping into pit -> add fall damage to items.
-# make projectile subclass for creatures? maybe subclass not necessary
-# drop/throw goblin off cliff
-# throw goblin up/down stairs
-# throw snake at goblin
-# "throw rock east", "throw dale east"
-# 	> get it chest
-# throw into a portal, and drop down a portal
 # readjust throw force formula; compare to BRDN (shouldn't be able to throw heavier than you can have in inv, or more than you can carry in hands?
 # check if throwing a creature which has another riding it?
 # handle "get on" to mount or get on a table (wb get on table while on a horse?)
