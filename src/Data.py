@@ -17,11 +17,11 @@
 
 menuinstructions = "\nType 'info' for information on how to play.\nType 'new' to start a new game.\nType 'load' to load a save file.\nType 'delete' to delete a save file.\nType 'quit' to quit the game.\n"
 
-gameinfo = "="*70 + "\n\nPotions & Pythons\nv.Alpha\nBy Carter Peene, 2022\n\n" + "-"*70 + "\n\nTo play, type a command of the form:\n[verb] [*noun] [*preposition] [*noun]\nOR\n[verb] [*preposition] [*noun]\n\n* denotes a term that can be omitted when unnecessary.\nArticles, determiners, and most symbols are removed from your input.\n\n" + "-"*70 + "\n\nDuring the game:\nSee these instructions by typing 'info' or 'help'.\nGet a list of valid commands by typing 'commands'.\nGet a list of command examples by typing 'examples'.\nSee your player statistics by typing 'stats', 'traits', and 'inv'.\nSee a description of your current location by typing 'here'.\nLearn about most game terms and commands by typing 'define [term].'\n\n" + "="*70
+gameinfo = "="*70 + "\n\nPotions & Pythons\nv.Alpha\nBy Carter Peene, 2022\n\n" + "-"*70 + "\n\nTo play, type a command of the form:\n[verb] [*noun] [*preposition] [*noun]\nOR\n[verb] [*preposition] [*noun]\n\n* denotes a term that can be omitted when unnecessary.\nArticles, determiners, and most symbols are removed from your input.\n\n" + "-"*70 + "\n\nDuring the game, you may...\nSee these instructions:\t\t'info' or 'help'\nGet a list of valid commands:\t'commands'\nGet a list of command examples:\t'examples'\nSee your player statistics:\t'stats', 'traits', and 'inv'\nLearn about your location:\t'here'\nLearn about most game terms:\t'define [term]'\nSave the game:\t\t\t'save' and 'quicksave'\nQuit:\t\t\t\t'quit'\n\n" + "="*70
 
 examples = "\nValid input examples include:\n- go\n- go north\n- go nw\n- go up the stairs\n- go back\n- go to tunnel\n- look around\n- look at python\n- i will fight the python!\n- hit the python with my sword\n- attack python sword\n- fight it\n- equip a sword\n- unequip sword\n- take red potion\n- take the red potion from the chest\n- take all\n- put red potion in the chest\n- put red potion chest\n- drop the red potion\n- pour it out\n- close chest\nGet an exhaustive list of commands by typing 'commands'."
 
-symbols = ".,!?~`\"()[]{}<>+=/*&^%$#@\t"
+symbols = ".,!?~`\"[]{}<>+=/*&^%$#@\t"
 
 numsymbols = "-0123456789"
 
@@ -42,12 +42,14 @@ colors = {
     "white": "w"
 }
 
+emoticons = {":)",":d",":(",";)",":o",":p"}
+
 
 #################
 ## USEFUL SETS ##
 #################
 
-articles = {"a","again","an","her","his","i","its","the","their","this","will"}
+articles = {"a","again","an","her","his","i","its","some","that","the","their","this","will"}
 
 cancels = {"cancel","done","end","nevermind","no","nvm","undo"}
 

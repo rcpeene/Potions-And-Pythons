@@ -97,6 +97,9 @@ class Box(Core.Portal):
 				Core.Print(f"You open {-self}.")
 			if Core.player not in self.items:
 				self.Look()
+		for elem in self.items:
+			if isinstance(elem,Core.Creature):
+				elem.removeCondition("hidden",-3)
 		self.open = True
 		return True
 
@@ -105,6 +108,9 @@ class Box(Core.Portal):
 	def Close(self):
 		self.open = False
 		Core.Print(f"You close {-self}.")
+		for elem in self.items:
+			if isinstance(elem,Core.Creature):
+				elem.addCondition("hidden",-3)
 		return True
 
 
@@ -173,6 +179,7 @@ class Box(Core.Portal):
 			return False
 		self.open = True
 		self.remove(traverser)
+		traverser.removeCondition("hidden",-3)
 
 
 	def Traverse(self,traverser,dir=None,verb=None):

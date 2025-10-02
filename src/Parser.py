@@ -78,8 +78,8 @@ def chooseObject(name,objects,verb=None):
 
 	prompt = f"\nWhich {name}{f' to {verb}' if verb else ''}?"
 	choice = Core.InputLoop(prompt,acceptKey=acceptKey,color="k")
-	if choice is None:
-		return False # this indicates the user cancelled
+	# if choice is None:
+	# 	return None # this indicates the user cancelled
 	return choice
 
 
@@ -602,7 +602,7 @@ def Commands(*args):
 	Core.flushInput()
 	Core.clearScreen()
 	Core.Print("Short Commands (May only be one word)",color="k")
-	shortcommands = sorted(tuple(shortactions.keys()) + Data.traits + Data.abilities)
+	shortcommands = sorted(tuple(key for key in shortactions.keys() if key not in Data.emoticons) + Data.traits + Data.abilities)
 	Core.columnPrint(shortcommands,12,10,delay=0,color="k")
 	Core.Print("\nVerb Commands (Does not include cheat codes and secret commands)",color="k")
 	Core.columnPrint(actions.keys(),12,10,delay=0,color="k")
@@ -620,7 +620,7 @@ def Info(*args):
 
 def Laugh(*args):
 	Core.Print('"HAHAHAHAHA!"',color="y")
-	Core.player.removeCondition("hiding",-3)
+	Core.player.removeCondition("hidden",-3)
 
 
 def Quit(*args):
@@ -631,18 +631,28 @@ def Quit(*args):
 
 def Shout(*args): 
 	Core.Print('"AHHHHHHHHHH"',color="y")
-	Core.player.removeCondition("hiding",-3)
+	Core.player.removeCondition("hidden",-3)
 
 
 def Sing(*args):
 	Core.Print('"Falalalaaaa"',color="y")
-	Core.player.removeCondition("hiding",-3)
+	Core.player.removeCondition("hidden",-3)
 
 
-def Time(*args): Core.Print("Time:",Core.game.time,color="k")
+def Smile(*args):
+	Core.Print("You smile.")
 
 
-def Yawn(*args): return Rest(None,None,None) if Core.yesno("Do you want to sleep?") else None
+def Time(*args):
+	Core.Print("Time:",Core.game.time,color="k")
+
+
+def Wink(*args):
+	Core.Print("You wink!",color="m")
+
+
+def Yawn(*args):
+	return Rest(None,None,None) if Core.yesno("Do you want to sleep?") else None
 
 
 
@@ -1186,8 +1196,9 @@ def GoVertical(dir,passage=None,dobj=None):
 
 # infers direction, destination, and passage (if they exist) from input terms
 def parseGoTerms(dobj,iobj,prep):
+	cancelledAction = False
 	dir,dest,passage = None,None,None
-	parentLinks = Core.player.parent.allLinks()
+	parentLinks = Core.player.parent.allLinks(d=0)
 	# assign dest
 	if dobj in parentLinks.values(): dest = dobj
 	elif Core.nameMatch(dobj,Core.player.parent): dest = dobj
@@ -1201,6 +1212,7 @@ def parseGoTerms(dobj,iobj,prep):
 				pairs.add((dir,passage))
 		if len(pairs) > 1:
 			passage = chooseObject("direction",[pair[1] for pair in pairs],"go with")
+			cancelledAction = passage is None
 			return None, passage
 		elif len(pairs) == 1:
 			return pairs.pop()
@@ -1209,13 +1221,18 @@ def parseGoTerms(dobj,iobj,prep):
 	# print(dobj,iobj,dir,dest,passage)
 	if dobj is not None:
 		dir,passage = getDirAndPassage(dobj)
+		if passage is None:
+			passage = findObject(dobj,f"go","both",silent=True)
+			cancelledAction = passage is None
 	elif iobj is not None:
 		dir2,passage2 = getDirAndPassage(iobj)	
 		if dir is None:
 			dir = dir2
 		if passage is None:
 			passage = passage2
+
 	
+	# print(dobj,iobj,dir,dest,passage)
 	# assign dir and passage
 	if dir is None and dobj in Data.directions.values(): dir = dobj
 	elif dir is None and iobj in Data.directions.values(): dir = iobj
@@ -1224,7 +1241,7 @@ def parseGoTerms(dobj,iobj,prep):
 	# if prep is None: prep = "with"
 	# if passage is None: passage = findObject(dobj,f"go {prep}","room",silent=True)
 	# if passage is None: passage = findObject(iobj,f"go {prep}","room",silent=True)
-	return dir,dest,passage
+	return dir,dest,passage,cancelledAction
 
 
 # parses user input to determine the intended direction, destination, and/or
@@ -1252,16 +1269,16 @@ def Go(dobj,iobj,prep):
 
 	locReminder = "" if Core.player.parent is Core.game.currentroom else f" You are in {~Core.player.parent}."
 	# get dir, dest, and passage and validate them
-	dir,dest,passage = parseGoTerms(dobj,iobj,prep)
+	dir,dest,passage,cancelledAction = parseGoTerms(dobj,iobj,prep)
 	# print(dir,dest,passage)
-	if passage is False: # if player cancelled passage choice
+	if cancelledAction:
 		return False
 	if (dir,dest,passage) == (None,None,None):
 		Core.Print(f"There is no exit leading to a '{dobj}' here.{locReminder}",color="k")
 		return False
 	if dir is None:
 		dir, passage = Core.player.parent.getDirPortalPair(dest)
-	# print(dir, dest, passage)
+	# print(dir,dest,passage)
 	if (dest,passage) == (None,None):
 		if dir in Core.player.parent.links:
 			if isinstance(Core.player.parent,Core.Room):
@@ -1276,6 +1293,7 @@ def Go(dobj,iobj,prep):
 		# this means player cancelled the choice
 		if len(passages) > 0 and passage is None:
 			return False
+	# print(dir,dest,passage)
 	if (dest,passage) == (None,None):
 		Core.Print(f"There is no exit leading '{dir}' here.{locReminder}",color="k")
 		return False
@@ -1846,7 +1864,7 @@ def Take(dobj,iobj,prep):
 		dobj = getNoun("What will you take?")
 		if dobj in Data.cancels: return False
 
-	if dobj in ("all","everything","it all"):
+	if dobj in ("all","each","everything","it all"):
 		# TODO: account for 'take everything from ground', so only take uncontained items
 		if iobj in ("here","room",None):
 			takeFrom = Core.player.parent
@@ -2126,7 +2144,13 @@ shortactions = {
 "verbs":Commands,
 "weapons":Core.Player.printWeapons,
 "xp":Core.Player.printXP,
-"yawn":Yawn
+"yawn":Yawn,
+":)": Smile,
+":(": Cry,
+":d": Laugh,
+":p": Sing,
+";)": Wink,
+":o": Shout,
 }
 
 actions = {
