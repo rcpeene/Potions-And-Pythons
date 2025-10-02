@@ -2146,9 +2146,8 @@ class Creature():
 		uncompGear = {}
 		for slot, idx in self.gear.items():
 			if idx == "carrying":
+				assert self.carrying is not None, f"Error: Creature {self.name} has gear slot '{slot}' set to 'carrying' but is not carrying anything."
 				uncompGear[slot] = self.carrying
-				if uncompGear[slot] is None:
-					uncompGear[slot] = EmptyGear()
 			elif idx is None:
 				uncompGear[slot] = EmptyGear()
 			else:
@@ -4250,6 +4249,7 @@ class Portal(Item):
 			if dir == thisDir and portal is not None:
 				portals.append(portal)
 		return portals
+
 
 	# if the given room object, dest, is in one of the rooms links, then find the direction and portal it is in from the room.
 	def getDirPortalPair(self,dest):

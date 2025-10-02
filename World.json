@@ -773,11 +773,13 @@
 					"left": "carrying",
 					"right": null,
 					"legs": null
-				}
+				},
+				"carrying": 2
 			},
 			{
 				"__class__": "Animal",
 				"name": "blue jay",
+				"id": 2,
 				"desc": "A small blue and white bird",
 				"aliases": ["bird","jay"],
 				"species": "bird",
