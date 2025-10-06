@@ -35,7 +35,7 @@ def nameMatch(term,obj):
 		return False
 	term = term.lower()
 	if isinstance(obj, Room):
-		return term == obj.name.lower() or term in ["here", "room"]
+		return term == obj.name.lower() or term in ["room"]
 	return term == obj.name.lower() or term == obj.nounPhrase().lower() or term in obj.aliases
 
 
@@ -360,6 +360,11 @@ def diceRoll(n,d,m=0):
 		x += randint(1,d)
 	x += m
 	return min1(x)
+
+
+# rolls a number between d//2 and d, adds m
+def halfRangeRoll(d,m=0):
+	return diceRoll(1,d//2,m+d//2)
 
 
 # returns a number, n, with a lower bound of m
@@ -1616,7 +1621,11 @@ class Room():
 
 
 	def allDirs(self):
-		return (tuple[0] for tuple in self.allLinks())
+		return {tuple[0] for tuple in self.allLinks()}
+	
+
+	def allDests(self):
+		return {dest for dest in self.allLinks().values()}
 
 
 	def itemNames(self):
@@ -1730,7 +1739,7 @@ class Room():
 # Anything in a Room that is not a Creature will be an Item
 # All items come with a name, description, weight, and durability
 class Item():
-	def __init__(self,name,desc,weight,durability,composition,id=None,aliases=None,status=None,plural=None,determiner=None,pronoun="it",longevity=None,despawnTimer=None,scent=None,taste=None,texture=None):
+	def __init__(self,name,desc,weight,durability,composition,id=None,aliases=None,status=None,plural=None,determiner=None,pronoun="it",longevity=None,despawnTimer=None,scent=None,taste=None,texture=None,occupant=None):
 		self.name = name
 		self.desc = desc
 		self.weight = weight
@@ -1752,6 +1761,7 @@ class Item():
 		self.pronoun = pronoun
 		self.parent = None
 		self.id = id
+		self.occupant = occupant
 
 
 	### File I/O ###
@@ -1819,9 +1829,13 @@ class Item():
 
 	def changeLocation(self,newparent):
 		prevparent = self.parent
-		
 		prevparent.exit(self)
+		if self is player.parent:
+			Print(f"{+self} rumbles for a moment...")
+
 		newparent.enter(self)
+		if self.occupant:
+			self.occupant.changeLocation(newparent)
 
 
 	def Obtain(self,creature):
@@ -1835,8 +1849,52 @@ class Item():
 			return False
 		if self.room() is game.currentroom:
 			Print(f"{+self} breaks.")
+		if self.occupant:
+			self.occupant.Fall()
+		self.Disoccupy()
 		self.parent.remove(self)
 		return True
+
+
+	def Occupy(self,occupant):
+		if occupant is self.occupant:
+			Print(f"{+occupant} is already on {+self}.")
+			return False
+		assert occupant.carrier is None
+		### TODO: instead of just checking ancestors, should check tether loops
+		if occupant in self.ancestors():
+			Print(f"{+self} is already carrying {~occupant}.")
+			return False
+		if self.occupant is not None:
+			Print(f"{~self.occupant} is already {self.occupant.posture()} on {-self}.")
+			return False
+
+		if getattr(self,"open",False):
+			self.Traverse(occupant)
+			return False
+		elif self.weight < occupant.weight // 5:
+			Print(f"{+self} is too small to support {~occupant}.")
+			occupant.Fall(minm(3,self.weight//5))
+			return False
+		self.occupant = occupant
+		occupant.carrier = self
+		if self.durability != -1 and occupant.weight > self.durability*2:
+			Print(f"{+self} cannot support the weight of {~occupant}!")
+			self.Break()
+			return False
+		return True
+
+
+	def removeCarry(self):
+		return self.Disoccupy()
+
+
+	def Disoccupy(self):
+		if not self.occupant:
+			return False
+		# TODO: if has self.items, then just remove from items instead?
+		self.occupant.carrier = None
+		self.occupant = None
 
 
 	def Fall(self,height=0,room=None):
@@ -1844,6 +1902,9 @@ class Item():
 			room = self.room()
 		if self.room() is game.currentroom:
 			Print(f"{+self} falls down.")
+		if self.occupant:
+			self.occupant.Fall(height,room)
+			self.Disoccupy()
 
 		while room.altitude != 0 and "down" in room.links:
 			height += room.size
@@ -1966,14 +2027,15 @@ class Item():
 
 
 	def hasAnyCondition(self,*names):
+		if type(names) is str:
+			names = (names,)
 		if len(names) == 0:
 			return len(self.status) > 0
-		if len(names) == 1:
-			names = names[0]
 		assert isinstance(names,Iterable)
 		for name in names:
 			if self.hasCondition(name):
 				return True
+		return False
 
 
 
@@ -2176,12 +2238,13 @@ class Creature():
 	def convertToJSON(self):
 		# convert the gear dict to a form more easily writable in a JSON object
 		compressedGear = self.compressGear()
-		self.carrying = self.carrying.id if self.carrying else None
-		self.carrier = self.carrier.id if self.carrier else None
-		self.riding = self.riding.id if self.riding else None
-		self.rider = self.rider.id if self.rider else None
-
 		jsonDict = self.__dict__.copy()
+
+		jsonDict["carrying"] = self.carrying.id if self.carrying else None
+		jsonDict["carrier"] = self.carrier.id if self.carrier else None
+		jsonDict["riding"] = self.riding.id if self.riding else None
+		jsonDict["rider"] = self.rider.id if self.rider else None
+
 		dictkeys = list(jsonDict.keys())
 		# these attributes do not get stored between saves (except gear)
 		for key in dictkeys:
@@ -2231,8 +2294,7 @@ class Creature():
 		if heal <= 0:
 			return 0
 		self.hp += heal
-		if self is player:
-			Print(f"You healed {heal} HP.",color="g")
+		self.Print(f"You healed {heal} HP.",color="g")
 		return heal
 
 
@@ -2242,8 +2304,7 @@ class Creature():
 		if mana <= 0:
 			return 0
 		self.mp += mana
-		if self is player:
-			Print(f"You regained {mana} MP.",color="b")
+		self.Print(f"You regained {mana} MP.",color="b")
 		return mana
 
 
@@ -2273,6 +2334,10 @@ class Creature():
 		if isinstance(I,Serpens):
 			return True
 		if self.invWeight() + I.Weight() > 2*self.BRDN():
+			return False
+		if I in (self.carrier,self.carrying,self.rider,self.riding):
+			return False
+		if self.checkTetherLoop(self,I,"take"):
 			return False
 		return True
 
@@ -2374,7 +2439,7 @@ class Creature():
 			self.gear[slot] = EmptyGear()
 			self.assignWeaponAndShield()
 			if not silent:
-				Print(f"You unequip your {I}.")
+				self.Print(f"You unequip your {I}.")
 			if hasMethod(I,"Unequip"): I.Unequip()
 
 
@@ -2421,23 +2486,47 @@ class Creature():
 
 	def addCarry(self,creature):
 		assert isinstance(creature,Creature)
+		assert self.carrying is None
+		assert creature.carrier is None
 		self.unequip("left")
 		if getattr(self.gear["right"],"twohanded",False):
 			self.unequip("right")
 
 		self.carrying = creature
+		creature.carrier = self
+		creature.parent.remove(creature)
+		self.parent.add(creature)
+
 		self.gear["left"] = creature
 		self.checkHindered()
 
 
 	def removeCarry(self,silent=False):
-		if self is player and not silent:
-			Print(f"You drop {-self.carrying}.")
+		if self.carrying is None:
+			return
+		self.Print(f"You drop {-self.carrying}.")
 		self.gear["left"] = EmptyGear()
 		self.carrying.carrier = None
+		self.carrying.Print(f"{+self} is no longer carrying you.")
 		self.carrying.removeCondition("restrained",-3)
 		self.carrying = None
 		self.checkHindered()
+
+
+	def addRiding(self,creature):
+		assert isinstance(creature,Creature)
+		assert creature.rider is None
+		assert self.riding is None
+		self.riding = creature
+		creature.rider = self
+
+
+	def removeRiding(self):
+		if self.riding is not None:
+			self.Print(f"You are no longer riding {-self.riding}.")
+			self.riding.Print(f"{+self} is no longer riding {self.riding}.")
+			self.riding.rider = None
+			self.riding = None
 
 
 	def addCondition(self,name,dur,stackable=False):
@@ -2536,8 +2625,7 @@ class Creature():
 		self.aliases = self.aliases | {"dead " + a for a in self.aliases}
 		n = diceRoll(3,player.LOOT(),-2)
 		self.parent.add(Serpens(n))
-		if not game.silent:
-			Print(f"Dropped $ {n}.",color="g")
+		Print(f"Dropped $ {n}.",color="g")
 		if game.whoseturn is player:
 			r = self.rating()
 			# xp granted generally scales with rating
@@ -2560,9 +2648,9 @@ class Creature():
 		if room != self.room():
 			self.changeLocation(room)
 
-		if self.hasCondition("fleetfooted"):
-			height = 0
-		self.takeDamage(height,"b")
+		if not self.hasCondition("fleetfooted"):
+			self.takeDamage(height,"b")
+			self.addCondition("laying",-3)
 		return True
 
 
@@ -2571,16 +2659,24 @@ class Creature():
 		food.Eat()
 
 
-	def Sit(self):
-		self.removeCondition("laying")
+	def Stand(self):
+		self.removeCondition("cozy",-3)
 		self.removeCondition("crouching")
-		self.addCondition("sitting",-3)
+		self.removeCondition("sitting")
+		self.removeCondition("laying")
 
 
 	def Crouch(self):
+		self.removeCondition("cozy",-3)
 		self.removeCondition("sitting")
 		self.removeCondition("laying")
 		self.addCondition("crouching",-3)
+
+
+	def Sit(self):
+		self.removeCondition("crouching")
+		self.removeCondition("laying")
+		self.addCondition("sitting",-3)
 		
 
 	def Lay(self):
@@ -2590,7 +2686,7 @@ class Creature():
 
 
 	def Give(self,I):
-		Print(f"{+self} ignores your offer.")
+		self.Print(f"{+self} ignores your offer.")
 
 
 	### Behavior ###
@@ -2620,16 +2716,15 @@ class Creature():
 
 
 	def Teleport(self,newroom):
-		prevroom = self.parent
-		prevroom.exit(self)
-		prevroom.removeCreature(self)
-		self.parent = newroom
-		newroom.addCreature(self)		
-		newroom.enter(self)
-		if self.riding:
-			self.riding = None
-		if self.carrying:
-			self.carrying = None
+		if self.carrier:
+			self.carrier.removeCarry()
+		if self.rider:
+			self.rider.removeRiding()
+		self.removeCarry()
+		self.removeRiding()
+		self.waitKbInput("You teleport!",color="b")
+		self.changeLocation(newroom)
+		self.Stand()
 
 
 	def act(self):
@@ -2641,15 +2736,16 @@ class Creature():
 	# a carrier is trying to carry the creature that is carrying them
 	# this must be prevented
 	def checkTetherLoop(self,actor,target,dverb):
-		assert dverb in ("carry","ride")
+		assert dverb in ("carry","ride","take","get on")
 		looplink = None		
 
 		iverb = "carrying"
 		carrier = actor
 		while carrier:
-			if carrier.carrier == target:
+			if getattr(carrier,"carrier",None) == target:
 				looplink = carrier
-			carrier = carrier.carrier
+			# carrier may be an item, which can't have its own carrier
+			carrier = getattr(carrier,"carrier",None)
 
 		iverb = "being carried by"
 		carrying = actor
@@ -2675,7 +2771,7 @@ class Creature():
 		# if a creature is found creating a loop with the actor and attempted target,
 		# identify the culprit
 		if looplink:
-			Print(f"You can't {dverb} {-target}, {target.pronoun} is {iverb} {looplink}")
+			self.Print(f"You can't {dverb} {-target}, {target.pronoun} is {iverb} {looplink}")
 			return True
 		return False
 
@@ -2695,17 +2791,23 @@ class Creature():
 
 
 	def Carry(self,carrier):
+		assert not isinstance(carrier,Item)
 		if self.checkTetherLoop(carrier,self,"carry"):
 			return False
 		if self.Weight() > carrier.BRDN()//2:
-			Print(f"{+self} is too heavy to carry.")
+			self.Print(f"{+self} is too heavy to carry.")
 			return False
+		if self.carrier:
+			self.Print(f"{+self} is already being carried by {self.carrier}.")
+			if halfRangeRoll(carrier.ATHL()) > halfRangeRoll(self.carrier.ATHL()):
+				carrier.Print()(f"You wrest {-self} away from {self.carrier}!")
+			else:
+				carrier.Print(f"{+self.carrier} holds onto {-self}.")
+				return False
+
 		if not self.Restrain(carrier):
 			return False
-		self.carrier = carrier
-		self.carrier.addCarry(self)
-		self.parent.remove(self)
-		self.carrier.parent.add(self)
+		carrier.addCarry(self)
 		return True
 
 
@@ -2717,10 +2819,10 @@ class Creature():
 				#TODO: add restraining with items? like rope??
 				pass
 			if self.ATHL() > restrainer.ATHL() or self.EVSN() > restrainer.ATHL():
-				Print(f"You fail to restrain {-self}!",color="r")
+				restrainer.Print(f"You fail to restrain {-self}!",color="r")
 				return False
 		self.addCondition("restrained",-3)
-		Print(f"You restrain {-self}!",color="g")
+		restrainer.Print(f"You restrain {-self}!",color="g")
 		return True
 
 
@@ -2743,8 +2845,7 @@ class Creature():
 		# basically, its just reduced for the amount of weight the missile has
 		force = min1(self.STR()//2) - bound((missile.Weight()//4)//self.STR(),0,10)
 		if force <= 0:
-			if self is player:
-				Print(f"{+missile} is too heavy!")
+			self.Print(f"{+missile} is too heavy!")
 			missile.asItem().Fall()
 			return False
 
@@ -2768,21 +2869,69 @@ class Creature():
 		if self.checkTetherLoop(rider,self,"ride"):
 			return False
 		if rider.Weight() > self.BRDN()//2:
-			Print(f"You are too heavy to ride {-self}")
+			rider.Print(f"You are too heavy to ride {-self}.")
 			return False
 		contest = not self.isFriendly() and self.canMove()
 		if contest:
-			Print(f"{+self} struggles.",color="o")
+			rider.Print(f"{+self} struggles.",color="o")
 			athl_contest = self.ATHL() - rider.ATHL()
 			if athl_contest > 0:
-				Print(f"{+self} shakes you off!",color="r")
+				rider.Print(f"{+self} shakes you off!",color="r")
 				if athl_contest > rider.ATHL():
 					rider.Fall(athl_contest-rider.ATHL())
 				return False
-		self.rider = rider
-		rider.riding = self
-		Print(f"You ride {-self}.",color="g" if contest else "w")
+		rider.addRiding(self)
+		rider.Print(f"You ride {-self}.",color="g" if contest else "w")
 		return True
+
+
+	def Mount(self,steed,position="sit"):
+		if self is steed:
+			self.Print("You can't get on yourself.")
+			return False
+		if self.riding:
+			self.Print(f"You can't, you are already riding {-self.riding}.")
+			return False
+		elif self.carrier:
+			carriername = steed.pronoun if steed is self.carrier else ~self.carrier
+			self.Print(f"You can't, you are already {self.posture()} on {carriername}.")
+			return False
+		if not hasMethod(steed,"Ride") and not hasMethod(steed,"Occupy"):
+			self.Print(f"{+steed} cannot be mounted.")
+			return False
+
+		if self.checkTetherLoop(self,steed,"get on"):
+			return False
+		if hasMethod(steed,"Ride"):
+			if not steed.Ride(self):
+				return False
+		elif hasMethod(steed,"Occupy"):
+			if not steed.Occupy(self):
+				return False
+			self.Print(f"You {position} on {-steed}.")
+
+		changePositionFuncs = {
+			None: self.Stand,
+			"stand": self.Stand,
+			"crouch": self.Crouch,
+			"sit": self.Sit,
+			"lay": self.Lay
+		}
+		changePositionFuncs[position]()
+		return True
+
+
+	def Dismount(self):
+		if self.riding:
+			self.Print(f"You get off {-self.riding}.")
+			self.riding.rider = None
+			self.riding = None
+		if isinstance(self.carrier,Item):
+			self.Print(f"You get off {-self.carrier}.")
+			self.carrier.Disoccupy()
+			self.carrier = None
+		self.Stand()
+		return False
 
 
 	def Smell(self,smeller):
@@ -3037,14 +3186,25 @@ class Creature():
 
 
 	def hasAnyCondition(self,*names):
+		if type(names) is str:
+			names = (names,)
+		if type(names[0]) is tuple or type(names[0]) is list:
+			names = names[0]
 		if len(names) == 0:
 			return len(self.status) > 0
-		if len(names) == 1:
-			names = names[0]
 		assert isinstance(names,Iterable)
 		for name in names:
 			if self.hasCondition(name):
 				return True
+		return False
+
+
+	def posture(self):
+		for pos in ("laying","sitting","crouching"):
+			if self.hasCondition(pos):
+				return pos
+		else:
+			return "standing"
 
 
 	# returns the sum of the weight of all items being held
@@ -3094,6 +3254,18 @@ class Creature():
 
 
 	### User Output ###
+
+	# This is used as a shortcut to show output only to the user
+	# It should do nothing for any other creature
+	def Print(self,*args,end="\n",sep="",delay=0.002,color=None,allowSilent=True):
+		return
+
+
+	# This is used as a shortcut to show output only to the user
+	# It should do nothing for any other creature
+	def waitKbInput(self,text=None,delay=0.005,color=None):
+		return
+
 
 	def nounPhrase(self,det="",n=-1,plural=False,cap=-1):
 		strname = getattr(self,"descname",self.name)
@@ -3162,26 +3334,11 @@ class Player(Creature):
 	def awaken(self,wellRested=True):
 		game.silent = False
 		sleep(1)
-		Print("You wake up!",color="o")
-		sleep(1)
+		waitKbInput("You wake up!",color="o")
 		if wellRested:
 			self.lastSlept = game.time
 			self.checkTired()
-		sleep(1)
-		Print("\n\n")
 		game.startUp()
-
-
-	def Teleport(self,newroom):
-		if type(self.parent) is not Room:
-			raise Exception(f"Can't change rooms. Stuck inside {self.parent}")
-		game.changeRoom(newroom)
-		if self.riding:
-			Print(f"You are no longer riding {self.riding}.")
-			self.riding = None
-		if self.carrying:
-			Print(f"You are no longer carrying {self.carrying}.")
-			self.carrying = None
 
 
 	# takes incoming damage, accounts for damage vulnerability or resistance
@@ -3442,14 +3599,14 @@ class Player(Creature):
 			return False
 
 
-	def Fall(self,height=0,room=None):
+	def Fall(self,height=3,room=None):
 		Print(f"You fall!",color="o")
 
 		if self.hasCondition("flying"):
 			Print(f"But you're flying.",color="g")
 			return False
 
-		if room is None:
+		if not isinstance(room, Room):
 			room = self.room()
 		while room.altitude != 0 and "down" in room.links:
 			height += room.size
@@ -3458,9 +3615,9 @@ class Player(Creature):
 			ellipsis()
 			self.changeLocation(room)
 			
-		if self.hasCondition("fleetfooted"):
-			height = 0
-		self.takeDamage(height,"b")
+		if not self.hasCondition("fleetfooted"):
+			self.takeDamage(height,"b")
+			self.addCondition("laying",-3)
 		return True
 
 
@@ -3497,6 +3654,15 @@ class Player(Creature):
 
 
 	### User Output ###
+
+	# This method does nothing for non-player creatures
+	def Print(self,*args,end="\n",sep="",delay=0.002,color=None,allowSilent=True):
+		return Print(*args,end=end,sep=sep,delay=delay,color=color,allowSilent=allowSilent)
+
+
+	def waitKbInput(self,text=None,delay=0.005,color=None):
+		return waitKbInput(text=text,delay=delay,color=color)
+
 
 	# prints all 10 player traits
 	def printTraits(self,trait=None):
@@ -3562,17 +3728,27 @@ class Player(Creature):
 
 	def printCarrying(self,silent=False,*args):
 		if self.carrying is not None:
-			Print(f"Carrying {~self.carrying}")
+			Print(f"You are carrying {~self.carrying}.")
 			# Print(f"Weight: {self.carrying.Weight()}")
 		elif silent is False:
-			Print("Carrying nothing")
+			Print("You aren't carrying anything.")
 
 
 	def printRiding(self,silent=False,*args):
 		if self.riding:
-			Print(f"Riding {~self.riding}")
+			Print(f"You are riding {~self.riding}.")
 		elif silent is False:
-			Print("Riding nothing")
+			Print("You aren't riding anything.")
+
+
+	def printPosition(self,*args):
+		pos = self.posture()
+		mount = ""
+		if self.riding:
+			mount = f" on {-self.riding}"
+		elif self.carrier:
+			mount = f" on {-self.carrier}"
+		Print(f"You are {pos}{mount}.")
 
 
 	def printStatus(self, *args):
@@ -3956,7 +4132,6 @@ class Animal(Speaker):
 
 
 	def attack(self):
-		Print(f"{self.name} attack?")
 		matches = self.parent.nameQuery('chest')
 		if len(matches) == 1:
 			chest = matches.pop()
@@ -4134,7 +4309,9 @@ class Portal(Item):
 		return choice(self.links)
 
 
-	def getNewLocation(self,dir):
+	def getNewLocation(self,dir=None):
+		if dir is None:
+			dir = self.getDefaultDir()
 		newloc = self.links[dir]
 		if isinstance(newloc, Portal):
 			newloc = newloc.parent
@@ -4217,7 +4394,7 @@ class Portal(Item):
 
 	### Getters ###
 
-	# returns dict of links, where keys are directions and values are room names
+	# returns dict of links, where keys are directions and values are rooms
 	def allLinks(self,d=3):
 		links = {}
 		for dir in self.links:
@@ -4263,6 +4440,9 @@ class Portal(Item):
 		return (tuple[0] for tuple in self.allLinks())
 
 
+	def allDests(self):
+		return {dest for dest in self.allLinks().values()}
+
 
 
 # almost identical to the item class, but fixtures may not be removed from their initial location.
@@ -4272,17 +4452,6 @@ class Fixture(Item):
 		self.mention = mention
 		self.parent = None
 
-
-	### Operation ###
-
-	def Break(self):
-		if self.durability == -1:
-			if not game.silent:
-				Print(f"The {self.name} cannot be broken.")
-			return False
-		Print(f"The {self.name} breaks.")
-		self.parent.removeFixture(self)
-		return True
 
 
 
@@ -4334,12 +4503,17 @@ class Projectile(Item):
 		if isinstance(target,Room):
 			self = self.asItem()
 			self.changeLocation(target)
-			return self.Fall(speed//2)
+			return self.Fall(speed//4)
+		if self.item.occupant:
+			occupant = self.item.occupant
+			self.item.Disoccupy()
+			occupant.Fall(speed//4)
+
+		# when throwing something in a Box at something outside the box
 		if self.item.parent not in (target,target.parent):
 			if not getattr(self.item.parent,"open",True):
 				return self.item.parent.Bombard(self)
-			self.item.parent.remove(self.item)
-			target.parent.add(self.item)
+			self.item.changeLocation(target.parent)
 
 		if not target.Bombard(self):
 			Print(f"{self.pronoun.title()} misses!")

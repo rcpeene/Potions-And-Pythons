@@ -8,6 +8,7 @@
 # 3. Action dicts		(dictionaries used to call action functions from)
 
 from random import choice,randint
+import traceback
 
 import Data
 import Core
@@ -18,6 +19,7 @@ import Effects
 
 
 helpCounter = 0
+commandQueue = []
 
 #######################
 ## PARSING FUNCTIONS ##
@@ -107,7 +109,7 @@ def findObject(term,verb=None,queryType="both",filter=None,roomD=1,playerD=2,req
 		matches |= Core.player.surroundings().nameQuery(term,d=roomD)
 	if queryType == "player" and Core.nameMatch(term,Core.player.carrying):
 		matches.add(Core.player.carrying)
-	if term in ("me","myself"):
+	if term in ("me","myself","player","self"):
 		matches.add(Core.player)
 	if term in ("room",Core.game.currentroom.name):
 		matches.add(Core.game.currentroom)
@@ -146,6 +148,21 @@ def enforceVerbScope(verb,obj):
 	if obj not in tree:
 		Core.Print(f"You can't {verb} {-obj}, you're {parent.passprep} {-parent}.")
 		return True
+
+
+def enforceTetherLimits(verb,obj):
+	if obj is Core.player.carrier:
+		if isinstance(obj,Core.Creature):
+			Core.Print(f"You can't {verb} {-obj}, you're being carried by {obj.pronoun}.")
+		if isinstance(obj,Core.Item):
+			Core.Print(f"You can't {verb} {-obj}, you're {Core.player.posture()} on {obj.pronoun}.")
+		return True
+	if obj is Core.player.riding:
+		Core.Print(f"You can't {verb} {-obj}, you're riding {obj.pronoun}.")
+		return True
+	# if obj is Core.player.rider: # TODO, what if a bird is 'riding' on your shoulder?
+	# 	Core.Print(f"You can't {verb} {-obj}, {obj.pronoun} is on you.")
+	# 	return True
 
 
 # checks if a noun refers to a room, an object in the world or on the player...
@@ -219,10 +236,8 @@ def replacePronoun(term):
 	return obj.nounPhrase()
 
 
-# validates user input and processes it into a command form usable by parse(),
-# namely, it returns a list of words without capitals, symbols, or articles
-# nounify() joins words that may only be meaningful as one term
-def processCmd(prompt,storeRawCmd=False):
+# takes and validates user input
+def takeCmd(prompt,storeRawCmd=False):
 	Core.flushInput()
 	rawcommand = Core.Input(prompt,low=False)
 	# take input until input has any non-whitespace characters in it
@@ -232,9 +247,19 @@ def processCmd(prompt,storeRawCmd=False):
 	# for convenience, save raw command in game object
 	if storeRawCmd:
 		Core.game.lastRawCommand = rawcommand.split()
+	return rawcommand
 
+	
+# processes it into a command form usable by parse(),
+# namely, it returns a list of words without capitals, symbols, or articles
+# nounify() joins words that may only be meaningful as one term
+def processCmd(command):
+	# allow for sequential commands separated by 'and'
+	seqcommand = command.split(" and ")
+	command = seqcommand[0]
+	commandQueue.extend(seqcommand[1:])
 	# lowercase-ify the sentence command, copy it excluding symbols
-	purecommand = "".join([i for i in rawcommand if i not in Data.symbols]).lower()
+	purecommand = "".join([i for i in command if i not in Data.symbols]).lower()
 	# split command into list of words, but combine words that seem to be single terms
 	splitcommand = nounify(purecommand.split())	
 	# split compound words that ought to be two separate words for parsing
@@ -245,7 +270,7 @@ def processCmd(prompt,storeRawCmd=False):
 
 
 def getNoun(prompt):
-	return " ".join(processCmd(prompt))
+	return " ".join(processCmd(takeCmd(prompt)))
 
 
 def parseWithoutVerb(cmdInput):
@@ -292,7 +317,10 @@ def promptHelp(msg):
 # n denotes how many times parse has recurred
 def parse():
 	global helpCounter
-	command = processCmd("\n\nWhat will you do?",storeRawCmd=True)
+	if commandQueue:
+		command = processCmd(commandQueue.pop(0))
+	else:
+		command = processCmd(takeCmd("\n\nWhat will you do?",storeRawCmd=True))
 	if len(command) == 0:
 		return promptHelp("Command not understood.")
 	verb = command[0]	# verb is always first word
@@ -345,10 +373,11 @@ def Evaluate(command):
 		return
 	code = " ".join(command[1:])
 	try:
+		fo = findObject # for convenience when executing quick code
 		Core.Print(eval(code))
 	except Exception as e:
 		Core.Print("Error: Code was unable to be executed.",color="k")
-		Core.Print(e)
+		Core.Print(traceback.format_exc(),color="k",delay=0)
 
 
 def Execute(command):
@@ -357,10 +386,11 @@ def Execute(command):
 		return
 	code = " ".join(command[1:])
 	try:
+		fo = findObject # for convenience when executing quick code
 		exec(code)
 	except Exception as e:
 		Core.Print("Error: Code was unable to be executed.",color="k")
-		Core.Print(e)
+		Core.Print(traceback.format_exc(),color="k",delay=0)
 
 
 def Expell(command):
@@ -415,7 +445,6 @@ def Imbue(command):
 			Core.Print("Error: Duration not number",color="k")
 			return
 
-
 	Core.player.addCondition(condname,duration)
 
 
@@ -427,6 +456,45 @@ def Learn(command):
 		Core.player.gainxp(int(command[1]))
 	except:
 		Core.Print(f"Error: Value not number {command[1]}",color="k")
+
+
+def Lob(command):
+	if len(command) < 2:
+		Core.Print("Error: no object name given",color="k")
+		return
+	if len(command) < 3:
+		Core.Print("Error: no target given",color="k")
+		return
+
+	prep = "at"
+	objname = command[1].lower()
+	# dir, dest, or passage
+	path = " ".join(command[2:]).lower()
+	missile = findObject(objname,"get",playerD=3,roomD=3)
+	if missile is None:
+		Core.Print("Error: Object not found",color="k")
+		return
+	
+	if path in Data.directions:
+		path = Data.directions[path]
+	for dir, room in Core.game.currentroom.links.items():
+		if path in (dir, room.name.lower()):
+			target = room
+			prep = "to"
+			break
+	else:
+		target = findObject(path,"launch at",playerD=3,roomD=3)
+	if target is None:
+		Core.Print("Error: target not found",color="k")
+		return False
+	
+	if getattr(missile,"carrier",None):
+		missile.carrier.removeCarry(missile)
+	if getattr(missile,"rider",None):
+		missile.rider.removeRiding(missile)
+	missile = missile.asProjectile()
+	Core.Print(f"{+missile} is launched {prep} {-target}.",color="k")
+	missile.Launch(50,100,None,target)
 
 
 def Mode(command):
@@ -496,6 +564,15 @@ def Set(command):
 		obj.checkConditions()
 
 
+def Shrink(command):
+	if len(command) > 1:
+		objname = " ".join(command[1:])
+		obj = findObject(objname,"shrink",playerD=3,roomD=3)
+	else:
+		obj = Core.player
+	Core.Print(f"Shrinking {-obj}.",color="k")
+	obj.weight = 2
+
 
 def Spawn(command):
 	if len(command) < 2:
@@ -521,7 +598,7 @@ def Teleport(command):
 		return
 	location = " ".join(command[1:]).lower()
 	if location in Core.world:
-		Core.player.changeLocation(Core.world[location])
+		Core.player.Teleport(Core.world[location])
 	else:
 		Core.Print("Location not in world",color="k")
 
@@ -652,7 +729,7 @@ def Wink(*args):
 
 
 def Yawn(*args):
-	return Rest(None,None,None) if Core.yesno("Do you want to sleep?") else None
+	return Sleep(None,None,None) if Core.yesno("Do you want to sleep?") else None
 
 
 
@@ -859,7 +936,7 @@ def Cross(dobj,iobj,prep):
 
 
 def Crouch(dobj,iobj,prep):
-	if prep not in ("behind","below","beneath","inside","under",None):
+	if prep not in ("down","behind","below","beneath","inside","under",None):
 		return promptHelp("Command not understood.")
 
 	if dobj is None:
@@ -911,8 +988,10 @@ def Dismount(dobj,iobj,prep):
 	if prep not in ("from","of","off","out","out of",None):
 		return promptHelp("Command not understood.")
 
-	if Core.player.riding is None:
-		return promptHelp(f"You're not riding anything")
+	if Core.player.riding is None and Core.player.carrier is None:
+		if Core.player.posture() != "standing":
+			return Stand(None,None,None)
+		return promptHelp(f"You're not on anything.")
 
 	if iobj is not None:
 		dobj = iobj
@@ -920,16 +999,12 @@ def Dismount(dobj,iobj,prep):
 		if dobj.startswith("my "):
 			dobj = dobj[3:]
 		matches = Core.player.surroundings().nameQuery(dobj)
-		if Core.player.riding not in matches:
-			Core.Print(f"You're not riding a '{dobj}'",color="k")
+		if Core.player.riding not in matches and Core.player.carrier not in matches:
+			Core.Print(f"You're not on a '{dobj}'",color="k")
 			return False
-	
-	riding = Core.player.riding
-	Core.game.setPronouns(riding)
-	Core.Print(f"You dismount {-riding}.")	
-	riding.rider = None
-	Core.player.riding = None
-	Core.player.removeCondition("sitting")
+
+	Core.player.Dismount()
+	Core.game.setPronouns(Core.player.riding)
 	return True
 
 
@@ -1120,6 +1195,9 @@ def Escape(dobj,iobj,prep):
 
 
 def Exit(dobj,iobj,prep):
+	if isinstance(Core.player.carrier, Items.Bed):
+		if Core.nameMatch(dobj, Core.player.carrier):
+			return Dismount(dobj,iobj,prep)
 	if dobj is None and "out" in Core.player.parent.allDirs():
 		return Go("out",iobj,prep)
 	return Go(None,iobj,"out")
@@ -1206,6 +1284,7 @@ def parseGoTerms(dobj,iobj,prep):
 	elif Core.nameMatch(iobj,Core.player.parent): dest = iobj
 
 	def getDirAndPassage(term):
+		nonlocal cancelledAction
 		pairs = set()
 		for dir,passage in parentLinks.keys():
 			if term == dir or Core.nameMatch(term,passage):
@@ -1221,11 +1300,10 @@ def parseGoTerms(dobj,iobj,prep):
 	# print(dobj,iobj,dir,dest,passage)
 	if dobj is not None:
 		dir,passage = getDirAndPassage(dobj)
-		if passage is None:
-			passage = findObject(dobj,f"go","both",silent=True)
-			cancelledAction = passage is None
+		if passage is None and not cancelledAction:
+			passage = findObject(dobj,f"go","room",silent=True)
 	elif iobj is not None:
-		dir2,passage2 = getDirAndPassage(iobj)	
+		dir2,passage2 = getDirAndPassage(iobj)
 		if dir is None:
 			dir = dir2
 		if passage is None:
@@ -1247,6 +1325,12 @@ def parseGoTerms(dobj,iobj,prep):
 # parses user input to determine the intended direction, destination, and/or
 # passage. Then calls either traverse or changelocation accordingly
 def Go(dobj,iobj,prep):
+	if isinstance(Core.player.carrier, Core.Creature):
+		Core.Print(f"You can't go anywhere, you are being carried by {-Core.player.carrier}.")
+		return False
+	if isinstance(Core.player.carrier, Core.Item):
+		Core.Print(f"You can't go anywhere, you are {Core.player.posture()} on {-Core.player.carrier}.")
+		return False
 	for cond in ("sitting","laying"):
 		if Core.player.hasCondition(cond) and Core.player.riding is None:
 			Core.Print(f"You can't go anywhere, you are {cond}.")
@@ -1274,9 +1358,9 @@ def Go(dobj,iobj,prep):
 	if cancelledAction:
 		return False
 	if (dir,dest,passage) == (None,None,None):
-		Core.Print(f"There is no exit leading to a '{dobj}' here.{locReminder}",color="k")
+		Core.Print(f"There is no '{dobj}' here.{locReminder}",color="k")
 		return False
-	if dir is None:
+	if dir is None and dest is not None:
 		dir, passage = Core.player.parent.getDirPortalPair(dest)
 	# print(dir,dest,passage)
 	if (dest,passage) == (None,None):
@@ -1285,7 +1369,9 @@ def Go(dobj,iobj,prep):
 				dest = Core.player.parent.links[dir].name.lower()
 			else:
 				passage = Core.player.parent
-		if dir == "out" and len(Core.player.parent.allLinks()) == 1:
+		if dir == "out" and len(Core.player.parent.allDests()) == 1:
+			dir = None
+			passage = list(Core.player.parent.allLinks().keys())[0][1]
 			dest = list(Core.player.parent.allLinks().values())[0].name.lower()
 	if passage is None and dir not in Core.player.parent.links:
 		passages = Core.player.parent.getPortalsFromDir(dir)
@@ -1301,6 +1387,7 @@ def Go(dobj,iobj,prep):
 		Core.Print(f"You are already there!")
 		return False
 
+	# print(dir,dest,passage)
 	Core.player.removeCondition("hiding",-3)
 	# call one of three functions to actually change rooms
 	# depends if they go normally, traverse a passage, or go vertically
@@ -1319,17 +1406,18 @@ def Go(dobj,iobj,prep):
 	return False
 
 
-def Hide(dobj,iobj,prep):
+def Hide(dobj,iobj,prep,I=None):
 	if prep not in ("behind","below","beneath","inside","under",None):
 		return promptHelp("Command not understood.")
 
+	# TODO: account for being mounted on an item
 	riding = Core.player.riding
 	if riding is not None:
 		Core.Print(f"You can't hide, you are riding {~riding}")
 		return False
 
 	if dobj is None: dobj = iobj
-	I = findObject(dobj,f"hide {prep}","room")
+	if I is None: I = findObject(dobj,f"hide {prep}","room")
 	if I is None: return False
 	Core.game.setPronouns(I)
 
@@ -1379,29 +1467,33 @@ def Kill(dobj,iobj,prep):
 def Lay(dobj,iobj,prep):
 	if prep not in ("behind","below","beneath","in","inside","on","onto","under","upon",None):
 		return promptHelp("Command not understood.")
-
-
 	if dobj is None:
 		dobj = iobj
-	if dobj is not None and prep in ("behind","below","beneath","inside","under"):
-		if not Hide(dobj,iobj,prep):
+
+	if (dobj,prep) == (None,None):
+		if Core.player.posture() == "laying":
+			Core.Print("You are already laying.")
 			return False
 
-	if Core.player.hasCondition("laying"):
-		Core.Print("You are already laying.")
-		return False
+	if prep is not None and dobj is None:
+		dobj = getNoun(f"What will you lay {prep}?")
+		if dobj in Data.cancels: return False
+	elif prep is None and dobj is not None:
+		prep = "on"
 
-	if prep is not None:
-		R = findObject(dobj,f"lay {prep}")
-		if Core.hasMethod(R,"Lay"):
-			Core.player.Lay()
-			R.Lay(Core.player)
-		else:
-			Core.Print(f"You can't lay on {-R}.")
-			return False
-
-	Core.player.Lay()
-	return True
+	if prep in ("at","by","near"):
+		Core.Print("You are there.")
+	elif prep == "behind":
+		return Hide(dobj,iobj,prep) # also handle hiding here?
+	elif prep in ("below","beneath","under"):
+		pass # TODO handle hiding here?
+	elif prep in ("on","onto","upon","in","inside","into"):
+		M = findObject(dobj,f"lay {prep}","room")
+		if M is None: return False
+		return Mount(dobj,iobj,prep,position="lay",M=M)
+	else:
+		Core.player.Lay()
+		return True
 
 
 def Lick(dobj,iobj,prep):
@@ -1453,7 +1545,7 @@ def Lock(dobj,iobj,prep):
 
 def Look(dobj,iobj,prep):
 	# TODO: add "look up", so they can look at sky or ceiling
-	if prep not in ("at","in","inside","into","on","through",None):
+	if prep not in ("at","in","inside","into","on","out","through",None):
 		return promptHelp("Command not understood.")
 
 	if dobj is None: dobj = iobj
@@ -1483,31 +1575,41 @@ def Look(dobj,iobj,prep):
 	Core.game.setPronouns(L)
 	L.describe()
 	if Core.hasMethod(L,"Look"):
-		L.Look()
+		L.Look(Core.player)
 	return True
 
 
-def Mount(dobj,iobj,prep):
+def Mount(dobj,iobj,prep,M=None,position=None):
+	if position not in ("stand","crouch","sit","lay",None):
+		return promptHelp("Command not understood.")
 	if prep not in ("in","into","inside","on","onto","upon",None):
 		return promptHelp("Command not understood.")
 
-	if Core.player.riding is not None:
-		Core.Print(f"You're already riding {~Core.player.riding}.")
-		return False
-
 	if dobj is None: dobj = iobj
-	C = findObject(dobj,"mount","room")
-	if C is None: return False
-	Core.game.setPronouns(C)
-	
-	if Core.player.Weight() > C.BRDN():
-		Core.Print(f"You are too heavy to ride {-C}")
+	if M is None: M = findObject(dobj,"get on","room")
+	if M is None: return False
+	Core.game.setPronouns(M)
+	if M is Core.player:
+		Core.Print("You can't get on yourself.",color="k")
+		return False
+	# if input was 'get on ground', we should actually dismount
+	if isinstance(M,Core.Room):
+		return Dismount(None,None,None)
+	if Core.player.riding is not None:
+		Core.Print(f"You can't get on {-M}. You're riding {~Core.player.riding}.")
 		return False
 
-	Core.player.removeCondition("hiding",-3)
-	if C.Ride(Core.player):
-		Core.player.Sit()
-	return True
+	if Core.hasMethod(M,"Ride"):
+		if Core.player.Weight() > M.BRDN():
+			Core.Print(f"You are too heavy to ride {-M}.")
+			return False
+		# Core.player.removeCondition("hiding",-3) TODO: readd this?
+		if position is None:
+			position = "sit"
+
+	if position is None:
+		position = "stand"
+	return Core.player.Mount(M,position)
 
 
 def Open(dobj,iobj,prep):
@@ -1646,34 +1748,6 @@ def Release(dobj,iobj,prep):
 	Core.Print("releaseing")
 
 
-def Rest(dobj,iobj,prep):
-	if prep not in ("behind","below","beneath","in","inside","into","on","onto","over","under","upon","using","with",None):
-		return promptHelp("Commmand not understood")
-
-	for condname in Data.conditionDmg.keys():
-		if Core.player.hasCondition(condname):
-			Core.Print(f"This is no time for slumber! You are {condname}.",color="o")
-			return False
-
-	if prep is None: prep = "on"
-	if dobj is None: dobj = iobj
-
-	if not Core.player.hasCondition("laying"):
-		I = findObject(dobj,f"sleep {prep}")
-		if I is None and not Core.yesno("Would you like to sleep on the ground?"):
-			return False
-		Lay(dobj,iobj,"on")
-
-	if not Core.player.hasCondition("cozy"):
-		Core.Print("Your sleep will not be very restful...")
-
-	sleeptime = 90 + randint(1,20)
-	Core.player.addCondition("asleep",sleeptime)
-	Core.ellipsis()
-	Core.game.silent=True
-	return True
-
-
 def Restrain(dobj,iobj,prep):
 	if prep not in ("using","with",None):
 		return promptHelp("Command not understood.")
@@ -1682,6 +1756,7 @@ def Restrain(dobj,iobj,prep):
 	if C is None: return False
 	Core.game.setPronouns(C)
 
+	# TODO: can't restrain creature you're riding??
 	if not isinstance(C,Core.Creature):
 		Core.Print(f"You can't restrain {-C}.")
 		return False
@@ -1741,26 +1816,69 @@ def Shove(dobj,iobj,prep):
 
 
 def Sit(dobj,iobj,prep):
-	if prep not in ("below","beneath","in","inside","on","onto","under","upon",None):
+	# TODO: make sure to handle case when already standing on something,
+	# and they want to sit on it
+	# TODO: also handle case when they are already sitting, but want to sit on something else
+	# TODO: make this only happen if they didn't specify an object
+	if prep not in ("behind","below","beneath","in","inside","on","onto","under","upon",None):
 		return promptHelp("Command not understood.")
-
 	if dobj is None:
 		dobj = iobj
 
-	if Core.player.hasCondition("sitting"):
-		Core.Print("You are already sitting.")
-		return False
-
-	if prep is not None:
-		R = findObject(dobj,f"sit {prep}")
-		if Core.hasMethod(R,"Sit"):
-			Core.player.Sit()
-			R.Sit(Core.player)
-		else:
-			Core.Print(f"You can't sit on {-R}.")
+	if (dobj,prep) == (None,None):
+		if Core.player.posture() == "sitting":
+			Core.Print("You are already sitting.")
 			return False
 
-	Core.player.Sit()
+	if prep is not None and dobj is None:
+		dobj = getNoun(f"What will you sit {prep}?")
+		if dobj in Data.cancels: return False
+	elif prep is None and dobj is not None:
+		prep = "on"
+
+	if prep in ("at","by","near"):
+		Core.Print("You are there.")
+	elif prep == "behind":
+		return Hide(dobj,iobj,prep) # also handle hiding here?
+	elif prep in ("below","beneath","under"):
+		pass # TODO handle hiding here?
+	elif prep in ("on","onto","upon","in","inside","into"):
+		M = findObject(dobj,f"sit {prep}","room")
+		if M is None: return False
+		return Mount(dobj,iobj,prep,position="sit",M=M)
+	else:
+		Core.player.Sit()
+		return True
+
+
+def Sleep(dobj,iobj,prep):
+	if prep not in ("behind","below","beneath","in","inside","into","on","onto","over","under","upon","using","with",None):
+		return promptHelp("Commmand not understood")
+
+	for condname in Data.conditionDmg.keys():
+		if Core.player.hasCondition(condname):
+			Core.Print(f"This is no time for slumber! You are {condname}.",color="o")
+			return False
+
+	if prep is None: prep = "on"
+	if dobj is None: dobj = iobj
+
+	if not Core.player.hasAnyCondition("laying"):
+		I = findObject(dobj,f"sleep {prep}","room")
+		if I is None and not Core.yesno("Would you like to sleep on the ground?"):
+			return False
+		if I in (None, Core.player.parent):
+			Lay(dobj,iobj,None)
+		else:
+			Lay(dobj,iobj,"on",R=I)
+
+	if not Core.player.hasCondition("cozy"):
+		Core.Print("Your sleep will not be very restful...")
+
+	sleeptime = 90 + randint(1,20)
+	Core.player.addCondition("asleep",sleeptime)
+	Core.ellipsis()
+	Core.game.silent=True
 	return True
 
 
@@ -1783,35 +1901,39 @@ def Smell(dobj,iobj,prep):
 
 
 def Stand(dobj,iobj,prep):
-	if prep not in ("at","behind","below","beneath","by","in","inside","near","on","onto","upon",None):
+	if prep not in ("at","behind","below","beneath","by","in","inside","into","near","on","onto","upon",None):
 		return promptHelp("Command not understood.")
+	if dobj is None:
+		dobj = iobj
 
-	Core.player.removeCondition("cozy",-3)
-	Core.player.removeCondition("laying")
-	Core.player.removeCondition("crouching")
-	Core.player.removeCondition("sitting")
+	if (dobj,prep) == (None,None):
+		if Core.player.posture() == "standing":
+			Core.Print("You are already standing.")
+			return False
 
-	# TODO: complete/redo this action
-	if prep is None:
-		if dobj is None: 
-			dobj = iobj
-		if dobj is not None:
-			M = findObject(dobj)
-			Mount(dobj,iobj,prep)
-	elif prep in ("at","by","near"):
+	if prep is not None and dobj is None:
+		dobj = getNoun(f"What will you stand {prep}?")
+		if dobj in Data.cancels: return False
+	elif prep is None and dobj is not None:
+		prep = "on"
+
+	if prep in ("at","by","near"):
 		Core.Print("You are there.")
 	elif prep == "behind":
-		Hide(dobj,iobj,prep)
+		return Hide(dobj,iobj,prep) # also handle hiding here?
 	elif prep in ("below","beneath","under"):
-		pass
-	elif prep in ("in","inside"):
-		pass
-	elif prep in ("on","onto","upon"):
-		pass
-	return True
+		pass # TODO handle hiding here?
+	elif prep in ("on","onto","upon","in","inside","into"):
+		M = findObject(dobj,f"stand {prep}","room")
+		if M is None: return False
+		return Mount(dobj,iobj,prep,position="stand",M=M)
+	else:
+		Core.player.Stand()
+		return True
 
 
 def Steal(dobj,iobj,prep,I=None):
+	# TODO make sure to account for tethers
 	Core.Print(f"stealing {dobj} {prep} {iobj}")
 
 
@@ -1843,6 +1965,9 @@ def TakeAllRecur(objToTake):
 	tookMsg = f"You take {strname}{suffix}."
 	failMsg = f"You can't take {-objToTake}, your Inventory is too full."
 
+	if objToTake is Core.player.carrier:
+		Core.Print(f"You can't take {-objToTake}, you are {Core.player.posture()} on it.")
+		return False
 	return Core.player.obtainItem(objToTake,tookMsg,failMsg) or takenAny
 
 
@@ -1876,7 +2001,7 @@ def Take(dobj,iobj,prep):
 		objToTake = findObject(dobj,"take","room",roomD=2)
 	else:
 		objToTake = findObject(dobj,"take",roomD=2,reqParent=iobj)
-	if objToTake is None: # None
+	if objToTake is None:
 		return False
 	Core.game.setPronouns(objToTake)
 	if objToTake.parent is Core.player:
@@ -1884,10 +2009,12 @@ def Take(dobj,iobj,prep):
 		return False
 	if enforceVerbScope("take",objToTake):
 		return False
+	if enforceTetherLimits("take",objToTake):
+		return False
 	if isinstance(objToTake,Core.Fixture):
 		Core.Print(f"You can't take {objToTake}.")
 		return False
-	if isinstance(objToTake,Core.Creature): 
+	if isinstance(objToTake,Core.Creature):
 		return CarryCreature(objToTake)
 
 	parent = objToTake.parent
@@ -1961,6 +2088,10 @@ def Throw(dobj,iobj,prep,maxspeed=None):
 		if T is None: return False
 		dirprep = getattr(T,"passprep","toward")
 		dir = f"{dirprep} {-T}"
+	if enforceTetherLimits(verb,I):
+		return False
+	if enforceTetherLimits(f"{verb} {prep}",T):
+		return False
 	if T is None:
 		T = Core.player.parent
 	if T is I:
@@ -2098,10 +2229,12 @@ cheatcodes = {
 	"\\exe":Execute,
 	"\\get":Get,
 	"\\lrn":Learn,
+	"\\lob":Lob,
 	"\\mbu":Imbue,
 	"\\mod":Mode,
 	"\\pot":Pypot,
 	"\\set":Set,
+	"\\shk":Shrink,
 	"\\spn":Spawn,
 	"\\tst":Test,
 	"\\tpt":Teleport,
@@ -2133,6 +2266,8 @@ shortactions = {
 "lv":Core.Player.printLV,
 "money":Core.Player.printMoney,
 "mp":Core.Player.printMP,
+"pos":Core.Player.printPosition,
+"position":Core.Player.printPosition,
 "quit":Quit,
 "riding":Core.Player.printRiding,
 "rp":Core.Player.printRP,
@@ -2191,7 +2326,7 @@ actions = {
 "escape":Escape,
 "examine":Look,
 "exit":Exit,
-"fall asleep":Rest,
+"fall asleep":Sleep,
 "feed":Feed,
 "feel":Touch,
 "fight":Attack,
@@ -2209,10 +2344,10 @@ actions = {
 "get on":Mount,
 "get out":Exit,
 "get out of":Exit,
-"get up":Stand,
+"get up":Dismount,
 "give":Give,
 "go":Go,
-"go to sleep":Rest,
+"go to sleep":Sleep,
 "grab":Take,
 "grapple":Take,
 "hand":Give,
@@ -2240,6 +2375,7 @@ actions = {
 "make":Craft,
 "mount":Mount,
 "move":Go,
+"nap":Sleep,
 "obtain":Take,
 "offer":Give,
 "open":Open,
@@ -2266,7 +2402,7 @@ actions = {
 "read":Look,
 "release":Release,
 "remove":Unequip,
-"rest":Rest,
+"rest":Sleep,
 "restrain":Restrain,
 "return":Return,
 "ride":Mount,
@@ -2287,14 +2423,14 @@ actions = {
 "sit up":Sit,
 "sing":Sing,
 "slap":Punch,
-"sleep":Rest,
+"sleep":Sleep,
 "slice":Cut,
-"slumber":Rest,
+"slumber":Sleep,
 "smash":Break,
 "smell":Smell,
 "sneak":Crouch,
 "sniff":Smell,
-"snooze":Rest,
+"snooze":Sleep,
 "speak":Talk,
 "squat":Crouch,
 "stand":Stand,

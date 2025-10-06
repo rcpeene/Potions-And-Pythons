@@ -1475,6 +1475,9 @@ norte chico - unknown
 chichen itza - unknown
 
 ADDITIONAL PLACE IDEAS:
+- xanadu
+- shangri-la
+- gundahar
 - the burgage (rented complex)
 - brigadoon (disappearing village)
 - apple forest (early quest setting)
@@ -1485,6 +1488,7 @@ ADDITIONAL PLACE IDEAS:
 - panopticon
 - atelier (workshop)
 - athenaeum
+- lyceum (lot of lychee around)
 - the garden path "to mislead someone"
 - a very smelly tree (why did I write this?)
 - black lotus
@@ -1600,6 +1604,7 @@ CHARACTER NAME IDEAS:
 	The Green Goddess
 	Galigantus the giant
 	Grendel
+	Sylvain - hero
 	Pergynt - from myth, maybe an ex-hero guy
 	Archons (regional rulers? maybe names for the giants)
 	Ashaver - Wandering eternal old man, was a cobbler

@@ -233,7 +233,8 @@
 			{
 				"__class__": "Window",
 				"name": "window",
-				"desc": "A brittle, dusty window on the northern wall of this room. You can't see through it",
+				"desc": "A brittle, dusty window on the northern wall of this room",
+				"view": "out",
 				"weight": 8,
 				"durability": 3,
 				"composition": "glass",
@@ -250,11 +251,11 @@
 		"items": [
 			{
 				"__class__": "Table",
-				"name": "table",
-				"desc": "A sturdy oaken kitchen table",
-				"aliases": ["kitchen table"],
+				"name": "shelf",
+				"desc": "A sturdy oaken kitchen shelf",
+				"aliases": ["kitchen shelf"],
 				"weight": 50,
-				"durability": 12,
+				"durability": 20,
 				"composition": "wood",
 				"items": [
 					{
@@ -280,7 +281,7 @@
 						"heal": 1
 					}
 				],
-				"descname": "table with things on it"
+				"descname": "shelf with things on it"
 			},
 			{
 				"__class__": "Table",
@@ -288,7 +289,7 @@
 				"desc": "A sturdy oaken kitchen table",
 				"aliases": ["kitchen table"],
 				"weight": 50,
-				"durability": 12,
+				"durability": 28,
 				"composition": "wood",
 				"items": [],
 				"descname": "table"
@@ -307,6 +308,15 @@
 				"aliases": ["button","machine","coffee machine","nespresso"],
 				"triggers": ["Use", "Press", "Run"],
 				"effect": "Effects.spawnObject('coffee')"
+			},
+			{
+				"__class__": "Item",
+				"name": "wooden chair",
+				"desc": "A sturdy oaken kitchen chair",
+				"aliases": ["chair"],
+				"weight": 10,
+				"durability": 20,
+				"composition": "wood"
 			}
 		],
 		"creatures": []
@@ -391,7 +401,7 @@
 				"desc": "An cheap oaken bed",
 				"aliases": [],
 				"weight": 100,
-				"durability": 10,
+				"durability": 20,
 				"composition": "wood"
 			},
 			{
@@ -431,7 +441,9 @@
 		"domain": "Woodlands",
 		"desc": "A wet cave. You are surrounded by stalactites above and stalagmites around. Dripping sounds can be heard echoing throughout the cave. A dim light can be seen down a tunnel to the north.",
 		"links": {
-			"north": "tunnel"
+			"north": "tunnel",
+			"light": "tunnel",
+			"out": "tunnel"
 		},
 		"fixtures": [],
 		"items": [
@@ -440,7 +452,7 @@
 				"name": "compass",
 				"desc": "a plain steel compass with a red arrow",
 				"weight": 2,
-				"durability": 10,
+				"durability": 20,
 				"composition": "steel",
 				"plural": "compasses"
 			}
@@ -622,7 +634,7 @@
 				"desc": "A small grey rock",
 				"aliases": ["stone","rock"],
 				"weight": 3,
-				"durability": 6,
+				"durability": 50,
 				"composition": "stone"
 			}
 		],
@@ -735,6 +747,7 @@
 			{
 				"__class__": "Person",
 				"name": "The Earl of Chesterbrook",
+				"id": 3,
 				"descname": "adorned man",
 				"aliases": ["earl","earl of chesterbrook"],
 				"pronoun": "he",
@@ -794,7 +807,8 @@
 					"head": null,
 					"mouth": null
 				},
-				"dlogName": "silent"
+				"dlogName": "silent",
+				"carrier": 3
 			}
 		],
 		"status": []
@@ -806,7 +820,9 @@
 		"desc": "A long tunnel. To the north, a bright opening can be seen. To the south, a dark cave beckons.",
 		"links": {
 			"north": "glen",
-			"south": "cave"
+			"south": "cave",
+			"out": "glen",
+			"opening": "glen"
 		},
 		"fixtures": [],
 		"items": [],

@@ -17,9 +17,9 @@
 
 menuinstructions = "\nType 'info' for information on how to play.\nType 'new' to start a new game.\nType 'load' to load a save file.\nType 'delete' to delete a save file.\nType 'quit' to quit the game.\n"
 
-gameinfo = "="*70 + "\n\nPotions & Pythons\nv.Alpha\nBy Carter Peene, 2022\n\n" + "-"*70 + "\n\nTo play, type a command of the form:\n[verb] [*noun] [*preposition] [*noun]\nOR\n[verb] [*preposition] [*noun]\n\n* denotes a term that can be omitted when unnecessary.\nArticles, determiners, and most symbols are removed from your input.\n\n" + "-"*70 + "\n\nDuring the game, you may...\nSee these instructions:\t\t'info' or 'help'\nGet a list of valid commands:\t'commands'\nGet a list of command examples:\t'examples'\nSee your player statistics:\t'stats', 'traits', and 'inv'\nLearn about your location:\t'here'\nLearn about most game terms:\t'define [term]'\nSave the game:\t\t\t'save' and 'quicksave'\nQuit:\t\t\t\t'quit'\n\n" + "="*70
+gameinfo = "="*70 + "\n\nPotions & Pythons\nv.Alpha\nBy Carter Peene, 2022\n\n" + "-"*70 + "\n\nTo play, type a command of the form:\n[verb] [*noun] [*preposition] [*noun]\nOR\n[verb] [*preposition] [*noun]\n\n* denotes a term that can be omitted when unnecessary.\nArticles, determiners, and most symbols are removed from your input.\n\n" + "-"*70 + "\n\nDuring the game, you may type...\nSee these instructions:\t\t'info' or 'help'\nGet a list of valid commands:\t'commands'\nGet a list of command examples:\t'examples'\nSee your player statistics:\t'stats', 'traits', and 'inv'\nLearn about your location:\t'here'\nLearn about most game terms:\t'define [term]'\nSave the game:\t\t\t'save' and 'quicksave'\nQuit:\t\t\t\t'quit'\n\n" + "="*70
 
-examples = "\nValid input examples include:\n- go\n- go north\n- go nw\n- go up the stairs\n- go back\n- go to tunnel\n- look around\n- look at python\n- i will fight the python!\n- hit the python with my sword\n- attack python sword\n- fight it\n- equip a sword\n- unequip sword\n- take red potion\n- take the red potion from the chest\n- take all\n- put red potion in the chest\n- put red potion chest\n- drop the red potion\n- pour it out\n- close chest\nGet an exhaustive list of commands by typing 'commands'."
+examples = "\nValid input examples include:\n- go\n- go north\n- go nw\n- go up the stairs\n- go back\n- go to tunnel\n- look around\n- look at python\n- i will fight the python!\n- hit the python with my sword\n- attack python sword\n- fight it\n- equip a sword\n- unequip sword\n- take red potion\n- take the potion from the chest\n- take all\n- put red potion in the chest\n- put potion chest\n- drop the red potion\n- pour it out\n- close chest\nGet an exhaustive list of commands by typing 'commands'."
 
 symbols = ".,!?~`\"[]{}<>+=/*&^%$#@\t"
 
@@ -87,9 +87,9 @@ blessings = {"brawniness","swiftness","prowess","liveliness","toughness","felici
 
 curses = {"weakness","slowness","clumsiness","tiredness","illness","timidity","stupidity","insanity","apathy","calamity"}
 
-buffs = {"anointed","invigorated","wildtongued"}
+buffs = {"anointed","fleetfooted","flying","invigorated","mending","wildtongued"}
 
-debuffs = {"dead","fleetfooted","flying","hindered","mending"}
+debuffs = {"dead","hindered"}
 
 
 conditionDmg = {

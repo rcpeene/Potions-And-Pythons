@@ -27,18 +27,26 @@ class Axe(Core.Weapon):
 
 class Bed(Core.Item):
 	def Lay(self,layer):
-		layer.addCondition("cozy",-3)
-		return True
-	
-	def Sit(self,sitter):
-		return True
+		if self.Occupy(layer):
+			if layer is Core.player:
+				Core.Print(f"You get in {-self}.")
+			else:
+				Core.Print(f"{+layer} lies down on {-self}.")
+			layer.Lay()
+			layer.addCondition("cozy",-3)
+			return True
+		return False
+
+
+	def Traverse(self,traverser,dir=None,verb=None):
+		return self.Lay(traverser)
 
 
 class Bottle(Core.Item):
 	# breaks the bottle, removes it from player inventory, and generates some shards
 	def Break(self):
-		Core.Print(f"{+self} breaks.")
-		self.parent.remove(self)
+		if not super().Break():
+			return False
 		if self.weight > 2 and self.composition == "glass":
 			Core.Print("Shards of glass scatter everywhere.",color="o")
 		while self.weight > 2 and self.composition == "glass":
@@ -46,8 +54,7 @@ class Bottle(Core.Item):
 			self.weight -= shardWeight
 			shard = Shard("glass shard","a sharp shard of glass",shardWeight,-1,"glass",{"shard"})
 			Core.game.currentroom.add(shard)
-		return True
-
+		return True 
 
 
 class Box(Core.Portal):
@@ -78,29 +85,20 @@ class Box(Core.Portal):
 				item.addCondition(name,dur,stackable)
 
 
-	def changeLocation(self,newparent):
-		prevparent = self.parent
-
-		if Core.player in self.items:
-			Core.Print(f"{+self} rumbles for a moment...")
-
-		prevparent.exit(self)
-		newparent.enter(self)
-
-
 	# sets open bool to true, prints its items
 	def Open(self,opener):
-		if opener is Core.player:
-			if self.open:
-				Core.Print(f"{+self} is already open.")
-			else:
-				Core.Print(f"You open {-self}.")
-			if Core.player not in self.items:
-				self.Look()
+		if self.open:
+			opener.Print(f"{+self} is already open.")
+		else:
+			opener.Print(f"You open {-self}.")
+		self.open = True
 		for elem in self.items:
 			if isinstance(elem,Core.Creature):
 				elem.removeCondition("hidden",-3)
-		self.open = True
+		if self.occupant:
+			return self.occupant.Fall()
+		if Core.player not in self.items:
+			self.Look(opener)
 		return True
 
 
@@ -114,7 +112,7 @@ class Box(Core.Portal):
 		return True
 
 
-	def Look(self):
+	def Look(self,looker):
 		if Core.player not in self.items:
 			self.open = True
 		# exclude player if they are inside the box
@@ -123,19 +121,16 @@ class Box(Core.Portal):
 			text = "It is empty"
 			if Core.player in self.items:
 				text += ", apart from you"
-			Core.Print(f"{text}.")
+			looker.Print(f"{text}.")
 		else:
-			Core.Print(f"Inside there is {Core.listObjects(displayItems)}.")
+			looker.Print(f"Inside there is {Core.listObjects(displayItems)}.")
 			Core.game.setPronouns(self.items[-1])
 		return True
 
 
 	def Break(self):
-		if self.durability == -1:
-			Core.Print(f"{+self.name} cannot be broken.")
+		if not super().Break():
 			return False
-		self.parent.remove(self)
-		Core.Print(f"{+self} breaks.")
 		if len(self.items) > 0:
 			Core.Print("Its contents spill out.")
 		# drop things it contains into parent
@@ -160,8 +155,7 @@ class Box(Core.Portal):
 			else:
 				Core.Print(f"{+missile} goes into {-self}.")
 				missile = missile.asItem()
-				missile.parent.remove(missile)
-				self.add(missile)
+				missile.changeLocation(self)
 			return True
 		return False
 
@@ -188,6 +182,9 @@ class Box(Core.Portal):
 				Core.Print(f"You can't enter {-self}. It's within your Inventory.")
 			else:
 				Core.Print(f"{+traverser} can't enter {-self}. It's within {-traverser}'s Inventory.")
+			return False
+		if self.occupant is traverser:
+			Core.Print(f"{+traverser} is {traverser.posture()} on {-self}.")
 			return False
 
 		if dir in ("out","outside","out of"):
@@ -290,6 +287,7 @@ class Box(Core.Portal):
 	# get the links dict to use in the parent's allLinks method
 	def getLinksForParent(self):
 		return {self.passprep:self}
+
 
 
 class Controller(Core.Item):
@@ -464,11 +462,11 @@ class Lockbox(Box):
 		return Box.Open(self,opener)
 
 
-	def Look(self):
+	def Look(self,looker):
 		if self.locked == True and Core.player not in self.items:
-			Core.Print(f"{+self} is locked.")
+			looker.Print(f"{+self} is locked.")
 			return False
-		return Box.Look(self)
+		return Box.Look(self,looker)
 
 
 	def Lock(self,key):
@@ -519,13 +517,12 @@ class Mouth(Core.Item):
 
 
 class Potion(Bottle):
-
 	# heals the player hp 1000, replaces potion with an empty bottle
 	def Drink(self):
 		Core.Print(f"You drink {-self}.")
 		Core.player.heal(1000)
 		self.parent.remove(self)
-		Core.player.add(factory["bottle"])
+		Core.player.add(factory["bottle"]())
 
 
 	def Pour(self,obj=None):
@@ -603,12 +600,8 @@ class Table(Core.Item):
 	### Operation ###
 
 	def Break(self):
-		if self.durability == -1:
-			if not Core.game.silent:
-				Core.Print(f"{+self} cannot be broken.")
+		if not super().Break():
 			return False
-		Core.Print(f"{+self} breaks.")
-		self.parent.remove(self)
 		# drop things it contains into parent
 		if self.items:
 			Core.Print(f"It's contents fall onto the ground.")
@@ -634,6 +627,12 @@ class Table(Core.Item):
 		elif len(self.items) > 1:
 			self.descname = f"{self.name} with things on it"
 
+		if self.itemsWeight() > self.durability*2:
+			print(f"{+self} collapses under the weight.")
+			self.Break()
+		elif self.itemsWeight() > self.durability:
+			Core.Print(f"{+self} creaks under the weight.")
+
 
 	def remove(self,I):
 		self.items.remove(I)
@@ -653,12 +652,20 @@ class Table(Core.Item):
 		return w
 
 
+	def itemsWeight(self):
+		return sum(i.untetheredWeight() for i in self.items)
+
+
 	def itemNames(self):
 		return [item.name for item in self.items]
 
 
 	def contents(self):
 		return self.items
+
+
+	def canAdd(self,I):
+		return True
 
 
 	### User Output ###
@@ -730,9 +737,12 @@ class Wall(Core.Passage):
 
 
 class Window(Core.Passage):
-	def __init__(self,name,desc,weight,durability,composition,links,descname,open=False,broken=False,passprep="through",**kwargs):
+	def __init__(self,name,desc,weight,durability,composition,links,descname,open=False,broken=False,view=None,passprep="through",**kwargs):
 		Core.Passage.__init__(self,name,desc,weight,durability,composition,links,descname,passprep=passprep,**kwargs)
 		self.descname = descname
+		self.view = view
+		if self.view is not None:
+			assert self.view in self.links
 		self.open = open
 		if not self.open:
 			self.passprep = "at"
@@ -744,6 +754,7 @@ class Window(Core.Passage):
 		Core.Print(f"{+self} breaks.")
 		self.broken = True
 		self.open = True
+		self.durability = -1
 		self.passprep = "through"
 		if self.weight > 2 and self.composition == "glass":
 			Core.Print("Shards of glass scatter everywhere.",color="o")
@@ -752,6 +763,10 @@ class Window(Core.Passage):
 			self.weight -= shardWeight
 			shard = Shard("glass shard","a sharp shard of glass",shardWeight,-1,"glass",{"shard"})
 			Core.game.currentroom.add(shard)
+		if self.occupant:
+			occupant = self.occupant
+			self.Disoccupy()
+			occupant.Fall(room=self.getNewLocation())
 		return True
 
 
@@ -797,6 +812,13 @@ class Window(Core.Passage):
 				self.Transfer(missile.asItem())
 			return True
 		return False
+	
+
+	def Look(self,looker):
+		if self.view:
+			looker.waitKbInput(f"You look through it...")
+			Core.Print(f"{self.links[self.view].desc}.")
+		return True
 
 
 
