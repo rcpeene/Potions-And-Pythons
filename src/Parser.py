@@ -171,7 +171,7 @@ def isMeaningful(noun):
 	if noun in Core.world or \
 	noun in actions or \
 	noun in shortactions or \
-	noun in Data.definitions or \
+	noun in Data.glossary or \
 	noun in Data.miscexpressions or \
 	noun in Data.hellos or \
 	noun in Data.goodbyes or \
@@ -764,11 +764,11 @@ def Attack(dobj,iobj,prep,target=None,weapon=None,weapon2=None):
 		weapon, weapon2 = weapon2, None
 	if iobj in ("fist","hand"):
 		Core.player.unequip("right")
-		weapon = Items.Hand("your hand","",4,-1,None)
+		weapon = Items.Hand("hand","",4,-1,None)
 	if iobj in ("foot","leg"):
-		weapon = Items.Foot("your foot","",6,-1,None)
+		weapon = Items.Foot("foot","",6,-1,None)
 	if iobj in ("mouth","teeth"):
-		weapon = Items.Mouth("your mouth","",4,-1,None)
+		weapon = Items.Mouth("mouth","",4,-1,None)
 	if iobj is not None:
 		if weapon is None:
 			_, weapon = Core.player.inGear(iobj)
@@ -967,15 +967,15 @@ def Define(dobj,iobj,prep):
 		dobj = getNoun("What term would you like defined?")
 		if dobj in Data.cancels: return False
 
-	if dobj in Data.definitions:
-		Core.Print("\n"+Data.definitions[dobj])
+	if dobj in Data.glossary:
+		Core.Print("\n"+Data.glossary[dobj])
 		return True
 	elif Core.game.inWorld(dobj):
 		return Look(dobj,iobj,prep)
 	elif dobj == Core.player.name.lower():
 		Core.Print(f"\n{Core.player.name}\nThat is you!")
 		return True
-	Core.Print(f"'{dobj}' is unknown",color="k")
+	Core.Print(f"'{dobj}' is not in the glossary",color="k")
 	return False
 
 
@@ -991,7 +991,7 @@ def Describe(dobj,iobj,prep):
 	return True
 
 
-def Dismount(dobj,iobj,prep):
+def Dismount(dobj,iobj,prep,position=None):
 	if prep not in ("from","of","off","out","out of",None):
 		return promptHelp("Command not understood.")
 
@@ -1010,7 +1010,7 @@ def Dismount(dobj,iobj,prep):
 			Core.Print(f"You're not on a '{dobj}'",color="k")
 			return False
 
-	Core.player.Dismount()
+	Core.player.Dismount(position=position)
 	Core.game.setPronouns(Core.player.riding)
 	return True
 
@@ -1297,9 +1297,9 @@ def parseGoTerms(dobj,iobj,prep):
 			if term == dir or Core.nameMatch(term,passage):
 				pairs.add((dir,passage))
 		if len(pairs) > 1:
-			passage = chooseObject("direction",[pair[1] for pair in pairs],"go with")
-			cancelledAction = passage is None
-			return None, passage
+			dir = chooseObject("direction",[pair[0] for pair in pairs],"go with")
+			cancelledAction = dir is None
+			return dir, None
 		elif len(pairs) == 1:
 			return pairs.pop()
 		return None, None
@@ -1497,6 +1497,7 @@ def Lay(dobj,iobj,prep,M=None):
 	elif prep in ("on","onto","upon","in","inside","into"):
 		if M is None: M = findObject(dobj,f"lay {prep}","room")
 		if M is None: return False
+		Core.game.setPronouns(M)
 		return Mount(dobj,iobj,prep,position="lay",M=M)
 	else:
 		Core.player.Lay()
@@ -1601,7 +1602,7 @@ def Mount(dobj,iobj,prep,M=None,position=None):
 		return False
 	# if input was 'get on ground', we should actually dismount
 	if isinstance(M,Core.Room):
-		return Dismount(None,None,None)
+		return Dismount(None,None,None,position=position)
 	if Core.player.riding is not None:
 		Core.Print(f"You can't get on {-M}. You're riding {~Core.player.riding}.")
 		return False
@@ -1848,6 +1849,7 @@ def Sit(dobj,iobj,prep):
 	elif prep in ("on","onto","upon","in","inside","into"):
 		M = findObject(dobj,f"sit {prep}","room")
 		if M is None: return False
+		Core.game.setPronouns(M)
 		return Mount(dobj,iobj,prep,position="sit",M=M)
 	else:
 		Core.player.Sit()
@@ -1866,8 +1868,9 @@ def Sleep(dobj,iobj,prep):
 	if prep is None: prep = "on"
 	if dobj is None: dobj = iobj
 
-	if not Core.player.hasAnyCondition("laying"):
-		I = findObject(dobj,f"sleep {prep}","room")
+	if not Core.player.hasCondition("laying"):
+		I = Core.player.carrier
+		if I is None: I = findObject(dobj,f"sleep {prep}","room")
 		if I is None and not Core.yesno("Would you like to sleep on the ground?"):
 			return False
 		if I in (None, Core.player.parent):
@@ -1931,6 +1934,7 @@ def Stand(dobj,iobj,prep):
 	elif prep in ("on","onto","upon","in","inside","into"):
 		M = findObject(dobj,f"stand {prep}","room")
 		if M is None: return False
+		Core.game.setPronouns(M)
 		return Mount(dobj,iobj,prep,position="stand",M=M)
 	else:
 		Core.player.Stand()

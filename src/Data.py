@@ -160,8 +160,8 @@ textures = {
 ## GAME TERM DICTIONARY ##
 ##########################
 
-# Library of game terms to help players, used by the Define() verb in Parser.py
-definitions = {
+# Glossary of game terms to help players, used by the Define() verb in Parser.py
+glossary = {
 "abilities":"Abilities\n24 stats which dictate the chance to accomplish a goal, such as attacking, investigating, or persuading. The 24 abilities are ACCU, ATCK, ATHL, ATSP, BRDN, CAST, CRIT, CSSP, DCPT, DFNS, ENDR, EVSN, INVS, KNWL, LOOT, MVMT, MXHP, MXMP, PRSD, RSTN, RITL, SLTH, SPLS, and TNKR. Type 'abilities' to view your abilities.",
 
 "ability":"Ability\nOne of 24 stats which dictate the chance to accomplish a goal, such as attacking, investigating, or persuading. The 24 abilities are ACCU, ATCK, ATHL, ATSP, BRDN, CAST, CRIT, CSSP, DCPT, DFNS, ENDR, EVSN, INVS, KNWL, LOOT, MVMT, MXHP, MXMP, PRSD, RSTN, RITL, SLTH, SPLS, and TNKR. Type 'abilities' to view your abilities.",

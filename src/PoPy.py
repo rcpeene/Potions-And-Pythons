@@ -87,9 +87,6 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# try "get in bed" and "get on bed"
-# continue stand func with stand on and stand in
-	# try "get on bed", redirect Mounting an obj to stand
 
 # try the combinations:
 	# VERBS: (stand,sit,lay) get, (mount,ride)
@@ -102,8 +99,6 @@ if __name__ == "__main__":
 		# try "get on chair", "get on box"
 	# get under/behind -> hide/crouch [get under table] [get behind box] 
 
-	# "sit on bed and sleep" yields "you are already sitting"
-	# make sure "you are already sitting" doesn't pop up if youre trying to sit somewhere new??
 	# account for basic "stand" or "lay" when riding
 	# account for being restrained when doing any of this
 	# standing on a much small creature -> kick?
@@ -142,7 +137,6 @@ if __name__ == "__main__":
 
 # add "in" operator to objects
 # test drinking an object when inv is full, see if bottle goes on ground
-# "you attack the goblin with your your hand!" is what shows up on attack
 # fix obtaining money problem, think about other objects which won't go into inv upon obtaining
 # add "look up" as valid. Should look at sky if not in a room?
 	# add room property which is description of directions ("look up", "look east", "look out", etc.)
