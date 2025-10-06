@@ -75,6 +75,7 @@ def main(testing=False):
 			if testing: raise e
 			Core.Print(f"\n\nAn error has occurred. The game will attempt to continue, but you may want to restart.\nThe error message is as follows:\n")
 			traceback.print_exc()
+			Core.waitKbInput("\nPress enter to continue...")
 			# return Menu.quit()
 
 
@@ -101,6 +102,7 @@ if __name__ == "__main__":
 		# try "get on chair", "get on box"
 	# get under/behind -> hide/crouch [get under table] [get behind box] 
 
+	# "sit on bed and sleep" yields "you are already sitting"
 	# make sure "you are already sitting" doesn't pop up if youre trying to sit somewhere new??
 	# account for basic "stand" or "lay" when riding
 	# account for being restrained when doing any of this
