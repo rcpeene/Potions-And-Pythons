@@ -49,7 +49,7 @@ emoticons = {":)",":d",":(",";)",":o",":p"}
 ## USEFUL SETS ##
 #################
 
-articles = {"a","again","an","her","his","i","its","some","that","the","their","this","will"}
+articles = {"a","again","an","her","his","i","its","some","that","the","then","their","this","will"}
 
 cancels = {"cancel","done","end","nevermind","no","nvm","undo"}
 

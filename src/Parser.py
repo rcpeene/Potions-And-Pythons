@@ -302,6 +302,7 @@ def parseWithoutVerb(cmdInput):
 # n is the number of times parse() has recurred
 def promptHelp(msg):
 	global helpCounter
+	commandQueue.clear()
 	if msg != "":
 		Core.Print(msg,color="k")
 	helpCounter += 1
@@ -319,6 +320,7 @@ def parse():
 	global helpCounter
 	if commandQueue:
 		command = processCmd(commandQueue.pop(0))
+		Core.waitKbInput()
 	else:
 		command = processCmd(takeCmd("\n\nWhat will you do?",storeRawCmd=True))
 	if len(command) == 0:
@@ -327,6 +329,7 @@ def parse():
 
 	# handle cases with special verb commands
 	if verb in cheatcodes.keys():
+		commandQueue.clear()
 		return cheatcodes[verb](Core.game.lastRawCommand)
 	elif verb in Data.hellos:
 		return Hello()
@@ -357,6 +360,7 @@ def parse():
 	helpCounter = 0
 	# if action didn't take any time, return False
 	if not actionCompleted:
+		commandQueue.clear()
 		return False
 	return True
 
@@ -570,6 +574,9 @@ def Shrink(command):
 		obj = findObject(objname,"shrink",playerD=3,roomD=3)
 	else:
 		obj = Core.player
+	if obj is None:
+		Core.Print("Error: Object not found",color="k")
+		return
 	Core.Print(f"Shrinking {-obj}.",color="k")
 	obj.weight = 2
 
@@ -1464,18 +1471,18 @@ def Kill(dobj,iobj,prep):
 	return Attack(dobj,iobj,prep)
 
 
-def Lay(dobj,iobj,prep):
-	if prep not in ("behind","below","beneath","in","inside","on","onto","under","upon",None):
+def Lay(dobj,iobj,prep,M=None):
+	if prep not in ("at","behind","below","beneath","by","in","inside","into","near","on","onto","under","upon",None):
 		return promptHelp("Command not understood.")
 	if dobj is None:
 		dobj = iobj
 
-	if (dobj,prep) == (None,None):
+	if (dobj,prep,M) == (None,None,None):
 		if Core.player.posture() == "laying":
 			Core.Print("You are already laying.")
 			return False
 
-	if prep is not None and dobj is None:
+	if prep is not None and dobj is None and M is None:
 		dobj = getNoun(f"What will you lay {prep}?")
 		if dobj in Data.cancels: return False
 	elif prep is None and dobj is not None:
@@ -1483,12 +1490,12 @@ def Lay(dobj,iobj,prep):
 
 	if prep in ("at","by","near"):
 		Core.Print("You are there.")
-	elif prep == "behind":
+	if prep == "behind":
 		return Hide(dobj,iobj,prep) # also handle hiding here?
 	elif prep in ("below","beneath","under"):
 		pass # TODO handle hiding here?
 	elif prep in ("on","onto","upon","in","inside","into"):
-		M = findObject(dobj,f"lay {prep}","room")
+		if M is None: M = findObject(dobj,f"lay {prep}","room")
 		if M is None: return False
 		return Mount(dobj,iobj,prep,position="lay",M=M)
 	else:
@@ -1816,11 +1823,7 @@ def Shove(dobj,iobj,prep):
 
 
 def Sit(dobj,iobj,prep):
-	# TODO: make sure to handle case when already standing on something,
-	# and they want to sit on it
-	# TODO: also handle case when they are already sitting, but want to sit on something else
-	# TODO: make this only happen if they didn't specify an object
-	if prep not in ("behind","below","beneath","in","inside","on","onto","under","upon",None):
+	if prep not in ("at","behind","below","beneath","by","in","inside","into","near","on","onto","under","upon",None):
 		return promptHelp("Command not understood.")
 	if dobj is None:
 		dobj = iobj
@@ -1838,7 +1841,7 @@ def Sit(dobj,iobj,prep):
 
 	if prep in ("at","by","near"):
 		Core.Print("You are there.")
-	elif prep == "behind":
+	if prep == "behind":
 		return Hide(dobj,iobj,prep) # also handle hiding here?
 	elif prep in ("below","beneath","under"):
 		pass # TODO handle hiding here?
@@ -1868,9 +1871,11 @@ def Sleep(dobj,iobj,prep):
 		if I is None and not Core.yesno("Would you like to sleep on the ground?"):
 			return False
 		if I in (None, Core.player.parent):
-			Lay(dobj,iobj,None)
+			res = Lay(dobj,iobj,None)
 		else:
-			Lay(dobj,iobj,"on",R=I)
+			res = Lay(dobj,iobj,"on",M=I)
+		if not res:
+			return False
 
 	if not Core.player.hasCondition("cozy"):
 		Core.Print("Your sleep will not be very restful...")
@@ -1919,7 +1924,7 @@ def Stand(dobj,iobj,prep):
 
 	if prep in ("at","by","near"):
 		Core.Print("You are there.")
-	elif prep == "behind":
+	if prep == "behind":
 		return Hide(dobj,iobj,prep) # also handle hiding here?
 	elif prep in ("below","beneath","under"):
 		pass # TODO handle hiding here?

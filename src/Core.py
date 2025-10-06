@@ -2905,6 +2905,8 @@ class Creature():
 		if hasMethod(steed,"Ride"):
 			if not steed.Ride(self):
 				return False
+		elif position is "lay" and hasMethod(steed,"Lay"):
+			return steed.Lay(self)
 		elif hasMethod(steed,"Occupy"):
 			if not steed.Occupy(self):
 				return False
