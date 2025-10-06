@@ -2577,7 +2577,7 @@ class Creature():
 		self.checkHungry()
 
 		# natural healing is faster with a higher endurance
-		if not self.hasAnyCondition("hungry","starving"):
+		if not self.hasAnyCondition("hungry","starving") or self.hasCondition("mending"):
 			self.regenTimer += 1
 			if self.regenTimer >= 50 - self.ENDR() or self.hasCondition("mending"):
 				self.regenTimer = 0
@@ -2892,21 +2892,22 @@ class Creature():
 		if self.riding:
 			self.Print(f"You can't, you are already riding {-self.riding}.")
 			return False
-		elif self.carrier:
-			carriername = steed.pronoun if steed is self.carrier else ~self.carrier
-			self.Print(f"You can't, you are already {self.posture()} on {carriername}.")
+		elif self.carrier and self.carrier is not steed:
+			self.Print(f"You can't, you are already {self.posture()} on {self.carrier}.")
 			return False
 		if not hasMethod(steed,"Ride") and not hasMethod(steed,"Occupy"):
 			self.Print(f"{+steed} cannot be mounted.")
 			return False
 
-		if self.checkTetherLoop(self,steed,"get on"):
+		if position is "lay" and hasMethod(steed,"LayOn"):
+			return steed.LayOn(self)
+		elif steed is self.carrier or steed is self.riding:
+			pass
+		elif self.checkTetherLoop(self,steed,"get on"):
 			return False
-		if hasMethod(steed,"Ride"):
+		elif hasMethod(steed,"Ride"):
 			if not steed.Ride(self):
 				return False
-		elif position is "lay" and hasMethod(steed,"Lay"):
-			return steed.Lay(self)
 		elif hasMethod(steed,"Occupy"):
 			if not steed.Occupy(self):
 				return False
@@ -2923,7 +2924,7 @@ class Creature():
 		return True
 
 
-	def Dismount(self):
+	def Dismount(self,position=None):
 		if self.riding:
 			self.Print(f"You get off {-self.riding}.")
 			self.riding.rider = None
@@ -2932,8 +2933,16 @@ class Creature():
 			self.Print(f"You get off {-self.carrier}.")
 			self.carrier.Disoccupy()
 			self.carrier = None
-		self.Stand()
-		return False
+		
+		changePositionFuncs = {
+			None: self.Stand,
+			"stand": self.Stand,
+			"crouch": self.Crouch,
+			"sit": self.Sit,
+			"lay": self.Lay
+		}
+		changePositionFuncs[position]()
+		return True
 
 
 	def Smell(self,smeller):
@@ -3004,7 +3013,7 @@ class Creature():
 
 
 	def FTH(self):
-		modifiers = [("fidelity",10), ("apathy",-10)]
+		modifiers = [("fidelity",10), ("apathy",-10), ("fatigued", 3)]
 		return self.conditionalMod(self.fth, modifiers, min=1)
 
 
@@ -3463,7 +3472,7 @@ class Player(Creature):
 				if duration == reqDuration or reqDuration is None:
 					self.status.remove([name,duration])
 
-					if name == "asleep" and duration == 0:
+					if name == "asleep" and duration < 20:
 						wellRested = True
 					if name != "asleep" and not self.hasCondition(name):
 						Print(f"You are no longer {name}.",allowSilent=False)

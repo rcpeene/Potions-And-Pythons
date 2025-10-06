@@ -26,12 +26,13 @@ class Axe(Core.Weapon):
 
 
 class Bed(Core.Item):
-	def Lay(self,layer):
-		if self.Occupy(layer):
+	def LayOn(self,layer):
+		if layer.carrier is not self and self.Occupy(layer):
 			if layer is Core.player:
 				Core.Print(f"You get in {-self}.")
 			else:
 				Core.Print(f"{+layer} lies down on {-self}.")
+		if layer.carrier is self:
 			layer.Lay()
 			layer.addCondition("cozy",-3)
 			return True
@@ -39,7 +40,7 @@ class Bed(Core.Item):
 
 
 	def Traverse(self,traverser,dir=None,verb=None):
-		return self.Lay(traverser)
+		return self.LayOn(traverser)
 
 
 class Bottle(Core.Item):
@@ -561,7 +562,7 @@ class Sign(Core.Item):
 
 
 	# prints the text on the sign in quotes
-	def Look(self):
+	def Look(self,looker):
 		Core.Print(f'\n"{self.text}"',color='y')
 
 
