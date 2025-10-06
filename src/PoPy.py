@@ -4,6 +4,7 @@
 
 import os
 import sys
+import traceback
 
 import Core
 import Menu
@@ -33,42 +34,48 @@ def main(testing=False):
 
 	# main input loop
 	while True:
-		if Core.game.quit: return Menu.quit()
-		Core.game.silent = False
-		Core.game.whoseturn = Core.player
-		if not Core.player.isAlive(): 
-			if not Menu.restart():
-				return False
-			continue
+		try:
+			if Core.game.quit: return Menu.quit()
+			Core.game.silent = False
+			Core.game.whoseturn = Core.player
+			if not Core.player.isAlive(): 
+				if not Menu.restart():
+					return False
+				continue
 
-		# take user input until player successfully performs an action
-		if not Core.player.hasCondition("asleep"):
-			while not Parser.parse(): continue
-		if Core.game.quit: return Menu.quit()
+			# take user input until player successfully performs an action
+			if not Core.player.hasCondition("asleep"):
+				while not Parser.parse(): continue
+			if Core.game.quit: return Menu.quit()
 
-		# creatures in current room's turn
-		for creature in Core.game.currentroom.allCreatures():
-			if not Core.player.isAlive(): continue
-			Core.game.whoseturn = creature
-			creature.act()
-
-		# creatures in nearby rooms' turn
-		Core.game.silent = True
-		for room in Core.game.nearbyRooms():
-			for creature in room.allCreatures():
+			# creatures in current room's turn
+			for creature in Core.game.currentroom.allCreatures():
 				if not Core.player.isAlive(): continue
 				Core.game.whoseturn = creature
 				creature.act()
 
-		if not Core.player.isAlive(): continue
-		# cleanup before looping
-		Core.game.whoseturn = None
-		# pass the time for all rooms and creatures
-		Core.game.passTime()
+			# creatures in nearby rooms' turn
+			Core.game.silent = True
+			for room in Core.game.nearbyRooms():
+				for creature in room.allCreatures():
+					if not Core.player.isAlive(): continue
+					Core.game.whoseturn = creature
+					creature.act()
 
-		if not Core.player.isAlive(): continue
-		# save game every so often just in case
-		if Core.game.time >= Core.game.lastsave+10: Menu.quickSave("autosave")
+			if not Core.player.isAlive(): continue
+			# cleanup before looping
+			Core.game.whoseturn = None
+			# pass the time for all rooms and creatures
+			Core.game.passTime()
+
+			if not Core.player.isAlive(): continue
+			# save game every so often just in case
+			if Core.game.time >= Core.game.lastsave+20: Menu.quickSave("autosave")
+		except Exception as e:
+			if testing: raise e
+			Core.Print(f"\n\nAn error has occurred. The game will attempt to continue, but you may want to restart.\nThe error message is as follows:\n")
+			traceback.print_exc()
+			# return Menu.quit()
 
 
 if __name__ == "__main__":
@@ -79,8 +86,49 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
+# try "get in bed" and "get on bed"
 # continue stand func with stand on and stand in
 	# try "get on bed", redirect Mounting an obj to stand
+
+# try the combinations:
+	# VERBS: (stand,sit,lay) get, (mount,ride)
+	# PREPS: on, in, under, behind
+	# OBJS: bed, table, horse, chair, ground, floor, box, crate, shelf
+
+	# get in -> go ?-> traverse -> mount [get in bed] [get in car] [get in box]
+		# this will also help "go to bed"
+	# get on -> mount [get on table] [get on horse]
+		# try "get on chair", "get on box"
+	# get under/behind -> hide/crouch [get under table] [get behind box] 
+
+	# make sure "you are already sitting" doesn't pop up if youre trying to sit somewhere new??
+	# account for basic "stand" or "lay" when riding
+	# account for being restrained when doing any of this
+	# standing on a much small creature -> kick?
+
+	# revisit how lay redirects to Hide and how sleep redirects to lay
+		# check selecting none or something unlayable for sleep
+	# climb on self yields 'you cannot be traversed'. Should return 'you cant get on self' through Mount
+		# make sure climb properly redirects
+
+	# add "jumping" from one object to another?
+	# 	must stand first in order to jump
+	# 	'jump off cliff'
+	# 	'jump off [item]' (onto ground)
+	# 	'jump to [item]' (from ground)
+	# 	'jump to [item] from [item]'
+	# 	 just 'jump'
+	# 	'jump over [chasm]'
+	# 	'jump off [riding]' onto ground
+	# 	'jump onto [riding]' from ground
+	# 	'jump off [riding] onto [item]'
+
+# test case where you're riding a horse and the horse is being carried
+	# or when the horse is in a box
+	# or case when something carries you when you're already riding something
+		# probably either carrier or riding should always be None
+
+# "take bird from earl" -> should redirect to steal?
 # readjust throw force formula; compare to BRDN (shouldn't be able to throw heavier than you can have in inv, or more than you can carry in hands?
 # check if throwing a creature which has another riding it?
 # handle "get on" to mount or get on a table (wb get on table while on a horse?)
@@ -91,7 +139,7 @@ if __name__ == "__main__":
 	# you are hiding (if in one)
 
 # add "in" operator to objects
-
+# test drinking an object when inv is full, see if bottle goes on ground
 # "you attack the goblin with your your hand!" is what shows up on attack
 # fix obtaining money problem, think about other objects which won't go into inv upon obtaining
 # add "look up" as valid. Should look at sky if not in a room?
@@ -99,6 +147,7 @@ if __name__ == "__main__":
 # correctly factor DFNS into takeDamage (it should probably be in takeDamage method itself), but consider different damage source like collision and falling
 # try out using a creature as a weapon
 # knock stuff off of a table if it takes impact?
+# color status conditions green/red in status display
 # add in projectile weapons?
 # add in a whip or hook which is a projectile that allows you to grab an item?
 # throw 'grappling hook' which creates a new passage?, throw up a cliff or across a gap
