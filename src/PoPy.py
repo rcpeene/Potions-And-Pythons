@@ -99,14 +99,21 @@ if __name__ == "__main__":
 		# try "get on chair", "get on box"
 	# get under/behind -> hide/crouch [get under table] [get behind box] 
 
-	# account for basic "stand" or "lay" when riding
-	# account for being restrained when doing any of this
-	# standing on a much small creature -> kick?
-
+	# whats the formula for HIDE?
+		# think about freely changing ones position (going directly from hiding to mounted, or mounted to hiding)
+		# figure out when to remove cover. When you mount it should
+		# what about hiding "IN" something, you should be obscured if you close the item
+		# can creatures be coverers? they can I guess...
+		# this means all item and creatures which must handle this if they change locations, are carried, or change position
+		# maybe make writeToJSON handle replacing objects with their ids?? if object isn't in items or creatures arrays
 	# revisit how lay redirects to Hide and how sleep redirects to lay
 		# check selecting none or something unlayable for sleep
 	# climb on self yields 'you cannot be traversed'. Should return 'you cant get on self' through Mount
 		# make sure climb properly redirects
+	# account for basic "stand" or "lay" when riding
+	# account for being restrained when doing any of this
+	# standing on a much small creature -> kick?
+	# account for 'occupant' and 'covering' when saving item
 
 	# add "jumping" from one object to another?
 	# 	must stand first in order to jump

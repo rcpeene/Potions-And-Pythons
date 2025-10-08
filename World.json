@@ -288,7 +288,7 @@
 				"name": "table",
 				"desc": "A sturdy oaken kitchen table",
 				"aliases": ["kitchen table"],
-				"weight": 50,
+				"weight": 25,
 				"durability": 28,
 				"composition": "wood",
 				"items": [],
