@@ -1030,11 +1030,15 @@ class EmptyGear:
 		return ""
 
 
-	def untetheredWeight(self):
+	def soloWeight(self):
 		return 0
 
 
 	def Weight(self):
+		return 0
+
+
+	def Size(self):
 		return 0
 
 
@@ -1739,7 +1743,7 @@ class Room():
 # Anything in a Room that is not a Creature will be an Item
 # All items come with a name, description, weight, and durability
 class Item():
-	def __init__(self,name,desc,weight,durability,composition,id=None,aliases=None,status=None,plural=None,determiner=None,pronoun="it",longevity=None,despawnTimer=None,scent=None,taste=None,texture=None,occupant=None):
+	def __init__(self,name,desc,weight,durability,composition,id=None,aliases=None,status=None,plural=None,determiner=None,pronoun="it",longevity=None,despawnTimer=None,scent=None,taste=None,texture=None,occupant=None,covering=None):
 		self.name = name
 		self.desc = desc
 		self.weight = weight
@@ -1762,6 +1766,7 @@ class Item():
 		self.parent = None
 		self.id = id
 		self.occupant = occupant
+		self.covering = covering
 
 
 	### File I/O ###
@@ -1967,12 +1972,18 @@ class Item():
 	### Getters ###
 
 	# this is a meaningful method for Creatures, for Items it is same as Weight
-	def untetheredWeight(self):
+	def soloWeight(self):
 		return self.weight
 
 
 	def Weight(self):
 		return self.weight
+
+
+	def Size(self):
+		# under normal conditions, size is equal to weight
+		# I realize this doesn't count for density... whatever
+		return self.soloWeight()
 
 
 	# should be empty for items that aren't containers
@@ -2091,7 +2102,7 @@ class Item():
 # Creatures have 10 base stats, called traits
 # They also have abilities; stats which are derived from traits through formulas
 class Creature():
-	def __init__(self,name,desc,weight,traits,hp,id=None,mp=0,money=0,inv=None,gear=None,love=0,fear=0,carrying=None,carrier=None,riding=None,rider=None,composition="flesh",memories=None,appraisal=None,status=None,descname=None,aliases=None,plural=None,determiner=None,pronoun="it",timeOfDeath=None,lastAte=0,lastSlept=0,regenTimer=0,alert=False,seesPlayer=False,sawPlayer=-1):
+	def __init__(self,name,desc,weight,traits,hp,id=None,mp=0,money=0,inv=None,gear=None,love=0,fear=0,carrying=None,carrier=None,riding=None,rider=None,cover=None,composition="flesh",memories=None,appraisal=None,status=None,descname=None,aliases=None,plural=None,determiner=None,pronoun="it",timeOfDeath=None,lastAte=0,lastSlept=0,regenTimer=0,alert=False,seesPlayer=False,sawPlayer=-1):
 		self.name = name
 		self.desc = desc
 		self.descname = descname if descname else name
@@ -2135,6 +2146,7 @@ class Creature():
 		self.rider = rider
 		self.carrying = carrying
 		self.carrier = carrier
+		self.cover = cover
 		self.gear = gear if gear else Data.initgear
 
 		self.weapon = EmptyGear()
@@ -2654,6 +2666,17 @@ class Creature():
 		return True
 
 
+	def addCover(self,cover):
+		self.cover = cover
+		cover.covering = self
+
+
+	def removeCover(self):
+		if self.cover:
+			self.cover.covering = None
+		self.cover = None
+
+
 	def Eat(self,food):
 		food.parent.remove(food)
 		food.Eat()
@@ -2683,6 +2706,20 @@ class Creature():
 		self.removeCondition("crouching")
 		self.removeCondition("sitting")
 		self.addCondition("laying",-3)
+
+
+	def changePosture(self,posture):
+		postureMap = {
+			None: self.Stand,
+			"stand": self.Stand,
+			"crouch": self.Crouch,
+			"sit": self.Sit,
+			"lay": self.Lay
+		}
+		if posture in postureMap:
+			postureMap[posture]()
+		self.checkHidden()
+		return False
 
 
 	def Give(self,I):
@@ -2858,11 +2895,25 @@ class Creature():
 		return missile.Launch(speed,aim,self,target)
 
 
-	def Hide(self,I):
-		if 4 * self.SLTH() > I.weight:
-			self.addCondition("hiding",-3)
-		else:
-			pass
+	def Hide(self,I,posture):
+		if self.Size(posture) > I.Size():
+			self.Print(f"You can't hide behind {-I}.")
+			return False
+
+		if self.carrier: # remove '-ing' from posture
+			self.Dismount(posture=self.posture()[:-3])
+
+		if hasMethod(I,"HideBehind"):
+			I.HideBehind(self)
+
+		# TODO: account for item composition? (glass items don't provide hide)
+		# TODO: when creature stands, check if still hidden (maybe checkHidden method)
+		# TODO: if changing position to new object, remove hidden and remove cover (will they be immediately able to hide from one spot to another?)
+		self.addCover(I)
+		self.Print(f"You {posture} behind {-I}.")
+		self.changePosture(posture)
+		if self.coverBonus() > 5:
+			self.addCondition("hidden",-3)
 
 
 	def Ride(self,rider):
@@ -2885,7 +2936,7 @@ class Creature():
 		return True
 
 
-	def Mount(self,steed,position="sit"):
+	def Mount(self,steed,posture="sit"):
 		if self is steed:
 			self.Print("You can't get on yourself.")
 			return False
@@ -2899,7 +2950,7 @@ class Creature():
 			self.Print(f"{+steed} cannot be mounted.")
 			return False
 
-		if position is "lay" and hasMethod(steed,"LayOn"):
+		if posture is "lay" and hasMethod(steed,"LayOn"):
 			return steed.LayOn(self)
 		elif steed is self.carrier or steed is self.riding:
 			pass
@@ -2911,20 +2962,14 @@ class Creature():
 		elif hasMethod(steed,"Occupy"):
 			if not steed.Occupy(self):
 				return False
-			self.Print(f"You {position} on {-steed}.")
+			self.Print(f"You {posture} on {-steed}.")
 
-		changePositionFuncs = {
-			None: self.Stand,
-			"stand": self.Stand,
-			"crouch": self.Crouch,
-			"sit": self.Sit,
-			"lay": self.Lay
-		}
-		changePositionFuncs[position]()
+		self.removeCover()
+		self.changePosture(posture)
 		return True
 
 
-	def Dismount(self,position=None):
+	def Dismount(self,posture=None):
 		if self.riding:
 			self.Print(f"You get off {-self.riding}.")
 			self.riding.rider = None
@@ -2933,15 +2978,8 @@ class Creature():
 			self.Print(f"You get off {-self.carrier}.")
 			self.carrier.Disoccupy()
 			self.carrier = None
-		
-		changePositionFuncs = {
-			None: self.Stand,
-			"stand": self.Stand,
-			"crouch": self.Crouch,
-			"sit": self.Sit,
-			"lay": self.Lay
-		}
-		changePositionFuncs[position]()
+
+		self.changePosture(posture)
 		return True
 
 
@@ -3062,19 +3100,26 @@ class Creature():
 	def PRSD(self): return 2*self.CHA() + self.WIS()
 	def RSTN(self): return 2*self.FTH() + self.STM()
 	def RITL(self): return 2*self.FTH() + self.LCK()
-	def SLTH(self): return min0(2*self.SKL() + self.INT() - self.invToll()) * 2*int(self.hasCondition("hiding"))
+	def SLTH(self): return min0(2*self.SKL() + self.INT() - self.invToll()) + self.coverBonus()
 	def SPLS(self): return 3*self.INT()
 	def TNKR(self): return 2*self.INT() + self.SKL()
 
 
-	def untetheredWeight(self):
+	def soloWeight(self):
 		return self.weight + self.CON()
 
 
 	def Weight(self):
 		riderWeight = 0 if self.rider is None else self.rider.Weight()
 		carryWeight = 0 if self.carrying is None else self.carrying.Weight()
-		return self.untetheredWeight() + riderWeight + carryWeight
+		return self.soloWeight() + riderWeight + carryWeight
+
+
+	def Size(self,posture=None):
+		posture = self.posture() if posture is None else posture
+		# under normal conditions, size is equal to weight
+		# I realize this doesn't count for density... whatever
+		return self.soloWeight() * (1 if posture == "standing" else 0.5)
 
 
 	def contents(self):
@@ -3186,6 +3231,10 @@ class Creature():
 	# returns sum of all protection values of all items in gear
 	def protection(self):
 		return sum(item.prot for item in self.gear.values() if hasattr(item,"prot"))
+
+
+	def coverBonus(self):
+		return min0(self.cover.Size() - self.Size()) if self.cover else 0
 
 
 	def hasCondition(self,name,reqDuration=None):
@@ -3492,6 +3541,13 @@ class Player(Creature):
 				self.removeCondition("hindered",-3)
 
 
+	def checkHidden(self):
+		if self.coverBonus() >= 5:
+			self.addCondition("hidden",-3)
+		if self.coverBonus() < 5:
+			self.removeCondition("hidden",-3)
+
+
 	def checkHungry(self):
 		# being invigorated prevents hunger but not starving
 		invigorated = self.hasCondition("invigorated")
@@ -3752,14 +3808,19 @@ class Player(Creature):
 			Print("You aren't riding anything.")
 
 
-	def printPosition(self,*args):
+	def position(self):
 		pos = self.posture()
-		mount = ""
 		if self.riding:
 			mount = f" on {-self.riding}"
 		elif self.carrier:
 			mount = f" on {-self.carrier}"
-		Print(f"You are {pos}{mount}.")
+		elif self.cover:
+			mount = f" behind {-self.cover}"
+		return f"{pos}{mount}"
+
+
+	def printPosition(self,*args):
+		Print(f"You are {self.position()}.")
 
 
 	def printStatus(self, *args):

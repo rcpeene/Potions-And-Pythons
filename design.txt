@@ -433,6 +433,7 @@ DERIVED STATS:
 ACCU - accuracy
 50 + 2*SKL + LCK + weapon.sleight
 chance to hit against enemy evasion
+chance to catch a projectile
 
 ATCK - attack
 STR d weapon.might
@@ -445,12 +446,13 @@ combat order?
 
 EVSN - evasion
 2*ATSP + LCK
-chance to not be hit against enemy accuracy
+chance to not avoid hit (against enemy ACCU)
 ability to escape restraint
 
 CRIT - critical hit
 SKL + LCK + weapon.sharpness
 chance of a double-damage hit
+ability to get a bullseye
 
 DFNS - defense
 CON + armor.protection + shield.protection
@@ -500,7 +502,10 @@ ability to cast magical rituals and healing spells
 
 ATHL - athletics
 STR + SKL + STM
-ability to achieve physical activities
+ability to achieve physical feats
+ability to climb walls
+ability to restrain an enemy (against their EVSN)
+ability to ride an unwilling enemy (against their ATHL)
 
 ENDR - endurance
 2*STM + CON
@@ -509,6 +514,7 @@ ability to endure things (poison, holding breath, regeneration, etc.)
 SLTH - stealth
 2*SKL + INT - min0(inventory.weight - BRDN)
 ability to hide
+ability to steal without being noticed
 
 TNKR - tinker
 2*INT + SKL
@@ -518,20 +524,21 @@ quality of repaired items
 
 INVS - investigation
 2*WIS + INT
-ability to investigate
-ability to perceive hiding creatures
+ability to percieve lies
+ability to perceive hidden creatures and things
 
 KNWL - knowledge
 2*INT + LCK
-chance to know things
+chance to know things (unlocks some intelligent dialogue)
+unlocks ability to craft certain items and learn certain spells
 
 PRSD - persuasion
 2*CHA + WIS
-ability to persuade
+ability to persuade (unlocks some persuasive dialogue)
 
 DCPT - deception
 2*CHA + INT
-ability to deceive
+ability to deceive (unlocks some deceptive dialogue)
 
 
 

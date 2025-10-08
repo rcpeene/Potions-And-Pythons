@@ -33,7 +33,7 @@ class Bed(Core.Item):
 			else:
 				Core.Print(f"{+layer} lies down on {-self}.")
 		if layer.carrier is self:
-			layer.Lay()
+			layer.changePosture("lay")
 			layer.addCondition("cozy",-3)
 			return True
 		return False
@@ -261,7 +261,7 @@ class Box(Core.Portal):
 	### Getters ###
 
 	def itemsWeight(self):
-		return sum(i.untetheredWeight() for i in self.items)
+		return sum(i.soloWeight() for i in self.items)
 
 
 	# the weight of a box is equal to its own weight + weights of its items
@@ -654,7 +654,7 @@ class Table(Core.Item):
 
 
 	def itemsWeight(self):
-		return sum(i.untetheredWeight() for i in self.items)
+		return sum(i.soloWeight() for i in self.items)
 
 
 	def itemNames(self):
