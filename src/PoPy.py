@@ -89,11 +89,23 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
+# prevent gettubg cover if you're being carried
+# if a creatured dies/disappears, remove rider
+# if a carrier dies/disappears, remove carrying
+# only reap creatures at the hour of the serpent (probability based on time since death?)
+# test version of parseGoTerms that simply checks if dobj,iobj,prep are in each column of player.parent.allDirs
+# make sure removeCarry removes restrained,-3
+
 # test case where you're riding a horse and the horse is being carried
 	# or when the horse is in a box
 	# or case when something carries you when you're already riding something
 		# probably either carrier or riding should always be None
 # horse will be laying when it falls off cliff, yet you can still move...
+
+
+################################################################################
+
+# FUTURE IMPROVEMENTS
 
 # add "jumping" from one object to another?
 # 	must stand first in order to jump
@@ -108,69 +120,89 @@ if __name__ == "__main__":
 # 	'jump onto [riding]' from ground
 # 	'jump off [riding] onto [item]'
 
-# readjust throw force formula; compare to BRDN (shouldn't be able to throw heavier than you can have in inv, or more than you can carry in hands?
-# check if throwing a creature which has another riding it?
-
-# add "in" operator to objects
-# test drinking an object when inv is full, see if bottle goes on ground
+# hide/get in a body of water?
 # fix obtaining money problem, think about other objects which won't go into inv upon obtaining
-# add "look up" as valid. Should look at sky if not in a room?
-	# add room property which is description of directions ("look up", "look east", "look out", etc.)
-# correctly factor DFNS into takeDamage (it should probably be in takeDamage method itself), but consider different damage source like collision and falling
-# try out using a creature as a weapon
-# knock stuff off of a table if it takes impact?
-# color status conditions green/red in status display
-# add in projectile weapons?
-# add in a whip or hook which is a projectile that allows you to grab an item?
-# throw 'grappling hook' which creates a new passage?, throw up a cliff or across a gap
-# add turn order, so you aren't the first to move when you enter a room, makes MVMT more useful
-	# allow moving multiple times if you have enough speed? (maybe max 5 for vs 1 for slowest creature)
-# if something is on fire (or other condition) when entering a room, say it
+# test drinking an object when inv is full, see if bottle goes on ground
+# add "swim"
+# handle bodies of water; what about fall dammage, being weighed down
+# add magic beans or food to pour stuff on
+# "drink from the pond"
+
 # refactor drop into a creature method?
+# make sure Touch method is called when player 'takes' an item (unless they use a hook or smth?)
+# try to pull creature off of its mount?
+# add Steal
 # implement steal
 	# "take bird from earl"
+
+# readjust throw force formula; compare to BRDN (shouldn't be able to throw heavier than you can have in inv, or more than you can carry in hands?
+# check if throwing a creature which has another riding it?
+# knock stuff off of a table if it takes impact?
+# add in projectile weapons?
+# add range and ranged weapons???
+# add in a whip or hook which is a projectile that allows you to grab an item?
+# throw 'grappling hook' which creates a new passage?, throw up a cliff or across a gap
+# consider how attacking with foot, head, mouth, hand, tail works
+
+# color status conditions green/red in status display
+# account for being restrained when doing stuff
+
 # what if horse goes wild while riding it, doesn't obey your directions
 # give passages a capacity limit, so a dragon can't fit through a doorway?
-# create linked passages? if a window breaks on one side, it should break the other way too
-# add "swim"
-# "jump off cliff"
+
 # add chopping tree
 # add a "tree" item? item which can be climbed but isn't a passage
+
+# try out using a creature as a weapon
+# correctly factor DFNS into takeDamage (it should probably be in takeDamage method itself), but consider different damage source like collision and falling
 # add fencing and wooden swords
-# add dull method to weapons, add blunt weapons which cant be sharpened?
+# add in armor and shields and protection and test them
+# add new weapons
+
+# add turn order, so you aren't the first to move when you enter a room, makes MVMT more useful
+	# allow moving multiple times if you have enough speed? (maybe max 5 for vs 1 for slowest creature)
+# add time to verbs?
+# add action queue to sort initiative among rooms
+# add in "knockback"?, if you get hit on top of the cliff, have a chance to fall off?
+
+# add "in" operator to objects
+# use both items and fixtures array to contain fixtures. Just use fixtures array to determine which ones not to list and query normally. remove fixtures mention property
+# refactor Switch into just inheriting fixture and controller?
+# add possession? (so you can say 'break goblin's sword', 'take his food')... these could be easily restructured as "break sword from goblin", "take food from him"
+# add asserts to most class methods
+# add better comments to methods
+# skim/update design doc
+
+# if something is on fire (or other condition) when entering a room, say it
+# add room property which is description of directions ("look up", "look east", "look out", etc.)
 # try "boom" effect. It will only effect current room/container (unless container breaks or is open?)
 # restrict Read to readable objects?
 # if describing something in own inventory, also print the lore tip in grey (or other color)
-# use both items and fixtures array to contain fixtures. Just use fixtures array to determine which ones not to list and query normally. remove fixtures mention property
-# refactor Switch into just inheriting fixture and controller?
-# handle bodies of water; what about fall dammage, being wieghed down and following
-# try to pull creature off of its mount?
 # make items have an invisibility property? but what about if a missed projectile hits something invisible?
-# add in crafting recipes. Probably store this as a JSON?
-# add in "knockback"?, if you get hit on top of the cliff, have a chance to fall off?
-# account for being restrained when doing stuff
 # make player.aware(I) method, which instead of using currentroom, checks if I in player.surroundings.objTree
 	# replace references to currentroom with player.parent when needed
 	# include hiding ability?
 	# you are hiding (if in one)
 
-
+# sift through TODOs
 # add basic equipment and clothing items
-# make sure Touch method is called when player 'takes' an item (unless they use a hook or smth?)
+# restructure map and revise tests
+# add a coin purse? which holds your money? required to collect money?
+# make a list of all possible uses and inputs for each action and systematically test them. Revise the world to accomodate them
+# implement escape/run away
+
 # fix/add Creature.isNaked or Player.isNaked
+# add total traversal limit on dlog nodes?
 # add link nodes and effect nodes to dialogue after all
 	# for instance, continue conversation if a truesight person speaks to invisible player, or if a goddess spirit gives you blessing
 	# maybe blessings actually would be the course of action of the NPC with which you speak... I guess, find a way to do that
+# add dialect processor to tritepool output?
 
-# restructure map and revise tests
-	# add magic beans or food to pour stuff on
-	# "drink from the fountain"
-	# make a list of all possible uses and inputs for each action and systematically test them. Revise the world to accomodate them
-# add asserts to most class methods
-# add better comments to methods
-# skim/update design doc
+# add in crafting recipes. Probably store this as a JSON?
+# add cooking/brewing/crafting/tinkering
+# ^^^sharpening/smithing items?
+	# create system for 'recipes' with this
 
-# add total traversal limit on dlog nodes?
 # behavior
 	# add Escape to creature behavior. Make sure that if they escape a container thats in an inventory, to put them in the room??
 	# make fear lowered by taking damage on player's turn, but make love go down if player does something they don't like (like restraining them)
@@ -186,55 +218,28 @@ if __name__ == "__main__":
 	# figure out combat? attack items?
 # examine output grammar/statements for lower level actions (in case non-player creatures do actions, we dont want it to print the same msgs), alter print to use G.print which depends on silent
 
-# add portal object, which is basically a passage that isn't a fixture, (but still can't be taken?)
-# add dialect processor to tritepool output?
-# add possession? (so you can say 'break goblin's sword', 'take his food')... these could be easily restructured as "break sword from goblin", "take food from him"
-# add a coin purse? which holds your money? required to collect money?
-
-# sift through TODOs
-
 # FLESH OUT MORE VERBS (and add items to go with them)
 # add "insert the key into the lock"
-	# allow restful sleep if resting by a fire?
-	# implement escape
-	# add a wait command (cant wait with enemies nearby, cuz they could just kill you)
-	# add in armor and shields and protection and test them
-	# add range and ranged weapons???
-	# add new weapons
-	# more switches, levers, buttons
-	# add douse function
-	# add carry/put down (HOW IS THIS GONNA WORK? does it equip the creature? while they are restraining is the player unable to do anything else?)
-	# try "pick him up"
-	# add Steal
-	# determine what can be hid behind
+# add a wait command (cant wait with enemies nearby, cuz they could just kill you)
+# more switches, levers, buttons
+# add douse function
 
+# add spells
 # add some preliminary spells and add effects file
 	# reevaluate effect functions, is there a way to reference a function by string?
 	# how will amulet effects work??
 	# add spells functions and fill in spells dict
 	# added spell/effects tests
 
-
-################################################################################
-
-# FUTURE IMPROVEMENTS
+# add trading, buying, selling with npcs
 
 # fill out definitions more, change definitions of some things to be more expository and fantastical
-# consider making objects hideable based on something other than weight
-# add quicksave and autosave, possibly include recent save name in Game() class
 # add signal handling: ctrl+s to save, ctrl+q to quit?
-# add cooking/brewing/crafting/tinkering
-# ^^^sharpening/smithing items?
-	# create system for 'recipes' with this
-# add trading with npcs
-# add spells
-# add action queue to sort initiative among rooms
-# add time to verbs?
 # add a world map/record visited rooms
 # add a window which shows player stats/possible commands/instructions
 
-################################################################################
 
+################################################################################
 
 
 # OVERVIEW OF ITEM CLASSES AND SUBCLASSES:
