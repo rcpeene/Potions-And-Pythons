@@ -44,16 +44,19 @@ class worldEncoder(json.JSONEncoder):
 		JSONprimitives = {dict,list,str,int,float,bool,None}
 		if type(objToWrite) is set:
 			return {"__class__":"set","setdata":list(objToWrite)}
-		elif type(objToWrite) is Core.Player:
-			return {"__class__": "Player"}
-		# elif type(objToWrite) == Room:
-		# 	return objToWrite.__dict__
 		elif Core.hasMethod(objToWrite,"convertToJSON"):
 			jsonDict = objToWrite.convertToJSON()
 			jsonDict = {"__class__": objToWrite.__class__.__name__, **jsonDict}
 			if "parent" in jsonDict:
 				del jsonDict["parent"]
+			for k, v in jsonDict.items():
+				if isinstance(v, (Core.Creature, Core.Item)):
+					jsonDict[k] = v.id
 			return jsonDict
+		elif type(objToWrite) is Core.Player:
+			return {"__class__": "Player"}
+		# elif type(objToWrite) == Room:
+		# 	return objToWrite.__dict__
 		elif type(objToWrite) not in JSONprimitives:
 			jsonDict = objToWrite.__dict__
 			# this is done so the class key appears first in the JSON object

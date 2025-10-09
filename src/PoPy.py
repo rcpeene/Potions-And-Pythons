@@ -4,6 +4,7 @@
 
 import os
 import sys
+from time import sleep
 import traceback
 
 import Core
@@ -14,6 +15,7 @@ import Parser
 
 
 def main(testing=False):
+	# sleep(3)
 	# formatting the prompt window
 	# os.system("mode con: lines=32")
 	os.system("title Potions ^& Pythons")
@@ -75,7 +77,7 @@ def main(testing=False):
 			if testing: raise e
 			Core.Print(f"\n\nAn error has occurred. The game will attempt to continue, but you may want to restart.\nThe error message is as follows:\n")
 			traceback.print_exc()
-			Core.waitKbInput("\nPress enter to continue...")
+			Core.waitKbInput("\nPress any key to continue...")
 			# return Menu.quit()
 
 
@@ -87,60 +89,27 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-
-# try the combinations:
-	# VERBS: (stand,sit,lay) get, (mount,ride)
-	# PREPS: on, in, under, behind
-	# OBJS: bed, table, horse, chair, ground, floor, box, crate, shelf
-
-	# get in -> go ?-> traverse -> mount [get in bed] [get in car] [get in box]
-		# this will also help "go to bed"
-	# get on -> mount [get on table] [get on horse]
-		# try "get on chair", "get on box"
-	# get under/behind -> hide/crouch [get under table] [get behind box] 
-
-	# whats the formula for HIDE?
-		# think about freely changing ones position (going directly from hiding to mounted, or mounted to hiding)
-		# figure out when to remove cover. When you mount it should
-		# what about hiding "IN" something, you should be obscured if you close the item
-		# can creatures be coverers? they can I guess...
-		# this means all item and creatures which must handle this if they change locations, are carried, or change position
-		# maybe make writeToJSON handle replacing objects with their ids?? if object isn't in items or creatures arrays
-	# revisit how lay redirects to Hide and how sleep redirects to lay
-		# check selecting none or something unlayable for sleep
-	# climb on self yields 'you cannot be traversed'. Should return 'you cant get on self' through Mount
-		# make sure climb properly redirects
-	# account for basic "stand" or "lay" when riding
-	# account for being restrained when doing any of this
-	# standing on a much small creature -> kick?
-	# account for 'occupant' and 'covering' when saving item
-
-	# add "jumping" from one object to another?
-	# 	must stand first in order to jump
-	# 	'jump off cliff'
-	# 	'jump off [item]' (onto ground)
-	# 	'jump to [item]' (from ground)
-	# 	'jump to [item] from [item]'
-	# 	 just 'jump'
-	# 	'jump over [chasm]'
-	# 	'jump off [riding]' onto ground
-	# 	'jump onto [riding]' from ground
-	# 	'jump off [riding] onto [item]'
-
 # test case where you're riding a horse and the horse is being carried
 	# or when the horse is in a box
 	# or case when something carries you when you're already riding something
 		# probably either carrier or riding should always be None
+# horse will be laying when it falls off cliff, yet you can still move...
 
-# "take bird from earl" -> should redirect to steal?
+# add "jumping" from one object to another?
+# 	must stand first in order to jump
+# 	'jump off cliff'
+# 	'jump off [item]' (onto ground)
+# 	'jump to [item]' (from ground)
+# 	'jump to [item] from [item]'
+# 	 just 'jump'
+# 	'jump in the pond'
+# 	'jump over [chasm]'
+# 	'jump off [riding]' onto ground
+# 	'jump onto [riding]' from ground
+# 	'jump off [riding] onto [item]'
+
 # readjust throw force formula; compare to BRDN (shouldn't be able to throw heavier than you can have in inv, or more than you can carry in hands?
 # check if throwing a creature which has another riding it?
-# handle "get on" to mount or get on a table (wb get on table while on a horse?)
-# refactor drop into a creature method?
-# make player.aware(I) method, which instead of using currentroom, checks if I in player.surroundings.objTree
-	# replace references to currentroom with player.parent when needed
-	# include hiding ability?
-	# you are hiding (if in one)
 
 # add "in" operator to objects
 # test drinking an object when inv is full, see if bottle goes on ground
@@ -155,14 +124,18 @@ if __name__ == "__main__":
 # add in a whip or hook which is a projectile that allows you to grab an item?
 # throw 'grappling hook' which creates a new passage?, throw up a cliff or across a gap
 # add turn order, so you aren't the first to move when you enter a room, makes MVMT more useful
+	# allow moving multiple times if you have enough speed? (maybe max 5 for vs 1 for slowest creature)
 # if something is on fire (or other condition) when entering a room, say it
-# what if the tree at "big tree" is destroyed? Some contingency to reset/alter the room?
+# refactor drop into a creature method?
+# implement steal
+	# "take bird from earl"
 # what if horse goes wild while riding it, doesn't obey your directions
 # give passages a capacity limit, so a dragon can't fit through a doorway?
 # create linked passages? if a window breaks on one side, it should break the other way too
-# add "climb" and "swim"
+# add "swim"
 # "jump off cliff"
 # add chopping tree
+# add a "tree" item? item which can be climbed but isn't a passage
 # add fencing and wooden swords
 # add dull method to weapons, add blunt weapons which cant be sharpened?
 # try "boom" effect. It will only effect current room/container (unless container breaks or is open?)
@@ -175,6 +148,12 @@ if __name__ == "__main__":
 # make items have an invisibility property? but what about if a missed projectile hits something invisible?
 # add in crafting recipes. Probably store this as a JSON?
 # add in "knockback"?, if you get hit on top of the cliff, have a chance to fall off?
+# account for being restrained when doing stuff
+# make player.aware(I) method, which instead of using currentroom, checks if I in player.surroundings.objTree
+	# replace references to currentroom with player.parent when needed
+	# include hiding ability?
+	# you are hiding (if in one)
+
 
 # add basic equipment and clothing items
 # make sure Touch method is called when player 'takes' an item (unless they use a hook or smth?)

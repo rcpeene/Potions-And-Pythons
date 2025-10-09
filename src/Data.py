@@ -65,7 +65,7 @@ goodbyes = {"adieu","bye","bye bye","bye then","prosper and live long","may luck
 # this is because "up" and "down" are also in the "directions" dict
 # they are not necessary entries here, but make interpreting more consistent...
 # for use in the Go() action functions
-prepositions = {"above","across","at","away","away from","behind","below","beneath","by","d","down","for","from","in","inside","into","near","off","of","on","onto","out","out of","over","through","to","toward","under","u","up","upon","using","with"}
+prepositions = {"above","across","around","at","away","away from","behind","below","beneath","by","d","down","for","from","in","inside","into","near","off","of","on","onto","out","out of","over","through","to","toward","under","u","up","upon","using","with"}
 
 pronouns = {"she","he","they","her","him","them","it"}
 
@@ -128,6 +128,7 @@ scents = {}
 tastes = {
     "earth": "It has a sharp taste of ancient musty dirt.",
     "soil": "It has a deep and full fresh earthy taste.",
+    "mud": "It is wet and pungent, tasting mildly of dirt.",
     "stone": "It has a dull taste of chalk and lime.",
     "wood": "It doesn't taste like much.",
     "brick": "It tastes like dry clay.",
@@ -143,6 +144,7 @@ tastes = {
 textures = {
     "earth": "It feels dry and crumbly.",
     "soil": "It feels loamy and moist.",
+    "mud": "It feels wet and sticky.",
     "stone": "It feels slighty rough and very solid.",
     "wood": "It feels like a hard sturdy wood.",
     "brick": "It feels flat and gritty.",
