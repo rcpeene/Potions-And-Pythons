@@ -67,12 +67,18 @@ class Box(Core.Portal):
 		self.open = open
 		self.capacity = capacity
 		self.items = items
+		self.ceiling = self.composition
+		self.walls = self.composition
+		self.floor = self.composition
 
 
 	### File I/O ###
 
 	def convertToJSON(self):
 		jsonDict = self.__dict__.copy()
+		del jsonDict["ceiling"]
+		del jsonDict["walls"]
+		del jsonDict["floor"]
 		del jsonDict["links"]
 		del jsonDict["descname"]
 		return jsonDict
@@ -104,9 +110,9 @@ class Box(Core.Portal):
 
 
 	# sets open bool to false
-	def Close(self):
+	def Close(self,closer):
 		self.open = False
-		Core.Print(f"You close {-self}.")
+		closer.Print(f"You close {-self}.")
 		for elem in self.items:
 			if isinstance(elem,Core.Creature):
 				elem.addCondition("hidden",-3)
@@ -264,17 +270,20 @@ class Box(Core.Portal):
 		return sum(i.soloWeight() for i in self.items)
 
 
-	# the weight of a box is equal to its own weight + weights of its items
+	def itemsSize(self):
+		return sum(i.Size() for i in self.items)
+
+
 	def Weight(self):
 		return self.weight + self.itemsWeight()
 
 
 	def space(self):
-		return self.capacity - self.itemsWeight()
+		return self.capacity - self.itemsSize()
 
 
 	def canAdd(self,I):
-		return I.Weight() <= self.space() and self not in I.objTree()
+		return I.Size() <= self.space() and self not in I.objTree()
 
 
 	def contents(self):
@@ -681,8 +690,8 @@ class Table(Core.Item):
 
 
 class Wall(Core.Passage):
-	def __init__(self,name,desc,weight,durability,composition,links,descname,difficulty,passprep="onto",**kwargs):
-		Core.Passage.__init__(self,name,desc,weight,durability,composition,links,descname,passprep=passprep,**kwargs)
+	def __init__(self,name,desc,composition,links,descname,difficulty,passprep="onto",**kwargs):
+		Core.Passage.__init__(self,name,desc,composition,links,descname,passprep=passprep,**kwargs)
 		self.difficulty = difficulty
 
 
@@ -738,8 +747,8 @@ class Wall(Core.Passage):
 
 
 class Window(Core.Passage):
-	def __init__(self,name,desc,weight,durability,composition,links,descname,open=False,broken=False,view=None,passprep="through",**kwargs):
-		Core.Passage.__init__(self,name,desc,weight,durability,composition,links,descname,passprep=passprep,**kwargs)
+	def __init__(self,name,desc,composition,links,descname,open=False,broken=False,view=None,passprep="through",**kwargs):
+		Core.Passage.__init__(self,name,desc,composition,links,descname,passprep=passprep,**kwargs)
 		self.descname = descname
 		self.view = view
 		if self.view is not None:
@@ -768,6 +777,8 @@ class Window(Core.Passage):
 			occupant = self.occupant
 			self.Disoccupy()
 			occupant.Fall(room=self.getNewLocation())
+		if self.covering:
+			self.covering.removeCover()
 		return True
 
 

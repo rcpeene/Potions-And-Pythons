@@ -1126,7 +1126,7 @@ class Game():
 		clearScreen()
 		self.prevroom = self.currentroom
 		self.currentroom = newroom
-		newroom.describe()
+		self.describeRoom()
 		return True
 
 
@@ -1236,7 +1236,7 @@ class Game():
 
 
 	def checkMoon(self):
-		if self.currentroom.altitude < 0 or self.currentroom.type == "shelter":
+		if self.currentroom.ceiling is not None:
 			return
 		mooncycle = (self.time % self.monthlength) // self.daylength
 		if mooncycle == 0:
@@ -1252,7 +1252,7 @@ class Game():
 
 
 	def checkAstrology(self,update=False):
-		if self.currentroom.altitude < 0 or self.currentroom.type == "shelter":
+		if self.currentroom.ceiling is not None:
 			return
 		darkhours = ("hearth","cat","mouse","owl","serpent","wolf")
 		aurora_cycle = self.time % 2000
@@ -1296,6 +1296,7 @@ class Game():
 
 
 	def describeRoom(self):
+		Print("\n"+self.currentroom.domain+"\n"+self.currentroom.name)
 		self.currentroom.describe()
 		if not isinstance(player.parent,Room):
 			Print(f"You are in {-player.parent}.")
@@ -1304,7 +1305,7 @@ class Game():
 
 
 	def checkDaytime(self):
-		if self.currentroom.altitude < 0:
+		if self.currentroom.ceiling is not None:
 			return
 		if self.hour() in ("stag","rooster","juniper"):
 			Print("It is morning.")
@@ -1318,10 +1319,13 @@ class Game():
 
 
 	def LookUp(self,target):
-		if self.currentroom.altitude < 0:
-			Print("You can't see that from here.")
+		if self.currentroom.ceiling is not None:
+			if target not in (None,"ceiling","roof"):
+				Print("You can't see the sky from here.")
+				return False
+			Print(f"You see a ceiling of {self.currentroom.ceiling}.")
 		
-		if target == "sky":
+		if target in ("sky",None):
 			target = "sun" if self.hour() in Data.dayhours else "moon"		
 
 		if "eclipse" in self.events:
@@ -1379,7 +1383,7 @@ class Game():
 # directed graph, facilitated by the world dict, where the links dict specifies
 # the edges from a given node to its neighboring nodes.
 class Room():
-	def __init__(self,name,domain,desc,links,fixtures,items,creatures,size=10,type=None,altitude=0,passprep=None,status=None):
+	def __init__(self,name,domain,desc,links,fixtures,items,creatures,size=10,passprep=None,ceiling=None,walls=None,floor=None,status=None):
 		self.name = name
 		self.domain = domain
 		self.desc = desc
@@ -1388,10 +1392,9 @@ class Room():
 		self.items = items
 		self.creatures = creatures
 		self.size = size
-		# "road", "shelter", None
-		self.type = type
-		# 0 for outdoors, -1 for indoors, <-1 for underground, >0 for in the sky
-		self.altitude = altitude
+		self.ceiling = ceiling
+		self.walls = walls
+		self.floor = floor
 		self.passprep = "at" if passprep is None else passprep
 		self.status = status if status else []
 		self.parent = None
@@ -1711,7 +1714,6 @@ class Room():
 
 	# prints room name, description, all its items and creatures
 	def describe(self):
-		Print("\n"+self.domain+"\n"+self.name)
 		# if player.countCompasses() == 0:
 		# 	Print("\n" + ambiguateDirections(self.desc))
 		# else:
@@ -1730,10 +1732,27 @@ class Room():
 
 	# prints all the creatures in the room in sentence form
 	def describeCreatures(self):
-		select = lambda creature: creature not in (player, player.carrying, player.riding)
+		select = lambda creature: creature is not player and creature.carrier is None and creature.rider is None
+		listCreatures = [creature for creature in self.creatures if select(creature)]
+
+		select = lambda creature: creature not in (player, player.carrying, player.riding) and creature.rider is None
 		listCreatures = [creature for creature in self.creatures if select(creature)]
 		if len(listCreatures) != 0:
 			Print(f"There is {listObjects(listCreatures)}.")
+
+		carriers = [creature for creature in self.creatures if creature is not player and creature.carrying is not None]
+		carrierPhrases = [f"{-creature} is carrying {-creature.carrying}" for creature in carriers]
+		if len(carrierPhrases) > 1:
+			carrierDescriptions = (", ".join(carrierPhrases[:-1]) + " and " + carrierPhrases[-1])
+		elif len(carrierPhrases) == 1:
+			carrierDescriptions = carrierPhrases[0]
+		else:
+			carrierDescriptions = ""
+		if carrierDescriptions:
+			Print(capWords(carrierDescriptions,1) + ".")
+
+
+
 		for creature in listCreatures:
 			game.setPronouns(creature)
 
@@ -1829,18 +1848,24 @@ class Item():
 		if self.despawnTimer is not None:
 			self.despawnTimer -= t
 			if self.despawnTimer <= 0 and self.parent is not game.currentroom:
-				self.parent.remove(self)			
+				self.parent.remove(self)
+
+		if self.parent.floor is None:
+			self.Fall()
+
 
 
 	def changeLocation(self,newparent):
 		prevparent = self.parent
 		prevparent.exit(self)
 		if self is player.parent:
-			Print(f"{+self} rumbles for a moment...")
+			player.Print(f"{+self} rumbles for a moment...")
 
 		newparent.enter(self)
 		if self.occupant:
 			self.occupant.changeLocation(newparent)
+		if self.covering:
+			self.covering.removeCover()
 
 
 	def Obtain(self,creature):
@@ -1856,6 +1881,8 @@ class Item():
 			Print(f"{+self} breaks.")
 		if self.occupant:
 			self.occupant.Fall()
+		if self.covering:
+			self.covering.removeCover()
 		self.Disoccupy()
 		self.parent.remove(self)
 		return True
@@ -1875,18 +1902,17 @@ class Item():
 			return False
 
 		if getattr(self,"open",False):
-			self.Traverse(occupant)
-			return False
+			return self.Traverse(occupant)
 		elif self.weight < occupant.weight // 5:
 			Print(f"{+self} is too small to support {~occupant}.")
 			occupant.Fall(minm(3,self.weight//5))
-			return False
+			return True
 		self.occupant = occupant
 		occupant.carrier = self
 		if self.durability != -1 and occupant.weight > self.durability*2:
 			Print(f"{+self} cannot support the weight of {~occupant}!")
 			self.Break()
-			return False
+			return True
 		return True
 
 
@@ -1911,9 +1937,9 @@ class Item():
 			self.occupant.Fall(height,room)
 			self.Disoccupy()
 
-		while room.altitude != 0 and "down" in room.links:
+		while room.floor is None and "down" in room.links:
 			height += room.size
-			room = room["down"]
+			room = room.links["down"]
 		if room != self.room():
 			self.changeLocation(room)
 			if self.room() is game.currentroom:
@@ -1970,6 +1996,9 @@ class Item():
 
 
 	### Getters ###
+
+	def posture(self):
+		return None
 
 	# this is a meaningful method for Creatures, for Items it is same as Weight
 	def soloWeight(self):
@@ -2102,7 +2131,7 @@ class Item():
 # Creatures have 10 base stats, called traits
 # They also have abilities; stats which are derived from traits through formulas
 class Creature():
-	def __init__(self,name,desc,weight,traits,hp,id=None,mp=0,money=0,inv=None,gear=None,love=0,fear=0,carrying=None,carrier=None,riding=None,rider=None,cover=None,composition="flesh",memories=None,appraisal=None,status=None,descname=None,aliases=None,plural=None,determiner=None,pronoun="it",timeOfDeath=None,lastAte=0,lastSlept=0,regenTimer=0,alert=False,seesPlayer=False,sawPlayer=-1):
+	def __init__(self,name,desc,weight,traits,hp,id=None,mp=0,money=0,inv=None,gear=None,love=0,fear=0,carrying=None,carrier=None,riding=None,rider=None,cover=None,covering=None,composition="flesh",memories=None,appraisal=None,status=None,descname=None,aliases=None,plural=None,determiner=None,pronoun="it",timeOfDeath=None,lastAte=0,lastSlept=0,regenTimer=0,alert=False,seesPlayer=False,sawPlayer=-1):
 		self.name = name
 		self.desc = desc
 		self.descname = descname if descname else name
@@ -2147,6 +2176,7 @@ class Creature():
 		self.carrying = carrying
 		self.carrier = carrier
 		self.cover = cover
+		self.covering = covering
 		self.gear = gear if gear else Data.initgear
 
 		self.weapon = EmptyGear()
@@ -2506,6 +2536,8 @@ class Creature():
 
 		self.carrying = creature
 		creature.carrier = self
+		if self.cover is not creature.cover:
+			creature.addCover(self.cover)
 		creature.parent.remove(creature)
 		self.parent.add(creature)
 
@@ -2556,6 +2588,9 @@ class Creature():
 			if name == reqName or reqName is None:
 				if duration == reqDuration or reqDuration is None:
 					self.status.remove([name,duration])
+		if not self.hasCondition(reqName,reqDuration):
+			return True
+		return False
 
 
 	def nullDespawn(self):
@@ -2605,13 +2640,25 @@ class Creature():
 		if reapable(self):
 			self.parent.removeCreature(self)
 
+		if self.parent.floor is None and not self.hasCondition("flying"):
+			self.Fall()
+
+
+	def checkHidden(self):
+		coverComposition = getattr(self.cover,"composition",None)
+		if self.coverBonus() >= 5 and coverComposition not in ("glass","ice","water"):
+			self.addCondition("hidden",-3)
+		if self.coverBonus() < 5:
+			self.removeCondition("hidden",-3)
+
 
 	def checkHindered(self):
-		carryWeight = 0 if self.carrying is None else self.carrying.Weight()
-		if self.invWeight() + carryWeight > self.BRDN():
-			self.addCondition("hindered",-3)
-		if self.invWeight() + carryWeight <= self.BRDN():
-			self.removeCondition("hindered")
+		if self.invWeight() + self.carryWeight() > self.BRDN():
+			if self.addCondition("hindered",-3):
+				self.Print("Your Inventory grows heavy.")
+		if self.invWeight() + self.carryWeight() <= self.BRDN():
+			if self.removeCondition("hindered",-3):
+				self.Print("Your Inventory feels lighter.")
 
 
 	def checkHungry(self):
@@ -2623,6 +2670,7 @@ class Creature():
 
 
 	def checkConditions(self):
+		self.checkHidden()
 		self.checkHindered()
 		self.checkHungry()
 		self.checkTired()
@@ -2654,9 +2702,9 @@ class Creature():
 
 		if room is None:
 			room = self.room()
-		while room.altitude != 0 and "down" in room.links:
+		while room.floor is None and "down" in room.links:
 			height += room.size
-			room = room["down"]
+			room = room.links["down"]
 		if room != self.room():
 			self.changeLocation(room)
 
@@ -2669,12 +2717,18 @@ class Creature():
 	def addCover(self,cover):
 		self.cover = cover
 		cover.covering = self
+		if self.carrying:
+			self.carrying.addCover(cover)
+		self.checkHidden()
 
 
 	def removeCover(self):
 		if self.cover:
 			self.cover.covering = None
 		self.cover = None
+		if self.carrying:
+			self.carrying.removeCover()
+		self.checkHidden()
 
 
 	def Eat(self,food):
@@ -2682,42 +2736,25 @@ class Creature():
 		food.Eat()
 
 
-	def Stand(self):
-		self.removeCondition("cozy",-3)
-		self.removeCondition("crouching")
-		self.removeCondition("sitting")
-		self.removeCondition("laying")
+	def changePosture(self,posture,silent=False):
+		if posture is None:
+			posture = "standing"
+		if not posture.endswith("ing"):
+			posture = "sitt" if posture == "sit" else posture
+			posture = posture+"ing"
 
+		validPostures = ("standing","crouching","sitting","laying")
+		assert posture in validPostures
 
-	def Crouch(self):
-		self.removeCondition("cozy",-3)
-		self.removeCondition("sitting")
-		self.removeCondition("laying")
-		self.addCondition("crouching",-3)
+		for p in validPostures:
+			if p != posture:
+				self.removeCondition(p)
+		# standing is the absence of the other conditions
+		if posture != "standing":
+			self.addCondition(posture,-3)
+		if posture in ("standing","crouching"):
+			self.removeCondition("cozy",-3)
 
-
-	def Sit(self):
-		self.removeCondition("crouching")
-		self.removeCondition("laying")
-		self.addCondition("sitting",-3)
-		
-
-	def Lay(self):
-		self.removeCondition("crouching")
-		self.removeCondition("sitting")
-		self.addCondition("laying",-3)
-
-
-	def changePosture(self,posture):
-		postureMap = {
-			None: self.Stand,
-			"stand": self.Stand,
-			"crouch": self.Crouch,
-			"sit": self.Sit,
-			"lay": self.Lay
-		}
-		if posture in postureMap:
-			postureMap[posture]()
 		self.checkHidden()
 		return False
 
@@ -2736,7 +2773,9 @@ class Creature():
 			return self.riding.changeLocation(newparent)
 
 		prevparent = self.parent
-
+		self.removeCover()
+		if self.covering:
+			self.covering.removeCover()
 		prevparent.exit(self)
 		if self is player and isinstance(newparent,Room):
 			game.changeRoom(newparent)
@@ -2759,9 +2798,10 @@ class Creature():
 			self.rider.removeRiding()
 		self.removeCarry()
 		self.removeRiding()
+		self.removeCover()
 		self.waitKbInput("You teleport!",color="b")
 		self.changeLocation(newroom)
-		self.Stand()
+		self.changePosture("stand")
 
 
 	def act(self):
@@ -2896,24 +2936,27 @@ class Creature():
 
 
 	def Hide(self,I,posture):
+		if self.parent is not I.parent:
+			self.Print(f"You can't, you are {self.parent.passprep} {-self.parent}.")
+			return False
+		rec = " Try crouching." if posture != "crouch" else ""
 		if self.Size(posture) > I.Size():
+			self.Print(f"{+I} is too small to hide behind.{rec}")
+			return False
+		if isinstance(I,Fixture):
 			self.Print(f"You can't hide behind {-I}.")
 			return False
 
-		if self.carrier: # remove '-ing' from posture
-			self.Dismount(posture=self.posture()[:-3])
+		if self.carrier:
+			self.Dismount(posture=self.posture())
 
 		if hasMethod(I,"HideBehind"):
 			I.HideBehind(self)
 
-		# TODO: account for item composition? (glass items don't provide hide)
-		# TODO: when creature stands, check if still hidden (maybe checkHidden method)
-		# TODO: if changing position to new object, remove hidden and remove cover (will they be immediately able to hide from one spot to another?)
-		self.addCover(I)
 		self.Print(f"You {posture} behind {-I}.")
-		self.changePosture(posture)
-		if self.coverBonus() > 5:
-			self.addCondition("hidden",-3)
+		self.changePosture(posture,silent=True)
+		self.addCover(I)
+		return True
 
 
 	def Ride(self,rider):
@@ -2925,7 +2968,9 @@ class Creature():
 		contest = not self.isFriendly() and self.canMove()
 		if contest:
 			rider.Print(f"{+self} struggles.",color="o")
-			athl_contest = self.ATHL() - rider.ATHL()
+			contestPenalty = -10 if self.posture() == "laying" else 0
+			contestBonus = 10 if rider.posture() == "standing" else 0
+			athl_contest = self.ATHL() - rider.ATHL() + contestBonus + contestPenalty
 			if athl_contest > 0:
 				rider.Print(f"{+self} shakes you off!",color="r")
 				if athl_contest > rider.ATHL():
@@ -2946,14 +2991,17 @@ class Creature():
 		elif self.carrier and self.carrier is not steed:
 			self.Print(f"You can't, you are already {self.posture()} on {self.carrier}.")
 			return False
+		elif self.parent is not steed.parent:
+			self.Print(f"You can't, you are in {-self.parent}.")
+			return False
 		if not hasMethod(steed,"Ride") and not hasMethod(steed,"Occupy"):
 			self.Print(f"{+steed} cannot be mounted.")
 			return False
 
-		if posture is "lay" and hasMethod(steed,"LayOn"):
+		if posture == "lay" and hasMethod(steed,"LayOn"):
 			return steed.LayOn(self)
 		elif steed is self.carrier or steed is self.riding:
-			pass
+			pass			
 		elif self.checkTetherLoop(self,steed,"get on"):
 			return False
 		elif hasMethod(steed,"Ride"):
@@ -2962,10 +3010,11 @@ class Creature():
 		elif hasMethod(steed,"Occupy"):
 			if not steed.Occupy(self):
 				return False
-			self.Print(f"You {posture} on {-steed}.")
 
-		self.removeCover()
-		self.changePosture(posture)
+		if self.carrier is steed or self.riding is steed:
+			self.Print(f"You {posture} on {-steed}.")
+			self.removeCover()
+			self.changePosture(posture)
 		return True
 
 
@@ -3119,7 +3168,10 @@ class Creature():
 		posture = self.posture() if posture is None else posture
 		# under normal conditions, size is equal to weight
 		# I realize this doesn't count for density... whatever
-		return self.soloWeight() * (1 if posture == "standing" else 0.5)
+		size = self.soloWeight()
+		if posture not in ("stand","standing"):
+			size //= 2
+		return size
 
 
 	def contents(self):
@@ -3329,6 +3381,11 @@ class Creature():
 
 	def nounPhrase(self,det="",n=-1,plural=False,cap=-1):
 		strname = getattr(self,"descname",self.name)
+		if self.riding and det != "the":
+			strname = f"{strname} {self.riding.passprep} {~self.riding}"
+		elif isinstance(self.carrier,Item) and det != "the":
+			strname = f"{strname} {self.posture()} on {-self.carrier}"
+
 		if len(strname) == 0:
 			return ""
 		if n > 1:
@@ -3488,30 +3545,28 @@ class Player(Creature):
 			self.levelUp(oldlv,newlv)
 
 
-	def addCondition(self,name,dur,stackable=False):
+	def addCondition(self,name,dur,stackable=False,silent=False):
 		if self.hasCondition(name) and not stackable:
 			return False
-		if not self.hasCondition(name):
+		if not self.hasCondition(name) and not silent:
 			color = "w"
-			if name in Data.buffs | Data.blessings:
-				color = "g"
-			if name in Data.debuffs | Data.curses:
-				color = "r"
+			if name in Data.buffs | Data.blessings: color = "g"
+			if name in Data.debuffs | Data.curses: color = "r"
 			if name in Data.curses:
-				Print(f"You have the curse of {name}.",allowSilent=False,color=color)
+				self.Print(f"You have the curse of {name}.",allowSilent=False,color=color)
 			elif name in Data.blessings:
-				Print(f"You have the blessing of {name}.",allowSilent=False,color=color)
+				self.Print(f"You have the blessing of {name}.",allowSilent=False,color=color)
 			elif name == "asleep":
-				Print(f"You fall {name}.",allowSilent=False)
+				self.Print(f"You fall {name}.",allowSilent=False)
 			else:
-				Print(f"You are {name}.",allowSilent=False,color=color)
+				self.Print(f"You are {name}.",allowSilent=False,color=color)
 		insort(self.status,[name,dur])
 		return True
 
 
 	# removes all condition of the same name
 	# if reqDuration is given, only removes conditions with that duration
-	def removeCondition(self,reqName=None,reqDuration=None):
+	def removeCondition(self,reqName=None,reqDuration=None,silent=False):
 		wasSleeping = self.hasCondition("asleep")
 		wellRested = False
 
@@ -3523,29 +3578,11 @@ class Player(Creature):
 
 					if name == "asleep" and duration < 20:
 						wellRested = True
-					if name != "asleep" and not self.hasCondition(name):
-						Print(f"You are no longer {name}.",allowSilent=False)
-		
+					if name != "asleep" and not self.hasCondition(name) and not silent:
+						self.Print(f"You are no longer {name}.",allowSilent=False)
+
 		if wasSleeping and not self.hasCondition("asleep"):
 			self.awaken(wellRested=wellRested)
-
-
-	def checkHindered(self):
-		if self.invWeight() + self.carryWeight() > self.BRDN():
-			if not self.hasCondition("hindered"):
-				Print("Your Inventory grows heavy.")
-				self.addCondition("hindered",-3)
-		if self.invWeight() + self.carryWeight() <= self.BRDN():
-			if self.hasCondition("hindered"):
-				Print("Your Inventory feels lighter.")
-				self.removeCondition("hindered",-3)
-
-
-	def checkHidden(self):
-		if self.coverBonus() >= 5:
-			self.addCondition("hidden",-3)
-		if self.coverBonus() < 5:
-			self.removeCondition("hidden",-3)
 
 
 	def checkHungry(self):
@@ -3675,9 +3712,9 @@ class Player(Creature):
 
 		if not isinstance(room, Room):
 			room = self.room()
-		while room.altitude != 0 and "down" in room.links:
+		while room.floor is None and "down" in room.links:
 			height += room.size
-			room = room["down"]
+			room = room.links["down"]
 		if room != self.room():
 			ellipsis()
 			self.changeLocation(room)
@@ -3816,6 +3853,8 @@ class Player(Creature):
 			mount = f" on {-self.carrier}"
 		elif self.cover:
 			mount = f" behind {-self.cover}"
+		else:
+			mount = ""
 		return f"{pos}{mount}"
 
 
@@ -4111,9 +4150,16 @@ class Person(Speaker,Humanoid):
 	### User Output ###
 
 	def nounPhrase(self,det="",n=-1,plural=False,cap=0):
+		if self.riding and det != "the":
+			suffix = f" riding {self.riding.nounPhrase()}"
+		elif isinstance(self.carrier,Item) and det != "the":
+			suffix = f" {self.posture()} on {self.carrier.nounPhrase()}"
+		else:
+			suffix = ""
+
 		if "met" in self.memories:
-			return self.name
-		strname = self.descname
+			return self.name + suffix
+		strname = self.descname + suffix
 		if len(strname) == 0:
 			return ""
 		if n > 1:
@@ -4204,11 +4250,7 @@ class Animal(Speaker):
 
 
 	def attack(self):
-		matches = self.parent.nameQuery('chest')
-		if len(matches) == 1:
-			chest = matches.pop()
-			if player in chest.contents():
-				chest.changeLocation(world['phlegethon'])
+		pass
 
 
 	def climb():
@@ -4519,8 +4561,8 @@ class Portal(Item):
 
 # almost identical to the item class, but fixtures may not be removed from their initial location.
 class Fixture(Item):
-	def __init__(self,name,desc,weight,durability,composition,mention=False,**kwargs):
-		Item.__init__(self,name,desc,weight,durability,composition,**kwargs)
+	def __init__(self,name,desc,composition,weight=None,durability=None,mention=False,**kwargs):
+		Item.__init__(self,name,desc,10000,-1,composition,**kwargs)
 		self.mention = mention
 		self.parent = None
 
@@ -4528,8 +4570,8 @@ class Fixture(Item):
 
 
 class Passage(Portal,Fixture):
-	def __init__(self,name,desc,weight,durability,composition,links,descname,passprep="into",mention=False,**kwargs):
-		Fixture.__init__(self,name,desc,weight,durability,composition,mention=mention,**kwargs)
+	def __init__(self,name,desc,composition,links,descname,passprep="into",mention=False,**kwargs):
+		Fixture.__init__(self,name,desc,composition,mention=mention,**kwargs)
 		self.passprep = passprep
 		self.links = links
 		self.descname = descname
@@ -4599,14 +4641,14 @@ class Projectile(Item):
 
 		# have a chance to randomly hit a different object in room
 		otherObjs = [obj for obj in parent.contents() if obj not in (self,self.item,launcher,target)]
-		weights = [obj.weight for obj in otherObjs]
+		sizes = [obj.Size() for obj in otherObjs]
 		if isinstance(parent,Room):
 			otherObjs += [None]
-			weights += [parent.size*10]
+			sizes += [parent.size*10]
 		else:
 			otherObjs += [parent]
-			weights += [parent.weight]
-		victim = choices(otherObjs,weights)[0]
+			sizes += [parent.Size()]
+		victim = choices(otherObjs,sizes)[0]
 		if victim is None:
 			return False
 		if victim is target.parent:

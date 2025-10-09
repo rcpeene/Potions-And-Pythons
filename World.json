@@ -38,7 +38,8 @@
 				"type": "s"
 			}
 		],
-		"creatures": []
+		"creatures": [],
+		"floor": "soil"
 	},
 	"big oak": {
 		"__class__": "Room",
@@ -56,15 +57,14 @@
 				"__class__": "Fixture",
 				"name": "oak tree",
 				"desc": "It is much larger than any trees in the surrounding forest. It's vast height and cold shade feel imposing",
-				"weight": 100,
-				"durability": 100,
 				"composition": "wood",
 				"aliases": ["tree","big tree","oak"]
 			}
 		],
 		"items": [],
 		"creatures": [],
-		"status": []
+		"status": [],
+		"floor": "soil"
 	},
 	"boulder": {
 		"__class__": "Room",
@@ -79,7 +79,8 @@
 		"fixtures": [],
 		"items": [],
 		"creatures": [],
-		"status": []
+		"status": [],
+		"floor": "soil"
 	},
 	"brook": {
 		"__class__": "Room",
@@ -95,7 +96,8 @@
 		"fixtures": [],
 		"items": [],
 		"creatures": [],
-		"status": []
+		"status": [],
+		"floor": "mud"
 	},
 	"cabin basement": {
 		"__class__": "Room",
@@ -108,8 +110,6 @@
 				"__class__": "Passage",
 				"name": "stairway",
 				"desc": "creaky wooden stairway which leads up",
-				"weight": -1,
-				"durability": -1,
 				"composition": "wood",
 				"links": {
 					"up": "cabin hallway",
@@ -176,7 +176,10 @@
 			}
 		],
 		"creatures": [],
-		"status": []
+		"status": [],
+		"ceiling": "wood",
+		"walls": "stone",
+		"floor": "stone"
 	},
 	"cabin hallway": {
 		"__class__": "Room",
@@ -195,8 +198,6 @@
 				"__class__": "Passage",
 				"name": "stairway",
 				"desc": "wooden stairs which lead up on the right of the hall and down on the left of the hall",
-				"weight": -1,
-				"durability": -1,
 				"composition": "wood",
 				"links": {
 					"up": "cabin quarters",
@@ -208,7 +209,10 @@
 		],
 		"items": [],
 		"creatures": [],
-		"status": []
+		"status": [],
+		"ceiling": "wood",
+		"walls": "wood",
+		"floor": "wood"
 	},
 	"cabin kitchen": {
 		"__class__": "Room",
@@ -225,8 +229,6 @@
 				"__class__": "Fixture",
 				"name": "hearth",
 				"desc": "A cold stone hearth embedded in the wall. It is blackened from soot and ash.",
-				"weight": -1,
-				"durability": -1,
 				"composition": "stone",
 				"aliases": ["stone hearth","grey stone hearth"]
 			},
@@ -235,8 +237,6 @@
 				"name": "window",
 				"desc": "A brittle, dusty window on the northern wall of this room",
 				"view": "out",
-				"weight": 8,
-				"durability": 3,
 				"composition": "glass",
 				"aliases": ["northern window"],
 				"links": {
@@ -319,7 +319,10 @@
 				"composition": "wood"
 			}
 		],
-		"creatures": []
+		"creatures": [],
+		"ceiling": "wood",
+		"walls": "wood",
+		"floor": "wood"
 	},
 	"cabin privy": {
 		"__class__": "Room",
@@ -369,7 +372,10 @@
 				"name": "goblin"
 			}
 		],
-		"status": []
+		"status": [],
+		"ceiling": "wood",
+		"walls": "wood",
+		"floor": "wood"
 	},
 	"cabin quarters": {
 		"__class__": "Room",
@@ -383,8 +389,6 @@
 				"name": "stairway",
 				"desc": "an old creaky wooden staircase",
 				"aliases": ["stairs","staircase","stairway"],
-				"weight": -1,
-				"durability": -1,
 				"composition": "wood",
 				"mention": true,
 				"links": {
@@ -433,7 +437,10 @@
 			}
 		],
 		"creatures": [],
-		"status": []
+		"status": [],
+		"ceiling": "wood",
+		"walls": "wood",
+		"floor": "wood"
 	},
 	"cave": {
 		"__class__": "Room",
@@ -462,7 +469,10 @@
 				"__class__": "Player"
 			}
 		],
-		"status": []
+		"status": [],
+		"ceiling": "stone",
+		"walls": "stone",
+		"floor": "mud"
 	},
 	"cliffside": {
 		"__class__": "Room",
@@ -481,8 +491,6 @@
 				"__class__": "Wall",
 				"name": "cliff",
 				"desc": "A mossy grey cliff",
-				"weight": -1,
-				"durability": -1,
 				"composition": "earth",
 				"aliases": ["cliffside","pale cliff"],
 				"difficulty": 30,
@@ -494,7 +502,9 @@
 		],
 		"items": [],
 		"creatures": [],
-		"status": []
+		"status": [],
+		"walls": "wood",
+		"floor": "soil"
 	},
 	"clifftop": {
 		"__class__": "Room",
@@ -507,8 +517,6 @@
 				"__class__": "Wall",
 				"name": "cliff",
 				"desc": "A mossy grey cliff",
-				"weight": -1,
-				"durability": -1,
 				"composition": "earth",
 				"aliases": ["cliffside","white cliff"],
 				"difficulty": 30,
@@ -559,7 +567,8 @@
 				"status": [["flying",-3]]
 			}
 		],
-		"status": []
+		"status": [],
+		"floor": "earth"
 	},
 	"field": {
 		"__class__": "Room",
@@ -600,7 +609,8 @@
 				"aliases": ["mirror"]
 			}
 		],
-		"creatures": []
+		"creatures": [],
+		"floor": "soil"
 	},
 	"glen": {
 		"__class__": "Room",
@@ -639,7 +649,8 @@
 			}
 		],
 		"creatures": [],
-		"status": []
+		"status": [],
+		"floor": "soil"
 	},
 	"burning shore": {
 		"__class__": "Room",
@@ -652,7 +663,9 @@
 		"fixtures": [],
 		"items": [],
 		"creatures": [],
-		"status": [["AREA burning -1",10]]
+		"status": [["AREA burning -1",10]],
+		"ceiling": "smoke",
+		"floor": "sand"
 	},
 	"mound": {
 		"__class__": "Room",
@@ -666,7 +679,8 @@
 		},
 		"fixtures": [],
 		"items": [],
-		"creatures": []
+		"creatures": [],
+		"floor": "soil"
 	},
 	"pit": {
 		"__class__": "Room",
@@ -682,8 +696,6 @@
 				"__class__": "Wall",
 				"name": "pit",
 				"desc": "A deep black pit, big enough for a horse. You cannot see the bottom. ",
-				"weight": -1,
-				"durability": -1,
 				"composition": null,
 				"links": {
 					"down": "burning shore",
@@ -694,7 +706,8 @@
 			}
 		],
 		"items": [],
-		"creatures": []
+		"creatures": [],
+		"floor": "earth"
 	},
 	"pond": {
 		"__class__": "Room",
@@ -708,7 +721,8 @@
 		},
 		"fixtures": [],
 		"items": [],
-		"creatures": []
+		"creatures": [],
+		"floor": "mud"
 	},
 	"treeline": {
 		"__class__": "Room",
@@ -811,7 +825,8 @@
 				"carrier": 3
 			}
 		],
-		"status": []
+		"status": [],
+		"floor": "soil"
 	},
 	"tunnel": {
 		"__class__": "Room",
@@ -845,6 +860,9 @@
 					"mouth": null
 				}
 			}
-		]
+		],
+		"ceiling": "earth",
+		"walls": "earth",
+		"floor": "earth"
 	}
 }
