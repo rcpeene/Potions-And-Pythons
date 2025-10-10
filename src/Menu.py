@@ -249,21 +249,21 @@ def saveGame(savename=None):
 	saves = os.listdir()
 	if savename is None:
 		# player names their save
-		Core.columnPrint(saves,10,10,delay=None,color="k")
-		savename = Core.Input("\nWhat name will you give this save file?",delay=None,color="k").lower()
+		Core.columnPrint(saves,10,10,delay=0,color="k")
+		savename = Core.Input("\nWhat name will you give this save file?",delay=0,color="k").lower()
 	if savename in ("", "all", "autosave", "quicksave") or savename in Data.cancels:
 		if savename == "":
-			Core.Print(f"Save name cannot be empty.",delay=None,color="k")
+			Core.Print(f"Save name cannot be empty.",delay=0,color="k")
 		else:
-			Core.Print(f"Save name cannot be '{savename}'.",delay=None,color="k")
+			Core.Print(f"Save name cannot be '{savename}'.",delay=0,color="k")
 		os.chdir("..")
 		return
 
 	# if the save name is used, ask to overwrite it
 	if os.path.exists(savename):
-		Core.Print("A save file with this name already exists.",delay=None,color="k")
+		Core.Print("A save file with this name already exists.",delay=0,color="k")
 		#if dont overwrite, then just return
-		if not Core.yesno("Would you like to overwrite it?",delay=None,color="k"):
+		if not Core.yesno("Would you like to overwrite it?",delay=0,color="k"):
 			os.chdir("..")
 			return
 	# if the save name is unused, make a new directory
@@ -271,7 +271,7 @@ def saveGame(savename=None):
 		try:
 			os.mkdir(savename)
 		except:
-			Core.Print("Invalid save name.",delay=None,color="k")
+			Core.Print("Invalid save name.",delay=0,color="k")
 			os.chdir("..")
 			return
 
@@ -282,7 +282,7 @@ def saveGame(savename=None):
 	writeGame("game.txt", Core.game, Core.world)
 	os.chdir("../..")
 	sleep(1)
-	Core.Print(f"Game saved as {savename}",delay=None,color="k")
+	Core.Print(f"Game saved as {savename}",delay=0,color="k")
 	Core.game.lastsave = Core.game.time
 	sleep(1)
 
@@ -290,7 +290,7 @@ def saveGame(savename=None):
 # load a game from a save directory
 def loadGame(filename=None):
 	if not (os.path.exists("saves")) or len(os.listdir("./saves")) == 0:
-		Core.Print("\nThere are no save files.\n",delay=None,color="k")
+		Core.Print("\nThere are no save files.\n",delay=0,color="k")
 		Core.waitKbInput()
 		return False
 	os.chdir("saves")
@@ -298,10 +298,10 @@ def loadGame(filename=None):
 	if filename is None:
 		Core.clearScreen()
 		# split save names into a list and display them
-		Core.Print("Save files: ",delay=None,color="k")
+		Core.Print("Save files: ",delay=0,color="k")
 		saves = os.listdir()
-		Core.columnPrint(saves,10,10,delay=None,color="k")
-		savename = Core.Input("\nWhich save file will you load?",delay=None,color="k")
+		Core.columnPrint(saves,10,10,delay=0,color="k")
+		savename = Core.Input("\nWhich save file will you load?",delay=0,color="k")
 	else:
 		savename = filename
 
@@ -311,7 +311,7 @@ def loadGame(filename=None):
 
 	# if user inputs a save name that doesn't exist
 	if not os.path.exists(savename):
-		Core.Print(f"\nThere is no save file named '{savename}'.",delay=None,color="k")
+		Core.Print(f"\nThere is no save file named '{savename}'.",delay=0,color="k")
 		os.chdir("..")
 		Core.waitKbInput()
 		return False
@@ -324,7 +324,7 @@ def loadGame(filename=None):
 	Core.game = readGame("game.txt",Core.world,dlogDict)
 	# hopefully load doesn't fail, that would suck
 	# except:
-	# 	Core.Print("Could not load game, save data corrupted\n",delay=None,color="k")
+	# 	Core.Print("Could not load game, save data corrupted\n",delay=0,color="k")
 	# 	os.chdir("..")
 	# 	os.chdir("..")
 	# 	return False
@@ -343,10 +343,10 @@ def loadGame(filename=None):
 # deletes all save files in 'save' directory (if the user is very, very sure)
 def deleteAll():
 	Core.clearScreen()
-	if not Core.yesno("Are you sure you want to delete all save files?",delay=None):
+	if not Core.yesno("Are you sure you want to delete all save files?",delay=0):
 		os.chdir("..")
 		return mainMenu()
-	if not Core.yesno("Are you very, very sure??",delay=None):
+	if not Core.yesno("Are you very, very sure??",delay=0):
 		os.chdir("..")
 		return mainMenu()
 	for savename in os.listdir():
@@ -356,13 +356,13 @@ def deleteAll():
 		os.rmdir(savename)
 	os.chdir("..")
 	sleep(1)
-	Core.waitKbInput("\nAll save files deleted.\n",delay=None,color="k")
+	Core.waitKbInput("\nAll save files deleted.\n",delay=0,color="k")
 
 
 # deletes a save file whose name is given by the user
 def delete(filename):
 	if not os.path.exists("saves") or len(os.listdir("./saves")) == 0:
-		Core.Print("\nThere are no save files.\n",delay=None,color="k")
+		Core.Print("\nThere are no save files.\n",delay=0,color="k")
 		Core.waitKbInput()
 		return
 	os.chdir("saves")
@@ -370,10 +370,10 @@ def delete(filename):
 	if filename is None:
 		Core.clearScreen()
 		# split save names into a list and display them
-		Core.Print("Save files: ",delay=None,color="k")
+		Core.Print("Save files: ",delay=0,color="k")
 		saves = os.listdir()
-		Core.columnPrint(saves,10,10,delay=None,color="k")
-		savename = Core.Input("\nWhich save file will you delete?",delay=None)
+		Core.columnPrint(saves,10,10,delay=0,color="k")
+		savename = Core.Input("\nWhich save file will you delete?",delay=0)
 	else:
 		savename = filename
 
@@ -385,12 +385,12 @@ def delete(filename):
 
 	# if the user inputs a save name that doesn't exist
 	if not os.path.exists(savename):
-		Core.Print(f"\nThere is no save file named '{savename}'.\n",delay=None,color="k")
+		Core.Print(f"\nThere is no save file named '{savename}'.\n",delay=0,color="k")
 		os.chdir("..")
 		Core.waitKbInput()
 		return mainMenu()
 	# ask for confirmation, if no, then return to menu
-	if not Core.yesno("Are you sure you want to delete this save file?",delay=None):
+	if not Core.yesno("Are you sure you want to delete this save file?",delay=0):
 		os.chdir("..")
 		return
 
@@ -402,17 +402,17 @@ def delete(filename):
 	os.rmdir(savename)
 	os.chdir("..")
 	sleep(1)
-	Core.waitKbInput("\nDeleted\n",delay=None,color="k")
+	Core.waitKbInput("\nDeleted\n",delay=0,color="k")
 
 
 # asks for player name and description, starts everything else at initial values
 def createCharacter():
-	name = Core.Input("What is your name?",delay=None,color="k").title()
+	name = Core.Input("What is your name?",delay=0,color="k").title()
 	while len(name) == 0:
-		name = Core.Input(delay=None,color="k").title()
-	desc = Core.InputLoop("Describe yourself.",cue="You are ",delay=None,color="k")
+		name = Core.Input(delay=0,color="k").title()
+	desc = Core.InputLoop("Describe yourself.",cue="You are ",delay=0,color="k")
 	while len(desc) == 0:
-		desc = Core.Input(cue="\nYou are ",delay=None,color="k")
+		desc = Core.Input(cue="\nYou are ",delay=0,color="k")
 	return Core.Player(name,desc,29,[1]*10,2,2,0,0)
 
 
@@ -466,7 +466,7 @@ def testGame():
 
 def gameInfo():
 	Core.clearScreen()
-	Core.Print(Data.gameinfo,delay=None,color="k")
+	Core.Print(Data.gameinfo,delay=0,color="k")
 	Core.waitKbInput()
 
 
@@ -481,8 +481,8 @@ def mainMenu():
 		Core.clearScreen()
 		Core.flushInput()
 		print(Data.logo)
-		Core.Print(Data.menuinstructions,end="",delay=None,color="k")
-		g = Core.Input(delay=None).split()
+		Core.Print(Data.menuinstructions,end="",delay=0,color="k")
+		g = Core.Input(delay=0).split()
 
 		if len(g) == 0:
 			continue
@@ -513,12 +513,12 @@ def restart():
 	next = None
 	Core.flushInput()
 	while next is None:
-		if Core.yesno(f"Would you like to return to the main menu?",delay=None,color="k"):
+		if Core.yesno(f"Would you like to return to the main menu?",delay=0,color="k"):
 			next = "restart"
-		elif Core.yesno("Would you like to quit?",delay=None,color="k"):
+		elif Core.yesno("Would you like to quit?",delay=0,color="k"):
 			next = "quit"
 		else:
-			Core.Print("You must choose! Don't be a sore loser.",delay=None,color="k")
+			Core.Print("You must choose! Don't be a sore loser.",delay=0,color="k")
 	if next == "restart":
 		Core.game.quit = 0
 		mainMenu()
@@ -528,7 +528,7 @@ def restart():
 
 def quit():
 	if Core.game.mode != 1:
-		Core.waitKbInput("Goodbye.",delay=None,color="k")
+		Core.waitKbInput("Goodbye.",delay=0,color="k")
 		Core.game.quit = 1
 	return False
 

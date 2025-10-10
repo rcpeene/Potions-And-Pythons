@@ -13,6 +13,7 @@ from math import floor, sqrt
 from bisect import insort
 from collections.abc import Iterable
 import sys, os, re
+from turtle import delay
 
 try:
 	import msvcrt
@@ -133,7 +134,14 @@ def displayLength(text):
 	return l
 
 
-def Print(*args,end="\n",sep="",delay=0.002,color=None,allowSilent=True):
+def Print(*args,end="\n",sep="",delay=None,color=None,allowSilent=True):
+	if delay is None:
+		if player.hasCondition("swiftness"):
+			delay = 0
+		elif player.hasCondition("slowness"):
+			delay = 0.02
+		else:
+			delay = 0.002
 	if game.silent and allowSilent:
 		return
 	if len(args) > 1 and sep=="":
@@ -151,7 +159,7 @@ def Print(*args,end="\n",sep="",delay=0.002,color=None,allowSilent=True):
 	sleep(delay)
 	for arg in args:
 		for char in str(arg):
-			if kbInput():
+			if kbInput() and not player.hasCondition("slowness"):
 				delay = 0
 			sys.stdout.write(char)
 			sys.stdout.flush()
@@ -166,7 +174,7 @@ def Print(*args,end="\n",sep="",delay=0.002,color=None,allowSilent=True):
 
 
 # waits for any keyboard input
-def waitKbInput(text=None,delay=0.005,color=None):
+def waitKbInput(text=None,delay=None,color=None):
 	sys.stdout.flush
 	if text is not None:
 		Print(text,delay=delay,color=color,allowSilent=False)
@@ -189,7 +197,7 @@ def waitKbInput(text=None,delay=0.005,color=None):
 			termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
 
 
-def Input(text="",cue="\n> ",low=True,delay=0.005,color=None):
+def Input(text="",cue="\n> ",low=True,delay=None,color=None):
 	sys.stdout.flush()
 	# should never be silent when asking for input
 	Print(text,end="",delay=delay,color=color,allowSilent=False)
@@ -200,7 +208,21 @@ def Input(text="",cue="\n> ",low=True,delay=0.005,color=None):
 	return ret
 
 
-def InputLoop(prompt,cue="> ",acceptKey=None,escapeKey=None,refuseMsg="",helpMsg="Type 'cancel' to undo.",color=None,delay=0.005):
+def InputLock(text="", cue="\n> ", low=True, delay=None, color=None):
+	nlines = cue.count("\n")+1
+	Print(text,end="",delay=delay,color=color,allowSilent=False)
+	while True:
+		sys.stdout.flush()
+		ret = input(cue)
+		if ret.strip():  # if input is not empty
+			if low:
+				ret = ret.lower()
+			return ret
+		else:
+			movePrintCursor(nlines)
+
+
+def InputLoop(prompt,cue="> ",acceptKey=None,escapeKey=None,refuseMsg="",helpMsg="Type 'cancel' to undo.",color=None,delay=None):
 	if acceptKey is None:
 		acceptKey = lambda inp: inp
 	if escapeKey is None:
@@ -225,7 +247,7 @@ def InputLoop(prompt,cue="> ",acceptKey=None,escapeKey=None,refuseMsg="",helpMsg
 
 
 # prints a question, gets a yes or no, returns True or False respectively
-def yesno(question,delay=0.005,color=None):
+def yesno(question,delay=None,color=None):
 	def acceptKey(inp):
 		if inp in Data.yesses:
 			return True
@@ -2014,7 +2036,7 @@ class Item():
 
 	def Use(self,user):
 		if user not in self.ancestors():
-			Print(f"{+self} is not in your inventory.")
+			Print(f"{+self} is not in your Inventory.")
 			return False
 		Print(f"You use {-self}")
 
@@ -2679,7 +2701,10 @@ class Creature():
 	def addCondition(self,name,dur,stackable=False,silent=False):
 		if self.hasCondition(name) and not stackable:
 			return False
-		if not self.hasCondition(name) and not silent:
+		# some conditions alter output itself, we want to add before printing
+		hadCondition = self.hasCondition(name)
+		insort(self.status,[name,dur])
+		if not hadCondition and not silent:
 			color = "w"
 			if name in Data.buffs | Data.blessings: color = "g"
 			if name in Data.debuffs | Data.curses: color = "r"
@@ -2691,7 +2716,6 @@ class Creature():
 				Print(self+f"fall {name}.")
 			else:
 				Print(self+f"are {name}.",color=color)
-		insort(self.status,[name,dur])
 		return True
 
 	
@@ -2715,7 +2739,6 @@ class Creature():
 			self.awaken(wellRested=wellRested)
 
 		return anyRemoved
-
 
 
 	def nullDespawn(self):
@@ -3189,8 +3212,7 @@ class Creature():
 			self.riding.rider = None
 			self.riding = None
 		if isinstance(self.carrier,Item):
-			if not silent:
-				self.Print(f"You get off {-self.carrier}.")
+			self.Print(f"You get off {-self.carrier}.")
 			self.carrier.Disoccupy()
 			self.carrier = None
 
@@ -3261,7 +3283,7 @@ class Creature():
 
 
 	def WIS(self):
-		modifiers = [("lucidity",10), ("instanity",-10), ("fatigued",-3)]
+		modifiers = [("lucidity",10), ("insanity",-10), ("fatigued",-3)]
 		return self.conditionalMod(self.wis, modifiers, min=1)
 
 
@@ -3535,7 +3557,7 @@ class Creature():
 
 	# This is used as a shortcut to show output only to the user
 	# It should do nothing for any other creature
-	def Print(self,*args,end="\n",sep="",delay=0.002,color=None,allowSilent=True):
+	def Print(self,*args,end="\n",sep="",delay=None,color=None,allowSilent=True):
 		if self is player.riding:
 			return Print(*args,end=end,sep=sep,delay=delay,color=color,allowSilent=allowSilent)
 		return
@@ -3543,7 +3565,7 @@ class Creature():
 
 	# This is used as a shortcut to show output only to the user
 	# It should do nothing for any other creature
-	def waitKbInput(self,text=None,delay=0.005,color=None):
+	def waitKbInput(self,text=None,delay=None,color=None):
 		return
 
 
@@ -3906,11 +3928,11 @@ class Player(Creature):
 	### User Output ###
 
 	# This method does nothing for non-player creatures
-	def Print(self,*args,end="\n",sep="",delay=0.002,color=None,allowSilent=True):
+	def Print(self,*args,end="\n",sep="",delay=None,color=None,allowSilent=True):
 		return Print(*args,end=end,sep=sep,delay=delay,color=color,allowSilent=allowSilent)
 
 
-	def waitKbInput(self,text=None,delay=0.005,color=None):
+	def waitKbInput(self,text=None,delay=None,color=None):
 		return waitKbInput(text=text,delay=delay,color=color)
 
 
