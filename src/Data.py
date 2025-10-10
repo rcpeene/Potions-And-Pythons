@@ -32,14 +32,14 @@ elementaldmg = "acfltx"
 magicaldmg = "inrv"
 
 colors = {
-    "red": "r",
-    "orange": "o",
-    "yellow": "y",
-    "green": "g",
-    "blue": "b",
-    "magenta": "m",
-    "grey": "k",
-    "white": "w"
+	"red": "r",
+	"orange": "o",
+	"yellow": "y",
+	"green": "g",
+	"blue": "b",
+	"magenta": "m",
+	"grey": "k",
+	"white": "w"
 }
 
 emoticons = {":)",":d",":(",";)",":o",":p"}
@@ -93,17 +93,17 @@ debuffs = {"dead","hindered"}
 
 
 conditionDmg = {
-    "burning":(50,"f"),
-    "drowning":(50,"n"),
-    "bleeding":(25,"n"),
-    "frozen":(15,"f"),
-    "poisoned":(5,"x"),
-    "starving":(1,"h"),
+	"burning":(50,"f"),
+	"drowning":(50,"n"),
+	"bleeding":(25,"n"),
+	"frozen":(15,"f"),
+	"poisoned":(5,"x"),
+	"starving":(1,"h"),
 }
 
 spawnpools = {
-    "Woodlands": (("green python",1), ("goblin",1)),
-    "Plains": (("red python",1), ("horse",1))
+	"Woodlands": (("green python",1), ("goblin",1)),
+	"Plains": (("red python",1), ("horse",1))
 }
 
 # the following are tuples because their order should be preserved for printing
@@ -126,35 +126,35 @@ scents = {}
 
 
 tastes = {
-    "earth": "It has a sharp taste of ancient musty dirt.",
-    "soil": "It has a deep and full fresh earthy taste.",
-    "mud": "It is wet and pungent, tasting mildly of dirt.",
-    "stone": "It has a dull taste of chalk and lime.",
-    "wood": "It doesn't taste like much.",
-    "brick": "It tastes like dry clay.",
-    "glass": "It has little taste.",
-    "bronze": "It has a light metallic taste.",
-    "iron": "It tastes like iron.",
-    "rust": "It tastes like dirty iron.",
-    "steel": "It has a sharp metallic taste.",
-    "bread": "It tastes like dreams and joy"
+	"earth": "It has a sharp taste of ancient musty dirt.",
+	"soil": "It has a deep and full fresh earthy taste.",
+	"mud": "It is wet and pungent, tasting mildly of dirt.",
+	"stone": "It has a dull taste of chalk and lime.",
+	"wood": "It doesn't taste like much.",
+	"brick": "It tastes like dry clay.",
+	"glass": "It has little taste.",
+	"bronze": "It has a light metallic taste.",
+	"iron": "It tastes like iron.",
+	"rust": "It tastes like dirty iron.",
+	"steel": "It has a sharp metallic taste.",
+	"bread": "It tastes like dreams and joy"
 }
 
 
 textures = {
-    "earth": "It feels dry and crumbly.",
-    "soil": "It feels loamy and moist.",
-    "mud": "It feels wet and sticky.",
-    "stone": "It feels slighty rough and very solid.",
-    "wood": "It feels like a hard sturdy wood.",
-    "brick": "It feels flat and gritty.",
-    "glass": "It is very smooth.",
-    "bronze": "It feels slick and clean.",
-    "iron": "It feels smooth and sturdy.",
-    "rust": "It feels rough.",
-    "steel": "It feels smooth and sturdy.",
-    "bread": "It is soft and fluffly.",
-    "python": "It feels smooth and scaly. Ew."
+	"earth": "It feels dry and crumbly.",
+	"soil": "It feels loamy and moist.",
+	"mud": "It feels wet and sticky.",
+	"stone": "It feels slighty rough and very solid.",
+	"wood": "It feels like a hard sturdy wood.",
+	"brick": "It feels flat and gritty.",
+	"glass": "It is very smooth.",
+	"bronze": "It feels slick and clean.",
+	"iron": "It feels smooth and sturdy.",
+	"rust": "It feels rough.",
+	"steel": "It feels smooth and sturdy.",
+	"bread": "It is soft and fluffy.",
+	"python": "It feels smooth and scaly. Ew."
 }
 
 
