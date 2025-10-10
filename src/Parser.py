@@ -246,11 +246,7 @@ def replacePronoun(term):
 # takes and validates user input
 def takeCmd(prompt,storeRawCmd=False):
 	Core.flushInput()
-	rawcommand = Core.Input(prompt,low=False)
-	# take input until input has any non-whitespace characters in it
-	while not any(i not in "\t " for i in rawcommand):
-		Core.flushInput()
-		rawcommand = Core.Input("",cue="> ",low=False)
+	rawcommand = Core.InputLock(prompt,low=False)
 	# for convenience, save raw command in game object
 	if storeRawCmd:
 		Core.game.lastRawCommand = rawcommand.split()
@@ -669,7 +665,7 @@ def Dance(*args):
 
 def Examples(*args):
 	Core.clearScreen()
-	Core.Print(Data.examples,color="k")
+	Core.Print(Data.examples,color="k",delay=0.001)
 	Core.waitKbInput()
 	Core.clearScreen()
 
@@ -694,9 +690,9 @@ def Commands(*args):
 	Core.clearScreen()
 	Core.Print("Short Commands (May only be one word)",color="k")
 	shortcommands = sorted(tuple(key for key in shortactions.keys() if key not in Data.emoticons) + Data.traits + Data.abilities)
-	Core.columnPrint(shortcommands,12,10,delay=0,color="k")
+	Core.columnPrint(shortcommands,12,10,color="k")
 	Core.Print("\nVerb Commands (Does not include cheat codes and secret commands)",color="k")
-	Core.columnPrint(actions.keys(),12,10,delay=0,color="k")
+	Core.columnPrint(actions.keys(),12,10,color="k")
 	Core.Print("\nDuring the game, type 'info' for information on the game and how to play.",color="k")
 	Core.waitKbInput()
 	Core.clearScreen()
@@ -704,7 +700,7 @@ def Commands(*args):
 
 def Info(*args):
 	Core.clearScreen()
-	Core.Print(Data.gameinfo,color="k")
+	Core.Print(Data.gameinfo,color="k",delay=0.001)
 	Core.waitKbInput()
 	Core.clearScreen()
 

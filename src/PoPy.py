@@ -89,7 +89,7 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-
+# \zap dragon -> The dragon is dead. The dragon is laying. The dragon died.
 
 ################################################################################
 
@@ -221,6 +221,19 @@ if __name__ == "__main__":
 # add a wait command (cant wait with enemies nearby, cuz they could just kill you)
 # more switches, levers, buttons
 # add douse function
+
+# add output effects to blessings and curses?
+# slowness/swiftness already affects output speed
+# perhaps brawniness makes text bold? weakness makes all lowercase?
+# insanity -> make random words random colors? random prints like "You see a demon" Or weird whispering messages
+# stupidity -> make text use dumb vocabulary? (would be difficult) (maybe remove any >6 word, replace with stuff and things)
+# stupidity -> remove ability to see stats, remove glossary
+# clumsiness -> trip randomly? jumping likely to fail, likely to drop stuff out of inventory, likely to fail crafting
+# calamity -> ricochet always hits you
+# apathy might make all text white or light gray, perhaps you can't gain xp? make sensory information gone (taste, smell touch), makes sleeping much longer
+# timidity make it not possible to meet new people?, don't do quest or colloquy
+# illness, perhaps make it so that the player has random coughing fits or sneezes, heal half the rate?
+
 
 # add spells
 # add some preliminary spells and add effects file
