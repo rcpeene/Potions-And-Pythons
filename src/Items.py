@@ -84,6 +84,7 @@ class Box(Core.Portal):
 		return jsonDict
 
 
+
 	### Operation ###
 
 	def addCondition(self,name,dur,stackable=False):
@@ -550,7 +551,7 @@ class Shard(Core.Item):
 		# TODO: do something here?
 		Core.Print("[you cut something?]")
 
-	
+
 	def Lick(self,licker):
 		if self.composition in ("glass","bronze","iron","steel"):
 			Core.Print("It tastes like... blood.")
@@ -824,7 +825,7 @@ class Window(Core.Passage):
 				self.Transfer(missile.asItem())
 			return True
 		return False
-	
+
 
 	def Look(self,looker):
 		if self.view:

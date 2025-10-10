@@ -61,7 +61,7 @@ def chooseObject(name,objects,verb=None):
 			labels.append("Inventory")
 		elif object.determiner:
 			labels.append(object.determiner)
-		
+
 		strLabel = ""
 		if len(labels) >= 1:
 			for label in labels[:-1]:
@@ -69,7 +69,7 @@ def chooseObject(name,objects,verb=None):
 			strLabel = " (" + strLabel + labels[-1] + ")"
 
 		Core.Print(f"{n+1}. {object}{strLabel}",color="k")
-	
+
 	def acceptKey(inp):
 		try:
 			return objects[int(inp)-1]
@@ -256,7 +256,7 @@ def takeCmd(prompt,storeRawCmd=False):
 		Core.game.lastRawCommand = rawcommand.split()
 	return rawcommand
 
-	
+
 # processes it into a command form usable by parse(),
 # namely, it returns a list of words without capitals, symbols, or articles
 # nounify() joins words that may only be meaningful as one term
@@ -431,7 +431,7 @@ def Get(command):
 	if obj is None:
 		Core.Print("Error: Object not found",color="k")
 		return
-	
+
 	if len(command) < 3:
 		Core.Print(obj,color="k")
 	else:
@@ -463,10 +463,10 @@ def Learn(command):
 	if len(command) < 2:
 		Core.Print("Error: No xp value given",color="k")
 		return
-	try:
-		Core.player.gainxp(int(command[1]))
-	except:
-		Core.Print(f"Error: Value not number {command[1]}",color="k")
+	# try:
+	Core.player.gainxp(int(command[1]))
+	# except:
+	# 	Core.Print(f"Error: Value not number {command[1]}",color="k")
 
 
 def Lob(command):
@@ -485,7 +485,7 @@ def Lob(command):
 	if missile is None:
 		Core.Print("Error: Object not found",color="k")
 		return
-	
+
 	if path in Data.directions:
 		path = Data.directions[path]
 	for dir, room in Core.game.currentroom.links.items():
@@ -498,7 +498,7 @@ def Lob(command):
 	if target is None:
 		Core.Print("Error: target not found",color="k")
 		return False
-	
+
 	if getattr(missile,"carrier",None):
 		missile.carrier.removeCarry(missile)
 	if getattr(missile,"rider",None):
@@ -644,7 +644,7 @@ def Zap(command):
 	objname = " ".join(command[1:])
 	key = lambda obj: Core.nameMatch(objname, obj)
 	matches = Core.game.queryRooms(key=key)
-	Core.Print(f"Zapped objects: {len(matches)}",color="k")
+	# Core.Print(f"Zapped objects: {len(matches)}",color="k")
 	for obj in matches:
 		if isinstance(obj,Core.Item):
 			obj.Break()
@@ -858,7 +858,7 @@ def Caress(dobj,iobj,prep):
 		return I.Caress(Core.player)
 	if Core.hasMethod(I,"Touch"):
 		return I.Touch(Core.player)
-		
+
 	if I.composition in Data.textures:
 		Core.Print(Data.textures[I.composition])
 	return True
@@ -869,7 +869,7 @@ def Caress(dobj,iobj,prep):
 def CarryCreature(creature):
 	Core.game.setPronouns(creature)
 	carrying = Core.player.carrying
-	
+
 	if carrying:
 		Core.Print(f"You're already carrying {-carrying}.")
 		if carrying is creature:
@@ -1297,7 +1297,7 @@ def Give(dobj,iobj,prep):
 	C = findObject(iobj,"room")
 	if C is None:
 		return False
-	
+
 	Core.game.setPronouns(C)
 	if Core.hasMethod(C,"Give"):
 		return C.Give(I)
@@ -1321,7 +1321,7 @@ def GoVertical(dir,passage=None,dobj=None):
 		passage = findObject("",f"go {dir}","room")
 	if passage is None:
 		return False
-	
+
 	if Core.hasMethod(passage,"Traverse"):
 		return passage.Traverse(Core.player,dir)
 
@@ -1362,7 +1362,7 @@ def parseGoTerms(dobj,iobj,prep):
 			dir = dir2
 		if passage is None:
 			passage = passage2
-	
+
 	# print(dobj,iobj,dir,dest,passage)
 	# assign dir and passage
 	if dir is None and dobj in Data.directions.values(): dir = dobj
@@ -1388,9 +1388,15 @@ def Go(dobj,iobj,prep):
 	if isinstance(Core.player.carrier, Core.Item):
 		Core.Print(f"You can't go anywhere, you are {Core.player.posture()} on {-Core.player.carrier}.")
 		return False
-	for cond in ("sitting","laying"):
+	immobileConds = ("laying","sitting","asleep","frozen","paralyzed","unconscious","stunned","dead","restrained")
+	for cond in immobileConds:
 		if Core.player.hasCondition(cond) and Core.player.riding is None:
 			Core.Print(f"You can't go anywhere, you are {cond}.")
+			return False
+		if Core.player.riding is not None and Core.player.riding.hasCondition(cond):
+			spurRec = f" Try to spur {Core.player.riding.pronoun}." if cond in ("laying","sitting") else ""
+			Core.Print(f"You can't go anywhere, you are riding {-Core.player.riding} which is {cond}.{spurRec}")
+			Core.game.setPronouns(Core.player.riding)
 			return False
 
 	preps = ("away","away from","down","through","to","toward","up","in","inside","into","on","onto","out",None)
@@ -1664,9 +1670,6 @@ def Mount(dobj,iobj,prep,M=None,posture=None):
 	# if input was 'get on ground', we should actually dismount
 	if isinstance(M,Core.Room):
 		return Dismount(None,None,None,posture=posture)
-	if Core.player.riding is not None:
-		Core.Print(f"You can't get on {-M}. You're riding {~Core.player.riding}.")
-		return False
 
 	if Core.hasMethod(M,"Ride"):
 		# Core.player.removeCondition("hidden",-3) TODO: readd this?
@@ -1797,7 +1800,7 @@ def Put(dobj,iobj,prep):
 	elif not R.canAdd(I) and I not in R.contents():
 		Core.Print(f"You can't put {-I} {prep} {-R}. There's not enough room.")
 		return False
-	
+
 	idet = "your" if Core.player in I.ancestors() else 'the'
 	rdet = "your" if Core.player in R.ancestors() else 'the'
 	outprep = "on" if isinstance(R,Items.Table) else "in"
@@ -1963,7 +1966,7 @@ def Smell(dobj,iobj,prep):
 
 	if Core.hasMethod(I,"Smell"):
 		return I.Smell(Core.player)
-		
+
 	if isinstance(I,Core.Room):
 		if dobj in ("walls","wall"):
 			composition = I.walls
@@ -1978,6 +1981,27 @@ def Smell(dobj,iobj,prep):
 		Core.Print(Data.scents[composition])
 	if composition in Data.tastes:
 		Core.Print(Data.tastes[composition].replace("taste","smell").replace("tasting","smelling"))
+	return True
+
+
+def Spur(dobj,iobj,prep):
+	if prep not in ("at","on","to","upon",None):
+		return promptHelp("Command not understood.")
+	if dobj is None:
+		dobj = getNoun("What will you spur?")
+		if dobj in Data.cancels: return False
+	M = findObject(dobj,"spur","room")
+	if M is None: return False
+	Core.game.setPronouns(M)
+	if M is not Core.player.riding:
+		Core.Print(f"You are not riding {-M}.")
+		return False
+	if not isinstance(M,Core.Creature):
+		Core.Print(f"You can't spur {-M}.")
+		return False
+	Core.Print(f"You spur {-M}.")
+	if M.isFriendly():
+		M.changePosture("stand")
 	return True
 
 
@@ -2037,7 +2061,7 @@ def TakeAllRecur(objToTake):
 
 	parent = objToTake.parent
 	count = parent.itemNames().count(objToTake.name)
-	
+
 	if parent is Core.game.currentroom: suffix = ""
 	elif Core.player in objToTake.ancestors(): suffix = " from your " + parent.name
 	else: suffix = f" from {-parent}"
@@ -2222,7 +2246,7 @@ def Touch(dobj,iobj,prep):
 
 	if Core.hasMethod(I,"Touch"):
 		return I.Touch(Core.player)
-		
+
 	if I.composition in Data.textures:
 		Core.Print(Data.textures[I.composition])
 	return True
@@ -2398,6 +2422,7 @@ actions = {
 "doff":Doff,
 "don":Don,
 "drink":Drink,
+"drive":Spur,
 "drop":Drop,
 "duck":Crouch,
 "dump":Dump,
@@ -2516,6 +2541,7 @@ actions = {
 "sniff":Smell,
 "snooze":Sleep,
 "speak":Talk,
+"spur":Spur,
 "squat":Crouch,
 "stand":Stand,
 "stand up":Stand,

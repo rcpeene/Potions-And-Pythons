@@ -40,7 +40,7 @@ class worldEncoder(json.JSONEncoder):
 		# print(objToWrite)
 		if objToWrite in visitedobjects:
 			raise Exception(f"{objToWrite} already visited")
-		
+
 		JSONprimitives = {dict,list,str,int,float,bool,None}
 		if type(objToWrite) is set:
 			return {"__class__":"set","setdata":list(objToWrite)}
@@ -114,11 +114,11 @@ def writeWorld(filename,World):
 	except Exception as e:
 		print("Error while serializing object to JSON:")
 		print(f"Error: {e}")
-		
+
 		# Now we try to isolate the problematic sub-object in World
 		print("Attempting to find the problematic sub-object...")
 		find_problematic_subobject(World)
-		
+
 		raise  # Re-raise the exception for further handling
 
 
@@ -132,11 +132,11 @@ def writePlayer(filename,Player):
 	except Exception as e:
 		print("Error while serializing object to JSON:")
 		print(f"Error: {e}")
-		
+
 		# Now we try to isolate the problematic sub-object in World
 		print("Attempting to find the problematic sub-object...")
 		find_problematic_subobject(Player)
-		
+
 		raise  # Re-raise the exception for further handling
 
 
@@ -144,7 +144,7 @@ def writePlayer(filename,Player):
 #########################
 ## READ DATA FUNCTIONS ##
 #########################
-	
+
 
 def objDecoder(jsonDict):
 	# print("==== converting object of type: " + str(type(jsonDict)))
@@ -331,7 +331,7 @@ def loadGame(filename=None):
 
 	os.chdir("../..")
 	Core.buildWorld()
-	
+
 	Core.ellipsis()
 	Core.flushInput()
 
@@ -451,9 +451,9 @@ def testGame():
 
 	dlogDict = readDialogue("Dialogue.json")
 	Core.game = Core.Game(0,Core.world["cave"],Core.world["tunnel"],0,set(),dlogDict,Creatures.factory)
-	
+
 	Core.buildWorld()
-	
+
 	Core.clearScreen()
 	Core.flushInput()
 

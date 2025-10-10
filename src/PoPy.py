@@ -89,18 +89,12 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# prevent gettubg cover if you're being carried
-# if a creatured dies/disappears, remove rider
-# if a carrier dies/disappears, remove carrying
-# only reap creatures at the hour of the serpent (probability based on time since death?)
-# test version of parseGoTerms that simply checks if dobj,iobj,prep are in each column of player.parent.allDirs
-# make sure removeCarry removes restrained,-3
 
-# test case where you're riding a horse and the horse is being carried
-	# or when the horse is in a box
-	# or case when something carries you when you're already riding something
-		# probably either carrier or riding should always be None
-# horse will be laying when it falls off cliff, yet you can still move...
+
+################################################################################
+
+# BUG BACKLOG
+
 
 
 ################################################################################
@@ -144,6 +138,11 @@ if __name__ == "__main__":
 # throw 'grappling hook' which creates a new passage?, throw up a cliff or across a gap
 # consider how attacking with foot, head, mouth, hand, tail works
 
+# add "in" operator to objects
+# reorganize methods, capital or lowercase them based on if creature is subject or object
+# add asserts to most class methods
+# add better comments to methods
+
 # color status conditions green/red in status display
 # account for being restrained when doing stuff
 
@@ -165,14 +164,6 @@ if __name__ == "__main__":
 # add action queue to sort initiative among rooms
 # add in "knockback"?, if you get hit on top of the cliff, have a chance to fall off?
 
-# add "in" operator to objects
-# use both items and fixtures array to contain fixtures. Just use fixtures array to determine which ones not to list and query normally. remove fixtures mention property
-# refactor Switch into just inheriting fixture and controller?
-# add possession? (so you can say 'break goblin's sword', 'take his food')... these could be easily restructured as "break sword from goblin", "take food from him"
-# add asserts to most class methods
-# add better comments to methods
-# skim/update design doc
-
 # if something is on fire (or other condition) when entering a room, say it
 # add room property which is description of directions ("look up", "look east", "look out", etc.)
 # try "boom" effect. It will only effect current room/container (unless container breaks or is open?)
@@ -191,6 +182,11 @@ if __name__ == "__main__":
 # make a list of all possible uses and inputs for each action and systematically test them. Revise the world to accomodate them
 # implement escape/run away
 
+# use both items and fixtures array to contain fixtures. Just use fixtures array to determine which ones not to list and query normally. remove fixtures mention property
+# refactor Switch into just inheriting fixture and controller?
+# add possession? (so you can say 'break goblin's sword', 'take his food')... these could be easily restructured as "break sword from goblin", "take food from him"
+	# 'take goblins sword from him'
+
 # fix/add Creature.isNaked or Player.isNaked
 # add total traversal limit on dlog nodes?
 # add link nodes and effect nodes to dialogue after all
@@ -204,6 +200,8 @@ if __name__ == "__main__":
 	# create system for 'recipes' with this
 
 # behavior
+	# implement creature.Go
+		# make sure they can't go if they're riding something dead or occupying something
 	# add Escape to creature behavior. Make sure that if they escape a container thats in an inventory, to put them in the room??
 	# make fear lowered by taking damage on player's turn, but make love go down if player does something they don't like (like restraining them)
 	# create system for behavior 'regimens'
@@ -233,7 +231,8 @@ if __name__ == "__main__":
 
 # add trading, buying, selling with npcs
 
-# fill out definitions more, change definitions of some things to be more expository and fantastical
+# update design doc
+# fill out glossary more, change definitions of some things to be more expository and fantastical
 # add signal handling: ctrl+s to save, ctrl+q to quit?
 # add a world map/record visited rooms
 # add a window which shows player stats/possible commands/instructions
