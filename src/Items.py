@@ -70,6 +70,9 @@ class Box(Core.Portal):
 		self.ceiling = self.composition
 		self.walls = self.composition
 		self.floor = self.composition
+		self.ceiling = self
+		self.walls = self
+		self.floor = self
 
 
 	### File I/O ###
@@ -151,7 +154,7 @@ class Box(Core.Portal):
 
 	def Bombard(self,missile):
 		assert isinstance(missile,Core.Projectile)
-		if Core.diceRoll(1,100) < Core.bound(missile.aim+self.weight+10,1,99):
+		if Core.diceRoll(1,100) < Core.bound(missile.aim+self.Size()+10,1,99):
 			if not self.open:
 				Core.Print(f"{+self} is closed.")
 				missile.Collide(self)
@@ -268,7 +271,7 @@ class Box(Core.Portal):
 	### Getters ###
 
 	def itemsWeight(self):
-		return sum(i.soloWeight() for i in self.items)
+		return sum(i.weight for i in self.items)
 
 
 	def itemsSize(self):
@@ -655,7 +658,7 @@ class Table(Core.Item):
 
 	### Getters ###
 
-	# the weight of a box is equal to its own weight + weights of its items
+	# the weight of a table is equal to its own weight + weights of its items
 	def Weight(self):
 		w = self.weight
 		for i in self.items:
@@ -664,7 +667,7 @@ class Table(Core.Item):
 
 
 	def itemsWeight(self):
-		return sum(i.soloWeight() for i in self.items)
+		return sum(i.weight for i in self.items)
 
 
 	def itemNames(self):
@@ -691,8 +694,8 @@ class Table(Core.Item):
 
 
 class Wall(Core.Passage):
-	def __init__(self,name,desc,composition,links,descname,difficulty,passprep="onto",**kwargs):
-		Core.Passage.__init__(self,name,desc,composition,links,descname,passprep=passprep,**kwargs)
+	def __init__(self,name,desc,weight,composition,links,descname,difficulty,passprep="onto",**kwargs):
+		Core.Passage.__init__(self,name,desc,weight,composition,links,descname,passprep=passprep,**kwargs)
 		self.difficulty = difficulty
 
 
@@ -748,8 +751,8 @@ class Wall(Core.Passage):
 
 
 class Window(Core.Passage):
-	def __init__(self,name,desc,composition,links,descname,open=False,broken=False,view=None,passprep="through",**kwargs):
-		Core.Passage.__init__(self,name,desc,composition,links,descname,passprep=passprep,**kwargs)
+	def __init__(self,name,desc,weight,composition,links,descname,open=False,broken=False,view=None,passprep="through",**kwargs):
+		Core.Passage.__init__(self,name,desc,weight,composition,links,descname,passprep=passprep,**kwargs)
 		self.descname = descname
 		self.view = view
 		if self.view is not None:
@@ -770,7 +773,7 @@ class Window(Core.Passage):
 		if self.weight > 2 and self.composition == "glass":
 			Core.Print("Shards of glass scatter everywhere.",color="o")
 		while self.weight > 2 and self.composition == "glass":
-			shardWeight = randint(2,4)
+			shardWeight = randint(2,6)
 			self.weight -= shardWeight
 			shard = Shard("glass shard","a sharp shard of glass",shardWeight,-1,"glass",{"shard"})
 			Core.game.currentroom.add(shard)
@@ -817,7 +820,7 @@ class Window(Core.Passage):
 
 	def Bombard(self,missile):
 		assert isinstance(missile,Core.Projectile)
-		if Core.diceRoll(1,100) < Core.bound(missile.aim+self.weight+10,1,99):
+		if Core.diceRoll(1,100) < Core.bound(missile.aim+self.Size+10,1,99):
 			if not self.open:
 				missile.Collide(self)
 			if self.open:

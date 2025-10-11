@@ -17,7 +17,7 @@
 
 menuinstructions = "\nType 'info' for information on how to play.\nType 'new' to start a new game.\nType 'load' to load a save file.\nType 'delete' to delete a save file.\nType 'quit' to quit the game.\n"
 
-gameinfo = "="*70 + "\n\nPotions & Pythons\nv.Alpha\nBy Carter Peene, 2022\n\n" + "-"*70 + "\n\nTo play, type a command of the form:\n[verb] [*noun] [*preposition] [*noun]\nOR\n[verb] [*preposition] [*noun]\n\n* denotes a term that can be omitted when unnecessary.\nArticles, determiners, and most symbols are removed from your input.\n\n" + "-"*70 + "\n\nDuring the game, you may type...\nSee these instructions:\t\t'info' or 'help'\nGet a list of valid commands:\t'commands'\nGet a list of command examples:\t'examples'\nSee your player statistics:\t'stats', 'traits', and 'inv'\nLearn about your location:\t'here'\nLearn about most game terms:\t'define [term]'\nSave the game:\t\t\t'save' and 'quicksave'\nQuit:\t\t\t\t'quit'\n\n" + "="*70
+gameinfo = "="*80 + "\n\n\tPotions & Pythons\n\tv.Alpha\n\tBy Carter Peene, 2022\n\n" + "-"*80 + "\n\n\tTo play, type a command of the form:\n\t[verb] [*noun] [*preposition] [*noun]\n\tOR\n\t[verb] [*preposition] [*noun]\n\n\t* denotes a term that can be omitted when unnecessary.\n\tArticles, determiners, and most symbols are removed from your input.\n\n" + "-"*80 + "\n\n\tDuring the game, you may type...\n\tSee these instructions:\t\t'info' or 'help'\n\tGet a list of valid commands:\t'commands'\n\tGet a list of command examples:\t'examples'\n\tSee your player statistics:\t'stats', 'traits', and 'inv'\n\tLearn about your location:\t'here'\n\tLearn about most game terms:\t'define [term]'\n\tSave the game:\t\t\t'save' and 'quicksave'\n\tQuit:\t\t\t\t'quit'\n\n" + "="*80
 
 examples = "\nValid input examples include:\n- go\n- go north\n- go nw\n- go up the stairs\n- go back\n- go to tunnel\n- look around\n- look at python\n- i will fight the python!\n- hit the python with my sword\n- attack python sword\n- fight it\n- equip a sword\n- unequip sword\n- take red potion\n- take the potion from the chest\n- take all\n- put red potion in the chest\n- put potion chest\n- drop the red potion\n- pour it out\n- close chest\nGet an exhaustive list of commands by typing 'commands'."
 
@@ -92,6 +92,8 @@ curses = {"weakness","slowness","clumsiness","tiredness","illness","timidity","s
 buffs = {"anointed","fleetfooted","flying","invigorated","mending","wildtongued"}
 
 debuffs = {"dead","hindered"}
+
+privateStatus = {"dead","invisible","hidden","hindered"}
 
 colorMap = {
 	"r":"31", "o": "38;5;215", "y":"38;5;227", "g":"32", 
@@ -415,42 +417,42 @@ glossary = {
 #####################
 
 # static final logo after animation
-logo = "\
- ______________________		\n\
-|   __  \   __\   ___  \	\n\
-|  |  \  \  \  \  \  \  \	\n\
-|  POTIONS  &  PYTHONS  |	\n\
-|   ____/ /\  \  \   ___/	\n\
-|  |    \ \_\  \__\  \		\n\
+logo = "\n\t\
+ ______________________		\n\t\
+|   __  \   __\   ___  \	\n\t\
+|  |  \  \  \  \  \  \  \	\n\t\
+|  POTIONS  &  PYTHONS  |	\n\t\
+|   ____/ /\  \  \   ___/	\n\t\
+|  |    \ \_\  \__\  \		\n\t\
 |__|     \_______/ \__\		"
 
 # animation logo which serves as the 'background'
-logoLines = ["",
-" ______________________	",
-"|   __  \   __\   ___  \	",
-"|  |  \  \  \  \  \  \  \	",
-"|  |__/  /   \  \  \__| |	",
-"|   ____/ /\  \  \   ___/	",
-"|  |    \ \_\  \__\  \		",
-"|__|     \_______/ \__\	",
+logoFrame = ["",
+"	 ______________________	",
+"	|   __  \   __\   ___  \	",
+"	|  |  \  \  \  \  \  \  \	",
+"	|  |__/  /   \  \  \__| |	",
+"	|   ____/ /\  \  \   ___/	",
+"	|  |    \ \_\  \__\  \		",
+"	|__|     \_______/ \__\		",
 "","","","","","",""]
 
 # animation logo which serves as the moving 'foreground'
-popyLines = ["",
-" _ POTIONS  &  PYTHONS 	",
-"|  POTIONS  &  PYTHONS \	",
-"|  POTIONS  &  PYTHONS  \	",
-"|  POTIONS  &  PYTHONS  |	",
-"|  POTIONS  &  PYTHONS _/	",
-"|  POTIONS  &  PYTHONS		",
-"|__POTIONS  &  PYTHONS 	",
-"   POTIONS  &  PYTHONS   	",
-"   POTIONS  &  PYTHONS   	",
-"   POTIONS  &  PYTHONS   	",
-"   POTIONS  &  PYTHONS   	",
-"   POTIONS  &  PYTHONS   	",
-"   POTIONS  &  PYTHONS   	",
-"   POTIONS  &  PYTHONS   	"]
+titleMask = ["",
+"	 _ POTIONS  &  PYTHONS 	",
+"	|  POTIONS  &  PYTHONS \	",
+"	|  POTIONS  &  PYTHONS  \	",
+"	|  POTIONS  &  PYTHONS  |	",
+"	|  POTIONS  &  PYTHONS _/	",
+"	|  POTIONS  &  PYTHONS  		",
+"	|__POTIONS  &  PYTHONS  ",
+"	   POTIONS  &  PYTHONS     	",
+"	   POTIONS  &  PYTHONS     	",
+"	   POTIONS  &  PYTHONS   	",
+"	   POTIONS  &  PYTHONS   	",
+"	   POTIONS  &  PYTHONS   	",
+"	   POTIONS  &  PYTHONS   	",
+"	   POTIONS  &  PYTHONS   	"]
 
 
 

@@ -407,12 +407,9 @@ def delete(filename):
 
 # asks for player name and description, starts everything else at initial values
 def createCharacter():
-	name = Core.Input("What is your name?",delay=0,color="k").title()
-	while len(name) == 0:
-		name = Core.Input(delay=0,color="k").title()
-	desc = Core.InputLoop("Describe yourself.",cue="You are ",delay=0,color="k")
-	while len(desc) == 0:
-		desc = Core.Input(cue="\nYou are ",delay=0,color="k")
+	name = Core.InputLock("What is your name?",delay=0,color="k").title()
+	Core.Print("Describe yourself.",end="",delay=0,color="k")
+	desc = Core.InputLock(cue="\nYou are ",delay=0)
 	return Core.Player(name,desc,29,[1]*10,2,2,0,0)
 
 
@@ -482,7 +479,7 @@ def mainMenu():
 		Core.flushInput()
 		print(Data.logo)
 		Core.Print(Data.menuinstructions,end="",delay=0,color="k")
-		g = Core.Input(delay=0).split()
+		g = Core.InputLock(delay=0).split()
 
 		if len(g) == 0:
 			continue
@@ -561,7 +558,7 @@ def moveBubble(logoArray,row,col):
 	# if char is a popped bubble
 	if char == '*':
 		# replace char at current location with the static logo's character
-		logoArray[row][col] = Data.logoLines[row][col]
+		logoArray[row][col] = Data.logoFrame[row][col]
 		poppedBubbles += 1
 	# if char is a bubble
 	elif char in {".","o","O"}:
@@ -571,7 +568,7 @@ def moveBubble(logoArray,row,col):
 				logoArray[row][col] = "*"
 		else:
 			# erase char at current location
-			logoArray[row][col] = Data.logoLines[row][col]
+			logoArray[row][col] = Data.logoFrame[row][col]
 			# generate "drift"; it may move left or right as it also moves up
 			drift = randint(-1,1)
 			# if bubble is blocked above by a wall, it must drift accordingly
@@ -651,8 +648,9 @@ def makeNewBubbles(logoArray,n,rows):
 # joins 2d array of characters into list of strings
 # then joins list of strings into one string with newlines, then prints it
 def printLogoArray(logoArray):
-	Core.clearScreen(delay=0)
-	print("\n".join(["".join(line) for line in logoArray]))
+	Core.movePrintCursor(len(logoArray))
+	for line in logoArray:
+		print("".join(line))
 
 
 # procedurally generated bubble animation, makes, grows, and moves bubbles
@@ -661,7 +659,7 @@ def printLogoArray(logoArray):
 # n is the max number of bubbles produced per frame
 def dynamicBubbleAnimation(t,b,n):
 	# convert logo data into a 2d array so it can be easily operated on
-	logoArray = [[char for char in line] for line in Data.logoLines]
+	logoArray = [[char for char in line] for line in Data.logoFrame]
 	totalBubbles = 0
 	currentBubbles = 0
 	# get a list of row indices of every other row that contains a "_"
@@ -703,7 +701,7 @@ def endIntro():
 # runs the intro logo animation
 # uses data from the bottom of Data.py
 def gameIntro():
-	tempLines = [line for line in Data.logoLines]
+	tempLines = Data.logoFrame.copy()
 	Core.clearScreen(delay=0)
 	# print logo crawling up
 	for line in tempLines:
@@ -718,16 +716,19 @@ def gameIntro():
 
 	# print PoPy text crawling up
 	sleep(0.375)
-	l = len(Data.popyLines)
-	for i in range(l-4):	#stops at the fourth line from the top
+	l = len(Data.logoFrame)
+	for i in range(l-1,4,-1):	# stops at the fourth line from the top
+		tempLines = Data.logoFrame.copy()
+		Core.movePrintCursor(l+1)
 		if Core.kbInput():	return endIntro()
-		tempLines[l-i-1] = Data.popyLines[l-i-1]
-		Core.clearScreen(delay=0)
+		tempLines[i] = Data.titleMask[i]
 		for line in tempLines:
+			# we need to overwrite the lines already printed with whitespace
+			if line == "": line = " "*30
 			print(line)
 		sleep(0.125)
-		tempLines[l-i-1] = Data.logoLines[l-i-1]
-	Core.clearScreen(delay=0)
+	# Core.clearScreen(delay=0)
+	Core.movePrintCursor(l+1)
 	print(Data.logo+"\n"*7)
 	sleep(0.625)
 	endIntro()

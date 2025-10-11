@@ -89,14 +89,21 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# \zap dragon -> The dragon is dead. The dragon is laying. The dragon died.
-# in chooseObject, typing '4.' gave another cue
-# You attack the Cliffside with your hand. doesnt do anything
+# test and go through verbs where specifying a floor,ground,ceiling
+	# "attack here" should attack the ground if no obj specified
+		# should 'here' always redirect to the floor?
+			# it should probably pick floor, then walls, then ceiling
+			# or maybe just give 'here' as aliases for these fixtures
+
+	# specifically check Mount, lick, smell, look
+
+# check the lines enforceTetherLimits in Throw
 
 ################################################################################
 
 # BUG BACKLOG
 
+# 'climb out of here' in a normal room -> you can't climb here
 
 
 ################################################################################
@@ -153,6 +160,10 @@ if __name__ == "__main__":
 
 # add chopping tree
 # add a "tree" item? item which can be climbed but isn't a passage
+# add destroying objects with fire, burning creatures
+# add a "torch" item which can be lit and put out, and lights up a dark room
+# a "campfire" item which can be used to cook food and provide light
+# if something is on fire (or other condition) when entering a room, say it
 
 # try out using a creature as a weapon
 # correctly factor DFNS into takeDamage (it should probably be in takeDamage method itself), but consider different damage source like collision and falling
@@ -166,7 +177,6 @@ if __name__ == "__main__":
 # add action queue to sort initiative among rooms
 # add in "knockback"?, if you get hit on top of the cliff, have a chance to fall off?
 
-# if something is on fire (or other condition) when entering a room, say it
 # add room property which is description of directions ("look up", "look east", "look out", etc.)
 # try "boom" effect. It will only effect current room/container (unless container breaks or is open?)
 # restrict Read to readable objects?
