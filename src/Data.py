@@ -51,6 +51,8 @@ emoticons = {":)",":d",":(",";)",":o",":p"}
 
 articles = {"a","again","an","her","his","i","its","some","that","the","then","their","this","will"}
 
+shortactions = {"cast","here","room","clear"}
+
 cancels = {"cancel","done","end","nevermind","no","nvm","undo"}
 
 yesses = {"absolutely","affirmative","aye","certainly","definitely","indeed","ja","ok","okay","oui","si","sure","surely","y","ya","yaa","yaaa","yaaaa","ye","yea","yeah","yes","yess","yesss","yup"}
@@ -91,6 +93,10 @@ buffs = {"anointed","fleetfooted","flying","invigorated","mending","wildtongued"
 
 debuffs = {"dead","hindered"}
 
+colorMap = {
+	"r":"31", "o": "38;5;215", "y":"38;5;227", "g":"32", 
+	"b":"34", "m":"35", "k":"90", "w":"37"
+}
 
 conditionDmg = {
 	"burning":(50,"f"),

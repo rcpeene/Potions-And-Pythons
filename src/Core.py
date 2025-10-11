@@ -8,7 +8,7 @@
 # 3. Core class definitions	(empty, game, room, item, creature, player, etc.)
 
 from time import sleep
-from random import randint,sample,choice,choices
+from random import choice,choices,randint,sample,shuffle
 from math import floor, sqrt
 from bisect import insort
 from collections.abc import Iterable
@@ -101,13 +101,9 @@ def kbInput():
 
 # color text using ANSI formatting
 def Tinge(*args,color=None):
-	colorMap = {
-		"r":"31", "o": "38;5;215", "y":"38;5;227", "g":"32", 
-		"b":"34", "m":"35", "k":"90", "w":"37"
-	}
-	if color is not None:
+	if len(args) > 0 and color is not None:
 		args = list(args)
-		c = colorMap[color]
+		c = Data.colorMap[color]
 		args[0] = f"\033[{c}m" + args[0]
 		args[-1] = args[-1] + f"\033[37m"
 
@@ -135,13 +131,12 @@ def displayLength(text):
 
 
 def Print(*args,end="\n",sep="",delay=None,color=None,allowSilent=True):
+	if player.hasCondition("insanity"):
+		color = choices(list(Data.colorMap.keys()),[1]*7 + [28])[0]
 	if delay is None:
-		if player.hasCondition("swiftness"):
-			delay = 0
-		elif player.hasCondition("slowness"):
-			delay = 0.02
-		else:
-			delay = 0.002
+		if player.hasCondition("swiftness"): delay = 0
+		elif player.hasCondition("slowness"): delay = 0.02
+		else: delay = 0.002
 	if game.silent and allowSilent:
 		return
 	if len(args) > 1 and sep=="":
@@ -218,8 +213,31 @@ def InputLock(text="", cue="\n> ", low=True, delay=None, color=None):
 			if low:
 				ret = ret.lower()
 			return ret
-		else:
-			movePrintCursor(nlines)
+		movePrintCursor(nlines)
+
+
+# def InputLoopLock(prompt,cue="> ",acceptKey=None,escapeKey=None,refuseMsg="",helpMsg="Type 'cancel' to undo.",color=None,delay=None):
+# 	if acceptKey is None:
+# 		acceptKey = lambda inp: inp
+# 	if escapeKey is None:
+# 		escapeKey = lambda inp: inp in Data.cancels
+# 	invalid_count = 0
+# 	inp = Input(prompt,"\n"+cue,color=color,delay=delay)
+# 	if refuseMsg != "":
+# 		refuseMsg += "\n"
+# 	while True:
+# 		if inp in ("","\n"):
+# 			inp = Input("",cue)
+# 			continue
+# 		if escapeKey(inp):
+# 			return None
+# 		acceptInp = acceptKey(inp) 
+# 		if acceptInp is not None:
+# 			return acceptInp
+# 		invalid_count += 1
+# 		if invalid_count >= 3:
+# 			Print(helpMsg,color="k",delay=delay)
+# 		inp = Input(refuseMsg,cue,color="k",delay=delay)
 
 
 def InputLoop(prompt,cue="> ",acceptKey=None,escapeKey=None,refuseMsg="",helpMsg="Type 'cancel' to undo.",color=None,delay=None):
@@ -1896,8 +1914,8 @@ class Item():
 
 	### Operation ###
 
-	def destroy(self):
-		if self.parent is player.parent:
+	def destroy(self,silent=True):
+		if self.parent is player.parent and not silent:
 			Print(f"{+self} disappears.")
 		if self.occupant:
 			self.occupant.Fall()
@@ -2408,8 +2426,8 @@ class Creature():
 
 	### Operation ###
 
-	def destroy(self):
-		if self.parent is player.parent:
+	def destroy(self,silent=True):
+		if self.parent is player.parent and not silent:
 			Print(f"{+self} disappears.")
 		if self.rider:
 			self.rider.Fall()
@@ -2480,11 +2498,11 @@ class Creature():
 
 
 	def updateLove(self,loveMod):
-		self.RP = bound(loveMod,-100,100)
+		self.love = bound(loveMod,-100,100)
 
 
 	def updateFear(self,fearMod):
-		self.RP = bound(fearMod,-100,100)
+		self.fear = bound(fearMod,-100,100)
 
 
 	def asProjectile(self):
@@ -3704,6 +3722,7 @@ class Player(Creature):
 			if traitval >= 20:
 				warning = f"Your {trait} cannot be raised any higher."
 				continue
+			warning = ""
 			setattr(self,trait,traitval+1)
 			QP -= 1
 		self.levelUpMenu(QP,"You are done leveling up.","")
@@ -4065,8 +4084,10 @@ class Player(Creature):
 
 	# prints player level, money, hp, mp, rp, and status effects
 	def printStats(self, *args):
-		stats = [self.name,f"$ {self.money}",f"LV: {self.level()}",f"RP: {self.rp}/100",f"HP: {self.hp}/{self.MXHP()}",f"MP: {self.mp}/{self.MXMP()}"]
+		stats = [self.name,f"§ {self.money}",f"LV: {self.level()}",f"RP: {self.rp}/100",f"HP: {self.hp}/{self.MXHP()}",f"MP: {self.mp}/{self.MXMP()}"]
 		colors = ["w","g","o","y","r","b"]
+		if self.hasCondition("insanity"):
+			shuffle(colors)
 		stats = [Tinge(stats[i],color=colors[i])[0] for i in range(len(stats))]
 		columnPrint(stats,3)
 
