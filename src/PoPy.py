@@ -9,7 +9,7 @@ import traceback
 
 import Core
 import Menu
-import Parser
+import Intepreter
 
 
 
@@ -47,7 +47,7 @@ def main(testing=False):
 
 			# take user input until player successfully performs an action
 			if not Core.player.hasCondition("asleep"):
-				while not Parser.parse(): continue
+				while not Intepreter.interpret(): continue
 			if Core.game.quit: return Menu.quit()
 
 			# creatures in current room's turn
@@ -90,6 +90,8 @@ if __name__ == "__main__":
 # CURRENT TASKS
 
 # \zap dragon -> The dragon is dead. The dragon is laying. The dragon died.
+# in chooseObject, typing '4.' gave another cue
+# You attack the Cliffside with your hand. doesnt do anything
 
 ################################################################################
 
@@ -229,10 +231,17 @@ if __name__ == "__main__":
 # stupidity -> make text use dumb vocabulary? (would be difficult) (maybe remove any >6 word, replace with stuff and things)
 # stupidity -> remove ability to see stats, remove glossary
 # clumsiness -> trip randomly? jumping likely to fail, likely to drop stuff out of inventory, likely to fail crafting
-# calamity -> ricochet always hits you
+# calamity -> ricochet always hits you, lightning strikes likely
 # apathy might make all text white or light gray, perhaps you can't gain xp? make sensory information gone (taste, smell touch), makes sleeping much longer
 # timidity make it not possible to meet new people?, don't do quest or colloquy
 # illness, perhaps make it so that the player has random coughing fits or sneezes, heal half the rate?
+# blind -> don't get a description of where you are, just a few hints (like "you feel grass under your feet"), 
+	# just hearing creature sounds, 
+	# some stuff like items breaking and taking damage you know
+	# you can't see items in the room, but you can feel them if you search
+	# maybe allow "feel something" and randomly select
+	# during Go, just choose a random direction
+# deaf -> bang doesn't affect you, and you can't talk to creatures
 
 
 # add spells
