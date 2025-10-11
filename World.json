@@ -57,6 +57,7 @@
 				"__class__": "Fixture",
 				"name": "oak tree",
 				"desc": "It is much larger than any trees in the surrounding forest. It's vast height and cold shade feel imposing",
+				"weight": 500,
 				"composition": "wood",
 				"aliases": ["tree","big tree","oak"]
 			}
@@ -110,6 +111,7 @@
 				"__class__": "Passage",
 				"name": "stairway",
 				"desc": "creaky wooden stairway which leads up",
+				"weight": 100,
 				"composition": "wood",
 				"links": {
 					"up": "cabin hallway",
@@ -198,6 +200,7 @@
 				"__class__": "Passage",
 				"name": "stairway",
 				"desc": "wooden stairs which lead up on the right of the hall and down on the left of the hall",
+				"weight": 100,
 				"composition": "wood",
 				"links": {
 					"up": "cabin quarters",
@@ -229,6 +232,7 @@
 				"__class__": "Fixture",
 				"name": "hearth",
 				"desc": "A cold stone hearth embedded in the wall. It is blackened from soot and ash.",
+				"weight": 100,
 				"composition": "stone",
 				"aliases": ["stone hearth","grey stone hearth"]
 			},
@@ -236,6 +240,7 @@
 				"__class__": "Window",
 				"name": "window",
 				"desc": "A brittle, dusty window on the northern wall of this room",
+				"weight": 20,
 				"view": "out",
 				"composition": "glass",
 				"aliases": ["northern window"],
@@ -388,6 +393,7 @@
 				"__class__": "Passage",
 				"name": "stairway",
 				"desc": "an old creaky wooden staircase",
+				"weight": 100,
 				"aliases": ["stairs","staircase","stairway"],
 				"composition": "wood",
 				"mention": true,
@@ -491,6 +497,7 @@
 				"__class__": "Wall",
 				"name": "cliff",
 				"desc": "A mossy grey cliff",
+				"weight": 500,
 				"composition": "earth",
 				"aliases": ["cliffside","pale cliff"],
 				"difficulty": 30,
@@ -517,6 +524,7 @@
 				"__class__": "Wall",
 				"name": "cliff",
 				"desc": "A mossy grey cliff",
+				"weight": 500,
 				"composition": "earth",
 				"aliases": ["cliffside","white cliff"],
 				"difficulty": 30,
@@ -696,6 +704,7 @@
 				"__class__": "Wall",
 				"name": "pit",
 				"desc": "A deep black pit, big enough for a horse. You cannot see the bottom. ",
+				"weight": 500,
 				"composition": null,
 				"links": {
 					"down": "burning shore",

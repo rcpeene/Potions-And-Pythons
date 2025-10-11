@@ -136,7 +136,7 @@ def Print(*args,end="\n",sep="",delay=None,color=None,allowSilent=True):
 	if delay is None:
 		if player.hasCondition("swiftness"): delay = 0
 		elif player.hasCondition("slowness"): delay = 0.02
-		else: delay = 0.002
+		else: delay = 0.001
 	if game.silent and allowSilent:
 		return
 	if len(args) > 1 and sep=="":
@@ -195,49 +195,26 @@ def waitKbInput(text=None,delay=None,color=None):
 def Input(text="",cue="\n> ",low=True,delay=None,color=None):
 	sys.stdout.flush()
 	# should never be silent when asking for input
-	Print(text,end="",delay=delay,color=color,allowSilent=False)
-	flushInput()
-	ret = input(cue)
+	Print(text+cue,end="",delay=delay,color=color,allowSilent=False)
+	ret = input()
 	if low:
 		ret = ret.lower()
 	return ret
 
 
-def InputLock(text="", cue="\n> ", low=True, delay=None, color=None):
+def InputLock(text="",cue="\n> ",acceptKey=None,low=True,delay=None,color=None):
+	if acceptKey is None:
+		acceptKey = lambda inp: inp.strip() # if input is not empty
 	nlines = cue.count("\n")+1
 	Print(text,end="",delay=delay,color=color,allowSilent=False)
 	while True:
 		sys.stdout.flush()
-		ret = input(cue)
-		if ret.strip():  # if input is not empty
-			if low:
-				ret = ret.lower()
-			return ret
+		inp = Input(text="",cue=cue,delay=delay,color=color)
+		if acceptKey(inp):
+			if low: inp = inp.lower()
+			return inp
+		flushInput()
 		movePrintCursor(nlines)
-
-
-# def InputLoopLock(prompt,cue="> ",acceptKey=None,escapeKey=None,refuseMsg="",helpMsg="Type 'cancel' to undo.",color=None,delay=None):
-# 	if acceptKey is None:
-# 		acceptKey = lambda inp: inp
-# 	if escapeKey is None:
-# 		escapeKey = lambda inp: inp in Data.cancels
-# 	invalid_count = 0
-# 	inp = Input(prompt,"\n"+cue,color=color,delay=delay)
-# 	if refuseMsg != "":
-# 		refuseMsg += "\n"
-# 	while True:
-# 		if inp in ("","\n"):
-# 			inp = Input("",cue)
-# 			continue
-# 		if escapeKey(inp):
-# 			return None
-# 		acceptInp = acceptKey(inp) 
-# 		if acceptInp is not None:
-# 			return acceptInp
-# 		invalid_count += 1
-# 		if invalid_count >= 3:
-# 			Print(helpMsg,color="k",delay=delay)
-# 		inp = Input(refuseMsg,cue,color="k",delay=delay)
 
 
 def InputLoop(prompt,cue="> ",acceptKey=None,escapeKey=None,refuseMsg="",helpMsg="Type 'cancel' to undo.",color=None,delay=None):
@@ -246,22 +223,23 @@ def InputLoop(prompt,cue="> ",acceptKey=None,escapeKey=None,refuseMsg="",helpMsg
 	if escapeKey is None:
 		escapeKey = lambda inp: inp in Data.cancels
 	invalid_count = 0
-	inp = Input(prompt,"\n"+cue,color=color,delay=delay)
+	inp = InputLock(prompt,"\n"+cue,color=color,delay=delay)
 	if refuseMsg != "":
 		refuseMsg += "\n"
+	if helpMsg != "":
+		helpMsg += "\n"
 	while True:
-		if inp in ("","\n"):
-			inp = Input("",cue)
-			continue
 		if escapeKey(inp):
 			return None
 		acceptInp = acceptKey(inp) 
 		if acceptInp is not None:
 			return acceptInp
+		Print(refuseMsg,end="",color="k",delay=delay)
 		invalid_count += 1
-		if invalid_count >= 3:
-			Print(helpMsg,color="k",delay=delay)
-		inp = Input(refuseMsg,cue,color="k",delay=delay)
+		if invalid_count == 2:
+			# Print(helpMsg,color="k",delay=delay)
+			refuseMsg = refuseMsg + helpMsg
+		inp = InputLock("",cue,color="k",delay=delay)
 
 
 # prints a question, gets a yes or no, returns True or False respectively
@@ -477,13 +455,15 @@ def bound(n,min,max): return min if n < min else (max if n > max else n)
 # d is the 'degree' of the query; how thorough it is'
 # if d is 3: queries through all objects from the root
 # elif d is 2: queries through all objects which are not locked
+# i.e. objects which are "accessible" to the player
 # elif d is 1: queries through objects which are not locked and not in
-# creature inventories; i.e. objects which are "accessible" to the player
+# creature inventories; i.e. objects which are "available" to the player
 # if d is 0: queries through items which are not "closed" and not in
 # creature inventories; i.e. objects which are "visible" to the player
 
 # this function is a wrapper for objQueryRecur()
-def objQuery(root,key=lambda obj:True,d=0):
+def objQuery(root,key=None,d=0):
+	if key is None: key = lambda obj:True
 	matches = set()
 	if key(root):
 		matches.add(root)
@@ -1101,10 +1081,6 @@ class EmptyGear:
 		return ""
 
 
-	def soloWeight(self):
-		return 0
-
-
 	def Weight(self):
 		return 0
 
@@ -1278,7 +1254,6 @@ class Game():
 
 
 	# returns a set of all objects in the rendered world
-	# does not include the player or anything in player inv
 	def getAllObjects(self):
 		allObjects = []
 		for room in self.renderedRooms():
@@ -1455,12 +1430,25 @@ class Room():
 		self.items = items
 		self.creatures = creatures
 		self.size = size
-		self.ceiling = ceiling
-		self.walls = walls
-		self.floor = floor
 		self.passprep = "at" if passprep is None else passprep
 		self.status = status if status else []
 		self.parent = None
+		
+		self.ceiling = None
+		self.walls = None
+		self.floor = None
+		if ceiling:
+			ceiling = Fixture("ceiling",f"A ceiling of {ceiling}",0,ceiling,aliases={"roof"})
+			fixtures.append(ceiling)
+			self.ceiling = ceiling
+		if walls:
+			walls = Fixture("wall",f"Walls of {walls}",0,walls,aliases={"walls"})
+			fixtures.append(walls)
+			self.walls = walls
+		if floor:
+			floor = Fixture("floor",f"A floor of {floor}",0,floor,aliases={"ground"})
+			fixtures.append(floor)
+			self.floor = floor
 
 
 	### Dunder Methods ###
@@ -1503,6 +1491,16 @@ class Room():
 		for dir, dest in self.links.items():
 			assert isinstance(dest, Room), f"Trying to save room {self.name} with exit to non-Room '{dest}'."
 			jsonDict["links"][dir] = dest.name.lower()
+
+		if self.ceiling:
+			jsonDict["fixtures"].remove(self.ceiling)
+			jsonDict["ceiling"] = self.ceiling.composition
+		if self.walls:
+			jsonDict["fixtures"].remove(self.walls)
+			jsonDict["walls"] = self.walls.composition
+		if self.floor:
+			jsonDict["fixtures"].remove(self.floor)
+			jsonDict["floor"] = self.floor.composition
 		return jsonDict
 
 
@@ -1670,6 +1668,10 @@ class Room():
 
 	### Getters ###
 
+	def Size(self):
+		return self.size
+
+
 	def canAdd(self,I):
 		# TODO: maybe make rooms have a capacity? perhaps 10*size
 		return True
@@ -1722,15 +1724,22 @@ class Room():
 		return sorted(list(creatures), key=lambda x: x.MVMT(), reverse=True)
 
 
+	def ancestors(self):
+		return []
+
+
 	# wrapper for objQuery, sets the degree of the query to 2 by default
 	def query(self,key=None,d=2):
+		# querying player inventory must be explicitly provided
+		if key is None: key = lambda obj: player not in obj.ancestors()
 		matches = objQuery(self,key=key,d=d)
 		return matches
 
 
 	def nameQuery(self,term,d=2):
 		term = term.lower()
-		key = lambda obj: nameMatch(term,obj)
+		# querying player inventory must be explicitly provided
+		key = lambda obj: nameMatch(term,obj) and player not in obj.ancestors()
 		return self.query(key=key,d=d)
 
 
@@ -1890,11 +1899,11 @@ class Item():
 
 
 	def __mul__(self,other):
-		return copulate(self.prep.capitalize(), other)
+		return copulate(self.pronoun.capitalize(), other)
 
 
 	def __truediv__(self,other):
-		return copulate(self.prep.lower(), other)
+		return copulate(self.pronoun.lower(), other)
 
 
 	def __lt__(self,other):
@@ -2006,13 +2015,13 @@ class Item():
 
 		if getattr(self,"open",False):
 			return self.Traverse(occupant)
-		elif self.weight < occupant.weight // 5:
+		elif self.Size() < occupant.Size() // 5:
 			Print(f"{+self} is too small to support {~occupant}.")
-			occupant.Fall(minm(3,self.weight//5))
+			occupant.Fall(minm(3,self.Size()//5))
 			return True
 		self.occupant = occupant
 		occupant.carrier = self
-		if self.durability != -1 and occupant.weight > self.durability*2:
+		if self.durability != -1 and occupant.Weight() > self.durability*2:
 			Print(f"{+self} cannot support the weight of {~occupant}!")
 			self.Break()
 			return True
@@ -2068,7 +2077,7 @@ class Item():
 
 	def Bombard(self,missile):
 		assert isinstance(missile,Projectile)
-		if diceRoll(1,100) < bound(missile.aim+self.weight+10,1,99):
+		if diceRoll(1,100) < bound(missile.aim+self.Size()+10,1,99):
 			return missile.Collide(self)
 		return False
 
@@ -2103,10 +2112,6 @@ class Item():
 	def posture(self):
 		return None
 
-	# this is a meaningful method for Creatures, for Items it is same as Weight
-	def soloWeight(self):
-		return self.weight
-
 
 	def Weight(self):
 		return self.weight
@@ -2115,7 +2120,7 @@ class Item():
 	def Size(self):
 		# under normal conditions, size is equal to weight
 		# I realize this doesn't count for density... whatever
-		return self.soloWeight()
+		return self.weight
 
 
 	# should be empty for items that aren't containers
@@ -2127,13 +2132,16 @@ class Item():
 
 	# wrapper for objQuery, sets the degree of the query to 2 by default
 	def query(self,key=None,d=2):
+		# querying player inventory must be explicitly provided
+		if key is None: key = lambda obj: player not in obj.ancestors()
 		matches = objQuery(self,key=key,d=d)
 		return matches
 
 
 	def nameQuery(self,term,d=2):
 		term = term.lower()
-		key = lambda obj: nameMatch(term,obj)
+		# querying player inventory must be explicitly provided
+		key = lambda obj: nameMatch(term,obj) and player not in obj.ancestors()
 		return self.query(key=key,d=d)
 
 
@@ -2332,11 +2340,11 @@ class Creature():
 
 
 	def __mul__(self,other):
-		return copulate(self.prep.capitalize(), other)
+		return copulate(self.pronoun.capitalize(), other)
 
 
 	def __truediv__(self,other):
-		return copulate(self.prep.lower(), other)
+		return copulate(self.pronoun.lower(), other)
 
 
 	def __eq__(self, other) :
@@ -2512,7 +2520,7 @@ class Creature():
 
 	# check if item can fit in inventory
 	def canObtain(self,I):
-		if isinstance(I,Creature):
+		if isinstance(I,(Creature,Fixture)):
 			return False
 		if I in self.ancestors():
 			return False
@@ -2722,6 +2730,8 @@ class Creature():
 		# some conditions alter output itself, we want to add before printing
 		hadCondition = self.hasCondition(name)
 		insort(self.status,[name,dur])
+		if self is not player and name in Data.privateStatus:
+			return True
 		if not hadCondition and not silent:
 			color = "w"
 			if name in Data.buffs | Data.blessings: color = "g"
@@ -2843,7 +2853,7 @@ class Creature():
 	def death(self):
 		self.timeOfDeath = game.time
 		self.addCondition("dead",-3)
-		self.changePosture("laying")
+		self.changePosture("laying",silent=True)
 		Print(f"{+self} died.",color="o")
 
 		if self.hasCondition("anointed",reqDuration=-3):
@@ -2937,12 +2947,12 @@ class Creature():
 
 		for p in validPostures:
 			if p != posture:
-				self.removeCondition(p)
+				self.removeCondition(p,silent=silent)
 		# standing is the absence of the other conditions
 		if posture != "standing":
-			self.addCondition(posture,-3)
+			self.addCondition(posture,-3,silent=silent)
 		if posture in ("standing","crouching"):
-			self.removeCondition("cozy",-3)
+			self.removeCondition("cozy",-3,silent=silent)
 
 		self.checkHidden()
 		return False
@@ -3360,21 +3370,18 @@ class Creature():
 	def TNKR(self): return 2*self.INT() + self.SKL()
 
 
-	def soloWeight(self):
-		return self.weight + self.CON()
-
 
 	def Weight(self):
 		riderWeight = 0 if self.rider is None else self.rider.Weight()
 		carryWeight = 0 if self.carrying is None else self.carrying.Weight()
-		return self.soloWeight() + riderWeight + carryWeight
+		return self.weight + riderWeight + carryWeight
 
 
 	def Size(self,posture=None):
 		posture = self.posture() if posture is None else posture
 		# under normal conditions, size is equal to weight
 		# I realize this doesn't count for density... whatever
-		size = self.soloWeight()
+		size = self.weight
 		if posture not in ("stand","standing"):
 			size //= 2
 		return size
@@ -3393,13 +3400,16 @@ class Creature():
 
 	# wrapper for objQuery, sets the degree of the query to 2 by default
 	def query(self,key=None,d=2):
+		# querying player inventory must be explicitly provided
+		if key is None: key = lambda obj: player not in obj.ancestors()
 		matches = objQuery(self,key=key,d=d)
 		return matches
 
 
 	def nameQuery(self,term,d=2):
 		term = term.lower()
-		key = lambda obj: nameMatch(term,obj)
+		# querying player inventory must be explicitly provided
+		key = lambda obj: nameMatch(term,obj) and player not in obj.ancestors()
 		return self.query(key=key,d=d)
 
 
@@ -3736,10 +3746,11 @@ class Player(Creature):
 
 	def updateMoney(self,money):
 		self.money += money
+		color = "g" if money > 0 else "w"
 		if money == 0:
-			Print(f"You have $ {self.money}.")
+			Print(f"You have § {self.money}.")
 		else:
-			Print(f"You have $ {self.money}!",color="g")
+			Print(f"You have § {self.money}!",color=color)
 
 
 	def obtainItem(self,I,tookMsg=None,failMsg=None):
@@ -3877,8 +3888,8 @@ class Player(Creature):
 	def Catch(self,missile):
 		assert isinstance(missile,Projectile)
 		self.unequip("left")
-		canCatch = 5*self.ATHL() > missile.weight and self.canObtain(missile)
-		catch = bound(self.ACCU() - missile.speed*missile.weight,1,99)
+		canCatch = 5*self.ATHL() > missile.Weight() and self.canObtain(missile)
+		catch = bound(self.ACCU() - missile.speed*missile.Size(),1,99)
 		if canCatch and diceRoll(1,100) <= catch:
 			missileItem = missile.asItem()
 			Print(f"You catch {-missileItem}!",color="o")
@@ -3926,6 +3937,19 @@ class Player(Creature):
 
 
 	### Getters ###
+
+	# wrapper for objQuery, sets the degree of the query to 2 by default
+	def query(self,key=None,d=2):
+		matches = objQuery(self,key=key,d=d)
+		return matches
+
+
+	def nameQuery(self,term,d=2):
+		term = term.lower()
+		# querying player inventory must be explicitly provided
+		key = lambda obj: nameMatch(term,obj)
+		return self.query(key=key,d=d)
+
 
 	def countCompasses(self):
 		return len([item for item in self.inv if isinstance(item,Compass)])
@@ -3980,7 +4004,7 @@ class Player(Creature):
 	def printLV(self, *args): Print(f"LV: {self.level()}",color="o")
 	def printMP(self, *args): Print(f"MP: {self.mp}/{self.MXMP()}",color="b")
 	def printXP(self, *args): Print(f"XP: {self.xp}",color="o")
-	def printRP(self, *args): Print(f"RP: {self.rp}",color="y")
+	def printRP(self, *args): Print(f"RP: {self.rp}/100",color="y")
 
 
 	def printSpells(self, *args):
@@ -4192,8 +4216,8 @@ class Humanoid(Creature):
 	def Catch(self,missile):
 		assert isinstance(missile,Projectile)
 		self.unequip("left")
-		canCatch = 5*self.ATHL() > missile.weight and self.canObtain(missile)
-		catch = bound(self.ACCU() - missile.speed*missile.weight,1,99)
+		canCatch = 5*self.ATHL() > missile.Weight() and self.canObtain(missile)
+		catch = bound(self.ACCU() - missile.speed*missile.Size(),1,99)
 		if canCatch and diceRoll(1,100) <= catch:
 			missileItem = missile.asItem()
 			Print(f"{+self} catches {-missileItem}!",color="o")
@@ -4683,7 +4707,7 @@ class Portal(Item):
 
 	def Bombard(self,missile):
 		assert isinstance(missile,Projectile)
-		if diceRoll(1,100) < bound(missile.aim+self.weight+10,1,99):
+		if diceRoll(1,100) < bound(missile.aim+self.Size()+10,1,99):
 			if getattr(self,"open",True):
 				Print(f"{+missile} goes {self.passprep} {-self}.")
 				self.Transfer(missile.asItem())
@@ -4748,17 +4772,26 @@ class Portal(Item):
 
 # almost identical to the item class, but fixtures may not be removed from their initial location.
 class Fixture(Item):
-	def __init__(self,name,desc,composition,weight=None,durability=None,mention=False,**kwargs):
-		Item.__init__(self,name,desc,10000,-1,composition,**kwargs)
+	def __init__(self,name,desc,weight,composition,durability=-1,mention=False,**kwargs):
+		Item.__init__(self,name,desc,weight,durability,composition,**kwargs)
 		self.mention = mention
 		self.parent = None
 
 
+	def destroy(self):
+		Print(f"{+self} cannot be destroyed.")
+		return False
+
+
+	def Break(self):
+		Print(f"{+self} cannot be broken.")
+		return False
+
 
 
 class Passage(Portal,Fixture):
-	def __init__(self,name,desc,composition,links,descname,passprep="into",mention=False,**kwargs):
-		Fixture.__init__(self,name,desc,composition,mention=mention,**kwargs)
+	def __init__(self,name,desc,weight,composition,links,descname,passprep="into",mention=False,**kwargs):
+		Fixture.__init__(self,name,desc,weight,composition,mention=mention,**kwargs)
 		self.passprep = passprep
 		self.links = links
 		self.descname = descname
@@ -4874,8 +4907,8 @@ class Projectile(Item):
 			# if hits a creature, take damage according to one of the creature's gear
 			if isinstance(target,Creature):
 				gearItems = [item for item in target.gear.values()]
-				weights = [min1(item.Weight()) for item in gearItems]
-				target = choices(gearItems,weights)[0]
+				sizes = [min1(item.Size()) for item in gearItems]
+				target = choices(gearItems,sizes)[0]
 			if target.durability == -1:
 				selfdmg = self.speed * 3
 			elif target.durability > self.durability:
