@@ -24,13 +24,7 @@ def applyAreaEffect(effect,root,condfunc=lambda x:True):
 def spawnObject(obj,parent=None,silent=False):
 	if parent is None:
 		parent = Core.game.currentroom
-	if type(obj) is str:
-		if obj in Items.factory:
-			obj = Items.factory[obj]()
-		elif obj in Creatures.factory:
-			obj = Creatures.factory[obj]()
-		else:
-			raise Exception(f"object name '{obj}' not in any factory")
+	obj = Core.game.spawn(obj)
 
 	if not parent.canAdd(obj):
 		Core.Print("It failed...")
@@ -43,12 +37,7 @@ def spawnObject(obj,parent=None,silent=False):
 
 
 def destroyObject(obj):
-	if isinstance(obj,Core.Creature):
-		obj.parent.removeCreature(obj)
-	elif isinstance(obj,Core.Fixture):
-		obj.parent.removeFixture(obj)
-	elif isinstance(obj,Core.Item):
-		obj.parent.removeItem(obj)
+	obj.destroy(silent=True)
 	if not Core.game.silent:
 		Core.Print(f"{-obj} was destroyed.")
 

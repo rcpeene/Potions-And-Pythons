@@ -51,7 +51,7 @@ emoticons = {":)",":d",":(",";)",":o",":p"}
 
 articles = {"a","again","an","her","his","i","its","some","that","the","then","their","this","will"}
 
-shortactions = {"cast","here","room","clear"}
+shortactions = {"cast","here","room","clear","cls"}
 
 cancels = {"cancel","done","end","nevermind","no","nvm","undo"}
 
@@ -104,7 +104,7 @@ conditionDmg = {
 	"burning":(50,"f"),
 	"drowning":(50,"n"),
 	"bleeding":(25,"n"),
-	"frozen":(15,"f"),
+	"frozen":(15,"c"),
 	"poisoned":(5,"x"),
 	"starving":(1,"h"),
 }
@@ -417,7 +417,7 @@ glossary = {
 #####################
 
 # static final logo after animation
-logo = "\n\t\
+logo = "                    \n\t\
  ______________________		\n\t\
 |   __  \   __\   ___  \	\n\t\
 |  |  \  \  \  \  \  \  \	\n\t\
@@ -427,32 +427,32 @@ logo = "\n\t\
 |__|     \_______/ \__\		"
 
 # animation logo which serves as the 'background'
-logoFrame = ["",
-"	 ______________________	",
-"	|   __  \   __\   ___  \	",
-"	|  |  \  \  \  \  \  \  \	",
-"	|  |__/  /   \  \  \__| |	",
-"	|   ____/ /\  \  \   ___/	",
-"	|  |    \ \_\  \__\  \		",
-"	|__|     \_______/ \__\		",
+logoFrame = [""*40,
+"	 ______________________     ",
+"	|   __  \   __\   ___  \    ",
+"	|  |  \  \  \  \  \  \  \   ",
+"	|  |__/  /   \  \  \__| |   ",
+"	|   ____/ /\  \  \   ___/   ",
+"	|  |    \ \_\  \__\  \      ",
+"	|__|     \_______/ \__\     ",
 "","","","","","",""]
 
 # animation logo which serves as the moving 'foreground'
-titleMask = ["",
-"	 _ POTIONS  &  PYTHONS 	",
-"	|  POTIONS  &  PYTHONS \	",
-"	|  POTIONS  &  PYTHONS  \	",
-"	|  POTIONS  &  PYTHONS  |	",
-"	|  POTIONS  &  PYTHONS _/	",
-"	|  POTIONS  &  PYTHONS  		",
-"	|__POTIONS  &  PYTHONS  ",
-"	   POTIONS  &  PYTHONS     	",
-"	   POTIONS  &  PYTHONS     	",
+titleMask = [""*40,
+"	 _ POTIONS  &  PYTHONS      ",
+"	|  POTIONS  &  PYTHONS \    ",
+"	|  POTIONS  &  PYTHONS  \   ",
+"	|  POTIONS  &  PYTHONS  |   ",
+"	|  POTIONS  &  PYTHONS _/   ",
+"	|  POTIONS  &  PYTHONS      ",
+"	|__POTIONS  &  PYTHONS      ",
+"	   POTIONS  &  PYTHONS      ",
+"	   POTIONS  &  PYTHONS      ",
 "	   POTIONS  &  PYTHONS   	",
 "	   POTIONS  &  PYTHONS   	",
 "	   POTIONS  &  PYTHONS   	",
 "	   POTIONS  &  PYTHONS   	",
-"	   POTIONS  &  PYTHONS   	"]
+"	   POTIONS  &  PYTHONS      "]
 
 
 

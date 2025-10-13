@@ -948,33 +948,33 @@ Faraday Shield (Lightning Shied)
 An item set named after all the greek letters (super powerful)
 each one has a magical effect associated with each of the 24 derived stats
 
-Alpha sword			CRIT
-Beta axe				ATCK
-Delta cloak			SLTH
-Gamma bow				ACCU
-Epsilon ring		CSSP
-Zeta wand				CAST
+Alpha sword		CRIT
+Beta axe		ATCK
+Delta cloak		SLTH
+Gamma bow		ACCU
+Epsilon ring	CSSP
+Zeta wand		CAST
 
-Eta flask				MXHP
+Eta flask		MXHP
 Theta gauntlet	TNKR
-Iota key				KNWL
-Kappa horn			DCPT
-Lambda lyre			PRSD
-Mu stone				MXMP
+Iota key		KNWL
+Kappa horn		DCPT
+Lambda lyre		PRSD
+Mu stone		MXMP
 
-Nu dagger				ATSP
-Xi amulet				RITL
-Omicron tome		SPLS
-Pi compass			LOOT
-Rho pack				BRDN
-Sigma tunic			EVSN
+Nu dagger		ATSP
+Xi amulet		RITL
+Omicron tome	SPLS
+Pi compass		LOOT
+Rho pack		BRDN
+Sigma tunic		EVSN
 
-Tau hammer			ATHL
+Tau hammer		ATHL
 Upsilon glaive	ENDR
-Phi helm				RSTN
-Chi torch				INVS
-Psi boots				MVMT
-Omega shield		DFNS
+Phi helm		RSTN
+Chi torch		INVS
+Psi boots		MVMT
+Omega shield	DFNS
 
 
 

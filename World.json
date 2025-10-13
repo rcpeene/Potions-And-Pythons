@@ -702,7 +702,7 @@
 		"fixtures": [
 			{
 				"__class__": "Wall",
-				"name": "pit",
+				"name": "black pit",
 				"desc": "A deep black pit, big enough for a horse. You cannot see the bottom. ",
 				"weight": 500,
 				"composition": null,

@@ -9,7 +9,7 @@ import traceback
 
 import Core
 import Menu
-import Intepreter
+import Interpreter
 
 
 
@@ -46,8 +46,8 @@ def main(testing=False):
 				continue
 
 			# take user input until player successfully performs an action
-			if not Core.player.hasCondition("asleep"):
-				while not Intepreter.interpret(): continue
+			if not Core.player.hasStatus("asleep"):
+				while not Interpreter.interpret(): continue
 			if Core.game.quit: return Menu.quit()
 
 			# creatures in current room's turn
@@ -89,6 +89,7 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
+# add enforceVerbScope to all verbs
 # test and go through verbs where specifying a floor,ground,ceiling
 	# "attack here" should attack the ground if no obj specified
 		# should 'here' always redirect to the floor?
@@ -103,8 +104,13 @@ if __name__ == "__main__":
 
 # BUG BACKLOG
 
+# if calling removeOccupant in a loop of occupants, it might have index problems?
+# sleep on the ground -> you fall
+# sleep here -> You're not on anything.
 # 'climb out of here' in a normal room -> you can't climb here
+# climb in bed -> you stand on the bed
 
+# inside chest: close chest, sit on key, get up -> "you are no longer hidden"
 
 ################################################################################
 
@@ -130,6 +136,7 @@ if __name__ == "__main__":
 # handle bodies of water; what about fall dammage, being weighed down
 # add magic beans or food to pour stuff on
 # "drink from the pond"
+# think about a broken water container or leaking/draining
 
 # refactor drop into a creature method?
 # make sure Touch method is called when player 'takes' an item (unless they use a hook or smth?)
@@ -187,6 +194,14 @@ if __name__ == "__main__":
 	# include hiding ability?
 	# you are hiding (if in one)
 
+# add character creation/customization
+# gender: male (+1 STR), female (+1 CHA), other (+1 LCK)
+# build: slender (+2 SPD), medium (+2 DEX), heavy (+2 CON)
+# age: youth (+3 STM), mature (+3 INT), aged (+3 WIS), elderly (+3 FTH)
+# hair color: black, brown, blonde, red, grey, no hair 
+	# (maybe just cosmetic or maybe affects something minor/dialogue)
+# character always has purple eyes?
+
 # sift through TODOs
 # add basic equipment and clothing items
 # restructure map and revise tests
@@ -205,6 +220,12 @@ if __name__ == "__main__":
 	# for instance, continue conversation if a truesight person speaks to invisible player, or if a goddess spirit gives you blessing
 	# maybe blessings actually would be the course of action of the NPC with which you speak... I guess, find a way to do that
 # add dialect processor to tritepool output?
+
+# fill out glossary more, change definitions of some things to be more expository and fantastical
+# add knowledge/intelligence value for glossary, 
+# player only knows something if the term is in their "knowledge" set or their KNWL fits the requirement
+# perhaps don't allow crafting certain things without it in their glossary?
+# or add items to glossary through trial and error in crafting?
 
 # add in crafting recipes. Probably store this as a JSON?
 # add cooking/brewing/crafting/tinkering
@@ -264,7 +285,6 @@ if __name__ == "__main__":
 # add trading, buying, selling with npcs
 
 # update design doc
-# fill out glossary more, change definitions of some things to be more expository and fantastical
 # add signal handling: ctrl+s to save, ctrl+q to quit?
 # add a world map/record visited rooms
 # add a window which shows player stats/possible commands/instructions
