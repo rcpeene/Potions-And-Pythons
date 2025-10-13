@@ -216,7 +216,7 @@ def readGame(filename,World,dlogDict):
 	time = int(gametext[3][:-1])		# fourth line is time int
 	events = eval(gametext[4][:-1])
 	gfd.close()
-	return Core.Game(mode,World[currentroom],World[prevroom],time,events,dlogDict,Creatures.factory)
+	return Core.Game(mode,World[currentroom],World[prevroom],time,events,dlogDict,Creatures.factory,Items.factory)
 
 
 
@@ -301,7 +301,7 @@ def loadGame(filename=None):
 		Core.Print("Save files: ",delay=0,color="k")
 		saves = os.listdir()
 		Core.columnPrint(saves,10,10,delay=0,color="k")
-		savename = Core.Input("\nWhich save file will you load?",delay=0,color="k")
+		savename = Core.Input("\nWhich save file will you load?",delay=0)
 	else:
 		savename = filename
 
@@ -342,13 +342,12 @@ def loadGame(filename=None):
 
 # deletes all save files in 'save' directory (if the user is very, very sure)
 def deleteAll():
-	Core.clearScreen()
 	if not Core.yesno("Are you sure you want to delete all save files?",delay=0):
 		os.chdir("..")
-		return mainMenu()
+		return
 	if not Core.yesno("Are you very, very sure??",delay=0):
 		os.chdir("..")
-		return mainMenu()
+		return
 	for savename in os.listdir():
 		os.chdir(savename)
 		for filename in os.listdir(): os.remove(filename)
@@ -388,7 +387,7 @@ def delete(filename):
 		Core.Print(f"\nThere is no save file named '{savename}'.\n",delay=0,color="k")
 		os.chdir("..")
 		Core.waitKbInput()
-		return mainMenu()
+		return
 	# ask for confirmation, if no, then return to menu
 	if not Core.yesno("Are you sure you want to delete this save file?",delay=0):
 		os.chdir("..")
@@ -403,11 +402,13 @@ def delete(filename):
 	os.chdir("..")
 	sleep(1)
 	Core.waitKbInput("\nDeleted\n",delay=0,color="k")
+	return
 
 
 # asks for player name and description, starts everything else at initial values
 def createCharacter():
-	name = Core.InputLock("What is your name?",delay=0,color="k").title()
+	Core.Print("What is your name?",end="",delay=0,color="k")
+	name = Core.InputLock(delay=0).title()
 	Core.Print("Describe yourself.",end="",delay=0,color="k")
 	desc = Core.InputLock(cue="\nYou are ",delay=0)
 	return Core.Player(name,desc,29,[1]*10,2,2,0,0)
@@ -415,14 +416,16 @@ def createCharacter():
 
 # starts a new game and returns player, world, and game objects
 def newGame():
+	# initializes the game at the "cave" room
+	dlogDict = readDialogue("Dialogue.json")
+	Core.game = Core.Game(0,Core.defaultRoom,Core.defaultRoom,0,set(),dlogDict,Creatures.factory,Items.factory)
 	# initializes from the character creation screen
 	Core.player = createCharacter()
 	# tries to load a clean new world from initial world file, must be defined after player
 	Core.world = readJSON("World.json",object_hook=worldDecoder)
-	# initializes the game at the "cave" room
-	dlogDict = readDialogue("Dialogue.json")
-	Core.game = Core.Game(0,Core.world["cave"],Core.world["cave"],0,set(),dlogDict,Creatures.factory)
 
+	Core.game.currentroom = Core.world["cave"]
+	Core.game.prevroom = Core.world["cave"]
 	Core.buildWorld()
 
 	# Core.ellipsis()
@@ -431,6 +434,7 @@ def newGame():
 	Core.clearScreen()
 	Core.flushInput()
 
+	Core.player.changeLocation(Core.game.currentroom)
 	# describe the current room
 	Core.game.startUp()
 
@@ -461,10 +465,11 @@ def testGame():
 	Core.game.silent = False
 
 
-def gameInfo():
+def gameInfo(*args): # requires args when called from Interpreter
 	Core.clearScreen()
 	Core.Print(Data.gameinfo,delay=0,color="k")
 	Core.waitKbInput()
+	Core.clearScreen()
 
 
 # main game menu, used to instantiate global variables P, W, and G in Parser.py
@@ -474,12 +479,14 @@ def mainMenu():
 	# handle case when running code from src directory instead of main directory
 	if "src" in os.getcwd(): os.chdir("..")
 
+	menucmds = ("info","new","load","delete","quit","test")
+	acceptKey = lambda inp: inp.startswith(menucmds)
 	while True:
 		Core.clearScreen()
 		Core.flushInput()
 		print(Data.logo)
 		Core.Print(Data.menuinstructions,end="",delay=0,color="k")
-		g = Core.InputLock(delay=0).split()
+		g = Core.InputLock(delay=0,acceptKey=acceptKey).split()
 
 		if len(g) == 0:
 			continue
@@ -564,7 +571,7 @@ def moveBubble(logoArray,row,col):
 	elif char in {".","o","O"}:
 		# if bubble is "O" and trapped, have chance to pop it
 		if bubbleTrapped(logoArray,row,col):
-			if char == "O" and bool(randint(0,1)):
+			if char == "O" and randint(0,2) == 2:
 				logoArray[row][col] = "*"
 		else:
 			# erase char at current location
@@ -668,7 +675,7 @@ def dynamicBubbleAnimation(t,b,n):
 	# run animation until b bubbles have been produced
 	while totalBubbles < b:
 		# if user presses any key, skip animation
-		if Core.kbInput():	return False
+		if Core.kbInput(): break
 		growBubbles(logoArray)
 		newBubbles = makeNewBubbles(logoArray,n,flatrows)
 		sleep(t)
@@ -676,26 +683,20 @@ def dynamicBubbleAnimation(t,b,n):
 		poppedBubbles = moveBubbles(logoArray)
 		totalBubbles += newBubbles
 		currentBubbles += newBubbles - poppedBubbles
+	Core.flushInput()
 	# run animation until no bubbles remain
 	while currentBubbles > 0:
 		# if user presses any key, skip animation
 		if Core.kbInput():	return False
 		growBubbles(logoArray)
-		# add a small delay for the final three bubbles for pizazz
+		# add a small delay for the final bubbles for pizazz
 		if currentBubbles < 3:	sleep(t)
-		if currentBubbles == 1: sleep(t)
+		# if currentBubbles == 1: sleep(t)
 		sleep(t)
 		printLogoArray(logoArray)
 		poppedBubbles = moveBubbles(logoArray)
 		currentBubbles -= poppedBubbles
 	return True
-
-
-# prints the static logo and flushes keyboard input at the end of the intro
-def endIntro():
-	Core.clearScreen(delay=0)
-	print(Data.logo)
-	Core.flushInput()
 
 
 # runs the intro logo animation
@@ -704,31 +705,29 @@ def gameIntro():
 	tempLines = Data.logoFrame.copy()
 	Core.clearScreen(delay=0)
 	# print logo crawling up
-	for line in tempLines:
+	l = len(tempLines)
+	for i in range(l,-1,-1):
+		Core.movePrintCursor(l,clear=True)
 		# if user presses any key, skip animation
-		if Core.kbInput():	return endIntro()
-		print(line)
+		if Core.kbInput():	return
+		print("\n".join(tempLines[i:l]))
 		sleep(0.125)
 
 	# if user skipped bubble animation, skip rest of intro too
-	if not dynamicBubbleAnimation(0.25,10,2):
-		return endIntro()
+	if not dynamicBubbleAnimation(0.2,25,2):
+		return
 
 	# print PoPy text crawling up
-	sleep(0.375)
+	sleep(0.5)
 	l = len(Data.logoFrame)
-	for i in range(l-1,4,-1):	# stops at the fourth line from the top
+	for i in range(l-1,3,-1):	# stops at the fourth line from the top
 		tempLines = Data.logoFrame.copy()
 		Core.movePrintCursor(l+1)
-		if Core.kbInput():	return endIntro()
+		if Core.kbInput():	return
 		tempLines[i] = Data.titleMask[i]
 		for line in tempLines:
 			# we need to overwrite the lines already printed with whitespace
 			if line == "": line = " "*30
 			print(line)
-		sleep(0.125)
-	# Core.clearScreen(delay=0)
-	Core.movePrintCursor(l+1)
-	print(Data.logo+"\n"*7)
-	sleep(0.625)
-	endIntro()
+		sleep(0.15)
+	sleep(0.5)

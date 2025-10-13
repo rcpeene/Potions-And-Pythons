@@ -27,14 +27,14 @@ class Axe(Core.Weapon):
 
 class Bed(Core.Item):
 	def LayOn(self,layer):
-		if layer.carrier is not self and self.Occupy(layer):
+		if layer.platform is not self and self.addOccupant(layer):
 			if layer is Core.player:
 				Core.Print(f"You get in {-self}.")
 			else:
 				Core.Print(f"{+layer} lies down on {-self}.")
-		if layer.carrier is self:
+		if layer.platform is self:
 			layer.changePosture("lay")
-			layer.addCondition("cozy",-3)
+			layer.addStatus("cozy",-3)
 			return True
 		return False
 
@@ -54,7 +54,7 @@ class Bottle(Core.Item):
 			shardWeight = randint(2,4)
 			self.weight -= shardWeight
 			shard = Shard("glass shard","a sharp shard of glass",shardWeight,-1,"glass",{"shard"})
-			Core.game.currentroom.add(shard)
+			Core.game.currentroom.spawn(shard)
 		return True 
 
 
@@ -78,7 +78,7 @@ class Box(Core.Portal):
 	### File I/O ###
 
 	def convertToJSON(self):
-		jsonDict = self.__dict__.copy()
+		jsonDict = Core.Item.convertToJSON(self)
 		del jsonDict["ceiling"]
 		del jsonDict["walls"]
 		del jsonDict["floor"]
@@ -90,10 +90,10 @@ class Box(Core.Portal):
 
 	### Operation ###
 
-	def addCondition(self,name,dur,stackable=False):
-		if Core.Item.addCondition(self,name,dur,stackable):
+	def addStatus(self,name,dur,stackable=False):
+		if Core.Item.addStatus(self,name,dur,stackable):
 			for item in self.items:
-				item.addCondition(name,dur,stackable)
+				item.addStatus(name,dur,stackable)
 
 
 	# sets open bool to true, prints its items
@@ -105,9 +105,9 @@ class Box(Core.Portal):
 		self.open = True
 		for elem in self.items:
 			if isinstance(elem,Core.Creature):
-				elem.removeCondition("hidden",-3)
-		if self.occupant:
-			return self.occupant.Fall()
+				elem.removeStatus("hidden",-3)
+		for occupant in self.occupants:
+			occupant.Fall()
 		if Core.player not in self.items:
 			self.Look(opener)
 		return True
@@ -119,7 +119,7 @@ class Box(Core.Portal):
 		closer.Print(f"You close {-self}.")
 		for elem in self.items:
 			if isinstance(elem,Core.Creature):
-				elem.addCondition("hidden",-3)
+				elem.addStatus("hidden",-3)
 		return True
 
 
@@ -184,7 +184,7 @@ class Box(Core.Portal):
 			return False
 		self.open = True
 		self.remove(traverser)
-		traverser.removeCondition("hidden",-3)
+		traverser.removeStatus("hidden",-3)
 
 
 	def Traverse(self,traverser,dir=None,verb=None):
@@ -194,8 +194,8 @@ class Box(Core.Portal):
 			else:
 				Core.Print(f"{+traverser} can't enter {-self}. It's within {-traverser}'s Inventory.")
 			return False
-		if self.occupant is traverser:
-			Core.Print(f"{+traverser} is {traverser.posture()} on {-self}.")
+		if traverser in self.occupants:
+			Core.Print(f"You can't, you are {traverser.position()}.")
 			return False
 
 		if dir in ("out","outside","out of"):
@@ -229,8 +229,7 @@ class Box(Core.Portal):
 
 		if not self.open:
 			self.Open(traverser)
-		if traverser is Core.player:
-			Core.Print(f"You {verb} {dir} {-self}.")
+		traverser.Print(f"You {verb} {dir} {-self}.")
 		traverser.changeLocation(self)
 		return True
 
@@ -317,7 +316,7 @@ class Controller(Core.Item):
 	### File I/O ###
 
 	def convertToJSON(self):
-		jsonDict = self.__dict__.copy()
+		jsonDict = super().convertToJSON()
 		for trigger in self.triggers:
 			del jsonDict[trigger]
 		return jsonDict
@@ -718,13 +717,13 @@ class Wall(Core.Passage):
 			Core.Print(f"You can't climb, you are carrying {~traverser.carrying}")
 			return False
 
-		if traverser.hasCondition("clingfast"): verb = "crawl"
-		elif traverser.hasCondition("flying"): verb = "fly"
+		if traverser.hasStatus("clingfast"): verb = "crawl"
+		elif traverser.hasStatus("flying"): verb = "fly"
 		elif traverser is Core.player.riding: verb = "ride"
 		if traverser is Core.player:
 			Core.waitKbInput(f"You {verb} {dir} {-self}.")
 
-		if traverser.ATHL() >= self.difficulty or traverser.hasAnyCondition("clingfast","flying"):
+		if traverser.ATHL() >= self.difficulty or traverser.hasAnyStatus("clingfast","flying"):
 			traverser.changeLocation(self.getNewLocation(dir))
 			return True
 		elif "down" in self.links:
@@ -776,11 +775,10 @@ class Window(Core.Passage):
 			shardWeight = randint(2,6)
 			self.weight -= shardWeight
 			shard = Shard("glass shard","a sharp shard of glass",shardWeight,-1,"glass",{"shard"})
-			Core.game.currentroom.add(shard)
-		if self.occupant:
-			occupant = self.occupant
-			self.Disoccupy()
+			Core.game.currentroom.spawn(shard)
+		for occupant in self.occupants:
 			occupant.Fall(room=self.getNewLocation())
+			self.removeOccupant(occupant)
 		if self.covering:
 			self.covering.removeCover()
 		return True
@@ -811,7 +809,7 @@ class Window(Core.Passage):
 			if traverser is Core.player:
 				Core.Print(f"You can't enter {-self}. There's not enough room.")
 			return False
-		if traverser.hasCondition("flying"): verb = "fly"
+		if traverser.hasStatus("flying"): verb = "fly"
 		elif traverser is Core.player.riding: verb = "ride"
 		Core.Print(f"You {verb} {dir} {-self}.")
 		traverser.changeLocation(newloc)
@@ -856,10 +854,10 @@ class Door(Window):
 
 
 factory = {
-	"blue potion": lambda: Potion("blue potion", "A bubbling blue liquid in a glass bottle",6,3,"glass",None,["potion"]),
-	"bottle": lambda: Bottle("bottle","an empty glass bottle",6,3,"glass"),
-	"coffee": lambda: Potion("bottle of coffee","A bottle of dark brown foamy liquid",6,3,"glass",None,["coffee","espresso","bottle"]),
-	"green potion": lambda: Potion("green potion", "A bubbling green liquid in a glass bottle",6,3,"glass",None,["potion"]),
-	"red potion": lambda: Potion("red potion", "A bubbling red liquid in a glass bottle",6,3,"glass",None,["potion"]),
+	"blue potion": lambda: Potion("blue potion", "A bubbling blue liquid in a glass bottle",6,3,"glass",["bottle","glass","potion"]),
+	"bottle": lambda: Bottle("bottle","an empty glass bottle",6,3,"glass",["glass"]),
+	"coffee": lambda: Potion("bottle of coffee","A bottle of dark brown foamy liquid",6,3,"glass",["coffee","espresso","bottle"]),
+	"green potion": lambda: Potion("green potion", "A bubbling green liquid in a glass bottle",6,3,"glass",["bottle","glass","potion"]),
+	"red potion": lambda: Potion("red potion", "A bubbling red liquid in a glass bottle",6,3,"glass",["bottle","glass","potion"]),
 	"shard": lambda: Shard("glass shard","a black glass shard",2,1,"glass",["shard"])
 }

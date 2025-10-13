@@ -12,8 +12,6 @@ import traceback
 import sys
 import gc
 
-from numpy import char
-
 import Data
 import Core
 import Menu
@@ -42,30 +40,32 @@ def chooseObject(name,objects,verb=None):
 	if len(objects) == 1:
 		return objects[0]
 	Core.Print()
-	for n,object in enumerate(objects):
+	for n,obj in enumerate(objects):
 		labels = []
-		if isinstance(object,Core.Creature):
-			if not object.isAlive():
+		if isinstance(obj,Core.Creature):
+			if not obj.isAlive():
 				labels.append("dead")
 			else:
-				labels.append(f"{object.hp} hp")
-		if hasattr(object,"parent"):
-			if not isinstance(object.parent,(type(None),Core.Room,Core.Player)):
-				labels.append(object.parent.name)
-		if object is Core.player:
+				labels.append(f"{obj.hp} hp")
+		if hasattr(obj,"parent"):
+			if not isinstance(obj.parent,(type(None),Core.Room,Core.Player)):
+				labels.append(obj.parent.name)
+		if obj is Core.player:
 			labels.append("you")
-		elif isinstance(object,Core.Room):
+		elif isinstance(obj,Core.Room):
 			labels.append("here")
-		elif object is Core.player.carrying:
+		elif obj in (obj.parent.ceiling,obj.parent.walls,obj.parent.floor):
+			labels.append(obj.parent.name.lower())
+		elif obj is Core.player.carrying:
 			labels.append("carrying")
-		elif object is Core.player.riding:
+		elif obj is Core.player.riding:
 			labels.append("riding")
-		elif object in Core.player.gear.values():
+		elif obj in Core.player.gear.values():
 			labels.append("equipped")
-		elif object in Core.player.objTree():
+		elif obj in Core.player.objTree():
 			labels.append("Inventory")
-		elif getattr(object,"determiner",None):
-			labels.append(object.determiner)
+		elif getattr(obj,"determiner",None):
+			labels.append(obj.determiner)
 
 		strLabel = ""
 		if len(labels) >= 1:
@@ -73,7 +73,7 @@ def chooseObject(name,objects,verb=None):
 				strLabel += label + ","
 			strLabel = " (" + strLabel + labels[-1] + ")"
 
-		Core.Print(f"{n+1}. {object}{strLabel}",color="k")
+		Core.Print(f"{n+1}. {obj}{strLabel}",color="k")
 
 	def acceptKey(inp):
 		try:
@@ -141,13 +141,13 @@ def findObject(term,verb=None,queryType="both",filter=None,roomD=1,playerD=2,req
 			suffix += " in your Inventory"
 		elif queryType == "room":
 			suffix += " in your surroundings"
-		if roomD <= 1:
-			suffix += " that you can see"
+			if roomD <= 1:
+				suffix += " that you can see"
 		Core.Print(f"There is no '{term}'{suffix}.",color="k")
 	return None
 
 
-def enforceVerbScope(verb,obj,permitParent=True,permitSelf=False):
+def enforceVerbScope(verb,obj,permitParent=True,permitSelf=False,permitAnchor=True,permitOutsideAnchor=True):
 	parent = Core.player.parent
 	if obj not in parent.objTree() and obj is not parent:
 		Core.Print(f"You can't {verb} {-obj}, you're {parent.passprep} {-parent}.")
@@ -158,25 +158,25 @@ def enforceVerbScope(verb,obj,permitParent=True,permitSelf=False):
 	if not permitSelf and obj is Core.player:
 		Core.Print(f"You can't {verb} yourself.")
 		return True
-	if isinstance(obj,Core.Fixture) and Core.nameMatch("ceiling",obj):
-		if Core.player.Size() < Core.player.parent.Size() // 2 and not Core.player.hasCondition("flying"):
-			Core.Print(f"You can't {verb} {-obj}, you're too far from the ceiling.")
+	if not permitAnchor and obj is Core.player.anchor():
+		Core.Print(f"You can't {verb} {-obj}, you're {Core.player.position()}.")
+		return True
+		# if obj is Core.player.rider: # TODO, what if a bird is 'riding' on your shoulder?
+		# 	Core.Print(f"You can't {verb} {-obj}, {obj.pronoun} is on you.")
+		# 	return True
+	if not permitOutsideAnchor:
+		anchor = Core.player.anchor()
+		if anchor in Core.player.parent.surfaces + (None,):
+			anchor = Core.player.parent
+		if obj not in anchor.objTree(includeSelf=True):
+			Core.Print(f"You can't {verb} {-obj}, you're not {obj.parent.passprep} {-obj.parent}.")
 			return True
 
+	if isinstance(obj,Core.Fixture) and Core.nameMatch("ceiling",obj):
+		if Core.player.Size() < Core.player.parent.Size() // 2 and not Core.player.hasStatus("flying"):
+			Core.Print(f"You can't {verb} {-obj}, you're too short.")
+			return True
 
-def enforceTetherLimits(verb,obj):
-	if obj is Core.player.carrier:
-		if isinstance(obj,Core.Creature):
-			Core.Print(f"You can't {verb} {-obj}, you're being carried by {obj.pronoun}.")
-		if isinstance(obj,Core.Item):
-			Core.Print(f"You can't {verb} {-obj}, you're {Core.player.posture()} on {obj.pronoun}.")
-		return True
-	if obj is Core.player.riding:
-		Core.Print(f"You can't {verb} {-obj}, you're riding {obj.pronoun}.")
-		return True
-	# if obj is Core.player.rider: # TODO, what if a bird is 'riding' on your shoulder?
-	# 	Core.Print(f"You can't {verb} {-obj}, {obj.pronoun} is on you.")
-	# 	return True
 
 
 # checks if a noun refers to a room, an object in the world or on the player...
@@ -330,7 +330,7 @@ def dispatchShortCommand(command,verb):
 			return Core.player.parent.describe()
 		if verb == "room":
 			return Core.game.currentroom.describe()
-		if verb == "clear":
+		if verb in ("clear","cls"):
 			return Core.clearScreen()
 		if verb in Data.hellos:
 			return Hello()
@@ -348,7 +348,7 @@ def dispatchShortCommand(command,verb):
 # the primary endpoint of the interpreter module
 # its purpose is to parse and execute user input
 # it is called on infinite loop until it returns True
-# it returns True only when the player successfully takes an action in the game
+# it returns True only when the player performs some action
 def interpret():
 	if not Core.player.isAlive():
 		return True
@@ -448,7 +448,7 @@ def Expell(command):
 		Core.Print("Error: no condition given",color="k")
 		return
 	condname = " ".join(command[1:])
-	Core.player.removeCondition(condname)
+	Core.player.removeStatus(condname)
 
 
 def Fortify(command):
@@ -496,7 +496,7 @@ def Get(command):
 
 
 def Grow(command):
-	val = 28
+	val = 3
 	obj = Core.player
 	if len(command) == 2:
 		objname = " ".join(command[1:])
@@ -508,8 +508,11 @@ def Grow(command):
 	if obj is None:
 		Core.Print("Error: Object not found",color="k")
 		return
+	if obj.weight * val > obj.parent.Size():
+		Core.Print(f"{-obj} can't get any bigger.",color="k")
+		return
 	Core.Print(f"Growing {-obj}.",color="k")
-	obj.weight = Core.min1(obj.weight + val)
+	obj.weight = Core.min1(obj.weight * val)
 
 
 def Honor(command):
@@ -555,7 +558,7 @@ def Imbue(command):
 		Core.Print("Error: Duration not number",color="k")
 		return
 
-	obj.addCondition(condname,duration)
+	obj.addStatus(condname,duration)
 
 
 def Learn(command):
@@ -602,6 +605,8 @@ def Lob(command):
 		missile.carrier.removeCarry(missile)
 	if getattr(missile,"rider",None):
 		missile.rider.removeRiding(missile)
+	if getattr(missile,"platform",None):
+		missile.platform.Disoccupy(missile)
 	missile = missile.asProjectile()
 	Core.Print(f"{+missile} is launched {prep} {-target}.",color="k")
 	missile.Launch(50,100,None,target)
@@ -673,7 +678,7 @@ def Set(command):
 
 
 def Shrink(command):
-	val = 28
+	val = 3
 	obj = Core.player
 	if len(command) == 2:
 		objname = " ".join(command[1:])
@@ -681,12 +686,19 @@ def Shrink(command):
 	elif len(command) > 2:
 		objname = " ".join(command[1:-1])
 		obj = findObject(objname,"shrink",playerD=3,roomD=3)
-		val = int(command[-1])
+		try:
+			val = int(command[-1])
+		except:
+			Core.Print("Value not number",color="k")
+			return
 	if obj is None:
 		Core.Print("Error: Object not found",color="k")
 		return
+	if obj.weight <= 1:
+		Core.Print(f"{-obj} can't get any smaller.",color="k")
+		return
 	Core.Print(f"Shrinking {-obj}.",color="k")
-	obj.weight = Core.min1(obj.weight - val)
+	obj.weight = Core.min1(obj.weight // val)
 
 
 def Spawn(command):
@@ -744,8 +756,8 @@ def Zap(command):
 		return
 	objname = " ".join(command[1:])
 	if objname == "all":
-		matches = Core.player.surroundings().query(d=3)
-		matches.remove(Core.player)
+		key = lambda x: not (isinstance(x,(Core.Player,Core.Fixture)) or Core.player in x.ancestors())
+		matches = Core.player.surroundings().query(key=key,d=3)
 	elif objname in ("me","myself","player","self"):
 		matches = [Core.player]
 	else:
@@ -770,13 +782,13 @@ def Cry(*args): Core.Print("A single tear sheds from your eye.")
 
 
 def Dance(*args):
-	Core.player.removeCondition("hidden",-3)
+	Core.player.removeStatus("hidden",-3)
 	Core.Print("You bust down a boogie.",color="m")
 
 
 def Examples(*args):
 	Core.clearScreen()
-	Core.Print(Data.examples,color="k",delay=0.001)
+	Core.Print(Data.examples,color="k",delay=0.0001)
 	Core.waitKbInput()
 	Core.clearScreen()
 
@@ -809,32 +821,25 @@ def Commands(*args):
 	Core.clearScreen()
 
 
-def Info(*args):
-	Core.clearScreen()
-	Core.Print(Data.gameinfo,color="k",delay=0)
-	Core.waitKbInput()
-	Core.clearScreen()
-
-
 def Laugh(*args):
 	Core.Print('"HAHAHAHAHA!"',color="y")
-	Core.player.removeCondition("hidden",-3)
+	Core.player.removeStatus("hidden",-3)
 
 
 def Quit(*args):
-	if Core.yesno("Are you sure you want to quit? (Anything unsaved will be lost)",color="k"):
+	if Core.yesno("Are you sure you want to quit? (Anything unsaved will be lost)",color="k",delay=0):
 		Core.game.quit = True
 		return True
 
 
 def Shout(*args): 
 	Core.Print('"AHHHHHHHHHH"',color="y")
-	Core.player.removeCondition("hidden",-3)
+	Core.player.removeStatus("hidden",-3)
 
 
 def Sing(*args):
 	Core.Print('"Falalalaaaa"',color="y")
-	Core.player.removeCondition("hidden",-3)
+	Core.player.removeStatus("hidden",-3)
 
 
 def Smile(*args):
@@ -903,7 +908,7 @@ def Attack(dobj,iobj,prep,target=None,weapon=None,weapon2=None):
 		if target is None: return False
 	Core.game.setPronouns(target)
 	if enforceVerbScope("attack",target): return False
-	Core.player.removeCondition("hidden",-3)
+	Core.player.removeStatus("hidden",-3)
 
 	stowed = False
 	if isinstance(weapon,(Items.Foot,Items.Mouth)):
@@ -931,6 +936,7 @@ def Bite(dobj,iobj,prep):
 	else:
 		return Attack(dobj,"mouth",prep,target=I)
 
+	# make sure to add tasting it as well here
 	# TODO: if u add the ability to "bite" items, maybe actually damage them...
 	# if their durability is low enough or smth. Maybe append the item's...
 	# description to include "it has a bite taken out of it"
@@ -958,6 +964,7 @@ def Break(dobj,iobj,prep):
 def Caress(dobj,iobj,prep):
 	if prep not in ("using","with",None):
 		return promptHelp("Command not understood.")
+	# TODO: include iobj validation
 
 	I = findObject(dobj,"caress")
 	if I is None: return False
@@ -1041,7 +1048,7 @@ def Climb(dobj,iobj,prep):
 		return False
 	# TODO: handle 'climb out of here' in a normal room
 
-	if isinstance(M,Core.Room):
+	if isinstance(M,Core.Room) or M in M.parent.surfaces:
 		noun = f" the {dobj}" if dobj not in (None,"here") else " here"
 		Core.player.Print(f"You can't climb{noun}.",color="k")
 	elif isinstance(M,Core.Portal):
@@ -1153,7 +1160,7 @@ def Dismount(dobj,iobj,prep,posture=None):
 	if prep not in ("from","of","off","out","out of",None):
 		return promptHelp("Command not understood.")
 
-	if Core.player.riding is None and Core.player.carrier is None:
+	if Core.player.anchor() in (None,Core.player.parent.floor):
 		if Core.player.posture() != "standing":
 			return Stand(None,None,None)
 		return promptHelp(f"You're not on anything.")
@@ -1164,7 +1171,7 @@ def Dismount(dobj,iobj,prep,posture=None):
 		if dobj.startswith("my "):
 			dobj = dobj[3:]
 		matches = Core.player.surroundings().nameQuery(dobj)
-		if Core.player.riding not in matches and Core.player.carrier not in matches:
+		if Core.player.anchor() not in matches:
 			Core.Print(f"You're not on a '{dobj}'",color="k")
 			return False
 
@@ -1425,7 +1432,7 @@ def Give(dobj,iobj,prep):
 # not called by Parse directly
 # called when the user wants to go "up" or "down"
 def GoVertical(dir,passage=None,dobj=None):
-	if Core.player.hasCondition("flying") and not Core.player.riding:
+	if Core.player.hasStatus("flying") and not Core.player.riding:
 		newroom = Core.game.currentroom.allLinks()[dir,passage]
 		Core.Print(f"You fly {dir}!")
 		return Core.player.changeLocation(newroom)
@@ -1443,7 +1450,7 @@ def GoVertical(dir,passage=None,dobj=None):
 
 
 # infers direction, destination, and passage (if they exist) from input terms
-def parseGoTerms(dobj,iobj,prep):
+def parseGo(dobj,iobj,prep):
 	dir,dest,passage = None,None,None
 	parentLinks = Core.player.parent.allLinks(d=0)
 	cancelledAction = False
@@ -1504,10 +1511,10 @@ def Go(dobj,iobj,prep):
 		return False
 	immobileConds = ("laying","sitting","asleep","frozen","paralyzed","unconscious","stunned","dead","restrained")
 	for cond in immobileConds:
-		if Core.player.hasCondition(cond) and Core.player.riding is None:
+		if Core.player.hasStatus(cond) and Core.player.riding is None:
 			Core.Print(f"You can't go anywhere, you are {cond}.")
 			return False
-		if Core.player.riding is not None and Core.player.riding.hasCondition(cond):
+		if Core.player.riding is not None and Core.player.riding.hasStatus(cond):
 			spurRec = f" Try to spur {Core.player.riding.pronoun}." if cond in ("laying","sitting") else ""
 			Core.Print(f"You can't go anywhere, you are riding {-Core.player.riding} which is {cond}.{spurRec}")
 			Core.game.setPronouns(Core.player.riding)
@@ -1530,7 +1537,7 @@ def Go(dobj,iobj,prep):
 
 	locReminder = "" if Core.player.parent is Core.game.currentroom else f" You are in {~Core.player.parent}."
 	# get dir, dest, and passage and validate them
-	dir,dest,passage,cancelledAction = parseGoTerms(dobj,iobj,prep)
+	dir,dest,passage,cancelledAction = parseGo(dobj,iobj,prep)
 	if cancelledAction:
 		return False
 	# print(dir,dest,passage)
@@ -1774,12 +1781,12 @@ def Mount(dobj,iobj,prep,M=None,posture=None):
 	if M is None: return False
 	Core.game.setPronouns(M)
 	if enforceVerbScope("get on",M): return False
-	# if input was 'get on ground', we should actually dismount
-	if isinstance(M,Core.Room):
-		return Dismount(None,None,None,posture=posture)
+	# # if input was 'get on ground', we should actually dismount
+	# if isinstance(M,Core.Room) or M is Core.player.parent.floor:
+	# 	return Dismount(None,None,None,posture=posture)
 
 	if Core.hasMethod(M,"Ride"):
-		# Core.player.removeCondition("hidden",-3) TODO: readd this?
+		# Core.player.removeStatus("hidden",-3) TODO: readd this?
 		if posture is None:
 			posture = "sit"
 
@@ -2038,14 +2045,14 @@ def Sleep(dobj,iobj,prep):
 		return promptHelp("Commmand not understood")
 
 	for condname in Data.conditionDmg.keys():
-		if Core.player.hasCondition(condname):
+		if Core.player.hasStatus(condname):
 			Core.Print(f"This is no time for slumber! You are {condname}.",color="o")
 			return False
 
 	if prep is None: prep = "on"
 	if dobj is None: dobj = iobj
 
-	if not Core.player.hasCondition("laying"):
+	if not Core.player.hasStatus("laying"):
 		I = Core.player.carrier
 		if I is None: I = findObject(dobj,f"sleep {prep}","room")
 		if I is None and not Core.yesno("Would you like to sleep on the ground?"):
@@ -2058,11 +2065,11 @@ def Sleep(dobj,iobj,prep):
 		if not res:
 			return False
 
-	if not Core.player.hasCondition("cozy"):
+	if not Core.player.hasStatus("cozy"):
 		Core.Print("Your sleep will not be very restful...")
 
 	sleeptime = 90 + randint(1,20)
-	Core.player.addCondition("asleep",sleeptime)
+	Core.player.addStatus("asleep",sleeptime)
 	Core.ellipsis()
 	Core.game.silent=True
 	return True
@@ -2222,8 +2229,7 @@ def Take(dobj,iobj,prep):
 	if objToTake is None:
 		return False
 	Core.game.setPronouns(objToTake)
-	if enforceVerbScope("take",objToTake): return False
-	if enforceTetherLimits("take",objToTake): return False
+	if enforceVerbScope("take",objToTake,permitParent=False,permitAnchor=False,permitOutsideAnchor=False): return False
 	if objToTake.parent is Core.player:
 		Core.Print(f"You can't take from your own Inventory.")
 		return False
@@ -2237,16 +2243,8 @@ def Take(dobj,iobj,prep):
 	# if it is in a non-player inventory, it will have to be stolen
 	if any(isinstance(anc,Core.Creature) for anc in objToTake.ancestors()) and objToTake not in Core.player.objTree():
 		return Steal(dobj,iobj,prep,I=objToTake)
-	count = parent.itemNames().count(objToTake.name)
 
-	if parent is Core.game.currentroom: suffix = ""
-	elif Core.player in objToTake.ancestors(): suffix = " from your " + parent.name
-	else: suffix = f" from {-parent}"
-	strname = objToTake.nounPhrase('the' if count==1 else 'a')
-	tookMsg = f"You take {strname}{suffix}."
-	failMsg = f"You can't take {-objToTake}, your Inventory is too full."
-
-	return Core.player.obtainItem(objToTake,tookMsg,failMsg)
+	return Core.player.obtainItem(objToTake)
 
 
 def Talk(dobj,iobj,prep):
@@ -2488,13 +2486,13 @@ statcommands = {
 "examples":Examples,
 "exits":Exits,
 "gear":Core.Player.printGear,
-"help":Info,
+"help":Menu.gameInfo,
 "hello":Hello,
 "here":Core.game.currentroom.describe,
 "hi":Hello,
 "hp":Core.Player.printHP,
-"info": Info,
-"information": Info,
+"info": Menu.gameInfo,
+"information": Menu.gameInfo,
 "inv":Core.Player.printInv,
 "inventory":Core.Player.printInv,
 "level":Core.Player.printLV,
@@ -2754,6 +2752,8 @@ actions = {
 # stop (stop him, stop hiding, stop riding, stop running, etc)
 # smoke
 # weave/sew
+# guard/shield/block/protect/cover
+# meditate
 # evade -> dodge
 # stare/gaze -> look
 # fart, burp
@@ -2791,7 +2791,7 @@ actions = {
 # cook/brew
 # clean/sweep/mop/wipe?
 # lay -> lay? (make own command?)
-# chop -> slash -> atk
+# chop -> slash -> attack
 # chew -> eat
 # strike -> ignite/hit
 # lift -> carry
