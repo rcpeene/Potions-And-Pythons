@@ -122,7 +122,7 @@ def Print(*args,end="\n",sep="",delay=None,color=None,allowSilent=True):
 	if player.hasStatus("insanity"):
 		color = choices(list(Data.colorMap.keys()),[1]*7 + [28])[0]
 	if delay is None:
-		if player.hasStatus("slowness"): delay = 0.02
+		if player.hasAnyStatus("dead","slowness"): delay = 0.02
 		else: delay = 0.001
 	if game.silent and allowSilent:
 		return
@@ -212,8 +212,9 @@ def Input(text="",cue="\n> ",low=True,delay=None,color=None):
 
 def InputLock(text="",cue="\n> ",acceptKey=None,low=True,delay=None,color=None):
 	if acceptKey is None:
-		acceptKey = lambda inp: inp.strip() # if input is not empty
-	nlines = cue.count("\n")+1
+		acceptKey = lambda inp: inp.strip()
+	nlines = cue.count("\n")+1 # account for the newline from input
+
 	Print(text,end="",delay=delay,color=color,allowSilent=False)
 	while True:
 		sys.stdout.flush()
@@ -264,10 +265,11 @@ def yesno(question,delay=None,color=None):
 
 # prints a timed ellipsis, used for dramatic transitions
 def ellipsis(n=3,color=None):
-	for i in range(n):
-		sleep(1)
-		Print(".",color=color)
-	sleep(1)
+	flushInput()
+	for _ in range(n):
+		# sleep(1)
+		Print(".",color=color,delay=0.05)
+	# sleep(1)
 	flushInput()
 
 
@@ -550,6 +552,7 @@ def buildWorld():
 ############
 
 
+ANSI_ESCAPE = re.compile(r'\x1b\[[0-9;?]*[ -/]*[A-Za-z]')
 class TeeLogger:
 	def __init__(self,logFile,inputFile=None):
 		self.terminal = sys.stdout
@@ -558,29 +561,7 @@ class TeeLogger:
 		os.makedirs(os.path.dirname(logFile),exist_ok=True)
 		self.log = open(logFile,"w")
 		self.stdin = open(inputFile,"r") if inputFile else self.originalStdin
-
-
-	def write(self, message):
-		self.terminal.write(message)
-		self.log.write(message)
-
-
-	def write_error(self,message):
-		self.errorTerminal.write(message)  # Print errors to stderr in terminal
-		self.log.write(message)  # Log errors in the same file
-		self.flush()
-
-
-	def readline(self):
-		input_text = self.stdin.readline()
-		self.log.write(input_text)
-		self.log.flush()
-		return input_text
-
-
-	def flush(self):
-		self.terminal.flush()
-		self.log.flush()
+		self.logbuffer = ""
 
 
 	def setInputFile(self, inputFilename):
@@ -588,6 +569,52 @@ class TeeLogger:
 			self.stdin.close()
 		self.stdin = open(inputFilename,"r")
 
+
+	def forceDrainBuffer(self):
+		cleanBuffer = ANSI_ESCAPE.sub('', self.logbuffer)
+		self.log.write(cleanBuffer)
+		self.log.flush()
+		self.logbuffer = ""
+
+
+	def drainBufferToNewline(self):
+		newline = self.logbuffer.find('\n')
+		if newline == -1:
+			return
+		line = self.logbuffer[:newline]
+		cleanLine = ANSI_ESCAPE.sub('', line)
+		self.log.write(cleanLine + '\n')
+		self.log.flush()
+		self.logbuffer = self.logbuffer[newline + 1:]
+
+
+	def write(self, message):
+		self.logbuffer += message
+		while '\n' in self.logbuffer:
+			self.drainBufferToNewline()
+		if len(self.logbuffer) > 3000:
+			self.forceDrainBuffer()
+		self.terminal.write(message)
+		self.terminal.flush()
+
+
+	def write_error(self,message):
+		self.forceDrainBuffer()
+		self.errorTerminal.write(message)
+
+
+	def readline(self):
+		self.forceDrainBuffer()
+		input_text = self.stdin.readline()
+		if len(input_text.strip()) > 0:
+			self.log.write(input_text)
+			self.log.flush()
+		return input_text
+
+
+	def flush(self):
+		self.terminal.flush()
+		self.log.flush()
 
 
 
@@ -1075,8 +1102,8 @@ class EmptyGear:
 		return self.name
 
 
-	def __eq__(self, other):
-		if isinstance(other, self.__class__):
+	def __eq__(self,other):
+		if isinstance(other,self.__class__):
 			return self.__dict__ == other.__dict__
 		else:
 			return False
@@ -1191,6 +1218,7 @@ class Game():
 	# passes time for each room, and each creature in each room
 	# important for decrementing the duration counter on all status conditions
 	def passTime(self,t=1):
+		# print("T =",self.time)
 		prev_hour = self.hour()
 		self.time += t
 		self.silent = player.hasAnyStatus("asleep","dead")
@@ -1902,6 +1930,8 @@ class Item():
 
 	def assignRefs(self,parent):
 		self.parent = parent
+		self.covering = [game.objRegistry[c] for c in self.covering]
+		self.occupants = [game.objRegistry[c] for c in self.occupants]
 
 
 	### Dunder Methods ###
@@ -1927,19 +1957,19 @@ class Item():
 
 
 	def __add__(self,other):
-		return copulate(+self, other)
+		return copulate(+self,other)
 
 
 	def __sub__(self,other):
-		return copulate(-self, other)
+		return copulate(-self,other)
 
 
 	def __mul__(self,other):
-		return copulate(self.pronoun.capitalize(), other)
+		return copulate(self.pronoun.capitalize(),other)
 
 
 	def __truediv__(self,other):
-		return copulate(self.pronoun.lower(), other)
+		return copulate(self.pronoun.lower(),other)
 
 
 	def __lt__(self,other):
@@ -1947,7 +1977,7 @@ class Item():
 
 
 	def __eq__(self,other) :
-		if isinstance(other, self.__class__):
+		if isinstance(other,self.__class__):
 			return self.__dict__ == other.__dict__
 		else:
 			return False
@@ -1971,7 +2001,7 @@ class Item():
 	def destroy(self,silent=True):
 		if self.parent is player.parent and not silent:
 			Print(f"{+self} disappears.")
-		for occupant in self.occupants:
+		for occupant in self.occupants.copy():
 			occupant.Fall()
 		for covered in self.covering:
 			covered.removeCover()
@@ -2013,7 +2043,7 @@ class Item():
 			player.Print(f"{+self} rumbles for a moment...")
 
 		newparent.enter(self)
-		for occupant in self.occupants:
+		for occupant in self.occupants.copy():
 			occupant.changeLocation(newparent)
 		for covered in self.covering:
 			covered.removeCover()
@@ -2023,8 +2053,8 @@ class Item():
 		self.parent.remove(self)
 		self.parent.add(newItem)
 		occupant = self.occupant
-		for occupant in self.occupants:
-			self.Disoccupy(occupant)
+		for occupant in self.occupants.copy():
+			self.removeOccupant(occupant)
 			newItem.addOccupant(occupant)
 		for covered in self.covering:
 			covered.removeCover()
@@ -2138,7 +2168,7 @@ class Item():
 			room = self.room()
 		if self.room() is game.currentroom:
 			Print(f"{+self} falls down.")
-		for occupant in self.occupants:
+		for occupant in self.occupants.copy():
 			occupant.Fall(height,room)
 		self.Disoccupy()
 
@@ -2436,23 +2466,23 @@ class Creature():
 
 
 	def __add__(self,other):
-		return copulate(+self, other)
+		return copulate(+self,other)
 
 
 	def __sub__(self,other):
-		return copulate(-self, other)
+		return copulate(-self,other)
 
 
 	def __mul__(self,other):
-		return copulate(self.pronoun.capitalize(), other)
+		return copulate(self.pronoun.capitalize(),other)
 
 
 	def __truediv__(self,other):
-		return copulate(self.pronoun.lower(), other)
+		return copulate(self.pronoun.lower(),other)
 
 
-	def __eq__(self, other) :
-		if isinstance(other, self.__class__):
+	def __eq__(self,other) :
+		if isinstance(other,self.__class__):
 			return self.__dict__ == other.__dict__
 		else:
 			return False
@@ -2463,7 +2493,7 @@ class Creature():
 
 
 	def __lt__(self,other):
-		if isinstance(other, Creature):
+		if isinstance(other,Creature):
 			return self.MVMT() < other.MVMT()
 		return self.name.lower() < other.name.lower()
 
@@ -2822,11 +2852,12 @@ class Creature():
 	def removeCarry(self,silent=False):
 		if self.carrying is None:
 			return
-		self.Print(f"You drop {-self.carrying}.")
 		self.gear["left"] = EmptyGear()
 		self.carrying.carrier = None
-		self.carrying.Print(f"{+self} is no longer carrying you.")
-		self.carrying.removeStatus("restrained",-3)
+		if not silent:
+			self.Print(f"You drop {-self.carrying}.")
+			self.carrying.Print(f"{+self} is no longer carrying you.")
+		self.carrying.removeStatus("restrained",-3,silent=True)
 		self.carrying = None
 		self.checkHindered()
 
@@ -2839,12 +2870,15 @@ class Creature():
 		creature.rider = self
 
 
-	def removeRiding(self):
+	def removeRiding(self,silent=False):
 		if self.riding is not None:
-			self.Print(f"You are no longer riding {-self.riding}.")
-			self.riding.Print(f"{+self} is no longer riding {self.riding}.")
+			# do this because dismounting affects riding.print
+			wasRiding = self.riding
 			self.riding.rider = None
 			self.riding = None
+			if not silent:
+				self.Print(f"You are no longer riding {-wasRiding}.")
+				wasRiding.Print(f"{+self} is no longer riding {wasRiding}.")
 
 
 	def removePlatform(self):
@@ -2989,16 +3023,16 @@ class Creature():
 			return self.reanimate()
 
 		if self.rider:
-			self.rider.removeRiding()
-		self.removeRiding()
-		self.removeCarry()
+			self.rider.removeRiding(silent=True)
+		self.removeRiding(silent=True)
+		self.removeCarry(silent=True)
 
 		self.descname = f"dead {self.descname}"
 		self.aliases = self.aliases | {"dead " + a for a in self.aliases}
 
 		n = diceRoll(3,player.LOOT(),-2)
 		self.parent.add(Serpens(n))
-		Print(f"Dropped $ {n}.",color="g")
+		Print(f"Dropped §{n}.",color="g")
 
 		if game.whoseturn is player:
 			r = self.rating()
@@ -3022,7 +3056,13 @@ class Creature():
 
 
 	def Fall(self,height=0,room=None):
-		Print(f"{+self} falls.",color="o")
+		if self.riding or self.carrier:
+			return self.anchor().Fall(height,room)
+
+		if player in (self.rider, self.carrying):
+			waitKbInput(f"{+self} falls!",color="o")
+		else:
+			Print(f"{+self} falls.",color="o")
 
 		if self.hasStatus("flying"):
 			Print(f"But {self.pronoun} is flying.")
@@ -3036,13 +3076,13 @@ class Creature():
 		if room != self.room():
 			if self.carrying:
 				self.carrying.Fall(height,room)
-			if self.rider:
-				self.rider.Fall(height,room)
 			self.changeLocation(room)
 
 		if not self.hasStatus("fleetfooted"):
 			self.takeDamage(height,"b")
 			self.addStatus("laying",-3)
+			if self.rider:
+				self.rider.takeDamage(height//2,"b")
 		return True
 
 
@@ -3132,7 +3172,7 @@ class Creature():
 			self.removeStatus("cozy",-3,silent=silent)
 
 		self.checkHidden()
-		return False
+		return self.posture() == posture
 
 
 	def Give(self,I):
@@ -3387,9 +3427,10 @@ class Creature():
 			self.Print(f"You can't, you are in {-self.parent}.")
 			return False
 		if anchor is self.anchor():
-			self.Print(f"You're already on {-anchor}.")
-			return False
-		if self.anchor() not in (None,self.parent.floor):
+			if not self.changePosture(posture,silent=True):
+				self.Print(f"You are already {self.posture()} on {-anchor}.")
+				return False
+		elif self.anchor() not in (None,self.parent.floor):
 			self.Print(f"You can't, you are {self.position()}.")
 			return False
 		if not hasMethod(anchor,"Ride") and not hasMethod(anchor,"addOccupant"):
@@ -3408,8 +3449,9 @@ class Creature():
 		elif hasMethod(anchor,"addOccupant"):
 			if not anchor.addOccupant(self):
 				return False
-			self.Print(f"You {posture} on {-anchor}.")
 
+		if self.platform is anchor:
+			self.Print(f"You {posture} on {-anchor}.")
 		if self.platform is anchor or self.riding is anchor:
 			self.removeCover()
 			self.changePosture(posture,silent=True)
@@ -3790,7 +3832,7 @@ class Creature():
 	# It should do nothing for any other creature
 	def Print(self,*args,end="\n",sep="",delay=None,color=None,allowSilent=True):
 		if self is player.riding:
-			return Print(*args,end=end,sep=sep,delay=delay,color=color,allowSilent=allowSilent)
+			return player.Print(*args,end=end,sep=sep,delay=delay,color=color,allowSilent=allowSilent)
 		return
 
 
@@ -3951,9 +3993,9 @@ class Player(Creature):
 		self.money += money
 		color = "g" if money > 0 else "w"
 		if money == 0:
-			Print(f"You have § {self.money}.")
+			Print(f"You have §{self.money}.")
 		else:
-			Print(f"You have § {self.money}!",color=color)
+			Print(f"You have §{self.money}!",color=color)
 
 
 	# adds xp, checks for player level up
@@ -4009,9 +4051,9 @@ class Player(Creature):
 			return self.reanimate()
 
 		if self.rider:
-			self.rider.removeRiding()
-		self.removeRiding()
-		self.removeCarry()
+			self.rider.removeRiding(silent=True)
+		self.removeRiding(silent=True)
+		self.removeCarry(silent=True)
 
 		self.addStatus("dead",-3)
 		waitKbInput()
@@ -4090,6 +4132,9 @@ class Player(Creature):
 
 
 	def Fall(self,height=3,room=None):
+		if self.riding or self.carrier:
+			return self.anchor().Fall(height,room)
+		
 		Print(f"You fall!",color="o")
 
 		if self.hasStatus("flying"):
@@ -4243,13 +4288,17 @@ class Player(Creature):
 
 
 	def position(self):
-		pos = self.posture()
+		pos = ""
 		if self.carrier:
-			pos == f" being carried by {-self.carrier}"
+			pos += f"being carried by {-self.carrier}"
 		elif self.riding:
-			pos += f" riding {-self.riding}"
-		elif self.platform and self.platform != self.parent.floor:
-			pos += f" on {-self.platform}"
+			pos += f"riding {-self.riding}"
+		elif self.platform:
+			pos += self.posture()		
+			if self.platform != self.parent.floor:
+				pos += f" on {-self.platform}"
+		else:
+			pos = "floating"
 		if self.cover:
 			pos += f" behind {-self.cover}"
 		return pos
@@ -4379,20 +4428,20 @@ class Humanoid(Creature):
 			Print(f"{n} attacks!")
 		for i in range(n):
 			if n > 1:
-				waitKbInput(f"\n{ordinal(i+1)} attack:")
+				target.waitKbInput(f"\n {+self}'s {ordinal(i+1)} attack on {target}:")
 			# TODO: what about if weapon is ranged?
 			hit = bound(self.ACCU() - target.EVSN(),1,99)
 			if diceRoll(1,100) <= hit:
 				crit = diceRoll(1,100) <= self.CRIT()
 				attack = self.ATCK()
 				if crit:
-					waitKbInput("Critical hit!",color="o")
+					target.waitKbInput("Critical hit!",color="o")
 					attack *= 2
 				damage = min0( attack - target.DFNS() )
 				target.takeDamage(damage,self.weapon.type)
 			else:
 				Print("It missed!")
-			waitKbInput()
+			# target.waitKbInput()
 			if not target.isAlive():
 				return
 			if self.weapon2 != EmptyGear():
@@ -4763,7 +4812,7 @@ class Portal(Item):
 
 
 	def assignRefs(self,parent):
-		self.parent = parent
+		super().assignRefs(parent)
 
 		for dir, dest in self.links.items():
 			if isinstance(dest,str) and dest in world:

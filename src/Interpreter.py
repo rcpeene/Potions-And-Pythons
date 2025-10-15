@@ -147,9 +147,9 @@ def findObject(term,verb=None,queryType="both",filter=None,roomD=1,playerD=2,req
 	return None
 
 
-def enforceVerbScope(verb,obj,permitParent=True,permitSelf=False,permitAnchor=True,permitOutsideAnchor=True):
+def enforceVerbScope(verb,obj,permitParent=True,permitSelf=False,permitAnchor=True,allowDistance=False):
 	parent = Core.player.parent
-	if obj not in parent.objTree() and obj is not parent:
+	if obj not in parent.objTree(includeSelf=True):
 		Core.Print(f"You can't {verb} {-obj}, you're {parent.passprep} {-parent}.")
 		return True
 	if not permitParent and obj is parent:
@@ -164,19 +164,18 @@ def enforceVerbScope(verb,obj,permitParent=True,permitSelf=False,permitAnchor=Tr
 		# if obj is Core.player.rider: # TODO, what if a bird is 'riding' on your shoulder?
 		# 	Core.Print(f"You can't {verb} {-obj}, {obj.pronoun} is on you.")
 		# 	return True
-	if not permitOutsideAnchor:
+	if not allowDistance:
 		anchor = Core.player.anchor()
 		if anchor in Core.player.parent.surfaces + (None,):
 			anchor = Core.player.parent
 		if obj not in anchor.objTree(includeSelf=True):
-			Core.Print(f"You can't {verb} {-obj}, you're not {obj.parent.passprep} {-obj.parent}.")
+			Core.Print(f"You can't {verb} {-obj}, you're {Core.player.position()}.")
 			return True
 
 	if isinstance(obj,Core.Fixture) and Core.nameMatch("ceiling",obj):
 		if Core.player.Size() < Core.player.parent.Size() // 2 and not Core.player.hasStatus("flying"):
-			Core.Print(f"You can't {verb} {-obj}, you're too short.")
+			Core.Print(f"You can't {verb} {-obj}, it is too high.")
 			return True
-
 
 
 # checks if a noun refers to a room, an object in the world or on the player...
@@ -354,8 +353,9 @@ def interpret():
 		return True
 	global helpCounter
 	if commandQueue:
-		command = tokenize(commandQueue.pop(0))
-		Core.waitKbInput()
+		queuedInput = commandQueue.pop(0)
+		Core.waitKbInput("\n& " + "".join(queuedInput))
+		command = tokenize(queuedInput)
 	else:
 		command = tokenize(read("\n\nWhat will you do?",storeRawCmd=True))
 	if len(command) == 0:
@@ -674,7 +674,7 @@ def Set(command):
 	Core.Print(f"Setting {obj}.{attrname} to {value}",color="k")
 	setattr(obj,attrname,value)
 	if isinstance(obj,Core.Creature):
-		obj.checkConditions()
+		obj.checkStatus()
 
 
 def Shrink(command):
@@ -1429,24 +1429,51 @@ def Give(dobj,iobj,prep):
 		return False
 
 
-# not called by Parse directly
 # called when the user wants to go "up" or "down"
 def GoVertical(dir,passage=None,dobj=None):
+	assert (dir,passage) in Core.game.currentroom.allLinks()
+	newroom = None
 	if Core.player.hasStatus("flying") and not Core.player.riding:
 		newroom = Core.game.currentroom.allLinks()[dir,passage]
-		Core.Print(f"You fly {dir}!")
+		Core.waitKbInput(f"You fly {dir}!")
+	if Core.player.riding and Core.player.riding.hasStatus("flying"):
+		newroom = Core.game.currentroom.allLinks()[dir,passage]
+		Core.waitKbInput(f"{+Core.player.riding} flies {dir}!")
+	if newroom is not None:
+		if passage is not None:
+			return Core.player.changeLocation(passage.getNewLocation())
 		return Core.player.changeLocation(newroom)
 
-	if passage is None and dobj is not None:
+	hasUpPassage = any(d == "up" for (d,p) in Core.game.currentroom.allLinks() if p is not None)
+	if passage is None and dir == "up" and dir in Core.game.currentroom.links:
+		if Core.player.riding is None and not Core.player.hasStatus("flying"):
+			goer = Core.player
+		if Core.player.riding and not Core.player.riding.hasStatus("flying"):
+			goer = Core.player.riding
+		if hasUpPassage:
+			dobj = getNoun("What will you go up?")
+			passage = findObject(dobj,"go up","room")
+			if passage is None:
+				return False
+		else:
+			Core.Print(f"{+goer} can't go up,", (goer+"isn't flying.").lower())
+			return False
+
+	if passage is None and dir in Core.game.currentroom.links:
+		return Core.player.changeLocation(Core.game.currentroom.links[dir])
+	elif passage is None and dobj is not None:
 		Core.Print(f"There is no '{dobj}' to go {dir} here.",color="k")
 		return False
-	if passage is None:
+	elif passage is None:
 		passage = findObject("",f"go {dir}","room")
-	if passage is None:
-		return False
-
+		if passage is None:
+			return False
 	if Core.hasMethod(passage,"Traverse"):
+		Core.game.setPronouns(passage)
 		return passage.Traverse(Core.player,dir)
+	else:
+		Core.Print(f"{+passage} can't be traversed.")
+		return False
 
 
 # infers direction, destination, and passage (if they exist) from input terms
@@ -1678,6 +1705,7 @@ def Lay(dobj,iobj,prep,M=None):
 	elif prep in ("on","onto","upon","in","inside","into"):
 		if M is None: M = findObject(dobj,f"lay {prep}","room")
 		if M is None: return False
+		if M is Core.player.parent: M = Core.player.parent.floor
 		Core.game.setPronouns(M)
 		return Mount(dobj,iobj,prep,M=M,posture="lay")
 	else:
@@ -1780,10 +1808,12 @@ def Mount(dobj,iobj,prep,M=None,posture=None):
 	if M is None: M = findObject(dobj,"get on","room")
 	if M is None: return False
 	Core.game.setPronouns(M)
-	if enforceVerbScope("get on",M): return False
-	# # if input was 'get on ground', we should actually dismount
-	# if isinstance(M,Core.Room) or M is Core.player.parent.floor:
-	# 	return Dismount(None,None,None,posture=posture)
+	# if input was 'get on ground', we should actually dismount
+	if isinstance(M,Core.Room) or M is Core.player.parent.floor:
+		if Core.player.anchor() not in (None,Core.player.parent.floor):
+			return Dismount(None,None,None,posture=posture)
+	if enforceVerbScope("get on",M):
+		return False
 
 	if Core.hasMethod(M,"Ride"):
 		# Core.player.removeStatus("hidden",-3) TODO: readd this?
@@ -2052,25 +2082,28 @@ def Sleep(dobj,iobj,prep):
 	if prep is None: prep = "on"
 	if dobj is None: dobj = iobj
 
-	if not Core.player.hasStatus("laying"):
-		I = Core.player.carrier
-		if I is None: I = findObject(dobj,f"sleep {prep}","room")
+	if dobj is not None:
+		I = findObject(dobj,f"sleep {prep}","room")
 		if I is None and not Core.yesno("Would you like to sleep on the ground?"):
 			return False
-		if enforceVerbScope(f"sleep {prep}",I): return False
-		if I in (None, Core.player.parent):
-			res = Lay(dobj,iobj,None)
-		else:
-			res = Lay(dobj,iobj,"on",M=I)
-		if not res:
-			return False
+	else:
+		I = Core.player.anchor()
+		if I is Core.player.parent.floor and I is not None:
+			if not Core.yesno("Would you like to sleep on the ground?"):
+				return False
+
+	if not Core.player.hasStatus("laying"):
+		Lay(dobj,iobj,"on",M=I)
+	if not Core.player.hasStatus("laying"):
+		Core.Print("You can't sleep, you're not laying down.")
+		return False
 
 	if not Core.player.hasStatus("cozy"):
-		Core.Print("Your sleep will not be very restful...")
+		Core.waitKbInput("Your sleep will not be very restful...")
 
 	sleeptime = 90 + randint(1,20)
 	Core.player.addStatus("asleep",sleeptime)
-	Core.ellipsis()
+	Core.ellipsis(sleeptime//30)
 	Core.game.silent=True
 	return True
 
@@ -2187,10 +2220,8 @@ def TakeAllRecur(objToTake):
 	tookMsg = f"You take {strname}{suffix}."
 	failMsg = f"You can't take {-objToTake}, your Inventory is too full."
 
-	if objToTake is Core.player.carrier:
-		Core.Print(f"You can't take {-objToTake}, you are {Core.player.posture()} on it.")
-		return False
-	return Core.player.obtainItem(objToTake,tookMsg,failMsg) or takenAny
+	if enforceVerbScope("take",objToTake,permitParent=False,permitAnchor=False): return False
+	return Core.player.obtainItem(objToTake) or takenAny
 
 
 def TakeAll(parent):
@@ -2229,7 +2260,7 @@ def Take(dobj,iobj,prep):
 	if objToTake is None:
 		return False
 	Core.game.setPronouns(objToTake)
-	if enforceVerbScope("take",objToTake,permitParent=False,permitAnchor=False,permitOutsideAnchor=False): return False
+	if enforceVerbScope("take",objToTake,permitParent=False,permitAnchor=False): return False
 	if objToTake.parent is Core.player:
 		Core.Print(f"You can't take from your own Inventory.")
 		return False
@@ -2239,7 +2270,6 @@ def Take(dobj,iobj,prep):
 	if isinstance(objToTake,Core.Creature):
 		return CarryCreature(objToTake)
 
-	parent = objToTake.parent
 	# if it is in a non-player inventory, it will have to be stolen
 	if any(isinstance(anc,Core.Creature) for anc in objToTake.ancestors()) and objToTake not in Core.player.objTree():
 		return Steal(dobj,iobj,prep,I=objToTake)
