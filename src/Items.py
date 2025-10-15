@@ -106,7 +106,7 @@ class Box(Core.Portal):
 		for elem in self.items:
 			if isinstance(elem,Core.Creature):
 				elem.removeStatus("hidden",-3)
-		for occupant in self.occupants:
+		for occupant in self.occupants.copy():
 			occupant.Fall()
 		if Core.player not in self.items:
 			self.Look(opener)
@@ -707,6 +707,7 @@ class Wall(Core.Passage):
 				dir = Core.Input(msg).lower()
 		if dir in Data.cancels:
 			return False
+		print(self,dir,self.links)
 		if dir not in self.links:
 			Core.Print(f"{+self} does not go '{dir}'.")
 			return False
@@ -746,7 +747,7 @@ class Wall(Core.Passage):
 			return item.Fall()
 
 		# Print(f"{+item} goes {self.passprep} {-self}.")	
-		item.changeLocation(self.links[dir])
+		item.changeLocation(self.getNewLocation(dir))
 
 
 class Window(Core.Passage):
@@ -776,7 +777,7 @@ class Window(Core.Passage):
 			self.weight -= shardWeight
 			shard = Shard("glass shard","a sharp shard of glass",shardWeight,-1,"glass",{"shard"})
 			Core.game.currentroom.spawn(shard)
-		for occupant in self.occupants:
+		for occupant in self.occupants.copy():
 			occupant.Fall(room=self.getNewLocation())
 			self.removeOccupant(occupant)
 		if self.covering:

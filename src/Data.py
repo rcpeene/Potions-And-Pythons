@@ -49,7 +49,7 @@ emoticons = {":)",":d",":(",";)",":o",":p"}
 ## USEFUL SETS ##
 #################
 
-articles = {"a","again","an","her","his","i","its","some","that","the","then","their","this","will"}
+articles = {"a","again","an","her","his","i","ill","i'll","its","some","that","the","then","their","this","will"}
 
 shortactions = {"cast","here","room","clear","cls"}
 

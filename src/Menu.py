@@ -282,7 +282,7 @@ def saveGame(savename=None):
 	writeGame("game.txt", Core.game, Core.world)
 	os.chdir("../..")
 	sleep(1)
-	Core.Print(f"Game saved as {savename}",delay=0,color="k")
+	Core.Print(f"Game saved as {savename}.",delay=0,color="k")
 	Core.game.lastsave = Core.game.time
 	sleep(1)
 
@@ -615,9 +615,9 @@ def growBubbles(logoArray):
 		for col in range(1,len(logoArray[row])-1):
 			char = logoArray[row][col]
 			if char == ".":
-				willGrow = bool(randint(0,2))
+				willGrow = randint(0,2) != 0
 			elif char == "o":
-				willGrow = bool(randint(0,1))
+				willGrow = randint(0,2) == 2
 			else:
 				continue
 			if willGrow and char == "o":

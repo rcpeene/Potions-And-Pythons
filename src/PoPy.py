@@ -4,7 +4,6 @@
 
 import os
 import sys
-from time import sleep
 import traceback
 
 import Core
@@ -23,13 +22,13 @@ def main(testing=False):
 	if "src" in os.getcwd(): os.chdir("..")
 
 	if not testing:
+		# run intro logo animation
+		Menu.gameIntro()
+
 		logger = Core.TeeLogger("./transcript.log")
 		sys.stdin = logger
 		sys.stdout = logger
 		sys.stderr = logger
-
-		# run intro logo animation
-		Menu.gameIntro()
 
 	# instantiate global objects Player, World, Game and run start-up
 	Menu.mainMenu()
@@ -104,9 +103,6 @@ if __name__ == "__main__":
 
 # BUG BACKLOG
 
-# if calling removeOccupant in a loop of occupants, it might have index problems?
-# sleep on the ground -> you fall
-# sleep here -> You're not on anything.
 # 'climb out of here' in a normal room -> you can't climb here
 # climb in bed -> you stand on the bed
 

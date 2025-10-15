@@ -490,7 +490,9 @@
 			"east": "brook",
 			"south": "big stump",
 			"in": "cabin hallway",
-			"cabin": "cabin hallway"
+			"cabin": "cabin hallway",
+			"up": "above the woods",
+			"down":"burning shore"
 		},
 		"fixtures": [
 			{
