@@ -291,7 +291,7 @@ def saveGame(savename=None):
 def loadGame(filename=None):
 	if not (os.path.exists("saves")) or len(os.listdir("./saves")) == 0:
 		Core.Print("\nThere are no save files.\n",delay=0,color="k")
-		Core.waitKbInput()
+		Core.waitInput()
 		return False
 	os.chdir("saves")
 
@@ -313,7 +313,7 @@ def loadGame(filename=None):
 	if not os.path.exists(savename):
 		Core.Print(f"\nThere is no save file named '{savename}'.",delay=0,color="k")
 		os.chdir("..")
-		Core.waitKbInput()
+		Core.waitInput()
 		return False
 	os.chdir(savename)
 	# try to load the player, world, and game objects
@@ -355,14 +355,14 @@ def deleteAll():
 		os.rmdir(savename)
 	os.chdir("..")
 	sleep(1)
-	Core.waitKbInput("\nAll save files deleted.\n",delay=0,color="k")
+	Core.waitInput("\nAll save files deleted.\n",delay=0,color="k")
 
 
 # deletes a save file whose name is given by the user
 def delete(filename):
 	if not os.path.exists("saves") or len(os.listdir("./saves")) == 0:
 		Core.Print("\nThere are no save files.\n",delay=0,color="k")
-		Core.waitKbInput()
+		Core.waitInput()
 		return
 	os.chdir("saves")
 
@@ -386,7 +386,7 @@ def delete(filename):
 	if not os.path.exists(savename):
 		Core.Print(f"\nThere is no save file named '{savename}'.\n",delay=0,color="k")
 		os.chdir("..")
-		Core.waitKbInput()
+		Core.waitInput()
 		return
 	# ask for confirmation, if no, then return to menu
 	if not Core.yesno("Are you sure you want to delete this save file?",delay=0):
@@ -401,7 +401,7 @@ def delete(filename):
 	os.rmdir(savename)
 	os.chdir("..")
 	sleep(1)
-	Core.waitKbInput("\nDeleted\n",delay=0,color="k")
+	Core.waitInput("\nDeleted\n",delay=0,color="k")
 	return
 
 
@@ -468,7 +468,7 @@ def testGame():
 def gameInfo(*args): # requires args when called from Interpreter
 	Core.clearScreen()
 	Core.Print(Data.gameinfo,delay=0,color="k")
-	Core.waitKbInput()
+	Core.waitInput()
 	Core.clearScreen()
 
 
@@ -532,7 +532,7 @@ def restart():
 
 def quit():
 	if Core.game.mode != 1:
-		Core.waitKbInput("Goodbye.",delay=0,color="k")
+		Core.waitInput("Goodbye.",delay=0,color="k")
 		Core.game.quit = 1
 	return False
 

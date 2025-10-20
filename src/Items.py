@@ -73,6 +73,7 @@ class Box(Core.Portal):
 		self.ceiling = self
 		self.walls = self
 		self.floor = self
+		self.surfaces = (self.ceiling,self.walls,self.floor)
 
 
 	### File I/O ###
@@ -82,6 +83,7 @@ class Box(Core.Portal):
 		del jsonDict["ceiling"]
 		del jsonDict["walls"]
 		del jsonDict["floor"]
+		del jsonDict["surfaces"]
 		del jsonDict["links"]
 		del jsonDict["descname"]
 		return jsonDict
@@ -119,7 +121,7 @@ class Box(Core.Portal):
 		closer.Print(f"You close {-self}.")
 		for elem in self.items:
 			if isinstance(elem,Core.Creature):
-				elem.addStatus("hidden",-3)
+				elem.addStatus("hidden",-4)
 		return True
 
 
@@ -147,14 +149,14 @@ class Box(Core.Portal):
 		# drop things it contains into parent
 		for item in self.items:
 			if item is Core.player:
-				Core.waitKbInput(f"You are no longer in {-self}.")
+				Core.waitInput(f"You are no longer in {-self}.")
 			item.changeLocation(self.parent)
 		return True
 
 
 	def Bombard(self,missile):
 		assert isinstance(missile,Core.Projectile)
-		if Core.diceRoll(1,100) < Core.bound(missile.aim+self.Size()+10,1,99):
+		if Core.roll(100) < Core.bound(missile.aim+self.Size()+10,1,99):
 			if not self.open:
 				Core.Print(f"{+self} is closed.")
 				missile.Collide(self)
@@ -204,7 +206,7 @@ class Box(Core.Portal):
 					self.Open(traverser)
 				Core.Print(f"You get out of {-self}.")
 				if self.parent is not Core.game.currentroom:
-					Core.waitKbInput()
+					Core.waitInput()
 				traverser.changeLocation(self.parent)
 				return True
 			else:
@@ -608,6 +610,10 @@ class Table(Core.Item):
 		Core.Item.__init__(self,name,desc,weight,durability,composition,**kwargs)
 		self.items = items
 		self.descname = descname
+		self.ceiling = self
+		self.walls = self
+		self.floor = self
+		self.surfaces = (self.ceiling,self.walls,self.floor)
 
 
 	### Operation ###
@@ -698,7 +704,7 @@ class Wall(Core.Passage):
 		self.difficulty = difficulty
 
 
-	def Traverse(self,traverser,dir=None,verb="climb"):
+	def Traverse(self,traverser,dir=None,verb=None):
 		if dir == None:
 			if len(set(self.links.values())) == 1:
 				dir = list(self.links.keys())[0]
@@ -707,27 +713,30 @@ class Wall(Core.Passage):
 				dir = Core.Input(msg).lower()
 		if dir in Data.cancels:
 			return False
-		print(self,dir,self.links)
 		if dir not in self.links:
 			Core.Print(f"{+self} does not go '{dir}'.")
 			return False
 
+		if traverser.hasStatus("flying") and verb is None: verb = "fly"
+		elif traverser.hasStatus("clingfast") and verb in ("climb",None): verb = "crawl"
+		elif traverser is Core.player.riding: verb = "ride"
+		elif verb is None: verb = "climb"
+
 		if traverser.riding:
 			return self.Traverse(traverser.riding,dir=dir)
-		if traverser.carrying:
-			Core.Print(f"You can't climb, you are carrying {~traverser.carrying}")
+		if traverser.carrying and verb in ("climb","crawl"):
+			Core.Print(f"You can't climb, you are carrying {~traverser.carrying}.")
 			return False
 
-		if traverser.hasStatus("clingfast"): verb = "crawl"
-		elif traverser.hasStatus("flying"): verb = "fly"
-		elif traverser is Core.player.riding: verb = "ride"
-		if traverser is Core.player:
-			Core.waitKbInput(f"You {verb} {dir} {-self}.")
+		traverser.waitInput(f"You {verb} {dir} {-self}.")
 
-		if traverser.ATHL() >= self.difficulty or traverser.hasAnyStatus("clingfast","flying"):
-			traverser.changeLocation(self.getNewLocation(dir))
-			return True
-		elif "down" in self.links:
+		if verb != "jump" or traverser.hasStatus("flying"):
+			contest = Core.roll(traverser.ATHL()) - self.difficulty
+			if contest > 0 or traverser.hasAnyStatus("clingfast","flying"):
+				traverser.changeLocation(self.getNewLocation(dir))
+				return True
+
+		if "down" in self.links:
 			traverser.Fall(self.difficulty,room=self.getNewLocation("down"))
 		else:
 			traverser.Fall(self.difficulty)
@@ -819,7 +828,7 @@ class Window(Core.Passage):
 
 	def Bombard(self,missile):
 		assert isinstance(missile,Core.Projectile)
-		if Core.diceRoll(1,100) < Core.bound(missile.aim+self.Size+10,1,99):
+		if Core.roll(100) < Core.bound(missile.aim+self.Size+10,1,99):
 			if not self.open:
 				missile.Collide(self)
 			if self.open:
@@ -831,7 +840,7 @@ class Window(Core.Passage):
 
 	def Look(self,looker):
 		if self.view:
-			looker.waitKbInput(f"You look through it...")
+			looker.waitInput(f"You look through it...")
 			Core.Print(f"{self.links[self.view].desc}.")
 		return True
 
