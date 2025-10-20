@@ -156,7 +156,7 @@ def Print(*args,end="\n",sep="",delay=None,color=None,allowSilent=True):
 
 
 # waits for any keyboard input
-def waitKbInput(text=None,delay=None,color=None):
+def waitInput(text=None,delay=None,color=None):
 	sys.stdout.flush
 	if text is not None:
 		Print(text,delay=delay,color=color,allowSilent=False)
@@ -267,9 +267,9 @@ def yesno(question,delay=None,color=None):
 def ellipsis(n=3,color=None):
 	flushInput()
 	for _ in range(n):
-		# sleep(1)
-		Print(".",color=color,delay=0.05)
-	# sleep(1)
+		sleep(1)
+		Print(".",color=color,delay=0)
+	sleep(1)
 	flushInput()
 
 
@@ -424,6 +424,9 @@ def diceRoll(n,d,m=0):
 def halfRangeRoll(d,m=0):
 	return diceRoll(1,d//2,m+d//2)
 
+
+def roll(d,m=0):
+	return diceRoll(1,d,m)
 
 # returns a number, n, with a lower bound of m
 def minm(m,n): return m if n < m else n
@@ -836,7 +839,7 @@ class DialogueNode():
 		if self.isCheckpoint:
 			speaker.dlogtree.checkpoint = self.id
 		if self.remark:
-			waitKbInput(f'"{self.remark}"',color="y")
+			waitInput(f'"{self.remark}"',color="y")
 		elif self.trites:
 			tritepool = set()
 			for trite in self.trites:
@@ -847,7 +850,7 @@ class DialogueNode():
 			if triteRemark == self.lastTriteRemark:
 				triteRemark = samples[1]
 
-			waitKbInput(f'"{triteRemark}"',color="y")
+			waitInput(f'"{triteRemark}"',color="y")
 			self.lastTriteRemark = triteRemark
 
 		# return next node if this node has children
@@ -1488,6 +1491,7 @@ class Room():
 		self.passprep = "at" if passprep is None else passprep
 		self.status = status if status else []
 		self.parent = None
+		self.pronoun = "it"
 		
 		# these are the default fixtures
 		self.ceiling = None
@@ -1549,6 +1553,7 @@ class Room():
 			assert isinstance(dest, Room), f"Trying to save room {self.name} with exit to non-Room '{dest}'."
 			jsonDict["links"][dir] = dest.name.lower()
 
+		del jsonDict["pronoun"]
 		jsonDict["fixtures"] = self.fixtures.copy()
 		if self.ceiling:
 			jsonDict["fixtures"].remove(self.ceiling)
@@ -2089,17 +2094,19 @@ class Item():
 		occupant.removeRiding()
 		occupant.removePlatform()
 
-		if getattr(self,"open",False):
-			occupant.Print(f"{+self} is open.")
-			self.Traverse(occupant)
+		if hasMethod(self,"Traverse") and getattr(self,"open",True):
+			if getattr(self,"open",False):
+				occupant.Print(f"{+self} is open.")
+			self.Traverse(occupant,verb="jump")
 			return False
 		elif self.occupantsWeight() + occupant.Weight() > self.durability*2 and self.durability != -1:
-			Print(f"{+self} cannot support the weight of {~occupant}!")
+			occupant.waitInput(f"{+self} cannot support the weight of {~occupant}!",color="o")
 			self.Break()
+			occupant.Fall(max(3,self.Size()//5))
 			return True
 		elif self.Size() < occupant.Size() // 5:
-			Print(f"{+self} is too small to support {~occupant}.")
-			occupant.Fall(minm(3,self.Size()//5))
+			occupant.Print(f"{+self} is too small to support {~occupant}.",color="o")
+			occupant.Fall(max(3,self.Size()//5))
 			return True
 		self.occupants.append(occupant)
 		occupant.platform = self
@@ -2117,7 +2124,7 @@ class Item():
 
 	def Disoccupy(self):
 		for occupant in self.occupants:
-			occupant.platform = None
+			occupant.platform = self.parent.floor
 		self.occupants.clear()
 
 
@@ -2616,11 +2623,16 @@ class Creature():
 		else:
 			self.hp = min0(self.hp-dmg)
 		total_dmg = prevhp - self.hp
-		dmgtype = Data.dmgtypes[type]
-		if self.room() is game.currentroom:
-			Print(f"{+self} took {total_dmg} {dmgtype} damage.",color="o")
+
+		p = "!" if self.hasStatus("asleep") or total_dmg > self.MXHP()//4 else "."
+		color = "w"
+		if self is player and total_dmg > 0:
+			color = "r"
+		Print(f"{+self} took {total_dmg} {Data.dmgtypes[type]} damage{p}",allowSilent=True,color=color)
 		if self.hp == 0:
-			self.death()
+			return self.death()
+		if total_dmg > 0 and self.hasStatus("asleep"):
+			self.removeStatus("asleep")
 
 
 	# heals hp a given amount
@@ -3048,7 +3060,7 @@ class Creature():
 		self.timeOfDeath = None
 		if self is player:
 			sleep(1)
-			self.waitKbInput("You reawaken!",color="g")
+			self.waitInput("You reawaken!",color="g")
 			self.removeStatus("dead")
 		else:
 			Print(f"{+self} has been reanimated!")
@@ -3060,7 +3072,7 @@ class Creature():
 			return self.anchor().Fall(height,room)
 
 		if player in (self.rider, self.carrying):
-			waitKbInput(f"{+self} falls!",color="o")
+			waitInput(f"{+self} falls!",color="o")
 		else:
 			Print(f"{+self} falls.",color="o")
 
@@ -3068,7 +3080,7 @@ class Creature():
 			Print(f"But {self.pronoun} is flying.")
 			return False
 
-		if room is None:
+		if not isinstance(room, Room):
 			room = self.room()
 		while room.floor is None and "down" in room.links:
 			height += room.size
@@ -3077,10 +3089,15 @@ class Creature():
 			if self.carrying:
 				self.carrying.Fall(height,room)
 			self.changeLocation(room)
+			if self.room() is game.currentroom:
+				Print(f"{+self} falls from above.")
+
+		if self.anchor() is not self.parent.floor:
+			self.parent.floor.addOccupant(self)
 
 		if not self.hasStatus("fleetfooted"):
 			self.takeDamage(height,"b")
-			self.addStatus("laying",-3)
+			self.changePosture("laying")
 			if self.rider:
 				self.rider.takeDamage(height//2,"b")
 		return True
@@ -3156,11 +3173,12 @@ class Creature():
 		if posture is None:
 			posture = "standing"
 		if not posture.endswith("ing"):
-			posture = "sitt" if posture == "sit" else posture
-			posture = posture+"ing"
+			posture = ("sitt" if posture == "sit" else posture) +"ing"
 
 		validPostures = ("standing","crouching","sitting","laying")
 		assert posture in validPostures
+		if self.posture() == posture:
+			return False
 
 		for p in validPostures:
 			if p != posture:
@@ -3194,7 +3212,8 @@ class Creature():
 		prevparent.exit(self)
 		if self is player and isinstance(newparent,Room):
 			game.changeRoom(newparent)
-		if self.anchor() in (None,prevparent.floor):
+		# when not riding or being carried, platform becomes new room's floor
+		if self.anchor() not in (self.riding, self.carrier) or self.anchor() is None:
 			self.platform = newparent.floor
 
 		newparent.enter(self)
@@ -3219,7 +3238,7 @@ class Creature():
 		self.removeCarry()
 		self.removeRiding()
 		self.removeCover()
-		self.waitKbInput("You teleport!",color="b")
+		self.waitInput("You teleport!",color="b")
 		self.changeLocation(newroom)
 		self.changePosture("stand")
 
@@ -3296,7 +3315,7 @@ class Creature():
 			return False
 		if self.carrier:
 			self.Print(f"{+self} is already being carried by {self.carrier}.")
-			if halfRangeRoll(carrier.ATHL()) > halfRangeRoll(self.carrier.ATHL()):
+			if roll(carrier.ATHL()) > roll(self.carrier.ATHL()):
 				carrier.Print()(f"You wrest {-self} away from {-self.carrier}!")
 			else:
 				carrier.Print(f"{+self.carrier} holds onto {-self}.")
@@ -3400,7 +3419,7 @@ class Creature():
 
 		if self.rider:
 			self.Print(f"{+self.rider} is already riding {self}.")
-			if halfRangeRoll(rider.ATHL()) > halfRangeRoll(self.rider.ATHL()):
+			if roll(rider.ATHL()) > roll(self.rider.ATHL()):
 				self.rider.Print()(f"You push {-self} off of {-self.rider}!")
 				self.rider.removeRiding()
 			else:
@@ -3423,13 +3442,12 @@ class Creature():
 
 
 	def Mount(self,anchor,posture="sit"):
-		if self.parent is not anchor.parent:
-			self.Print(f"You can't, you are in {-self.parent}.")
-			return False
 		if anchor is self.anchor():
 			if not self.changePosture(posture,silent=True):
 				self.Print(f"You are already {self.posture()} on {-anchor}.")
 				return False
+		elif anchor is self.parent.floor:
+			return self.Dismount(posture=posture)
 		elif self.anchor() not in (None,self.parent.floor):
 			self.Print(f"You can't, you are {self.position()}.")
 			return False
@@ -3838,7 +3856,7 @@ class Creature():
 
 	# This is used as a shortcut to show output only to the user
 	# It should do nothing for any other creature
-	def waitKbInput(self,text=None,delay=None,color=None):
+	def waitInput(self,text=None,delay=None,color=None):
 		return
 
 
@@ -3898,7 +3916,7 @@ class Player(Creature):
 
 
 	def __neg__(self):
-		return "yourself" if game.whoseturn is self else "you"
+		return "you"
 
 
 	def __pos__(self):
@@ -3906,7 +3924,7 @@ class Player(Creature):
 
 
 	def __invert__(self):
-		return "yourself" if game.whoseturn is self else "you"
+		return "you"
 
 
 	### Operation ###
@@ -3914,35 +3932,11 @@ class Player(Creature):
 	def awaken(self,wellRested=True):
 		game.silent = False
 		sleep(1)
-		waitKbInput("You wake up!",color="o")
+		waitInput("You wake up!",color="o")
 		if wellRested:
 			self.lastSlept = game.time
 			self.checkTired()
 		game.startUp()
-
-
-	# takes incoming damage, accounts for damage vulnerability or resistance
-	def takeDamage(self,dmg,type):
-		if self.hasStatus("dead"):
-			return False
-		prevhp = self.hp
-		if(f"{type} vulnerability" in self.status): dmg *= 2
-		if(f"{type} resistance" in self.status): dmg /= 2
-		if(f"{type} immunity" in self.status): dmg = 0
-		# bludgeoning damage can't kill you in one hit
-		if type == "b" and self.hp > 1:
-			self.hp = min1(self.hp-dmg)			
-		# player hp lowered to a minimum of 0
-		else:
-			self.hp = min0(self.hp-dmg)
-		total_dmg = prevhp - self.hp
-		p = "!" if player.hasStatus("asleep") or total_dmg*5 > self.MXHP() else "."
-		color = "r" if total_dmg > 0 else "w"
-		Print(f"You took {total_dmg} {Data.dmgtypes[type]} damage{p}",allowSilent=False,color=color)
-		if self.hp == 0:
-			return self.death()
-		if total_dmg > 0 and self.hasStatus("asleep"):
-			self.removeStatus("asleep")
 
 
 	def levelUpMenu(self,QP,prompt="",warning=""):
@@ -3960,7 +3954,7 @@ class Player(Creature):
 
 	# player gets 1 QPs for each level gained, can dispense them into any trait
 	def levelUp(self,oldlv,newlv):
-		waitKbInput(f"You leveled up to level {newlv}!",color="g")
+		waitInput(f"You leveled up to level {newlv}!",color="g")
 		QP = newlv-oldlv
 		Print("\n"*7)
 		warning = ""
@@ -4056,7 +4050,7 @@ class Player(Creature):
 		self.removeCarry(silent=True)
 
 		self.addStatus("dead",-3)
-		waitKbInput()
+		waitInput()
 		self.timeOfDeath = game.time
 		return True
 
@@ -4068,7 +4062,7 @@ class Player(Creature):
 			crit = diceRoll(1,100) <= self.CRIT()
 			attack = self.ATCK()
 			if crit:
-				waitKbInput("Critical hit!",color="o")
+				waitInput("Critical hit!",color="o")
 				self.weapon2.dull(1)
 				attack *= 2
 			damage = min0( attack - target.DFNS() )
@@ -4077,7 +4071,7 @@ class Player(Creature):
 				return
 		else:
 			Print("Aw it missed.")
-		waitKbInput()
+		waitInput()
 
 
 	def attackCreature(self,target):
@@ -4086,21 +4080,21 @@ class Player(Creature):
 			Print(f"{n} attacks!",color="o")
 		for i in range(n):
 			if n > 1:
-				waitKbInput(f"\n{ordinal(i+1)} attack:")
+				waitInput(f"\n{ordinal(i+1)} attack:")
 			# TODO: what about if weapon is ranged?
 			hit = bound(self.ACCU() - target.EVSN(),1,99)
 			if diceRoll(1,100) <= hit:
 				crit = diceRoll(1,100) <= self.CRIT()
 				attack = self.ATCK()
 				if crit:
-					waitKbInput("Critical hit!",color="o")
+					waitInput("Critical hit!",color="o")
 					self.weapon.dull(1)
 					attack *= 2
 				damage = min0( attack - target.DFNS() )
 				target.takeDamage(damage,self.weapon.type)
 			else:
 				Print("Aw it missed.")
-			waitKbInput()
+			waitInput()
 			if not target.isAlive():
 				return
 			if self.weapon2 != EmptyGear():
@@ -4135,7 +4129,7 @@ class Player(Creature):
 		if self.riding or self.carrier:
 			return self.anchor().Fall(height,room)
 		
-		Print(f"You fall!",color="o")
+		self.waitInput(f"You fall!",color="o")
 
 		if self.hasStatus("flying"):
 			Print(f"But you're flying.",color="g")
@@ -4150,9 +4144,12 @@ class Player(Creature):
 			ellipsis()
 			self.changeLocation(room)
 
+		if self.anchor() is not self.parent.floor:
+			self.parent.floor.addOccupant(self)
+
 		if not self.hasStatus("fleetfooted"):
 			self.takeDamage(height,"b")
-			self.addStatus("laying",-3)
+			self.changePosture("laying")
 		return True
 
 
@@ -4208,8 +4205,8 @@ class Player(Creature):
 		return Print(*args,end=end,sep=sep,delay=delay,color=color,allowSilent=allowSilent)
 
 
-	def waitKbInput(self,text=None,delay=None,color=None):
-		return waitKbInput(text=text,delay=delay,color=color)
+	def waitInput(self,text=None,delay=None,color=None):
+		return waitInput(text=text,delay=delay,color=color)
 
 
 	# prints all 10 player traits
@@ -4395,7 +4392,7 @@ class Humanoid(Creature):
 			crit = diceRoll(1,100) <= self.CRIT()
 			attack = self.ATCK()
 			if crit:
-				waitKbInput("Critical hit!",color="o")
+				waitInput("Critical hit!",color="o")
 				self.weapon2.dull(1)
 				attack *= 2
 			damage = min0( attack - target.DFNS() )
@@ -4404,7 +4401,7 @@ class Humanoid(Creature):
 				return
 		else:
 			Print("It missed!")
-		waitKbInput()
+		waitInput()
 
 
 	def attack(self):
@@ -4428,20 +4425,20 @@ class Humanoid(Creature):
 			Print(f"{n} attacks!")
 		for i in range(n):
 			if n > 1:
-				target.waitKbInput(f"\n {+self}'s {ordinal(i+1)} attack on {target}:")
+				target.waitInput(f"\n {+self}'s {ordinal(i+1)} attack on {target}:")
 			# TODO: what about if weapon is ranged?
 			hit = bound(self.ACCU() - target.EVSN(),1,99)
 			if diceRoll(1,100) <= hit:
 				crit = diceRoll(1,100) <= self.CRIT()
 				attack = self.ATCK()
 				if crit:
-					target.waitKbInput("Critical hit!",color="o")
+					target.waitInput("Critical hit!",color="o")
 					attack *= 2
 				damage = min0( attack - target.DFNS() )
 				target.takeDamage(damage,self.weapon.type)
 			else:
 				Print("It missed!")
-			# target.waitKbInput()
+			# target.waitInput()
 			if not target.isAlive():
 				return
 			if self.weapon2 != EmptyGear():
@@ -4681,7 +4678,7 @@ class Animal(Speaker):
 		if not player.hasStatus("wildtongued"):
 			sounds = game.dlogDict["sounds"][self.species]
 			sound = sample(sounds,1)[0]
-			waitKbInput(f'"{sound}"',color="y")
+			waitInput(f'"{sound}"',color="y")
 			return True
 		if "met" not in self.memories:
 			self.firstImpression(player)
@@ -4910,7 +4907,7 @@ class Portal(Item):
 			return False
 
 		if traverser is player:
-			waitKbInput(f"You go {dir} the {self.name}.")
+			waitInput(f"You go {dir} the {self.name}.")
 		traverser.changeLocation(newloc)
 		return True
 

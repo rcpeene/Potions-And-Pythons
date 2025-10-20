@@ -76,7 +76,7 @@ def main(testing=False):
 			if testing: raise e
 			Core.Print(f"\n\nAn error has occurred. The game will attempt to continue, but you may want to restart.\nThe error message is as follows:\n")
 			traceback.print_exc()
-			Core.waitKbInput("\nPress any key to continue...")
+			Core.waitInput("\nPress any key to continue...")
 			# return Menu.quit()
 
 
@@ -88,46 +88,23 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# add enforceVerbScope to all verbs
-# test and go through verbs where specifying a floor,ground,ceiling
-	# "attack here" should attack the ground if no obj specified
-		# should 'here' always redirect to the floor?
-			# it should probably pick floor, then walls, then ceiling
-			# or maybe just give 'here' as aliases for these fixtures
+# add chasm object, or is this just a Wall?
 
-	# specifically check Mount, lick, smell, look
-
-# check the lines enforceTetherLimits in Throw
 
 ################################################################################
 
 # BUG BACKLOG
 
-# 'climb out of here' in a normal room -> you can't climb here
-# climb in bed -> you stand on the bed
 
-# inside chest: close chest, sit on key, get up -> "you are no longer hidden"
 
 ################################################################################
 
 # FUTURE IMPROVEMENTS
 
-# add "jumping" from one object to another?
-# 	must stand first in order to jump
-# 	'jump off cliff'
-# 	'jump off [item]' (onto ground)
-# 	'jump to [item]' (from ground)
-# 	'jump to [item] from [item]'
-# 	 just 'jump'
-# 	'jump in the pond'
-# 	'jump over [chasm]'
-# 	'jump off [riding]' onto ground
-# 	'jump onto [riding]' from ground
-# 	'jump off [riding] onto [item]'
-
 # hide/get in a body of water?
 # fix obtaining money problem, think about other objects which won't go into inv upon obtaining
 # test drinking an object when inv is full, see if bottle goes on ground
+# try "jump in the pond"
 # add "swim"
 # handle bodies of water; what about fall dammage, being weighed down
 # add magic beans or food to pour stuff on
@@ -319,3 +296,16 @@ if __name__ == "__main__":
 #		axe
 #		polearm
 #		club
+
+
+### TYPES OF FEEDBACK:
+# 1. execution errors; Errors which stop the game from running
+# 2. failure of intention; Errors where player input result is interpreted in an unreasonable manner, leading to unexpected/nonsensical consequences.
+# 3. failure of information; Errors where the player is not given enough information about what happened making the game difficult to understand.
+# 4. failures of action; Errors where the player has difficulty figuring out how to do what they want to do. The game tells them they can't do something they think they should be able to.
+# 5. grammatical failures; Errors where the text output is ungrammatical or awkwardly phrased.
+# 6. failure of verisimilitude; Errors where the game mechanics behave in ways that are consistent and reliable, but absurd or at odds with reality (allowing the fantasy elements of the game world).
+# 7. lack of polish; Errors where the game mechanics are fully functional, but not as user-friendly or enjoyable as they could be.
+# 8. lack of gameplay content; Errors where the game is missing mechanics/features that would enhance the player's experience.
+# 9. narrative/lore shortcomings; Missing story or environment elements that detract from the game's immersion or storytelling. Things the world lacks that would make it more interesting.
+# 10. any other feedback

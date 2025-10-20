@@ -95,6 +95,8 @@ debuffs = {"dead","hindered"}
 
 privateStatus = {"dead","invisible","hidden","hindered"}
 
+immobileStatus = ("laying","sitting","asleep","frozen","paralyzed","unconscious","stunned","dead","restrained")
+
 colorMap = {
 	"r":"31", "o": "38;5;215", "y":"38;5;227", "g":"32", 
 	"b":"34", "m":"35", "k":"90", "w":"37"
