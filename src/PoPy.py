@@ -88,8 +88,6 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# add chasm object, or is this just a Wall?
-
 
 ################################################################################
 
@@ -101,9 +99,8 @@ if __name__ == "__main__":
 
 # FUTURE IMPROVEMENTS
 
-# hide/get in a body of water?
-# fix obtaining money problem, think about other objects which won't go into inv upon obtaining
 # test drinking an object when inv is full, see if bottle goes on ground
+# hide/get in a body of water?
 # try "jump in the pond"
 # add "swim"
 # handle bodies of water; what about fall dammage, being weighed down

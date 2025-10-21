@@ -78,7 +78,7 @@ compounds = {"downstairs":["down","stairs"], "upstairs":["up","stairs"]}
 # used in nounify() in Parser.py to combine multiple words that might have a single meaning as a whole term
 miscexpressions = {"it all","spell list","meteor shower","solar eclipse"}
 
-directions = {"n":"north","ne":"northeast","e":"east","se":"southeast","s":"south","sw":"southwest","w":"west","nw":"northwest","u":"up","d":"down","inside":"in","into":"in","o":"out","b":"beyond"}
+directions = {"n":"north","ne":"northeast","e":"east","se":"southeast","s":"south","sw":"southwest","w":"west","nw":"northwest","u":"up","d":"down","inside":"in","into":"in","o":"out","b":"beyond","onto":"on","upon":"on","off":"down","over":None,"to":None}
 
 dmgtypes = {"a":"acid","b":"bludgeoning","c":"cold","e":"essential","f":"fire","h":"hunger","i":"psychic","l":"lightning","n":"necrotic","p":"piercing","r":"radiant","s":"slashing","t":"thunder","v":"force","x":"poison"}
 

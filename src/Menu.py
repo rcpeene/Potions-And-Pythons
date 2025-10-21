@@ -38,6 +38,8 @@ visitedobjects = set()
 class worldEncoder(json.JSONEncoder):
 	def default(self,objToWrite):
 		# print(objToWrite)
+		# for k,v in getattr(objToWrite,"__dict__",{}).items():
+		# 	print(f"  {k}: {v}")
 		if objToWrite in visitedobjects:
 			raise Exception(f"{objToWrite} already visited")
 

@@ -93,7 +93,7 @@ def chooseObject(name,objects,verb=None):
 # queryPlayer and queryRoom indicate which places to look for matching objects
 # roomD and playerD are the 'degree' of the query.
 # Look at Core.py objQuery for details on query degree
-def findObject(term,verb=None,queryType="both",filter=None,roomD=1,playerD=2,reqParent=None,silent=False):
+def findObject(term,verb=None,queryType="both",filter=None,roomD=0,playerD=2,reqParent=None,silent=False,allowRooms=False):
 	if term is None and not silent and verb is not None:
 		term = getNoun(f"What will you {verb}?")
 	if term in Data.cancels or term is None or term == "nothing":
@@ -115,11 +115,11 @@ def findObject(term,verb=None,queryType="both",filter=None,roomD=1,playerD=2,req
 		matches.add(Core.player.carrying)
 	if term in ("me","myself","player","self"):
 		matches.add(Core.player)
-	if term in ("room",Core.game.currentroom.name):
-		matches.add(Core.game.currentroom)
 	if term in ("here","there"):
 		matches.add(Core.player.parent)
 
+	if not allowRooms:
+		matches = {match for match in matches if not isinstance(match,Core.Room)}
 	if filter:
 		matches = {match for match in matches if filter(match)}
 	if reqParent:
@@ -177,10 +177,13 @@ def enforceVerbScope(verb,obj,permitAnchor=True,permitParent=False,permitSelf=Fa
 			Core.Print(f"You can't {verb} {-obj}, you're {Core.player.position()}.{rec}")
 			return True
 
-	if isinstance(obj,Core.Fixture) and Core.nameMatch("ceiling",obj):
-		if Core.player.Size() < Core.player.parent.Size() // 2 and not Core.player.hasStatus("flying"):
-			Core.Print(f"You can't {verb} {-obj}, it is too high.")
-			return True
+	if Core.player.parent.ceiling:
+		if obj in Core.player.parent.ceiling.objTree(includeSelf=True):
+			if Core.player.Size() < Core.player.parent.Size() // 2:
+				if not Core.player.hasAnyStatus("clingfast","flying"):
+					Core.Print(f"You can't {verb} {-obj}, it is too high.")
+					return True
+	return False
 
 
 # checks if a noun refers to a room, an object in the world or on the player...
@@ -1508,6 +1511,7 @@ def parseGo(dobj,iobj,prep):
 	# but its useful to have for printing fail outputs to user
 
 	# assign dir if unassigned
+	if dir in Data.directions: dir = Data.directions[dir]
 	if dir is None and dobj in Data.directions.values(): dir = dobj
 	elif dir is None and iobj in Data.directions.values(): dir = iobj
 	elif dir is None: dir = prep
@@ -1548,7 +1552,7 @@ def Go(dobj,iobj,prep):
 			Core.game.setPronouns(Core.player.riding)
 			return False
 
-	preps = ("away","away from","down","through","to","toward","up","in","inside","into","on","onto","out",None)
+	preps = ("across","away","away from","down","through","to","toward","up","in","inside","into","on","onto","out","over",None)
 	if prep in ("to", "toward", "away", "away from"):
 		prep = None
 	if (dobj,iobj,prep) == (None,None,None):
@@ -1570,7 +1574,11 @@ def Go(dobj,iobj,prep):
 		return False
 	# print(dir,dest,passage)
 	if (dir,dest,passage) == (None,None,None):
-		Core.Print(f"There is no '{dobj}' here.{locReminder}",color="k")
+		if dobj is None: dobj = iobj
+		if dobj is None:
+			Core.Print(f"There is no way '{prep}' here.{locReminder}",color="k")
+		else:
+			Core.Print(f"There is no '{dobj}' here.{locReminder}",color="k")
 		return False
 	if dir is None and dest is not None:
 		dir, passage = Core.player.parent.getDirPortalPair(dest.name.lower())
@@ -1600,7 +1608,6 @@ def Go(dobj,iobj,prep):
 		Core.Print(f"You are already there!")
 		return False
 
-	# print(dir,dest,passage)
 	# call one of three functions to actually change rooms
 	# depends if they go normally, traverse a passage, or go vertically
 	if dir in ("up","down"):
@@ -1729,16 +1736,13 @@ def Jump(dobj,iobj,prep):
 		return Dismount(dobj,iobj,prep)
 	if prep in ("across","d","down","off","over","through"):
 		if Core.hasMethod(jumpTo,"Traverse"):
-			return jumpTo.Traverse(Core.player,verb="jump")
+			return jumpTo.Traverse(Core.player,dir=prep,verb="jump")
 		else:
 			Core.Print(f"{+jumpTo} can't be traversed.")
 			return False
-	if prep in ("on","onto","upon"):
+	if prep in ("in","inside","into","on","onto","upon"):
 		if Core.hasMethod(jumpTo,"Traverse") and getattr(jumpTo,"open",True):
-			return jumpTo.Traverse(Core.player,verb="jump")
-	if prep in ("in","inside","into") and not Core.hasMethod(jumpTo,"Traverse"):
-		Core.Print(f"You can't get {prep} {-jumpTo}.")
-		return False
+			return jumpTo.Traverse(Core.player,dir=prep,verb="jump")
 
 	jumpFromSize = jumpFrom.Size() if jumpFrom else 1
 	jumpToSize = jumpTo.Size() if jumpTo else 1
@@ -1819,9 +1823,6 @@ def Lick(dobj,iobj,prep):
 
 	if Core.hasMethod(I,"Lick"):
 		return I.Lick(Core.player)
-	if isinstance(I,Core.Room):
-		Core.Print("You can't lick the air.")
-		return False
 
 	if I.composition in Data.tastes:
 		Core.Print(Data.tastes[I.composition])
@@ -1878,7 +1879,7 @@ def Look(dobj,iobj,prep):
 	elif prep == "around":
 		L = Core.player.parent
 	else:
-		L = findObject(dobj,"look at")
+		L = findObject(dobj,"look at",allowRooms=True)
 		if L is None: return False
 
 	Core.game.setPronouns(L)
@@ -1904,9 +1905,10 @@ def Mount(dobj,iobj,prep,M=None,posture=None):
 			return Dismount(None,None,None,posture=posture)
 	if enforceVerbScope("get on",M,permitParent=True):
 		return False
-	if M in Core.player.parent.surfaces and not Core.player.hasStatus("clingfast"):
-		Core.Print(f"You can't get on {-M}.")
-		return False
+	if M in (Core.player.parent.ceiling, Core.player.parent.walls):
+		if not Core.player.hasStatus("clingfast"):
+			Core.Print(f"You can't get on {-M}.")
+			return False
 
 	if Core.hasMethod(M,"Ride"):
 		# Core.player.removeStatus("hidden",-3) TODO: readd this?
@@ -2213,7 +2215,7 @@ def Smell(dobj,iobj,prep):
 		return promptHelp("Command not understood.")
 
 	# TODO: if blinded, randomly smell something in the room?
-	I = findObject(dobj,"smell")
+	I = findObject(dobj,"smell",allowRooms=True)
 	if I is None: return False
 	Core.game.setPronouns(I)
 	if enforceVerbScope("smell",I,permitSelf=True,permitParent=True): return False
@@ -2357,9 +2359,9 @@ def Take(dobj,iobj,prep):
 		return TakeAll(takeFrom)
 
 	if iobj in ("here","room",None):
-		objToTake = findObject(dobj,"take","room",roomD=2)
+		objToTake = findObject(dobj,"take","room")
 	else:
-		objToTake = findObject(dobj,"take",roomD=2,reqParent=iobj)
+		objToTake = findObject(dobj,"take",reqParent=iobj)
 	if objToTake is None:
 		return False
 	Core.game.setPronouns(objToTake)
@@ -2828,6 +2830,8 @@ actions = {
 "take a seat":Sit,
 # "take a shit":Poop,
 "take a sip":Lick,
+"take a smell":Smell,
+"take a sniff":Smell,
 "take a step":Go,
 "take a swim":Swim,
 "take a walk":Go,
