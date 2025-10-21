@@ -83,7 +83,6 @@ class Box(Core.Portal):
 		del jsonDict["ceiling"]
 		del jsonDict["walls"]
 		del jsonDict["floor"]
-		del jsonDict["surfaces"]
 		del jsonDict["links"]
 		del jsonDict["descname"]
 		return jsonDict
@@ -190,6 +189,7 @@ class Box(Core.Portal):
 
 
 	def Traverse(self,traverser,dir=None,verb=None):
+		if dir in Data.directions: dir = Data.directions[dir]
 		if self in traverser.objTree():
 			if traverser is Core.player:
 				Core.Print(f"You can't enter {-self}. It's within your Inventory.")
@@ -699,9 +699,11 @@ class Table(Core.Item):
 
 
 class Wall(Core.Passage):
-	def __init__(self,name,desc,weight,composition,links,descname,difficulty,passprep="onto",**kwargs):
+	def __init__(self,name,desc,weight,composition,links,descname,difficulty,passprep=None,**kwargs):
 		Core.Passage.__init__(self,name,desc,weight,composition,links,descname,passprep=passprep,**kwargs)
 		self.difficulty = difficulty
+		if passprep is None:
+			self.passprep = "onto" if self.getDefaultDir() in ("up","down") else "across"
 
 
 	def Traverse(self,traverser,dir=None,verb=None):
@@ -713,14 +715,17 @@ class Wall(Core.Passage):
 				dir = Core.Input(msg).lower()
 		if dir in Data.cancels:
 			return False
+		if dir == "over": dir = "across"
+		if dir in Data.directions: dir = Data.directions[dir]
 		if dir not in self.links:
 			Core.Print(f"{+self} does not go '{dir}'.")
 			return False
 
 		if traverser.hasStatus("flying") and verb is None: verb = "fly"
-		elif traverser.hasStatus("clingfast") and verb in ("climb",None): verb = "crawl"
+		elif traverser.hasStatus("clingfast") and dir in ("u","up","d","down"): verb = "crawl"
 		elif traverser is Core.player.riding: verb = "ride"
-		elif verb is None: verb = "climb"
+		elif verb is None and dir in ("u","up","d","down"): verb = "climb"
+		elif verb is None: verb = "jump"
 
 		if traverser.riding:
 			return self.Traverse(traverser.riding,dir=dir)
@@ -730,7 +735,7 @@ class Wall(Core.Passage):
 
 		traverser.waitInput(f"You {verb} {dir} {-self}.")
 
-		if verb != "jump" or traverser.hasStatus("flying"):
+		if verb != "jump" or dir not in ("d","down","off") or traverser.hasAnyStatus("flying"):
 			contest = Core.roll(traverser.ATHL()) - self.difficulty
 			if contest > 0 or traverser.hasAnyStatus("clingfast","flying"):
 				traverser.changeLocation(self.getNewLocation(dir))
@@ -795,6 +800,7 @@ class Window(Core.Passage):
 
 
 	def Traverse(self,traverser,dir=None,verb="go"):
+		if dir in Data.directions: dir = Data.directions[dir]
 		if not (self.broken or self.open):
 			Core.Print(f"{+self} is closed.")
 			return False

@@ -119,7 +119,7 @@ def displayLength(text):
 
 
 def Print(*args,end="\n",sep="",delay=None,color=None,allowSilent=True):
-	if player.hasStatus("insanity"):
+	if player.hasStatus("insanity") and color != "k":
 		color = choices(list(Data.colorMap.keys()),[1]*7 + [28])[0]
 	if delay is None:
 		if player.hasAnyStatus("dead","slowness"): delay = 0.02
@@ -263,14 +263,18 @@ def yesno(question,delay=None,color=None):
 	return InputLoop(question,acceptKey=acceptKey,escapeKey=None,helpMsg="",refuseMsg=refuseMsg,color=color,delay=delay)
 
 
+def delay(seconds):
+	flushInput()
+	sleep(seconds)
+	flushInput()
+
+
 # prints a timed ellipsis, used for dramatic transitions
 def ellipsis(n=3,color=None):
-	flushInput()
 	for _ in range(n):
-		sleep(1)
+		delay(1)
 		Print(".",color=color,delay=0)
-	sleep(1)
-	flushInput()
+	delay(1)
 
 
 # prints a list of strings, l, into n columns of width w characters
@@ -1998,6 +2002,8 @@ class Item():
 		jsonDict = self.__dict__.copy()
 		jsonDict["occupants"] = [o.id for o in self.occupants] if self.occupants else None
 		jsonDict["covering"] = [c.id for c in self.covering] if self.covering else None
+		if "surfaces" in jsonDict:
+			del jsonDict["surfaces"]
 		return jsonDict
 
 
@@ -2627,8 +2633,11 @@ class Creature():
 		p = "!" if self.hasStatus("asleep") or total_dmg > self.MXHP()//4 else "."
 		color = "w"
 		if self is player and total_dmg > 0:
+			delay(0.5)
 			color = "r"
 		Print(f"{+self} took {total_dmg} {Data.dmgtypes[type]} damage{p}",allowSilent=True,color=color)
+		if self is player:
+			delay(0.5)
 		if self.hp == 0:
 			return self.death()
 		if total_dmg > 0 and self.hasStatus("asleep"):
@@ -2741,8 +2750,8 @@ class Creature():
 		if self.canObtain(I):
 			if self.add(I):
 				oldParent.remove(I)
-			I.Obtain(self)
 			self.Print(f"You take {strname}{suffix}.")
+			I.Obtain(self)
 			self.checkHindered()
 			return True
 		return False
@@ -3059,7 +3068,7 @@ class Creature():
 		self.hp = 1
 		self.timeOfDeath = None
 		if self is player:
-			sleep(1)
+			delay(1)
 			self.waitInput("You reawaken!",color="g")
 			self.removeStatus("dead")
 		else:
@@ -3931,7 +3940,7 @@ class Player(Creature):
 
 	def awaken(self,wellRested=True):
 		game.silent = False
-		sleep(1)
+		delay(1)
 		waitInput("You wake up!",color="o")
 		if wellRested:
 			self.lastSlept = game.time
@@ -4229,7 +4238,7 @@ class Player(Creature):
 
 
 	# each prints a different player stat
-	def printMoney(self, *args): Print(f"$ {self.money}",color="g")
+	def printMoney(self, *args): Print(f"§ {self.money}",color="g")
 	def printHP(self, *args): Print(f"HP: {self.hp}/{self.MXHP()}",color="r")
 	def printLV(self, *args): Print(f"LV: {self.level()}",color="o")
 	def printMP(self, *args): Print(f"MP: {self.mp}/{self.MXMP()}",color="b")
@@ -4865,7 +4874,7 @@ class Portal(Item):
 			return list(self.links.keys())[0]
 		elif "down" in self.links:
 			return "down"
-		return choice(self.links)
+		return choice(list(self.links.keys()))
 
 
 	def getNewLocation(self,dir=None):
@@ -4881,6 +4890,7 @@ class Portal(Item):
 
 	# method for creatures travelling through the portal
 	def Traverse(self,traverser,dir=None):
+		if dir in Data.directions: dir = Data.directions[dir]
 		if self in traverser.objTree():
 			if traverser is player:
 				Print(f"You can't enter {-self}. It's within your Inventory.")

@@ -707,13 +707,15 @@
 				"name": "black pit",
 				"desc": "A deep black pit, big enough for a horse. You cannot see the bottom. ",
 				"weight": 500,
+				"aliases": ["pit","dark pit","large pit","chasm"],
 				"composition": null,
 				"links": {
 					"down": "burning shore",
-					"in": "burning shore"
+					"in": "burning shore",
+					"across": "clifftop"
 				},
 				"descname": "dark pit",
-				"difficulty": 100
+				"difficulty": 20
 			}
 		],
 		"items": [],
