@@ -12,13 +12,15 @@ from random import choice,choices,randint,sample,shuffle
 from math import floor, sqrt
 from bisect import insort
 from collections.abc import Iterable
-import sys, os, re
-from turtle import delay
+import sys, os, re, subprocess
+import tempfile
+import subprocess
+import atexit
 
 try:
 	import msvcrt
 except:
-	import termios, select
+	import termios, select, tty, shlex
 
 import Data
 
@@ -118,8 +120,10 @@ def displayLength(text):
 	return l
 
 
-def Print(*args,end="\n",sep="",delay=None,color=None,allowSilent=True):
-	if player.hasStatus("insanity") and color != "k":
+def Print(*args,end="\n",sep="",delay=None,color=None,allowSilent=True,outfile=None):
+	if outfile is None:
+		outfile = sys.stdout
+	if player.hasStatus("insanity") and color != "k" and outfile is sys.stdout:
 		color = choices(list(Data.colorMap.keys()),[1]*7 + [28])[0]
 	if delay is None:
 		if player.hasAnyStatus("dead","slowness"): delay = 0.02
@@ -132,25 +136,25 @@ def Print(*args,end="\n",sep="",delay=None,color=None,allowSilent=True):
 	printLength = sum(displayLength(s) for s in args) + displayLength(sep)*(len(args)-1) + displayLength(end)
 	if color is not None:
 		args = Tinge(*args,color=color)
-	if game.mode == 1 or delay is None:
-		print(*args,end=end,sep=sep)
+	if game.mode == 1 or delay is None or outfile is not sys.stdout:
+		print(*args,end=end,sep=sep,file=outfile)
 		return printLength
 
 	sleep(delay)
-	sys.stdout.flush()
+	outfile.flush()
 	sleep(delay)
 	for arg in args:
 		for char in str(arg):
 			if kbInput() and not player.hasStatus("slowness"):
 				delay = 0
-			sys.stdout.write(char)
-			sys.stdout.flush()
+			outfile.write(char)
+			outfile.flush()
 			sleep(delay)
-		sys.stdout.write(sep)
-		sys.stdout.flush()
+		outfile.write(sep)
+		outfile.flush()
 	sleep(delay)
-	sys.stdout.write(end)
-	sys.stdout.flush()
+	outfile.write(end)
+	outfile.flush()
 	sleep(delay)
 	return printLength
 
@@ -165,11 +169,8 @@ def waitInput(text=None,delay=None,color=None):
 		return True
 	flushInput()
 	if os.name == 'nt':  # For Windows
-		import msvcrt
 		msvcrt.getch()
 	else:  # For Unix-based systems
-		import termios
-		import tty
 		fd = sys.stdin.fileno()
 		old_settings = termios.tcgetattr(fd)
 		try:
@@ -179,24 +180,26 @@ def waitInput(text=None,delay=None,color=None):
 			termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
 
 
-def movePrintCursor(nlines,clear=False,clearLast=True):
+def movePrintCursor(nlines,clear=False,clearLast=True,outfile=None):
+	if outfile is None:
+		outfile = sys.stdout
 	step = 1 if nlines > 0 else -1  # direction
 	for i in range(abs(nlines)):
 		# Move one line in the desired direction
 		if step > 0:
-			sys.stdout.write("\033[1A")  # up one line
+			outfile.write("\033[1A")  # up one line
 		else:
-			sys.stdout.write("\033[1B")  # down one line
-		sys.stdout.flush()
+			outfile.write("\033[1B")  # down one line
+		outfile.flush()
 
 		# Clear that line if requested
 		if clear and (clearLast or i != abs(nlines)-1):
-			sys.stdout.write("\r\033[2K")
-			sys.stdout.flush()
+			outfile.write("\r\033[2K")
+			outfile.flush()
 
 	# Make sure cursor is at start of final destination line
-	sys.stdout.write("\r")
-	sys.stdout.flush()
+	outfile.write("\r")
+	outfile.flush()
 
 
 
@@ -279,7 +282,7 @@ def ellipsis(n=3,color=None):
 
 # prints a list of strings, l, into n columns of width w characters
 # if an element is longer than one column, it takes up as many columns as needed
-def columnPrint(l,n,w=None,delay=0,color=None,inplace=False):
+def columnPrint(l,n,w=None,delay=0,color=None,inplace=False,outfile=None):
 	# automatically set column width based on longest item
 	termLengths = [displayLength(term) for term in l]
 	if w is None:
@@ -293,19 +296,19 @@ def columnPrint(l,n,w=None,delay=0,color=None,inplace=False):
 		# if the string is longer than remaining row width; print on a new row
 		if length >= (n*w) - k:
 			if inplace:
-				movePrintCursor(-1)
+				movePrintCursor(-1,outfile=outfile)
 				newline=""
 			else:
 				newline="\n"
-			k = Print(newline+term,end="",delay=delay,color=color)
+			k = Print(newline+term,end="",delay=delay,color=color,outfile=outfile)
 		# if the string is short enough, print it, increment k
 		else:
-			k += Print(term,end="",delay=delay,color=color)
+			k += Print(term,end="",delay=delay,color=color,outfile=outfile)
 		# to preserve column alignment, print spaces until k is divisble by w
 		spaces = w - (k % w)
-		k += Print(spaces * ' ',end="",delay=delay,color=color)
+		k += Print(spaces * ' ',end="",delay=delay,color=color,outfile=outfile)
 	if not inplace:
-		Print()
+		Print(outfile=outfile)
 
 
 # capitalizes the first letter of all the words in a string
@@ -554,9 +557,132 @@ def buildWorld():
 
 
 
-############
-## LOGGER ##
-############
+################
+## SIDE PANEL ##
+################
+
+class SidePanel:
+	os_name = os.name	# store OS type ('nt' for Windows, 'posix' for Linux/Mac)
+
+	def __init__(self, width=50, height=25):
+		self.title = ""
+		self.width = width
+		self.height = height
+		self.pipe_path = None
+		self.pipe = None
+		self.process = None
+
+	def open(self, title=""):
+		if self.isOpen():
+			Print(f"{self.title} side panel is already open.",color="k")
+			return False
+		self.title = title
+		if SidePanel.os_name == "nt":
+			self._open_windows()
+		elif sys.platform.startswith("linux") or sys.platform.startswith("darwin"):
+			self._open_unix()
+		else:
+			raise OSError("Unsupported OS")
+
+	def _open_windows(self):
+		pipe_dir = tempfile.gettempdir()
+		self.pipe_path = os.path.join(pipe_dir, f"sidepanel_{os.getpid()}.txt")
+		open(self.pipe_path, "w", encoding="utf-8").close()
+		self.pipe = open(self.pipe_path, "w", buffering=1, encoding="utf-8")
+
+		# escape any spaces in the path
+		safe_path = f'"{self.pipe_path}"'
+
+		# write batch file with @echo off and Quick Edit disabled
+		batch_cmd = (
+			f'@echo off\n'
+			f'chcp 65001 >nul\n'
+			f'title {self.title}\n'
+			f'mode con: cols={self.width} lines={self.height}\n'
+			f':loop\n'
+			f'cls\n'
+			f'type {safe_path}\n'
+			f'timeout /t 1 >nul\n'
+			f'goto loop\n'
+		)
+
+		bat_file = os.path.join(pipe_dir, f"sidepanel_{os.getpid()}.bat")
+		with open(bat_file, "w", encoding="utf-8") as f:
+			f.write(batch_cmd)
+
+		# launch cmd directly, not via "start"
+		self.process = subprocess.Popen(
+			["cmd", "/K", bat_file],
+			creationflags=subprocess.CREATE_NEW_CONSOLE,
+		)
+
+	def _open_unix(self):
+		self.pipe_path = os.path.join(tempfile.gettempdir(), f"sidepanel_{os.getpid()}.txt")
+		self.pipe = open(self.pipe_path, "w", buffering=1, encoding="utf-8")
+
+		cmd = (
+			f"xterm -T {shlex.quote(self.title)} "
+			f"-geometry {self.width}x{self.height} "
+			f"-e bash -c 'clear; tail -f {shlex.quote(self.pipe_path)}'"
+		)
+
+		self.process = subprocess.Popen(cmd, shell=True)
+		sleep(0.5)
+
+	def isOpen(self):
+		return self.process is not None and self.process.poll() is None
+
+	def write(self, text=""):
+		if self.pipe:
+			self.pipe.write(str(text))
+
+	def flush(self):
+		return
+		# if self.pipe:
+		# 	self.pipe.flush()
+
+	def clear(self):
+		if SidePanel.os_name == "nt":
+			if self.pipe:
+				self.pipe.seek(0)
+				self.pipe.truncate()
+		else:
+			if self.pipe:
+				self.pipe.seek(0)
+				self.pipe.truncate()
+
+	def close(self):
+		if not self.isOpen():
+			return False
+		if self.pipe:
+			self.pipe.close()
+			self.pipe = None
+		if self.process:
+			if SidePanel.os_name == "nt":
+				subprocess.call(
+					f'taskkill /FI "WINDOWTITLE eq {self.title}" /F >nul 2>&1',
+					shell=True
+				)
+			else:
+				self.process.terminate()
+			self.process = None
+		if self.pipe_path and os.path.exists(self.pipe_path):
+			try:
+				os.remove(self.pipe_path)
+			except Exception:
+				pass
+
+sidepanel = SidePanel()
+
+def cleanup():
+    if sidepanel.isOpen():
+        sidepanel.close()
+atexit.register(cleanup)
+
+
+#############
+## LOGGING ##
+#############
 
 
 ANSI_ESCAPE = re.compile(r'\x1b\[[0-9;?]*[ -/]*[A-Za-z]')
@@ -1217,7 +1343,6 @@ class Game():
 		clearScreen()
 		self.prevroom = self.currentroom
 		self.currentroom = newroom
-		player.printStats(showStatus=False)
 		self.describeRoom()
 		return True
 
@@ -1387,8 +1512,6 @@ class Game():
 
 	def startUp(self):
 		clearScreen()
-		player.printStats(showStatus=False)
-		Print()
 		self.describeRoom()
 		game.checkDaytime()
 		game.checkAstrology(update=True)
@@ -1594,11 +1717,9 @@ class Room():
 		return True
 
 
-	def spawn(self,obj):
-		return self.add(game.spawn(obj))
-
-
 	def add(self,O):
+		if isinstance(O,str) or O.id is None:
+			O = game.spawn(O)
 		if not self.canAdd(O):
 			return False
 		if isinstance(O,Creature):
@@ -1706,7 +1827,7 @@ class Room():
 			# TODO: refactor this to have an event chance for creatures in spawnpools?
 			# right now it is slightly biased to earlier in the list
 			if randint(1,100) <= prob:
-				self.spawn(name)
+				self.add(name)
 
 		# sort all Creatures occupying the room by their MVMT() value, descending
 		self.creatures.sort(key=lambda x: x.MVMT(), reverse=True)
@@ -2019,7 +2140,7 @@ class Item():
 		self.Disoccupy()
 		self.parent.remove(self)
 
-		# TODO: drop all items from contents? or just some important ones?
+		# TODO: first drop all items from contents? or just some important ones?
 		assert game.objRegistry[self.id] is self
 		del game.objRegistry[self.id]
 
@@ -2061,15 +2182,19 @@ class Item():
 
 
 	def replace(self,newItem):
-		self.parent.remove(self)
+		if isinstance(newItem,str) or newItem.id is None:
+			newItem = game.spawn(newItem)
 		self.parent.add(newItem)
-		occupant = self.occupant
 		for occupant in self.occupants.copy():
 			self.removeOccupant(occupant)
 			newItem.addOccupant(occupant)
-		for covered in self.covering:
+		for covered in self.covering.copy():
 			covered.removeCover()
 			covered.addCover(newItem)
+		self.destroy()
+		game.objRegistry[self.id] = newItem
+		newItem.id = self.id
+		return newItem
 
 
 	def Obtain(self,creature):
@@ -2100,12 +2225,7 @@ class Item():
 		occupant.removeRiding()
 		occupant.removePlatform()
 
-		if hasMethod(self,"Traverse") and getattr(self,"open",True):
-			if getattr(self,"open",False):
-				occupant.Print(f"{+self} is open.")
-			self.Traverse(occupant,verb="jump")
-			return False
-		elif self.occupantsWeight() + occupant.Weight() > self.durability*2 and self.durability != -1:
+		if self.occupantsWeight() + occupant.Weight() > self.durability*2 and self.durability != -1:
 			occupant.waitInput(f"{+self} cannot support the weight of {~occupant}!",color="o")
 			self.Break()
 			occupant.Fall(max(3,self.Size()//5))
@@ -2637,6 +2757,7 @@ class Creature():
 			color = "r"
 		Print(f"{+self} took {total_dmg} {Data.dmgtypes[type]} damage{p}",allowSilent=True,color=color)
 		if self is player:
+			self.display()
 			delay(0.5)
 		if self.hp == 0:
 			return self.death()
@@ -2651,22 +2772,33 @@ class Creature():
 		if heal <= 0 or not self.isAlive():
 			return 0
 		self.hp += heal
+		if self is player:
+			self.display()
 		self.Print(f"You healed {heal} HP.",color="g")
 		return heal
 
 
 	def resurge(self,mana,overflow=False):
 		if self.mp + mana > self.MXMP() and not overflow:
-			mana = min0(self.MXHP() - self.mp)
+			mana = min0(self.MXMP() - self.mp)
 		if mana <= 0:
 			return 0
 		self.mp += mana
+		if self is player:
+			self.display()
 		self.Print(f"You regained {mana} MP.",color="b")
 		return mana
 
 
 	def updateMoney(self,money):
 		self.money += money
+		color = "g" if money > 0 else "w"
+		if money == 0:
+			self.Print(f"You have §{self.money}.")
+		else:
+			self.Print(f"You have §{self.money}!",color=color)
+		if self is player:
+			self.display()
 
 
 	def updateLove(self,loveMod):
@@ -2707,6 +2839,8 @@ class Creature():
 	# try to add an Item to Inventory
 	# it will fail if the inventory is too heavy
 	def add(self,I):
+		if isinstance(I,str) or I.id is None:
+			I = game.spawn(I)
 		if isinstance(I,Creature):
 			return self.parent.add(I)
 		if isinstance(I,Serpens):
@@ -2927,6 +3061,8 @@ class Creature():
 				Print(self+f"are {name}.",color=color)
 
 		insort(self.status,[name,dur])
+		if self is player:
+			self.display()
 		return True
 
 	
@@ -2949,7 +3085,8 @@ class Creature():
 
 		if wasSleeping and not self.hasStatus("asleep"):
 			self.awaken(wellRested=wellRested)
-
+		if self is player:
+			self.display()
 		return anyRemoved
 
 
@@ -3011,11 +3148,13 @@ class Creature():
 
 	def checkHindered(self):
 		if self.invWeight() + self.carryWeight() > self.BRDN():
-			if self.addStatus("hindered",-3):
+			if not self.hasStatus("hindered",-3):
 				self.Print("Your Inventory grows heavy.")
+			self.addStatus("hindered",-3)
 		if self.invWeight() + self.carryWeight() <= self.BRDN():
-			if self.removeStatus("hindered",-3):
+			if self.hasStatus("hindered",-3):
 				self.Print("Your Inventory feels lighter.")
+			self.removeStatus("hindered",-3)
 
 
 	def checkHungry(self):
@@ -3376,7 +3515,7 @@ class Creature():
 		# basically, its just reduced for the amount of weight the missile has
 		force = min1(self.STR()//2) - bound((missile.Weight()//4)//self.STR(),0,10)
 		if force <= 0:
-			self.Print(f"{+missile} is too heavy!")
+			self.Print(f"{+missile} is too heavy to throw!")
 			missile.asItem().Fall()
 			return False
 
@@ -3464,9 +3603,12 @@ class Creature():
 			self.Print(f"{+anchor} cannot be mounted.")
 			return False
 
-		if posture == "lay" and hasMethod(anchor,"LayOn"):
-			return anchor.LayOn(self)
-		elif anchor is self.platform or anchor is self.riding:
+		if hasMethod(anchor,"Traverse") and getattr(anchor,"open",True):
+			if getattr(anchor,"open",False):
+				self.Print(f"{+anchor} is open.")
+			anchor.Traverse(self,verb="jump")
+			return False
+		if anchor is self.platform or anchor is self.riding:
 			pass
 		elif self.checkTetherLoop(self,anchor,"get on"):
 			return False
@@ -3857,9 +3999,9 @@ class Creature():
 
 	# This is used as a shortcut to show output only to the user
 	# It should do nothing for any other creature
-	def Print(self,*args,end="\n",sep="",delay=None,color=None,allowSilent=True):
+	def Print(self,*args,end="\n",sep="",delay=None,color=None,allowSilent=True,outfile=None):
 		if self is player.riding:
-			return player.Print(*args,end=end,sep=sep,delay=delay,color=color,allowSilent=allowSilent)
+			return player.Print(*args,end=end,sep=sep,delay=delay,color=color,allowSilent=allowSilent,outfile=outfile)
 		return
 
 
@@ -3948,8 +4090,8 @@ class Player(Creature):
 		game.startUp()
 
 
-	def levelUpMenu(self,QP,prompt="",warning=""):
-		movePrintCursor(7)
+	def traitMenu(self,QP,prompt="",warning=""):
+		movePrintCursor(8,clear=(QP+1)%10==0) # clear lingering extra digits
 		self.printTraits()
 		movePrintCursor(-2)
 		Print(f"Quality Points:	{QP}",end="",delay=0)
@@ -3958,17 +4100,17 @@ class Player(Creature):
 		movePrintCursor(-1,clear=True)
 		Print(warning,end="",delay=0)
 		movePrintCursor(-1,clear=True)
-		return Input(cue="> ",delay=0)
+		if prompt.endswith("?"):
+			return Input(cue="> ",delay=0)
+		waitInput()
+		return ""
 
 
-	# player gets 1 QPs for each level gained, can dispense them into any trait
-	def levelUp(self,oldlv,newlv):
-		waitInput(f"You leveled up to level {newlv}!",color="g")
-		QP = newlv-oldlv
+	def gainQP(self,QP):
 		Print("\n"*7)
 		warning = ""
 		while QP > 0:
-			trait = self.levelUpMenu(QP,"What trait will you improve?",warning)
+			trait = self.traitMenu(QP,"What trait will you improve?",warning)
 			if trait not in Data.traits:
 				if trait == "":
 					warning = ""
@@ -3983,22 +4125,21 @@ class Player(Creature):
 			warning = ""
 			setattr(self,trait,traitval+1)
 			QP -= 1
-		self.levelUpMenu(QP,"You are done leveling up.","")
+			self.display()
+		self.traitMenu(0,"You have no more QP.","")
+		movePrintCursor(8,clear=True)
+
+
+	# player gets 1 QPs for each level gained, can dispense them into any trait
+	def levelUp(self,oldlv,newlv):
+		waitInput(f"You leveled up to level {newlv}!",color="g")
+		self.gainQP(newlv-oldlv)
 		game.startUp()
 		self.checkStatus()
 
 
 	def updateReputation(self,repMod):
 		self.rp = bound(repMod,-100,100)
-
-
-	def updateMoney(self,money):
-		self.money += money
-		color = "g" if money > 0 else "w"
-		if money == 0:
-			Print(f"You have §{self.money}.")
-		else:
-			Print(f"You have §{self.money}!",color=color)
 
 
 	# adds xp, checks for player level up
@@ -4210,19 +4351,38 @@ class Player(Creature):
 	### User Output ###
 
 	# This method does nothing for non-player creatures
-	def Print(self,*args,end="\n",sep="",delay=None,color=None,allowSilent=True):
-		return Print(*args,end=end,sep=sep,delay=delay,color=color,allowSilent=allowSilent)
+	def Print(self,*args,end="\n",sep="",delay=None,color=None,allowSilent=True,outfile=None):
+		return Print(*args,end=end,sep=sep,delay=delay,color=color,allowSilent=allowSilent,outfile=outfile)
 
 
 	def waitInput(self,text=None,delay=None,color=None):
 		return waitInput(text=text,delay=delay,color=color)
 
 
+	def displayTrait(self,t):
+		assert hasattr(self,t.lower()) and hasMethod(self,t.upper())
+		displayTrait = t.upper() + ": "+ str(getattr(self,t))
+
+		if getattr(self,t.lower()) < getattr(self,t.upper())():
+			return Tinge(displayTrait,color='g')[0]
+		if getattr(self,t.lower()) > getattr(self,t.upper())():
+			ret = Tinge(displayTrait,color='r')[0]
+			return ret
+		else:
+			return displayTrait
+
+
 	# prints all 10 player traits
-	def printTraits(self,trait=None):
+	def printTraits(self,trait=None,outfile=None):
 		if trait == None:
-			traits = [f"{t.upper()}: {getattr(self,t)}" for t in Data.traits]
-			columnPrint(traits,5,10,inplace=True)
+			cols = 5
+			traits = [self.displayTrait(t) for t in Data.traits]
+			# if outfile is not None:
+				# reorder traits and print them vertically
+				# cols = 2
+				# traits = [t for pair in zip(traits[:5], traits[5:]) for t in pair]
+
+			columnPrint(traits,cols,10,outfile=outfile)
 			return	
 		Print(f"{trait.upper()}: {getattr(self,trait)}")
 
@@ -4255,34 +4415,35 @@ class Player(Creature):
 
 
 	# prints player inventory
-	def printInv(self, *args):
+	def printInv(self, *args, outfile=None):
+		cols = 8 if outfile is None else 3
 		W = self.invWeight() + self.carryWeight()
 		color = "o" if W / self.BRDN() > 0.80 else "w"
 		color = "r" if W > self.BRDN() else color
+		Print(f"Inv Weight: {W}/{self.BRDN()}", color=color, outfile=outfile)
 		if len(self.inv) == 0:
-			Print("\nYour Inventory is empty.")
+			if outfile is None:
+				Print("\nYour Inventory is empty.")
 		else:
-			columnPrint(self.invNames(),8,16)
-		self.printCarrying(silent=True)
-		Print(f"Weight: {W}/{self.BRDN()}", color=color)
+			columnPrint(self.invNames(),cols,16,outfile=outfile)
 
 
 	# print each player gear slot and the items equipped in them
-	def printGear(self, *args):
-		Print()
+	def printGear(self, *args, outfile=None):
+		Print(outfile=outfile)
 		for slot in self.gear:
 			val = self.gear[slot].name
 			if slot == "left" and self.carrying:
 				val = self.carrying.name
-			Print(slot + ":\t",end="")
-			Print(val)
+			Print(slot + ":\t",end="", outfile=outfile)
+			Print(val, outfile=outfile)
 
 
-	def printCarrying(self,silent=False,*args):
+	def printCarrying(self,*args,silent=False,outfile=None):
 		if self.carrying is not None:
-			Print(f"You are carrying {~self.carrying}.")
+			Print(f"You are carrying {~self.carrying}.", outfile=outfile)
 			# Print(f"Weight: {self.carrying.Weight()}")
-		elif silent is False:
+		elif silent is False and outfile is None:
 			Print("You aren't carrying anything.")
 
 
@@ -4314,9 +4475,10 @@ class Player(Creature):
 		Print(f"You are {self.position()}.")
 
 
-	def printStatus(self, *args):
+	def printStatus(self, *args, outfile=None):
 		if len(self.status) == 0:
-			Print("None")
+			if outfile is None:
+				Print("None")
 			return
 
 		conditions = []
@@ -4325,46 +4487,70 @@ class Player(Creature):
 		# populate durations with the highest duration for that condition
 		# negative (special) durations take precedence over positive durations
 		for cond, dur in sorted(self.status, key=lambda x: x[1]):
-			if cond not in conditions:
-				conditions.append(cond)
-				durations.append(dur)
-			else:
+			if cond in conditions:
 				idx = conditions.index(cond)
 				olddur = durations[idx]
 				newdur = dur if dur > olddur and olddur > 0 else olddur
 				durations[idx] = newdur
+				continue
+			conditions.append(cond)
+			durations.append(dur)
 
 		nDigits = len(str(max(durations)))
 		# make list of strings to display conditions and their durations
 		statusdisplay = []
 		for i in range(len(conditions)):
-			statusdisplay.append(conditions[i])
+			condname = conditions[i]
+			if condname in Data.blessings | Data.buffs:
+				condname = Tinge(condname,color="g")[0]
+			elif condname in Data.curses | Data.debuffs:
+				condname = Tinge(condname,color="r")[0]
+			statusdisplay.append(condname)
 			if durations[i] < 0:
 				statusdisplay.append("-"*nDigits)
 			else:
 				statusdisplay.append(str(durations[i]))
 
-		# dynamically determine display column width based on longest name
-		colWidth = len(max(conditions, key=len)) + 2
-		columnPrint(statusdisplay,2)
+		columnPrint(statusdisplay,2,outfile=outfile)
 
 
 	# prints player level, money, hp, mp, rp, and status effects
-	def printStats(self, *args, showStatus=True):
-		stats = [self.name,f"LV: {self.level()}",f"§ {self.money}",f"RP: {self.rp}/100",f"HP: {self.hp}/{self.MXHP()}",f"MP: {self.mp}/{self.MXMP()}"]
+	def printStats(self, *args, showStatus=True, outfile=None):
+		stats = [self.name,f"LV: {self.level()}",f"§ {self.money}",
+		   f"RP: {self.rp}/100",f"HP: {self.hp}/{self.MXHP()}",
+		   f"MP: {self.mp}/{self.MXMP()}"]
 		colors = ["w","o","g","y","r","b"]
-		if self.hasStatus("insanity"):
+		if self.hasStatus("insanity") and outfile is None:
 			shuffle(colors)
 		stats = [Tinge(stats[i],color=colors[i])[0] for i in range(len(stats))]
-		columnPrint(stats,3)
+		
+		columnPrint(stats,3,outfile=outfile)
 
 		if self.carrying is not None:
-			Print(f"Carrying {self.carrying}")
+			Print(f"Carrying {self.carrying}", outfile=outfile)
 		if self.riding is not None:
-			Print(f"Riding {self.riding}")
+			Print(f"Riding {self.riding}", outfile=outfile)
 		if len(self.status) != 0 and showStatus:
-			Print()
-			self.printStatus()
+			Print(outfile=outfile)
+			self.printStatus(outfile=outfile)
+
+
+	def openDisplay(self,*args):
+		if not sidepanel.isOpen():
+			sidepanel.open(self.name)
+			self.display()
+		else:
+			self.Print(f"Your stats panel is already open.",color="k")
+
+
+	def display(self, *args):
+		sidepanel.clear()
+		self.printStats(outfile=sidepanel)
+		self.printGear(outfile=sidepanel)
+		self.Print(outfile=sidepanel)
+		self.printTraits(outfile=sidepanel)
+		Print(outfile=sidepanel)
+		self.printInv(outfile=sidepanel)
 
 
 	# for every item in player inventory, if its a weapon, print it
@@ -5082,9 +5268,10 @@ class Projectile(Item):
 			self = self.asItem()
 			self.changeLocation(target)
 			return self.Fall(speed//4)
-		for occupant in self.item.occupants:
-			occupant.Fall(speed//4)
-		self.item.Disoccupy()
+		if isinstance(self.item,Item):
+			for occupant in getattr(self.item,"occupants",[]):
+				occupant.Fall(speed//4)
+			self.item.Disoccupy()
 
 		# when throwing something in a Box at something outside the box
 		if self.item.parent not in (target,target.parent):
@@ -5179,7 +5366,7 @@ class Serpens(Item):
 	def __init__(self,value,**kwargs):
 		desc = f"{str(value)} glistening coins made of an ancient metal"
 		Item.__init__(self,"Gold",desc,value,-1,"gold",**kwargs)
-		self.aliases = {"coin","coins","money","serpen","serpens"}
+		self.aliases = {"coin","coins","money","serpen","serpens",str(value),str(value)+" gold"}
 		self.plural = "gold"
 		self.descname = str(value) + " Gold"
 		self.value = value

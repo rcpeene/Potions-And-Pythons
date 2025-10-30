@@ -27,20 +27,19 @@ class Axe(Core.Weapon):
 
 class Bed(Core.Item):
 	def LayOn(self,layer):
-		if layer.platform is not self and self.addOccupant(layer):
-			if layer is Core.player:
-				Core.Print(f"You get in {-self}.")
-			else:
-				Core.Print(f"{+layer} lies down on {-self}.")
-		if layer.platform is self:
-			layer.changePosture("lay")
-			layer.addStatus("cozy",-3)
-			return True
-		return False
-
+		return self.Traverse(layer)
 
 	def Traverse(self,traverser,dir=None,verb=None):
-		return self.LayOn(traverser)
+		if traverser.platform is not self and self.addOccupant(traverser):
+			if traverser is Core.player:
+				Core.Print(f"You get in {-self}.")
+			else:
+				Core.Print(f"{+traverser} lies down on {-self}.")
+		if traverser.platform is self:
+			traverser.changePosture("lay")
+			traverser.addStatus("cozy",-3)
+			return True
+		return False
 
 
 class Bottle(Core.Item):
@@ -51,10 +50,10 @@ class Bottle(Core.Item):
 		if self.weight > 2 and self.composition == "glass":
 			Core.Print("Shards of glass scatter everywhere.",color="o")
 		while self.weight > 2 and self.composition == "glass":
-			shardWeight = randint(2,4)
+			shardWeight = randint(1,3)
 			self.weight -= shardWeight
 			shard = Shard("glass shard","a sharp shard of glass",shardWeight,-1,"glass",{"shard"})
-			Core.game.currentroom.spawn(shard)
+			Core.game.currentroom.add(shard)
 		return True 
 
 
@@ -536,16 +535,15 @@ class Potion(Bottle):
 	def Drink(self):
 		Core.Print(f"You drink {-self}.")
 		Core.player.heal(1000)
-		self.parent.remove(self)
-		Core.player.add(factory["bottle"]())
+		self.replace("bottle")
 
+	# TODO: when breaking, spill potion out and then call bottle.Break
 
 	def Pour(self,obj=None):
 		if obj != None:
 			if Core.hasMethod(obj,"Drench"):
 				obj.Drench(self)
-		self.parent.remove(self)
-		Core.player.add(factory["bottle"]())
+		self.replace("bottle")
 
 
 
@@ -787,10 +785,10 @@ class Window(Core.Passage):
 		if self.weight > 2 and self.composition == "glass":
 			Core.Print("Shards of glass scatter everywhere.",color="o")
 		while self.weight > 2 and self.composition == "glass":
-			shardWeight = randint(2,6)
+			shardWeight = randint(1,3)
 			self.weight -= shardWeight
 			shard = Shard("glass shard","a sharp shard of glass",shardWeight,-1,"glass",{"shard"})
-			Core.game.currentroom.spawn(shard)
+			Core.game.currentroom.add(shard)
 		for occupant in self.occupants.copy():
 			occupant.Fall(room=self.getNewLocation())
 			self.removeOccupant(occupant)
@@ -834,7 +832,7 @@ class Window(Core.Passage):
 
 	def Bombard(self,missile):
 		assert isinstance(missile,Core.Projectile)
-		if Core.roll(100) < Core.bound(missile.aim+self.Size+10,1,99):
+		if Core.roll(100) < Core.bound(missile.aim+self.Size()+10,1,99):
 			if not self.open:
 				missile.Collide(self)
 			if self.open:

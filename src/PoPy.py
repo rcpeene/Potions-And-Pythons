@@ -35,49 +35,49 @@ def main(testing=False):
 
 	# main input loop
 	while True:
-		try:
-			if Core.game.quit: return Menu.quit()
-			Core.game.silent = False
-			Core.game.whoseturn = Core.player
-			if not Core.player.isAlive(): 
-				if not Menu.restart():
-					return False
-				continue
+		# try:
+		if Core.game.quit: return Menu.quit()
+		Core.game.silent = False
+		Core.game.whoseturn = Core.player
+		if not Core.player.isAlive(): 
+			if not Menu.restart():
+				return False
+			continue
 
-			# take user input until player successfully performs an action
-			if not Core.player.hasStatus("asleep"):
-				while not Interpreter.interpret(): continue
-			if Core.game.quit: return Menu.quit()
+		# take user input until player successfully performs an action
+		if not Core.player.hasStatus("asleep"):
+			while not Interpreter.interpret(): continue
+		if Core.game.quit: return Menu.quit()
 
-			# creatures in current room's turn
-			for creature in Core.game.currentroom.allCreatures():
+		# creatures in current room's turn
+		for creature in Core.game.currentroom.allCreatures():
+			if not Core.player.isAlive(): continue
+			Core.game.whoseturn = creature
+			creature.act()
+
+		# creatures in nearby rooms' turn
+		Core.game.silent = True
+		for room in Core.game.nearbyRooms():
+			for creature in room.allCreatures():
 				if not Core.player.isAlive(): continue
 				Core.game.whoseturn = creature
 				creature.act()
 
-			# creatures in nearby rooms' turn
-			Core.game.silent = True
-			for room in Core.game.nearbyRooms():
-				for creature in room.allCreatures():
-					if not Core.player.isAlive(): continue
-					Core.game.whoseturn = creature
-					creature.act()
+		if not Core.player.isAlive(): continue
+		# cleanup before looping
+		Core.game.whoseturn = None
+		# pass the time for all rooms and creatures
+		Core.game.passTime()
 
-			if not Core.player.isAlive(): continue
-			# cleanup before looping
-			Core.game.whoseturn = None
-			# pass the time for all rooms and creatures
-			Core.game.passTime()
-
-			if not Core.player.isAlive(): continue
-			# save game every so often just in case
-			if Core.game.time >= Core.game.lastsave+20: Menu.quickSave("autosave")
-		except Exception as e:
-			if testing: raise e
-			Core.Print(f"\n\nAn error has occurred. The game will attempt to continue, but you may want to restart.\nThe error message is as follows:\n")
-			traceback.print_exc()
-			Core.waitInput("\nPress any key to continue...")
-			# return Menu.quit()
+		if not Core.player.isAlive(): continue
+		# save game every so often just in case
+		if Core.game.time >= Core.game.lastsave+20: Menu.quickSave("autosave")
+		# except Exception as e:
+		# 	if testing: raise e
+		# 	Core.Print(f"\n\nAn error has occurred. The game will attempt to continue, but you may want to restart.\nThe error message is as follows:\n")
+		# 	traceback.print_exc()
+		# 	Core.waitInput("\nPress any key to continue...")
+		# 	# return Menu.quit()
 
 
 if __name__ == "__main__":
@@ -93,7 +93,18 @@ if __name__ == "__main__":
 
 # BUG BACKLOG
 
+# > stomp on bottle
+# What will you kick?
 
+# > throw bottle down
+# "there is no down in your surroundings"
+
+# "> break bottle with hatchet" doesn't equip hatchet
+
+# > climb up the wall
+# What will you climb up here?
+
+# 'go down' has strange behavior when flying and at clifftop or on horse
 
 ################################################################################
 
@@ -171,6 +182,7 @@ if __name__ == "__main__":
 # hair color: black, brown, blonde, red, grey, no hair 
 	# (maybe just cosmetic or maybe affects something minor/dialogue)
 # character always has purple eyes?
+# add a secondary display window
 
 # sift through TODOs
 # add basic equipment and clothing items

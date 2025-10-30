@@ -25,12 +25,12 @@
 		"items": [
 			{
 				"__class__": "Axe",
-				"name": "iron hatchet",
-				"desc": "a small one-handed axe that is slightly dulled from use",
+				"name": "rusty hatchet",
+				"desc": "a small one-handed rusty axe that is slightly dulled from use",
 				"aliases": ["axe","hatchet"],
 				"weight": 4,
 				"durability": 10,
-				"composition": "iron",
+				"composition": "rust",
 				"might": 4,
 				"sleight": 0,
 				"sharpness": 1,
@@ -136,20 +136,6 @@
 				"sharpness": 2,
 				"range": 0,
 				"type": "p"
-			},
-			{
-				"__class__": "Sword",
-				"name": "rusty sword",
-				"desc": "a medium-length iron sword with a rusted edge",
-				"aliases": ["sword"],
-				"weight": 11,
-				"durability": 9,
-				"composition": "rust",
-				"might": 5,
-				"sleight": 2,
-				"sharpness": 0,
-				"range": 0,
-				"type": "s"
 			},
 			{
 				"__class__": "Armor",
@@ -687,7 +673,19 @@
 			"east": "big oak",
 			"south": "cliffside"
 		},
-		"fixtures": [],
+		"fixtures": [
+			{
+				"__class__": "Controller",
+				"name": "runic statue",
+				"desc": "A maiden statue with spiraling runes carved into its surface",
+				"weight": 1000,
+				"durability": -1,
+				"composition": "stone",
+				"aliases": ["statue", "maiden", "maiden statue"],
+				"triggers": ["Pray"],
+				"effect": "Core.Print('You feel enlightened.'); Core.player.gainQP(10)"
+			}
+		],
 		"items": [],
 		"creatures": [],
 		"floor": "soil"
@@ -732,7 +730,15 @@
 			"south": "large pit",
 			"west": "brook"
 		},
-		"fixtures": [],
+		"fixtures": [
+			{
+				"__class__": "Fixture",
+				"name": "pond",
+				"desc": "A murky medium-sized pond with clear water, lilypads",
+				"weight": 100,
+				"composition": "water"
+			}
+		],
 		"items": [],
 		"creatures": [],
 		"floor": "mud"

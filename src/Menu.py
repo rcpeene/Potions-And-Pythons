@@ -10,12 +10,13 @@
 
 from time import sleep
 from random import randint, choice
-import os, json, sys
+import os, json
 
 import Data
 import Core
 import Creatures
 import Items
+
 
 
 ##########################
@@ -222,7 +223,6 @@ def readGame(filename,World,dlogDict):
 
 
 
-
 ####################
 ## MENU FUNCTIONS ##
 ####################
@@ -334,8 +334,10 @@ def loadGame(filename=None):
 	os.chdir("../..")
 	Core.buildWorld()
 
+	# open side panel
+	Core.player.display()
+
 	Core.ellipsis()
-	Core.flushInput()
 
 	# describe the current room
 	Core.game.startUp()
@@ -429,6 +431,9 @@ def newGame():
 	Core.game.currentroom = Core.world["cave"]
 	Core.game.prevroom = Core.world["cave"]
 	Core.buildWorld()
+
+	# open side panel
+	Core.player.display()
 
 	# Core.ellipsis()
 	# enter the starting room
@@ -525,6 +530,7 @@ def restart():
 			next = "quit"
 		else:
 			Core.Print("You must choose! Don't be a sore loser.",delay=0,color="k")
+	Core.sidepanel.close()
 	if next == "restart":
 		Core.game.quit = 0
 		mainMenu()
@@ -536,6 +542,8 @@ def quit():
 	if Core.game.mode != 1:
 		Core.waitInput("Goodbye.",delay=0,color="k")
 		Core.game.quit = 1
+		Core.clearScreen()
+		Core.sidepanel.close()
 	return False
 
 

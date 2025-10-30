@@ -54,7 +54,7 @@ def chooseObject(name,objects,verb=None):
 			labels.append("you")
 		elif isinstance(obj,Core.Room):
 			labels.append("here")
-		elif obj in (obj.parent.ceiling,obj.parent.walls,obj.parent.floor):
+		elif obj in getattr(obj.parent,"surfaces",[]):
 			labels.append(obj.parent.name.lower())
 		elif obj is Core.player.carrying:
 			labels.append("carrying")
@@ -1298,8 +1298,8 @@ def Drop(dobj,iobj,prep,I=None):
 		Core.Print(f"You can't drop {-I}. There's not enough room.")
 		return False
 	else:
-		I.parent.remove(I)
 		Core.Print(f"You drop {-I}.")
+		I.parent.remove(I)
 		Core.player.parent.add(I)
 	return True
 
@@ -1539,7 +1539,7 @@ def parseGo(dobj,iobj,prep):
 # parses user input to determine the intended direction, destination, and/or
 # passage. Then calls either traverse or changelocation accordingly
 def Go(dobj,iobj,prep):
-	if Core.player.platform != Core.player.parent.floor or Core.player.carrier:
+	if Core.player.anchor() not in (Core.player.parent.floor, Core.player.riding):
 		Core.Print(f"You can't go anywhere, you are {Core.player.position()}.")
 		return False
 	for cond in Data.immobileStatus:
@@ -2631,7 +2631,7 @@ statcommands = {
 "riding":Core.Player.printRiding,
 "rp":Core.Player.printRP,
 "spells":Core.Player.printSpells,
-"stats":Core.Player.printStats,
+"stats":Core.Player.openDisplay,
 "status":Core.Player.printStatus,
 "time":Time,
 "traits":Core.Player.printTraits,
