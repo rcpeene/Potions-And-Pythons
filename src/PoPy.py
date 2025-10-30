@@ -93,10 +93,22 @@ if __name__ == "__main__":
 
 # BUG BACKLOG
 
-# "> break bottle with hatchet" doesn't equip hatchet
-
 # > climb up the wall
 # What will you climb up here?
+
+# There is a solar eclipse in the sky!
+# What will you do?
+# > touch it
+# There is no 'eclipse' that you can see.
+
+# > attack table with sword
+# You attack the table with your broken sword.
+# The table took 4 bludgeoning damage.
+# What will you do?
+# > attack table with hatchet
+# You attack the table with your broken sword.
+# The table took 5 bludgeoning damage.
+
 
 ################################################################################
 

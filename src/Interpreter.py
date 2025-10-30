@@ -184,6 +184,10 @@ def enforceVerbScope(verb,obj,permitAnchor=True,permitParent=False,permitSelf=Fa
 				if not Core.player.hasAnyStatus("clingfast","flying"):
 					Core.Print(f"You can't {verb} {-obj}, it is too high.")
 					return True
+	if obj in (Core.moon,Core.sun,Core.stars,Core.eclipse,Core.meteorshower,Core.aurora):
+		Core.Print(f"You can't {verb} {-obj},", obj/"is much too far away.")
+		return True
+
 	return False
 
 
@@ -887,11 +891,11 @@ def Attack(dobj,iobj,prep,target=None,weapon=None,weapon2=None):
 	if iobj in ("fist","hand"):
 		Core.player.unequip("right")
 		weapon = Items.Hand("hand","",4,-1,None)
-	if iobj in ("foot","leg"):
+	elif iobj in ("foot","leg"):
 		weapon = Items.Foot("foot","",6,-1,None)
-	if iobj in ("mouth","teeth"):
+	elif iobj in ("mouth","teeth"):
 		weapon = Items.Mouth("mouth","",4,-1,None)
-	if iobj is not None:
+	elif iobj is not None:
 		if weapon is None:
 			_, weapon = Core.player.inGear(iobj)
 		if weapon is None:
@@ -918,9 +922,10 @@ def Attack(dobj,iobj,prep,target=None,weapon=None,weapon2=None):
 	if isinstance(weapon,(Items.Foot,Items.Mouth)):
 		stowed = True
 		stowedweapons = (Core.player.weapon, Core.player.weapon2)
+	if not isinstance(weapon,(Items.Hand)):
+		Core.player.equipInHand(weapon)
 	if not isinstance(weapon,Core.Weapon):
 		weapon = weapon.asWeapon()
-	Core.player.weapon = weapon
 
 	Core.Print(f"You attack {-target} with your {Core.player.weapon}.",color="o")
 	if isinstance(target,Core.Creature): Core.player.attackCreature(target)
@@ -1044,8 +1049,9 @@ def Climb(dobj,iobj,prep):
 	verbprep = "on" if prep is None else prep
 
 	if dobj is None: dobj = iobj
-	surfacesHere = (Core.player.parent,) + Core.player.parent.surfaces
-	if any(Core.nameMatch(dobj,o) for o in surfacesHere):
+	# surfacesHere = (Core.player.parent,) + Core.player.parent.surfaces
+	# if any(Core.nameMatch(dobj,o) for o in surfacesHere):
+	if dobj == "here":
 		dobj = getNoun(f"What will you climb {verbprep} here?")
 	M = findObject(dobj,f"climb {verbprep}","room")
 	if M is None: return False

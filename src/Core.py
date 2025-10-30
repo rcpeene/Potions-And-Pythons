@@ -1345,6 +1345,9 @@ class Game():
 		self.prevroom = self.currentroom
 		self.currentroom = newroom
 		self.describeRoom()
+		if not newroom.ceiling:
+			self.checkDaytime()
+			self.checkAstrology()
 		return True
 
 
@@ -1478,6 +1481,9 @@ class Game():
 
 	def checkAstrology(self,update=False):
 		if self.currentroom.ceiling is not None:
+			self.currentroom.removeFixture(aurora)
+			self.currentroom.removeFixture(meteorshower)
+			self.currentroom.removeFixture(eclipse)
 			return
 		darkhours = ("hearth","cat","mouse","owl","serpent","wolf")
 		aurora_cycle = self.time % 2000
@@ -1485,8 +1491,11 @@ class Game():
 			if "aurora" not in self.events or update:
 				Print("There is an aurora in the sky!",color="b")			
 			self.events.add("aurora")
+			self.currentroom.addFixture(aurora)
+			self.setPronouns(aurora)
 		elif "aurora" in self.events:
 			self.events.remove("aurora")
+			self.currentroom.removeFixture(aurora)
 			Print("The aurora is over.")
 
 		meteor_cycle = self.time % 3500
@@ -1494,8 +1503,11 @@ class Game():
 			if "meteor shower" not in self.events or update:
 				Print("There is a meteor shower in the sky!",color="b")
 			self.events.add("meteor shower")
+			self.currentroom.addFixture(meteorshower)
+			self.setPronouns(meteorshower)
 		elif "meteor shower" in self.events:
 			self.events.remove("meteor shower")
+			self.currentroom.removeFixture(meteorshower)
 			Print("The meteor shower is over.")
 
 		lighthours = ("rooster","juniper","bell","sword","willow","lily")
@@ -1504,8 +1516,11 @@ class Game():
 			if "eclipse" not in self.events or update:
 				Print("There is a solar eclipse in the sky!",color="b")
 			self.events.add("eclipse")
+			self.currentroom.addFixture(eclipse)
+			self.setPronouns(eclipse)
 		elif "eclipse" in self.events:
 			self.events.remove("eclipse")
+			self.currentroom.removeFixture(eclipse)
 			Print("The solar eclipse is over.")
 
 
@@ -1529,15 +1544,24 @@ class Game():
 
 	def checkDaytime(self):
 		if self.currentroom.ceiling is not None:
+			self.currentroom.removeFixture(moon)
+			self.currentroom.removeFixture(stars)
+			self.currentroom.removeFixture(sun)
 			return
 		if self.hour() in ("stag","rooster","juniper"):
+			self.currentroom.removeFixture(moon)
+			self.currentroom.removeFixture(stars)
+			self.currentroom.addFixture(sun)
 			Print("It is morning.")
 		if self.hour() in ("bell","sword","willow","lily"):
 			Print("It is day.")
 		if self.hour() in ("hearth","cat"):
 			Print("It is evening.")
+			self.currentroom.addFixture(stars)
 		if self.hour() in ("mouse","owl","serpent","wolf"):
 			Print("It is night.")
+			self.currentroom.addFixture(moon)
+			self.currentroom.removeFixture(sun)
 			self.checkMoon()
 
 
@@ -1547,7 +1571,7 @@ class Game():
 				Print("You can't see the sky from here.")
 				return False
 			return self.currentroom.ceiling.describe()
-			
+
 		
 		if target in ("sky",None):
 			target = "sun" if self.hour() in Data.dayhours else "moon"		
@@ -1576,6 +1600,8 @@ class Game():
 					Print("A shimmering golden orb dances in the sky pouring whispers of light. You can make out traces of strange golden fire on its surface. It hangs amongst a scattering of sparkling drops on all sides. You can make out the constellations of Zork, Norman, and Glycon acting out the tales of fate.")
 			elif target == "moon":
 				Print("The moon isn't out right now.")
+			elif target == "stars" and self.hour() in ("hearth","cat"):
+				Print("The stars are just starting to appear as tiny pinpricks of silver light. They shimmer faintly against the deepening teal of the evening sky.",color="b")
 			elif target == "stars":
 				Print("The stars aren't out right now.")
 		
@@ -5229,7 +5255,12 @@ class Fixture(Item):
 		Print(f"{+self} cannot be broken.")
 		return False
 
-
+moon = Fixture("moon","The glowing moon hangs in the sky, illuminating the world below.",0,"cheese",aliases=["full moon","new moon"])
+sun = Fixture("sun","The blazing sun shines down from above, its warmth felt by all.",0,"fire",aliases=["sun"])
+stars = Fixture("stars","The twinkling stars dot the night sky, each one a distant sun.",0,"fire",aliases=["star"],pronoun="they")
+eclipse = Fixture("eclipse","The sun and moon align perfectly, casting an eerie shadow over the land.",0,"fire",aliases=["solar eclipse","sun","moon"])
+meteorshower = Fixture("meteor shower","A dazzling meteor shower streaks across the sky, lighting up the darkness with brief flashes of light.",0,"rock",aliases=["meteors","shower"])
+aurora = Fixture("aurora","The sky is painted with vibrant colors as the aurora dances overhead, a mesmerizing display of nature's beauty.",0,"energy",aliases=["auroras"])
 
 class Passage(Portal,Fixture):
 	def __init__(self,name,desc,weight,composition,links,descname,passprep="into",mention=False,**kwargs):
