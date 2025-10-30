@@ -1,6 +1,6 @@
 # PoPy.py, Potions & Pythons by Ross Peene, 2022
 # This file runs main() which loops, having the user and creatures take actions
-# This file is dependent on Parser.py
+# This file is dependent on Interpreter.py
 
 import os
 import sys
@@ -93,18 +93,10 @@ if __name__ == "__main__":
 
 # BUG BACKLOG
 
-# > stomp on bottle
-# What will you kick?
-
-# > throw bottle down
-# "there is no down in your surroundings"
-
 # "> break bottle with hatchet" doesn't equip hatchet
 
 # > climb up the wall
 # What will you climb up here?
-
-# 'go down' has strange behavior when flying and at clifftop or on horse
 
 ################################################################################
 

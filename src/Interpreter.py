@@ -1,6 +1,7 @@
 # Interpreter.py
 # This file contains the code to parse user input and execute player actions
-# This file is dependent on Menu.py and is a dependency of PoPy.py
+# This file is dependent on Menu.py, Items.py, Creatures.py, Data.py, and Core.py
+# and is a dependency of PoPy.py
 
 # It consists of three main parts;
 # 1. Interpreter functions	(functions to interpret user input)
@@ -1401,6 +1402,18 @@ def Fish(dobj,iobj,prep):
 	Core.Print("fishing")
 
 
+def Fly(dobj,iobj,prep):
+	if not Core.player.hasStatus("flying"):
+		if "fly" not in Core.player.spells:
+			Core.Print("You can't fly.")
+			return False
+		print("Casting fly here.")
+		return Cast("fly",None,None)
+	if Core.player.posture() != "standing":
+		Core.changePosture("standing")
+	return Go(dobj,iobj,prep)	
+
+
 def Follow(dobj,iobj,prep):
 	Core.Print("following")
 
@@ -1761,6 +1774,7 @@ def Jump(dobj,iobj,prep):
 
 
 def Kick(dobj,iobj,prep):
+	if dobj is None: dobj = iobj
 	if dobj is None:
 		dobj = getNoun("What will you kick?")
 		if dobj in Data.cancels: return False
@@ -2411,12 +2425,13 @@ def Throw(dobj,iobj,prep,maxspeed=None):
 		maxspeed = 0
 	verb = "toss" if maxspeed == 0 else "throw"
 
+	if prep is None:
+		prep = "at"
 	if prep in ("down","up","in","out"):
 		if iobj is None:
 			iobj = prep
 		prep = None
-	if prep is None:
-		prep = "at"
+
 	I = findObject(dobj,"throw","player")
 	if I is None: return False
 
@@ -2424,11 +2439,17 @@ def Throw(dobj,iobj,prep,maxspeed=None):
 		iobj = getNoun(f"What will you {verb} {prep}?")
 		if iobj in Data.cancels: return False
 	dir = None
-	if iobj.lower() in Core.game.currentroom.links.keys():
+	if Core.player.parent.getDirPortalPair(iobj)[0]:
+		dir, T = Core.player.parent.getDirPortalPair(iobj)
+	elif iobj == "up":
+		T = Core.player.parent.ceiling
+		dir = "up"
+	elif iobj.lower() in Core.game.currentroom.links.keys():
 		T = Core.game.currentroom.links[iobj]
 		dir = iobj
-	elif Core.player.parent.getDirPortalPair(iobj)[0]:
-		dir, T = Core.player.parent.getDirPortalPair(iobj)
+	elif iobj == "down":
+		T = Core.player.parent.floor
+		dir = "down"
 	else:
 		T = findObject(iobj,f"{verb} {prep}","room")
 		if T is None: return False
@@ -2439,12 +2460,13 @@ def Throw(dobj,iobj,prep,maxspeed=None):
 	if T is I:
 		Core.Print(f"You can't {verb} {-I} at {I.reflexive()}.",color="k")
 		return False
-	if T is Core.player.parent or T is Core.player.parent.walls:
-		dir = "forward"
-	elif T is Core.player.parent.floor or T is Core.player.anchor():
-		dir = "down"
-	elif T is Core.player.parent.ceiling:
-		dir = "up"
+	if dir is None:
+		if T is Core.player.parent or T is Core.player.parent.walls:
+			dir = "forward"
+		elif T is Core.player.parent.floor or T is Core.player.anchor():
+			dir = "down"
+		elif T is Core.player.parent.ceiling:
+			dir = "up"
 
 	if not Core.player.parent.canAdd(I) and I not in Core.player.parent.contents():
 		Core.Print(f"You can't {verb} {-I}. There's not enough room.",color="k")
@@ -2702,6 +2724,8 @@ actions = {
 "fill":Fill,
 "find":Find,
 "fish":Fish,
+"float":Fly,
+"fly":Fly,
 "follow":Follow,
 "fuck":Fuck,
 "get":Take,
@@ -2910,6 +2934,7 @@ actions = {
 # roll (in the mud?)
 # pilfer -> steal
 # swing (an item)
+# crush/squash
 # ligma/sugma
 # buy/pay/purchase, sell, trade
 # embrace/hug
@@ -2931,6 +2956,7 @@ actions = {
 # water,splash -> pour on
 # dig, bury
 # rip, tear -> break
+# nudge -> spur or shove?
 # reload?
 # reel -> fish?
 # cook/brew

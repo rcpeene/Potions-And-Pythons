@@ -1,9 +1,10 @@
 # Core.py
 # This file contains all core functions and classes used throughout the game
-# This file is a dependency of Objects.py and is dependent on Data.py
+# This file is a dependency of Creatures.py, Items.py, Menu.py, and Interpreter.py
+# and is dependent on Data.py
 
 # It consists of two main parts;
-# 1. Core functions			(used in Objects.py, Menu.py, and Parser.py)
+# 1. Core functions			(used in Creatures.py, Items.py, Menu.py, and Interpreter.py)
 # 2. Dialogue Classes		(DialogueNode and DialogueTree)
 # 3. Core class definitions	(empty, game, room, item, creature, player, etc.)
 
@@ -2138,6 +2139,7 @@ class Item():
 		for covered in self.covering:
 			covered.removeCover()
 		self.Disoccupy()
+
 		self.parent.remove(self)
 
 		# TODO: first drop all items from contents? or just some important ones?
@@ -2297,6 +2299,8 @@ class Item():
 
 
 	def Fall(self,height=0,room=None):
+		# contents could spill out if item breaks
+		contents = (self.contents() if hasMethod(self,"contents") else []).copy()
 		if room is None:
 			room = self.room()
 		if self.room() is game.currentroom:
@@ -2312,8 +2316,11 @@ class Item():
 			self.changeLocation(room)
 			if self.room() is game.currentroom:
 				Print(f"{+self} falls from above.")
-				
-		self.takeDamage(height,"b")
+
+		force = maxm(height,20*self.weight)
+		self.takeDamage(force,"b")
+		for item in contents:
+			item.takeDamage(force//3,"b")
 		return True
 
 
@@ -2327,8 +2334,11 @@ class Item():
 	def takeDamage(self,dmg,type):
 		if self in player.surroundings().objTree():
 			Print(f"{+self} took {dmg} {Data.dmgtypes[type]} damage.")
-		if self.durability != -1 and dmg > self.durability:
-			return self.Break()
+		if self.durability != -1:
+			dmg = min0(dmg-self.durability)
+			self.durability -= dmg
+			if self.durability <= 0:
+				return self.Break()
 
 
 	def Bombard(self,missile):
@@ -3243,11 +3253,12 @@ class Creature():
 		if self.anchor() is not self.parent.floor:
 			self.parent.floor.addOccupant(self)
 
+		force = maxm(height,20*self.weight)
 		if not self.hasStatus("fleetfooted"):
-			self.takeDamage(height,"b")
+			self.takeDamage(force,"b")
 			self.changePosture("laying")
 			if self.rider:
-				self.rider.takeDamage(height//2,"b")
+				self.rider.takeDamage(force//3,"b")
 		return True
 
 
@@ -4297,8 +4308,9 @@ class Player(Creature):
 		if self.anchor() is not self.parent.floor:
 			self.parent.floor.addOccupant(self)
 
+		force = maxm(height,20*self.weight)
 		if not self.hasStatus("fleetfooted"):
-			self.takeDamage(height,"b")
+			self.takeDamage(force,"b")
 			self.changePosture("laying")
 		return True
 
@@ -5329,7 +5341,9 @@ class Projectile(Item):
 			Print("Critical hit!",color="o")
 			self.dull(1)
 		damage = diceRoll(0,d,d)
-		target.takeDamage(damage,self.type)
+		# surfaces can't be damaged by projectiles
+		if target not in target.parent.surfaces:
+			target.takeDamage(damage,self.type)
 
 		# take self damage
 		if self.item:

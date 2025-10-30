@@ -451,7 +451,7 @@
 				"name": "compass",
 				"desc": "a plain steel compass with a red arrow",
 				"weight": 2,
-				"durability": 20,
+				"durability": 30,
 				"composition": "steel",
 				"plural": "compasses"
 			}
@@ -477,7 +477,7 @@
 			"south": "big stump",
 			"in": "cabin hallway",
 			"cabin": "cabin hallway",
-			"up": "above the woods",
+			"up": "clifftop",
 			"down":"burning shore"
 		},
 		"fixtures": [
@@ -506,7 +506,9 @@
 		"name": "Clifftop",
 		"domain": "Woodlands",
 		"desc": "Atop the edge of a rocky white cliff facing east. In the distance you can see plains stretching to the horizon past the forest below. At the base of this cliff is a brook flowing beside a cabin.",
-		"links": {},
+		"links": {
+			"up":"above the woods"
+		},
 		"fixtures": [
 			{
 				"__class__": "Wall",

@@ -1,6 +1,6 @@
 # Data.py
 # This file holds all the constant sets and dicts of data used in the game.
-# This file is a dependency of Core.py
+# This file is a dependency of Core.py and Menu.py
 
 # It consists of four main parts;
 # 1. Useful strings			(Useful strings of data primarily used in Parser.py)
@@ -76,7 +76,7 @@ reflexives = {"she":"herself","he":"himself","they":"themselves","it":"itself","
 compounds = {"downstairs":["down","stairs"], "upstairs":["up","stairs"]}
 
 # used in nounify() in Parser.py to combine multiple words that might have a single meaning as a whole term
-miscexpressions = {"it all","spell list","meteor shower","solar eclipse"}
+miscexpressions = {"it all","meteor shower","solar eclipse"}
 
 directions = {"n":"north","ne":"northeast","e":"east","se":"southeast","s":"south","sw":"southwest","w":"west","nw":"northwest","u":"up","d":"down","inside":"in","into":"in","o":"out","b":"beyond","onto":"on","upon":"on","off":"down","over":None,"to":None}
 
@@ -366,11 +366,11 @@ glossary = {
 
 "spd":"Speed\nTrait representing physical quickness. SPD contributes to determining ATSP and MVMT. Type 'spd' to view your SPD.",
 
-"spls":"Spells\nNumber of spells that can be learned. SPLS is determined by INT. Type 'spls' to view your SPLS. Type 'spell list' to view your Spell List.",
+"spls":"Spells\nNumber of spells that can be learned. SPLS is determined by INT. Type 'spls' to view your SPLS. Type 'spells' to view your Spell List.",
 
 "spell":"Spell\nA magical effect which can be cast using a Creature's CAST and CSSP. Spells can do damage, bestow a Status Condition, or have some other effect. The number of spells a Creature can know is determined by SPLS. Type 'spell list' to view your Spell List.",
 
-"spells":"Spells\nNumber of spells that can be learned. SPLS is determined by INT. Type 'spls'to view your SPLS. Type 'spell list' to view your Spell List.",
+"spells":"Spells\nNumber of spells that can be learned. SPLS is determined by INT. Type 'spls' to view your SPLS. Type 'spells' to view your Spell List.",
 
 "spell list":"Spell List\nList of spells which a Creature has learned. The maximum number of spells a Creature can know is determined by SPLS. Type 'spell list' to view your Spell List.",
 
