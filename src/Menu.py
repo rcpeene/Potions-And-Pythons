@@ -1,6 +1,7 @@
 # Menu.py
-# This file serves as an API for Parser.py to save and load game data with files
-# This file is dependent on Objects.py and is a dependency of Parser.py
+# This file serves as an API for Interpreter.py to save and load game data with files
+# This file is dependent on Core.py, Items.py, Creatures.py, and Data.py
+# and is a dependency of Interpreter.py
 
 # It consists of four main parts;
 # 1. Write data functions	(functions to write objects P, W, and G to files)

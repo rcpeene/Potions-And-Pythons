@@ -1,6 +1,6 @@
 # Items.py
 # This file contains the item classes used in the game
-# This file is dependent on Core.py and is a dependency of Menu.py
+# This file is dependent on Core.py and is a dependency of Menu.py and Interpreter.py
 
 
 from bisect import insort
@@ -143,11 +143,13 @@ class Box(Core.Portal):
 		if not super().Break():
 			return False
 		if len(self.items) > 0:
-			Core.Print("Its contents spill out.")
+			if self.parent is Core.player.parent:
+				Core.Print("Its contents spill out.")
 		# drop things it contains into parent
-		for item in self.items:
+		for item in self.items.copy():
 			if item is Core.player:
 				Core.waitInput(f"You are no longer in {-self}.")
+			print(f"{+item} comes out of {-self}.")
 			item.changeLocation(self.parent)
 		return True
 
@@ -256,16 +258,6 @@ class Box(Core.Portal):
 		Core.Item.passTime(self,t)
 		for I in self.items:
 			I.passTime(t)
-
-
-	def Fall(self,height=0,room=None):
-		# contents might spill out if item breaks
-		contents = self.contents().copy()
-		Core.Item.Fall(self,height,room)
-		for obj in contents:
-			# TODO, revise how damage is mitigated here based on composition/durability?
-			obj.takeDamage(height//3,"b")
-		return True
 
 
 	### Getters ###
@@ -869,8 +861,8 @@ class Door(Window):
 
 factory = {
 	"blue potion": lambda: Potion("blue potion", "A bubbling blue liquid in a glass bottle",6,3,"glass",["bottle","glass","potion"]),
-	"bottle": lambda: Bottle("bottle","an empty glass bottle",6,3,"glass",["glass"]),
-	"coffee": lambda: Potion("bottle of coffee","A bottle of dark brown foamy liquid",6,3,"glass",["coffee","espresso","bottle"]),
+	"bottle": lambda: Bottle("bottle","an empty glass bottle",6,3,"glass",["glass","glass bottle"]),
+	"coffee": lambda: Potion("bottle of coffee","A bottle of frothy dark brown liquid",6,3,"glass",["coffee","espresso","bottle"]),
 	"green potion": lambda: Potion("green potion", "A bubbling green liquid in a glass bottle",6,3,"glass",["bottle","glass","potion"]),
 	"red potion": lambda: Potion("red potion", "A bubbling red liquid in a glass bottle",6,3,"glass",["bottle","glass","potion"]),
 	"shard": lambda: Shard("glass shard","a black glass shard",2,1,"glass",["shard"])
