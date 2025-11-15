@@ -42,6 +42,8 @@ colors = {
 	"white": "w"
 }
 
+rarityColors = {-1:"r",0:"k",1:"w",2:"o",3:"g",4:"b",5:"m"}
+
 emoticons = {":)",":d",":(",";)",":o",":p"}
 
 
@@ -80,6 +82,10 @@ miscexpressions = {"it all","meteor shower","solar eclipse"}
 
 directions = {"n":"north","ne":"northeast","e":"east","se":"southeast","s":"south","sw":"southwest","w":"west","nw":"northwest","u":"up","d":"down","inside":"in","into":"in","o":"out","b":"beyond","onto":"on","upon":"on","off":"down","over":None,"to":None}
 
+cardinalDirs = ("north","east","south","west")
+ordinalDirs = ("northeast","southeast","southwest","northwest")
+
+
 dmgtypes = {"a":"acid","b":"bludgeoning","c":"cold","e":"essential","f":"fire","h":"hunger","i":"psychic","l":"lightning","n":"necrotic","p":"piercing","r":"radiant","s":"slashing","t":"thunder","v":"force","x":"poison"}
 
 # gear dict used to initialize the player object
@@ -91,7 +97,7 @@ curses = {"weakness","slowness","clumsiness","tiredness","illness","timidity","s
 
 buffs = {"anointed","fleetfooted","flying","invigorated","mending","wildtongued"}
 
-debuffs = {"dead","hindered"}
+debuffs = {"dead","hindered","hungry","starving","tired","fatigued"}
 
 privateStatus = {"dead","invisible","hidden","hindered"}
 

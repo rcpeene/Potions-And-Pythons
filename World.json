@@ -45,7 +45,7 @@
 		"__class__": "Room",
 		"name": "Big Oak",
 		"domain": "Woodlands",
-		"desc": "A very large oak tree stands before you. Much larger than any trees in the surrounding forest. It's vast height and cold shade feel imposing. To the north, a clearing can be seen in the distance. To the south, there a clearing with a grassy hill. To the east and west, more woods.",
+		"desc": "A very large oak tree stands before you. Much larger than any trees in the surrounding forest. It's vast height and cold shade feel imposing. To the north, a clearing can be seen in the distance. To the south, there's a clearing with a grassy hill. To the east and west, more woods.",
 		"links": {
 			"north": "treeline",
 			"east": "boulder",
@@ -150,10 +150,11 @@
 			},
 			{
 				"__class__": "Portal",
-				"name": "Cracked Mirror",
+				"name": "cracked mirror",
 				"desc": "A cracked mirror that shimmers slightly. It doesn't appear to reflect anything, but instead shows dark rippling shadows.",
 				"weight": 2,
 				"durability": 10,
+				"rarity": 4,
 				"composition": "glass",
 				"links": {
 					"in": "port:mirror"
@@ -173,7 +174,7 @@
 		"__class__": "Room",
 		"name": "Cabin Hallway",
 		"domain": "Cabin",
-		"desc": "The entrance to a dusty old cabin. Plants sprout through cracks in the floor and vines creep up the walls which were once painted white. The north and south walls of this hallway each have a doorway, and there is a creaky stairway at the end, which leads both up and down.",
+		"desc": "The entrance to a dusty old cabin. Plants sprout through cracks in the floor and vines creep up the walls which were once painted white. The northern and southern walls of this hallway each have a doorway, and there is a creaky stairway at the end, which leads both up and down.",
 		"links": {
 			"north": "cabin kitchen",
 			"east": "cliffside",
@@ -344,6 +345,7 @@
 						"desc": "A blazing orange portal that hangs in the air, rippling",
 						"weight": 2,
 						"durability": 1000,
+						"rarity": 4,
 						"composition": "fire",
 						"links": {
 							"in": "burning shore"
@@ -452,6 +454,7 @@
 				"desc": "a plain steel compass with a red arrow",
 				"weight": 2,
 				"durability": 30,
+				"rarity": 2,
 				"composition": "steel",
 				"plural": "compasses"
 			}
@@ -585,6 +588,7 @@
 				"weight": 30,
 				"durability": 20,
 				"composition": "steel",
+				"rarity": -1,
 				"aliases": ["machine","pitcher"],
 				"triggers": ["Use", "Press", "Run"],
 				"effect": "Effects.Launch('shard',10,50,self,Core.player)",
@@ -594,10 +598,11 @@
 			},
 			{
 				"__class__": "Portal",
-				"name": "Warped Mirror",
+				"name": "warped mirror",
 				"desc": "A warped mirror that seems to glow. You can't make out any reflection but dark twisted shapes.",
 				"weight": 2,
 				"durability": 10,
+				"rarity": 4,
 				"composition": "glass",
 				"links": {
 					"in": "port:mirror"
@@ -643,6 +648,7 @@
 				"aliases": ["stone","rock"],
 				"weight": 3,
 				"durability": 50,
+				"rarity": 0,
 				"composition": "stone"
 			}
 		],

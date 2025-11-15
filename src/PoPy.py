@@ -93,13 +93,8 @@ if __name__ == "__main__":
 
 # BUG BACKLOG
 
-# > climb up the wall
-# What will you climb up here?
-
-# There is a solar eclipse in the sky!
-# What will you do?
-# > touch it
-# There is no 'eclipse' that you can see.
+# displaying traits when have stupidity and a trait is up to 'some'
+# displaying taking money with stupidity 'you take the a small amount of gold'
 
 # > attack table with sword
 # You attack the table with your broken sword.
@@ -109,6 +104,7 @@ if __name__ == "__main__":
 # You attack the table with your broken sword.
 # The table took 5 bludgeoning damage.
 
+# saving then loading fails
 
 ################################################################################
 
@@ -140,15 +136,20 @@ if __name__ == "__main__":
 # consider how attacking with foot, head, mouth, hand, tail works
 
 # add "in" operator to objects
+# think about adding other operators
+	# operators should probably only be used for read-only operations?
+	# | for status conditions or adding items?
+	# << and >> used for comparing size? < and > for weight?
+	# // and ** for further string functionality?
+	# modula for pluralization?
+	# maybe use one of these as alias for "canAdd"?
+	# bitwise | and & used for listObjects
+	# using operators might require a generic gameObject class
 # reorganize methods, capital or lowercase them based on if creature is subject or object
-# add asserts to most class methods
-# add better comments to methods
 
-# color status conditions green/red in status display
-# account for being restrained when doing stuff
-
-# what if horse goes wild while riding it, doesn't obey your directions
 # give passages a capacity limit, so a dragon can't fit through a doorway?
+# assert room contents types during instantiation
+# during instantiation assert items weight can fit in space or size of container
 
 # add chopping tree
 # add a "tree" item? item which can be climbed but isn't a passage
@@ -157,6 +158,7 @@ if __name__ == "__main__":
 # a "campfire" item which can be used to cook food and provide light
 # if something is on fire (or other condition) when entering a room, say it
 
+# redo the attack and auto equipping system
 # try out using a creature as a weapon
 # correctly factor DFNS into takeDamage (it should probably be in takeDamage method itself), but consider different damage source like collision and falling
 # add fencing and wooden swords
@@ -189,6 +191,10 @@ if __name__ == "__main__":
 # add a secondary display window
 
 # sift through TODOs
+# account for being restrained when doing stuff
+# add asserts to most class methods
+# add better comments to methods
+
 # add basic equipment and clothing items
 # restructure map and revise tests
 # add a coin purse? which holds your money? required to collect money?
@@ -217,8 +223,10 @@ if __name__ == "__main__":
 # add cooking/brewing/crafting/tinkering
 # ^^^sharpening/smithing items?
 	# create system for 'recipes' with this
+# protect rare items from certain kinds of damage/effects
 
 # behavior
+	# what if horse goes wild while riding it, doesn't obey your directions
 	# implement creature.Go
 		# make sure they can't go if they're riding something dead or occupying something
 	# add Escape to creature behavior. Make sure that if they escape a container thats in an inventory, to put them in the room??

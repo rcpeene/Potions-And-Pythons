@@ -128,12 +128,14 @@ def Print(*args,end="\n",sep="",delay=None,color=None,allowSilent=True,outfile=N
 		color = choices(list(Data.colorMap.keys()),[1]*7 + [28])[0]
 	if delay is None:
 		if player.hasAnyStatus("dead","slowness"): delay = 0.02
-		else: delay = 0.001
+		else: delay = 0.001		
 	if game.silent and allowSilent:
-		return
+		return 0
 	if len(args) > 1 and sep=="":
 		sep=" "
 	args = [str(arg) for arg in args]
+	if player.hasStatus("stupidity") and color not in ('k','y'):
+		args = [ambiguateNumbers(arg,grammatical=True) for arg in args]
 	printLength = sum(displayLength(s) for s in args) + displayLength(sep)*(len(args)-1) + displayLength(end)
 	if color is not None:
 		args = Tinge(*args,color=color)
@@ -203,7 +205,6 @@ def movePrintCursor(nlines,clear=False,clearLast=True,outfile=None):
 	outfile.flush()
 
 
-
 def Input(text="",cue="\n> ",low=True,delay=None,color=None):
 	sys.stdout.flush()
 	# should never be silent when asking for input
@@ -217,16 +218,21 @@ def Input(text="",cue="\n> ",low=True,delay=None,color=None):
 def InputLock(text="",cue="\n> ",acceptKey=None,low=True,delay=None,color=None):
 	if acceptKey is None:
 		acceptKey = lambda inp: inp.strip()
-	nlines = cue.count("\n")+1 # account for the newline from input
+	cueLines = cue.count("\n")+1 # account for the newline from input
 
 	Print(text,end="",delay=delay,color=color,allowSilent=False)
+
+	# leave an aesthetic buffer so the cue is never at the very bottom of the screen
+	print("\n"*cueLines,end="")
+	movePrintCursor(cueLines,clear=True,clearLast=False)
+
 	while True:
 		sys.stdout.flush()
 		inp = Input(text="",cue=cue,low=low,delay=delay,color=color)
 		if acceptKey(inp):
 			return inp
 		flushInput()
-		movePrintCursor(nlines,clear=True,clearLast=False)
+		movePrintCursor(cueLines,clear=True,clearLast=False)
 
 
 def InputLoop(prompt,cue="> ",acceptKey=None,escapeKey=None,refuseMsg="",helpMsg="Type 'cancel' to undo.",color=None,delay=None):
@@ -234,12 +240,13 @@ def InputLoop(prompt,cue="> ",acceptKey=None,escapeKey=None,refuseMsg="",helpMsg
 		acceptKey = lambda inp: inp
 	if escapeKey is None:
 		escapeKey = lambda inp: inp in Data.cancels
-	invalid_count = 0
-	inp = InputLock(prompt,"\n"+cue,color=color,delay=delay)
 	if refuseMsg != "":
 		refuseMsg += "\n"
 	if helpMsg != "":
 		helpMsg += "\n"
+
+	invalid_count = 0
+	inp = InputLock(prompt,"\n"+cue,color=color,delay=delay)
 	while True:
 		if escapeKey(inp):
 			return None
@@ -251,7 +258,7 @@ def InputLoop(prompt,cue="> ",acceptKey=None,escapeKey=None,refuseMsg="",helpMsg
 		if invalid_count == 2:
 			# Print(helpMsg,color="k",delay=delay)
 			refuseMsg = refuseMsg + helpMsg
-		inp = InputLock("",cue,color="k",delay=delay)
+		inp = InputLock("",cue,color=color,delay=delay)
 
 
 # prints a question, gets a yes or no, returns True or False respectively
@@ -290,6 +297,7 @@ def columnPrint(l,n,w=None,delay=0,color=None,inplace=False,outfile=None):
 		w = max(termLengths) + 2
 	assert w > 1
 
+	nRowsPrinted = 1
 	# k is the number of characters that have been printed in the current row
 	k = 0
 	# for each string element in l
@@ -301,6 +309,7 @@ def columnPrint(l,n,w=None,delay=0,color=None,inplace=False,outfile=None):
 				newline=""
 			else:
 				newline="\n"
+				nRowsPrinted += 1
 			k = Print(newline+term,end="",delay=delay,color=color,outfile=outfile)
 		# if the string is short enough, print it, increment k
 		else:
@@ -310,6 +319,7 @@ def columnPrint(l,n,w=None,delay=0,color=None,inplace=False,outfile=None):
 		k += Print(spaces * ' ',end="",delay=delay,color=color,outfile=outfile)
 	if not inplace:
 		Print(outfile=outfile)
+	return nRowsPrinted
 
 
 # capitalizes the first letter of all the words in a string
@@ -327,17 +337,45 @@ def capWords(string,c=-1):
 	return cappedString[0:-1]
 
 
+def findFirst(text,substrs):
+	idxs = [text.find(substr) for substr in substrs]
+	idxs = [i for i in idxs if i != -1]
+	if not idxs:
+		return -1
+	return min(idxs)
+
+
 def copulate(str1,str2):
-	conjugate = lambda s, old, new: s.replace(old,new,1) if s.startswith(old) else s	
+	irregulars = (('has','have'),('is','are'),('was','were'),('does','do'),('goes','go'))
+
+	def conjugateFirstPerson(string):
+		firstWordEnd = findFirst(string," .,!?")
+		# conjugate irregular verbs
+		for t,f in irregulars:
+			if string[:firstWordEnd] == t:
+				return f + string[firstWordEnd:]
+		# assume for other verbs just remove the 's'
+		if firstWordEnd > 0 and string[firstWordEnd-1] == "s":
+			return string[:firstWordEnd-1] + string[firstWordEnd:]
+		return string
+
+	def conjugateThirdPerson(string):
+		firstWordEnd = findFirst(string," .,!?")
+		# conjugate irregular verbs
+		for t,f in irregulars:
+			if string[:firstWordEnd] == f:
+				return t + string[firstWordEnd:]
+		# assume for other verbs just add an 's'
+		if firstWordEnd > 0 and string[firstWordEnd-1] != "s":
+			return string[:firstWordEnd-1] + "s" + string[firstWordEnd:]
+		return string
+
 	if str2.startswith(" "):
 		str2 = str2[1:]
-	conjugate = lambda s, old, new: s.replace(old,new,1) if s.startswith(old) else s
 	if str1.lower() in ("you","they"):
-		for old,new in (('has','have'),('is','are'),('was','were')):
-			str2 = conjugate(str2,old,new)
+		str2 = conjugateFirstPerson(str2)
 	else:
-		for old,new in (('have','has'),('are','is'),('were','was')):
-			str2 = conjugate(str2,old,new)
+		str2 = conjugateThirdPerson(str2)
 	return str1 + ' ' + str2
 
 
@@ -352,11 +390,163 @@ def ordinal(n):
 
 
 def ambiguateDirections(text):
-	text = text.replace("north","???")
-	text = text.replace("east","???")
-	text = text.replace("south","???")
-	text = text.replace("west","???")
-	return text
+	directions = Data.cardinalDirs + Data.ordinalDirs
+	wards = tuple(dir+"ward" for dir in directions) + tuple(dir+"wards" for dir in directions)
+	erns = tuple(dir+"ern" for dir in directions)
+	tokens = text.split(" ")
+	unknownDirs = ("some direction","one way","in a certain direction","up ahead","a ways away","far off","over yonder","elsewhere")
+	additionalUnknownDirs = ("another direction","some other way","the other way","behind","also ahead")
+	adjectivalUnknownDirs = ("the nearby","the far","the left","the right")
+	lastChoice = None
+	dirPreps = {"of","from","to","toward","into","on","in","at","by","across","along"}
+	followsNounDir = {"there","theres","is","are","lie","stand","rise","begin","stretch","extend","run","rest","reach","flow"}
+
+	replacedYet = False
+
+	def getReplacement(oldTokens,newOptions):
+		nonlocal replacedYet, unknownDirs, additionalUnknownDirs, lastChoice
+		newToken = choice(newOptions)
+		# ensure replacement is different from last
+		while newToken == lastChoice:
+			newToken = choice(newOptions)
+		lastChoice = newToken
+		# preserve capitalization and punctuation
+		if oldTokens[0][0] == oldTokens[0][0].upper():
+			newToken = newToken.capitalize()
+		if oldTokens[-1][-1] in Data.symbols:
+			newToken += oldTokens[-1][-1]
+		# after we've replaced one direction, we can use additional phrases
+		if not replacedYet and newOptions is unknownDirs:
+			unknownDirs += additionalUnknownDirs
+			replacedYet = True
+		return newToken
+
+	def clean(token):
+		return token.lower().rstrip(Data.symbols) if token else None
+
+	def subsume(lst,idx):
+		if idx > 0 and lst[idx][-1] in Data.symbols:
+			if lst[idx-1][-1] in Data.symbols:
+				lst[idx-1] = lst[idx-1][:-1]
+			lst[idx-1] += lst[idx][-1]
+		if idx < len(lst)-1 and lst[idx][0].isupper():
+			lst[idx+1] = lst[idx+1].capitalize()
+		lst.pop(idx)
+
+	def dirIsNoun(t1,t2):
+		return t1[-1] in Data.symbols or clean(t2) in followsNounDir or clean(t2).endswith("s")
+
+	# 0. remove adjectives like 'the far north'
+	# 1. If the direction term ends in "ward", "wards", then replace it with its stem eg. (northern -> north),
+	# 2. If the direction ends in "ern" then it is an adjective,
+	# 3. If the direction term is followed by "and" and then followed by another direction term, then remove the "and" and the term (reducing the list)
+	# 4. if the direction is part of has comma and followed by another direction, remove the term (also reducing the list)
+	# 5. if the term is contains punctuation or is followed by our heuristically determined phrases, then it is a noun
+	# 6. otherwise assume its an adjective
+	i = 0
+	while i < len(tokens):
+		if i < 0: i = 0
+		t0 = tokens[i]
+		t1 = tokens[i+1] if i+1 < len(tokens) else None
+		t2 = tokens[i+2] if i+2 < len(tokens) else None
+		# print(i,t0,t1,t2)
+		if clean(t0) == "the" and clean(t2) in directions+wards+erns:
+			# the far northern -> the northern
+			subsume(tokens,i+1)
+			i -= 1
+		elif clean(t2) in wards:
+			# northward(s) -> north
+			tokens[i+2] = t2.replace("wards","").replace("ward","")
+		elif clean(t2) in erns:
+			# a northern window -> a window
+			subsume(tokens,i+2)
+		elif clean(t1) in directions and clean(t2) == "and":
+			# north and east - > north east
+			subsume(tokens,i+2)
+		elif clean(t1) in directions and clean(t2) in directions:
+			# North, east, west -> West
+			if tokens[i+1][-1] in Data.symbols:
+				tokens[i+1] = tokens[i+1][:-1]
+			subsume(tokens,i+1)
+		elif clean(t1) == "the" and clean(t2) in directions:
+			# to the north -> to north
+			subsume(tokens,i+1)
+		elif clean(t1) in directions and dirIsNoun(t1,t2):
+			# to north, a window -> in a certain direction, a window
+			tokens[i+1] = getReplacement((tokens[i+1]),unknownDirs)
+			if clean(t0) in dirPreps:
+				subsume(tokens,i)
+		elif clean(t1) in directions:
+			tokens[i+1] = getReplacement((tokens[i+1],),adjectivalUnknownDirs)
+		else:
+			i += 1
+		# print(tokens)
+
+	return " ".join([t for t in tokens if t is not None])
+
+
+def ambiguateNumbers(text,grammatical=False):
+	text = str(text)
+	# Lookbehind: find the nearest non-whitespace character before the number
+	# (?P<prev>\S)?  captures that character WITHOUT consuming whitespace
+	# pattern = r'(?:(?P<prev>\S)\s*)?(?P<num>\d+)'
+	# pattern = r'(?<!\[)(?<!\\)(?:(?P<prev>\S)\s*)?(?P<num>\d+)'
+	# pattern = r'(?:(?P<prev>\S)\s*)?(?P<num>\d+)(?!st|nd|rd|th)'
+	# pattern = r'(?<![\[\\;])(?P<prev>\S)?(?P<num>\d+)(?!st|nd|rd|th)'
+	# pattern = r'(?<![\[\\;])(?P<prev>\S)?\b(?P<num>\d+)\b(?!st|nd|rd|th)'
+	# pattern = r'(?<![\[\\;])(?P<prev>\S)?\s*(?P<num>\d+)(?!st|nd|rd|th)'
+	pattern = r'(?:(?P<prev>[^\d\s]))?\s*(?P<num>\d+)(?!st|nd|rd|th)'
+
+	replacementMap = {
+		"none": ("no","zero","not any"),
+		"two": ("two","a couple","a pair of"),
+		"few": ("a few","not many","a small amount of"),
+		"some": ("some","several","an amount of"),
+		"many": ("many","a lot of","a bunch of","a big amount of"),
+		"a ton": ("a ton of","a whole lot of","a really big amount of")
+	}
+	# when printing stats, don't use random selections
+	if not grammatical:
+		replacementMap = {k:(k,) for k in replacementMap}
+
+	def repl(match):
+		prev = match.group("prev")
+		num = int(match.group("num"))
+		# print("#",prev,num)
+
+		# if number was in an ANSI escape sequence, ignore it
+		if prev in ("[","\\",";"):
+			return match.group(0)
+		elif num == 0:
+			replacement = choice(replacementMap["none"])
+		elif num == 1:
+			replacement = "one"
+		elif num == 2:
+			replacement = choice(replacementMap["two"])
+		elif num > 2 and num < 6:
+			replacement = choice(replacementMap["few"])
+		elif num >= 6 and num < 15:
+			replacement = choice(replacementMap["some"])
+		elif num <= 60:
+			replacement = choice(replacementMap["many"])
+		else:
+			replacement = choice(replacementMap["a ton"])
+
+		# Capitalize only if preceding non-whitespace char is . ! ?
+		if (prev is None or prev in ".!?") and grammatical:
+			replacement = replacement.capitalize()
+
+		if prev == "§" and grammatical:
+			replacement += " money"
+			return replacement
+
+		# Reconstruct: include the preceding char (unchanged), then the replacement
+		# and leave all whitespace untouched
+		textBeforeNum = match.group(0)[:-len(match.group("num"))]
+		replacement = textBeforeNum + replacement
+		return replacement
+
+	return re.sub(pattern, repl, text)
 
 
 # returns an abbreviated direction into an expanded one
@@ -393,7 +583,7 @@ def bagObjects(objects):
 
 # takes a list of objects. Defines names as a bagged list of object names
 # returns a string that grammatically lists all strings in names
-def listObjects(objects):
+def listObjects(prepend, objects, append=""):
 	objBag = bagObjects(objects)
 	liststring = ""
 	l = len(objBag)
@@ -404,6 +594,11 @@ def listObjects(objects):
 			liststring += obj.nounPhrase(n=count) + " and "
 		else:
 			liststring += obj.nounPhrase(n=count) + ", "
+	liststring = prepend + liststring
+	liststring += append
+
+	if player.hasStatus("stupidity"):
+		liststring = ambiguateNumbers(liststring,grammatical=True)
 	return liststring
 
 
@@ -933,12 +1128,12 @@ class DialogueNode():
 		return None
 
 
-	# try to visit the child corresponding to Fthe user-chosen dialogue reply
+	# try to visit the child corresponding to the user-chosen dialogue reply
 	# users can end the dialogue by inputting a cancel command
 	def replyHop(self):
-		Print()
 		for i, reply in enumerate(self.replies):
-			Print(f'{i+1}. {reply}')
+			Print()
+			Print(f'{i+1}. {reply}',end="",color='k')
 
 		def acceptKey(inp):
 			try:
@@ -1259,6 +1454,12 @@ class EmptyGear:
 
 	def asWeapon(self):
 		return self
+	
+	
+	### User Output ###
+
+	def displayName(self):
+		return "[---]"
 
 
 
@@ -1344,8 +1545,14 @@ class Game():
 		clearScreen()
 		self.prevroom = self.currentroom
 		self.currentroom = newroom
+		# move the sun, moon, stars to the new room
+		for celestial in celestials:
+			if celestial in self.prevroom.contents():
+				self.prevroom.remove(celestial)
+				self.currentroom.add(celestial)
+
 		self.describeRoom()
-		if not newroom.ceiling:
+		if self.prevroom.ceiling and not self.currentroom.ceiling:
 			self.checkDaytime()
 			self.checkAstrology()
 		return True
@@ -1463,23 +1670,26 @@ class Game():
 		return Data.hours[(self.time % self.daylength) // self.hourlength]
 
 
-	def checkMoon(self):
+	def checkMoon(self,silent=False):
 		if self.currentroom.ceiling is not None:
-			return
+			silent=True
+		msg = ""
 		mooncycle = (self.time % self.monthlength) // self.daylength
 		if mooncycle == 0:
-			Print("It is a new moon.",color="b")
+			msg = "It is a new moon."
 			self.events.add("new moon")
 		elif mooncycle == 7:
-			Print("It is a full moon.",color="b")
+			msg = "It is a full moon."
 			self.events.add("full moon")
 		if "new moon" in self.events:
 			self.events.remove("new moon")
 		if "full moon" in self.events:
 			self.events.remove("full moon")
+		if msg and not silent:
+			Print(msg,color="b")
 
 
-	def checkAstrology(self,update=False):
+	def checkAstrology(self,silent=False):
 		if self.currentroom.ceiling is not None:
 			self.currentroom.removeFixture(aurora)
 			self.currentroom.removeFixture(meteorshower)
@@ -1488,11 +1698,11 @@ class Game():
 		darkhours = ("hearth","cat","mouse","owl","serpent","wolf")
 		aurora_cycle = self.time % 2000
 		if aurora_cycle >= 0 and aurora_cycle < 100 and self.hour() in darkhours:
-			if "aurora" not in self.events or update:
+			if "aurora" not in self.events and not silent:
 				Print("There is an aurora in the sky!",color="b")			
+				self.setPronouns(aurora)
 			self.events.add("aurora")
-			self.currentroom.addFixture(aurora)
-			self.setPronouns(aurora)
+			self.currentroom.add(aurora)
 		elif "aurora" in self.events:
 			self.events.remove("aurora")
 			self.currentroom.removeFixture(aurora)
@@ -1500,11 +1710,11 @@ class Game():
 
 		meteor_cycle = self.time % 3500
 		if meteor_cycle >= 0 and meteor_cycle < 300 and self.hour() in darkhours:
-			if "meteor shower" not in self.events or update:
+			if "meteor shower" not in self.events and not silent:
 				Print("There is a meteor shower in the sky!",color="b")
+				self.setPronouns(meteorshower)
 			self.events.add("meteor shower")
-			self.currentroom.addFixture(meteorshower)
-			self.setPronouns(meteorshower)
+			self.currentroom.add(meteorshower)
 		elif "meteor shower" in self.events:
 			self.events.remove("meteor shower")
 			self.currentroom.removeFixture(meteorshower)
@@ -1513,11 +1723,11 @@ class Game():
 		lighthours = ("rooster","juniper","bell","sword","willow","lily")
 		eclipse_cycle = self.time % (self.monthlength*3+100)
 		if eclipse_cycle > 0 and eclipse_cycle < 30 and self.hour() in lighthours:
-			if "eclipse" not in self.events or update:
+			if "eclipse" not in self.events and not silent:
 				Print("There is a solar eclipse in the sky!",color="b")
+				self.setPronouns(eclipse)
 			self.events.add("eclipse")
-			self.currentroom.addFixture(eclipse)
-			self.setPronouns(eclipse)
+			self.currentroom.add(eclipse)
 		elif "eclipse" in self.events:
 			self.events.remove("eclipse")
 			self.currentroom.removeFixture(eclipse)
@@ -1529,8 +1739,9 @@ class Game():
 	def startUp(self):
 		clearScreen()
 		self.describeRoom()
-		game.checkDaytime()
-		game.checkAstrology(update=True)
+		if self.currentroom.ceiling is None:
+			game.checkDaytime()
+			game.checkAstrology()
 
 
 	def describeRoom(self):
@@ -1542,27 +1753,39 @@ class Game():
 		# 	Print(f"You are carrying {~player.carrying}.")
 
 
-	def checkDaytime(self):
+	def checkDaytime(self,silent=False):
+		isNight = False
 		if self.currentroom.ceiling is not None:
+			self.currentroom.removeFixture(sky)
 			self.currentroom.removeFixture(moon)
 			self.currentroom.removeFixture(stars)
 			self.currentroom.removeFixture(sun)
 			return
+		self.currentroom.add(sky)
 		if self.hour() in ("stag","rooster","juniper"):
 			self.currentroom.removeFixture(moon)
 			self.currentroom.removeFixture(stars)
-			self.currentroom.addFixture(sun)
-			Print("It is morning.")
+			self.currentroom.add(sun)
+			msg = "It is morning."
 		if self.hour() in ("bell","sword","willow","lily"):
-			Print("It is day.")
+			self.currentroom.removeFixture(moon)
+			self.currentroom.removeFixture(stars)
+			self.currentroom.add(sun)
+			msg = "It is day."
 		if self.hour() in ("hearth","cat"):
-			Print("It is evening.")
-			self.currentroom.addFixture(stars)
+			msg = "It is evening."
+			self.currentroom.removeFixture(moon)
+			self.currentroom.add(sun)
+			self.currentroom.add(stars)
 		if self.hour() in ("mouse","owl","serpent","wolf"):
-			Print("It is night.")
-			self.currentroom.addFixture(moon)
+			isNight = True
+			msg = "It is night."
 			self.currentroom.removeFixture(sun)
-			self.checkMoon()
+			self.currentroom.add(moon)
+			self.currentroom.add(stars)
+		if not silent:
+			Print(msg)
+		self.checkMoon(silent=(silent or not isNight))
 
 
 	def LookUp(self,target):
@@ -1572,12 +1795,12 @@ class Game():
 				return False
 			return self.currentroom.ceiling.describe()
 
-		
+	
 		if target in ("sky",None):
 			target = "sun" if self.hour() in Data.dayhours else "moon"		
 
 		if "eclipse" in self.events:
-			Print("The bold red sun is blackened by the ominous moon. The world is dark above and below but for the ring of violet light tracing the moon. Those golden lines of fire that scar the moon's surface seem like cracks through which the sun's rays seep faintly through. All is still in the heavens as they bear witness to this solemn union.",color="b")
+			Print("The bold bronze sun is blackened by the ominous moon. The world is dark above and below but for the ring of violet light tracing the moon. Those golden lines of fire that scar the moon's surface seem like cracks through which the sun's rays seep faintly through. All is still in the heavens as they bear witness to this solemn union.",color="b")
 			player.takeDamage(5,"r")
 		elif "eclipse" not in self.events and target in ("eclipse","solar eclipse"):
 			Print("There's no eclipse happening right now.")
@@ -1585,7 +1808,7 @@ class Game():
 			if self.hour() in ("stag","rooster","juniper"):
 				Print("A burning ball of red fire marches upward in the sky. In the morning air it paints the heavens a tinge of pale green.")
 			elif self.hour() in ("bell","sword","willow","lily"):
-				Print("A burning ball of red fire hangs high in the sky. It warms your face with its bold glow.")
+				Print("A burning ball of bronze fire hangs high in the sky. It warms your face with its bold glow.")
 			elif self.hour() in ("hearth","cat"):
 				Print("A burning ball of red fire rests in the sky. As it descends toward the horizon it draws a curtain of violet across the world above.")
 			else:
@@ -1593,11 +1816,11 @@ class Game():
 		elif target in ("moon","stars"):
 			if self.hour() in Data.nighthours:
 				if "full moon" in self.events:
-					Print("A shimmering golden orb dances in the sky pouring whispers of light. You can make out traces of strange golden fire on its surface. The stars seem to dance around it joyously. You can make out the constellations of Zork, Norman, and Glycon acting out the tales of fate.",color="b")
+					Print("A shimmering silver orb dances in the sky pouring whispers of light. You can make out traces of strange golden fire on its surface. The stars seem to dance around it joyously. You can make out the constellations of Zork, Norman, and Glycon acting out the tales of fate.",color="b")
 				elif "new moon" in self.events:
 					Print("On a night without the moon the world is full of silence and cold. The stars seem to shiver lonesomely. You can make out the constellations of Zork, Norman, and Glycon acting out the tales of fate.",color="b")
 				else:
-					Print("A shimmering golden orb dances in the sky pouring whispers of light. You can make out traces of strange golden fire on its surface. It hangs amongst a scattering of sparkling drops on all sides. You can make out the constellations of Zork, Norman, and Glycon acting out the tales of fate.")
+					Print("A shimmering silver orb dances in the sky pouring whispers of light. You can make out traces of strange golden fire on its surface. It hangs amongst a scattering of sparkling drops on all sides. You can make out the constellations of Zork, Norman, and Glycon acting out the tales of fate.")
 			elif target == "moon":
 				Print("The moon isn't out right now.")
 			elif target == "stars" and self.hour() in ("hearth","cat"):
@@ -1611,7 +1834,7 @@ class Game():
 			Print("There's no aurora happening right now.")
 
 		if "meteor shower" in self.events:
-			Print("Bolts of yellow light streak deftly across the sky, leaving their imprint for no more than a moment. The almost seem to take turns whizzing past like a flock of birds, eager to follow one another toward the edge of the heavens.",color="b")
+			Print("Bolts of yellow light streak deftly across the sky, leaving their imprint for no more than a moment. They almost seem to take turns whizzing past like a flock of sparrows, eager to follow one another toward the edge of the heavens.",color="b")
 		elif target in ("shower","meteors","meteor shower"):
 			Print("There's no meteor shower happening right now.")
 
@@ -1652,15 +1875,15 @@ class Room():
 		self.walls = None
 		self.floor = None
 		if ceiling:
-			ceiling = Fixture("ceiling",f"A ceiling of {ceiling}",size,ceiling,aliases={"roof"})
+			ceiling = Fixture("ceiling",f"A ceiling of {ceiling}",size//3,ceiling,aliases={"roof"})
 			fixtures.append(ceiling)
 			self.ceiling = ceiling
 		if walls:
-			walls = Fixture("wall",f"Walls of {walls}",size,walls,aliases={"walls"})
+			walls = Fixture("wall",f"Walls of {walls}",size//3,walls,aliases={"walls"})
 			fixtures.append(walls)
 			self.walls = walls
 		if floor:
-			floor = Fixture("ground",f"A floor of {floor}",size,floor,aliases={"floor"})
+			floor = Fixture("ground",f"A floor of {floor}",size//3,floor,aliases={"floor"},determiner="the")
 			fixtures.append(floor)
 			self.floor = floor
 		self.surfaces = (self.ceiling,self.walls,self.floor)
@@ -1709,6 +1932,9 @@ class Room():
 
 		del jsonDict["pronoun"]
 		jsonDict["fixtures"] = self.fixtures.copy()
+		for celestial in (sun,moon,stars,aurora,meteorshower,eclipse):
+			if celestial in jsonDict["fixtures"]:
+				jsonDict["fixtures"].remove(celestial)
 		if self.ceiling:
 			jsonDict["fixtures"].remove(self.ceiling)
 			jsonDict["ceiling"] = self.ceiling.composition
@@ -1789,6 +2015,16 @@ class Room():
 			return self.removeFixture(O)
 		elif isinstance(O,Item):
 			return self.removeItem(O)
+
+
+	def replaceObj(self,oldObj,newObj):
+		assert oldObj in self.contents()
+		if not self.canAdd(newObj):
+			return False
+
+		self.remove(oldObj)
+		self.enter(newObj)
+		return True
 
 
 	def addAreaCondition(self,areacond):
@@ -1894,6 +2130,8 @@ class Room():
 
 	def canAdd(self,I):
 		# TODO: maybe make rooms have a capacity? perhaps 10*size
+		if I in self.contents():
+			return False
 		return True
 
 
@@ -2009,19 +2247,21 @@ class Room():
 
 	# prints room name, description, all its items and creatures
 	def describe(self):
-		# if player.countCompasses() == 0:
-		# 	Print("\n" + ambiguateDirections(self.desc))
-		# else:
-		Print("\n" + self.desc)
+		displayDesc = "\n" + self.desc
+		if not player.canNavigate(self):
+			displayDesc = ambiguateDirections(displayDesc)
+		if player.hasStatus("stupidity"):
+			displayDesc = ambiguateNumbers(displayDesc)
+		Print(displayDesc)
 		self.describeItems()
-		self.describeCreatures()
+		self.describeCreatures()		
 
 
 	# prints all the items of the room in sentence form
 	def describeItems(self):
 		items = self.listableItems()
 		if len(items) != 0:
-			Print(f"There is {listObjects(items)}.")
+			Print(listObjects("There is ",items,"."))
 			game.setPronouns(items[-1])
 
 
@@ -2033,7 +2273,7 @@ class Room():
 		select = lambda creature: creature not in (player, player.carrying, player.riding) and creature.rider is None
 		listCreatures = [creature for creature in self.creatures if select(creature)]
 		if len(listCreatures) != 0:
-			Print(f"There is {listObjects(listCreatures)}.")
+			Print(listObjects("There is ",listCreatures,"."))
 
 		carriers = [creature for creature in self.creatures if creature is not player and creature.carrying is not None and creature.carrying is not player and creature.rider is None]
 		carrierPhrases = [f"{-creature} is carrying {-creature.carrying}" for creature in carriers]
@@ -2046,8 +2286,6 @@ class Room():
 		if carrierDescriptions:
 			Print(capWords(carrierDescriptions,1) + ".")
 
-
-
 		for creature in listCreatures:
 			game.setPronouns(creature)
 
@@ -2057,12 +2295,13 @@ class Room():
 # Anything in a Room that is not a Creature will be an Item
 # All items come with a name, description, weight, and durability
 class Item():
-	def __init__(self,name,desc,weight,durability,composition,aliases=None,status=None,plural=None,determiner=None,pronoun="it",longevity=None,despawnTimer=None,scent=None,taste=None,texture=None,occupants=None,covering=None,id=None):
+	def __init__(self,name,desc,weight,durability,composition,aliases=None,rarity=1,status=None,plural=None,determiner=None,pronoun="it",longevity=None,despawnTimer=None,scent=None,taste=None,texture=None,occupants=None,covering=None,id=None):
 		self.name = name
 		self.desc = desc
 		self.weight = weight
 		self.durability = durability
 		self.composition = composition
+		self.rarity = rarity
 		# how long it lasts in despawnable conditions
 		self.longevity = longevity
 		self.despawnTimer = despawnTimer
@@ -2166,7 +2405,8 @@ class Item():
 			covered.removeCover()
 		self.Disoccupy()
 
-		self.parent.remove(self)
+		if self in self.parent.contents():
+			self.parent.remove(self)
 
 		# TODO: first drop all items from contents? or just some important ones?
 		assert game.objRegistry[self.id] is self
@@ -2198,7 +2438,8 @@ class Item():
 		self.Uncover()
 
 		prevparent = self.parent
-		prevparent.exit(self)
+		if prevparent:
+			prevparent.exit(self)
 		if self is player.parent:
 			player.Print(f"{+self} rumbles for a moment...")
 
@@ -2207,22 +2448,55 @@ class Item():
 			occupant.changeLocation(newparent)
 		for covered in self.covering:
 			covered.removeCover()
+		return True
 
 
-	def replace(self,newItem):
-		if isinstance(newItem,str) or newItem.id is None:
-			newItem = game.spawn(newItem)
-		self.parent.add(newItem)
+	def displace(self,newparent):
+		# print("DISPLACING",self,"TO",newparent)
+		if self.parent:
+			self.parent.remove(self)
+		nextparent = getattr(newparent,"parent",None)
+		if hasMethod(newparent,"canObtain"):
+			if newparent.canObtain(self,silent=True):
+				return newparent.obtainItem(self)
+			else:
+				return self.displace(nextparent)
+		elif hasMethod(newparent,"canAdd"):
+			if newparent.canAdd(self):
+				return self.changeLocation(newparent)
+			else:
+				return self.displace(nextparent)
+		else:
+			# item can't belong anywhere, so it must be destroyed
+			self.destroy()
+			return False
+
+
+	def replace(self,newObj):
+		if isinstance(newObj,str) or newObj.id is None:
+			newObj = game.spawn(newObj)
+
+		# if we fail to place the new object in parent, displace it
+		if not self.parent.replaceObj(self,newObj):
+			self.destroy()
+			game.objRegistry[self.id] = newObj
+			del game.objRegistry[newObj.id]
+			newObj.id = self.id
+			return newObj.displace(self.parent)
 		for occupant in self.occupants.copy():
 			self.removeOccupant(occupant)
-			newItem.addOccupant(occupant)
+			if isinstance(newObj,Item):
+				newObj.addOccupant(occupant)
+			else:
+				occupant.Fall(self.Size()//2)
 		for covered in self.covering.copy():
 			covered.removeCover()
-			covered.addCover(newItem)
+			covered.addCover(newObj)
 		self.destroy()
-		game.objRegistry[self.id] = newItem
-		newItem.id = self.id
-		return newItem
+		game.objRegistry[self.id] = newObj
+		del game.objRegistry[newObj.id]
+		newObj.id = self.id
+		return newObj
 
 
 	def Obtain(self,creature):
@@ -2506,7 +2780,8 @@ class Item():
 			strname = self.plural
 		if n > 1:
 			strname = str(n) + " " + strname
-		if self.determiner is not None and det == "":
+		# if self.determiner is not None and det == "":
+		if self.determiner is not None:
 			det = self.determiner
 		if det == "" and n == 1:
 			det = "a"
@@ -2523,6 +2798,11 @@ class Item():
 		if cap > 0:
 			strname = capWords(strname,c=cap)
 		return strname
+
+
+	def displayName(self):
+		color = Data.rarityColors.get(self.rarity,"w")
+		return Tinge(self.name,color=color)[0]
 
 
 	def describe(self):
@@ -2760,7 +3040,8 @@ class Creature():
 		self.Uncover()
 		self.removeCarry()
 		self.removeRiding()
-		self.parent.remove(self)
+		if self in self.parent.contents():
+			self.parent.remove(self)
 		# TODO: drop all items from inventory? or just some important ones?
 		assert game.objRegistry[self.id] is self
 		del game.objRegistry[self.id]
@@ -2791,7 +3072,7 @@ class Creature():
 		if self is player and total_dmg > 0:
 			delay(0.5)
 			color = "r"
-		Print(f"{+self} took {total_dmg} {Data.dmgtypes[type]} damage{p}",allowSilent=True,color=color)
+		Print(f"{+self} took {total_dmg} {Data.dmgtypes[type]} damage{p}",color=color)
 		if self is player:
 			self.display()
 			delay(0.5)
@@ -2851,24 +3132,23 @@ class Creature():
 
 
 	# check if item can fit in inventory
-	def canObtain(self,I):
+	def canObtain(self,I,silent=False):
+		msg = None
 		if isinstance(I,(Creature,Fixture)):
-			self.Print(f"You can't put {-I} in your Inventory.")
-			return False
+			msg = f"You can't put {-I} in your Inventory."
 		if I in self.ancestors():
-			self.Print(f"You can't take {-I}. You're within {I.pronoun}.")
-			return False
-		if isinstance(I,Serpens):
-			return True
+			msg = f"You can't take {-I}. You're within {I.pronoun}."
 		if self.invWeight() + I.Weight() > 2*self.BRDN():
-			self.Print(f"You can't take {-I}. Your Inventory is too full.")
-			return False
+			msg = f"You can't hold {-I}. Your Inventory is too full."
 		if I is self.anchor():
-			self.Print(f"You can't take {-I}. You're on {I.pronoun}.")
-			return False
+			msg = f"You can't take {-I}. You're on {I.pronoun}."
 		# not necessary because you can't take creatures
 		# if self.checkTetherLoop(self,I,"take"):
 		# 	return False
+		if msg:
+			if not silent:
+				self.Print(msg)
+			return False
 		return True
 
 
@@ -2884,6 +3164,8 @@ class Creature():
 		insort(self.inv,I)
 		I.parent = self
 		I.nullDespawn()
+		if self is player:
+			self.display()
 		return True
 
 
@@ -2901,7 +3183,7 @@ class Creature():
 			self.inv.remove(I)
 		if hasMethod(I,"Drop"):
 			I.Drop(self)
-		self.checkHindered()
+		self.checkStatus()
 
 
 	# takes an item from a source location
@@ -2909,7 +3191,7 @@ class Creature():
 	# if it is added, remove it from source location
 	# if it has an Obtain() method, call that
 	# finally, check if the new inventory weight has hindered the creature
-	def obtainItem(self,I):
+	def obtainItem(self,I,silent=False):
 		oldParent = I.parent
 		if isinstance(oldParent,Room): suffix = ""
 		elif self in I.ancestors(): suffix = " from your " + oldParent.name
@@ -2920,11 +3202,71 @@ class Creature():
 		if self.canObtain(I):
 			if self.add(I):
 				oldParent.remove(I)
-			self.Print(f"You take {strname}{suffix}.")
+			self.Print(f"You take {strname}{suffix}.",allowSilent=silent)
 			I.Obtain(self)
 			self.checkHindered()
 			return True
 		return False
+
+
+	def replaceObj(self,old,new):
+		if isinstance(old,Creature):
+			return self.replaceCreature(old,new)
+		elif isinstance(old,Item):
+			return self.replaceItem(old,new)
+		else:
+			return None
+
+
+	def replaceCreature(self,oldObj,newObj):
+		assert isinstance(oldObj,Creature)
+		if self.riding is oldObj:
+			self.removeRiding()
+			if isinstance(newObj,Creature):
+				self.addRiding(newObj)
+			else:
+				newObj.addOccupant(self)
+		if self.carrying is oldObj:
+			carrySlot = "left" if self.gear["left"] is oldObj else "right"
+			carrySlot = carrySlot if self.gear[carrySlot] is oldObj else None
+			self.removeCarry()
+			if isinstance(newObj,Creature):
+				self.addCarry(newObj,slot=carrySlot)
+			elif self.canObtain(newObj):
+				self.gear[carrySlot] = newObj
+				self.obtainItem(newObj)
+				self.equipInHand(newObj,slot=carrySlot)
+			else:
+				return False
+		self.checkStatus()
+
+
+	def replaceItem(self,oldObj,newObj):
+		assert oldObj in self.inv and isinstance(oldObj,Item)
+		if isinstance(newObj,Creature):
+			carriedSlot = "left" if self.gear["left"] is oldObj else "right"
+			carriedSlot = carriedSlot if self.gear[carriedSlot] is oldObj else None
+
+			self.remove(oldObj,silent=True)
+			if not self.parent.canAdd(newObj):
+				return False
+			self.parent.add(newObj)
+
+			if carriedSlot and not self.carrying:
+				self.addCarry(newObj,slot=carriedSlot)
+		else:
+			if not self.canObtain(newObj):
+				return False
+			index = self.inv.index(oldObj)
+			self.inv[index] = newObj
+			newObj.parent = self
+
+		for slot,obj in self.gear.items():
+			if oldObj is obj:
+				self.gear[slot] = newObj
+		self.checkStatus()
+
+		return True
 
 
 	# only used by equip and unequip to reassign several attributes
@@ -3021,13 +3363,14 @@ class Creature():
 		if hasMethod(I,"Equip"): I.Equip(self)
 
 
-	def addCarry(self,creature):
+	def addCarry(self,creature,slot="left"):
 		assert isinstance(creature,Creature)
 		assert self.carrying is None
 		assert creature.carrier is None
-		self.unequip("left")
-		if getattr(self.gear["right"],"twohanded",False):
-			self.unequip("right")
+		other = "right" if slot == "left" else "left"
+		self.unequip(slot)
+		if getattr(self.gear[other],"twohanded",False):
+			self.unequip(other)
 
 		self.carrying = creature
 		creature.carrier = self
@@ -3036,14 +3379,17 @@ class Creature():
 		creature.parent.remove(creature)
 		self.parent.add(creature)
 
-		self.gear["left"] = creature
+		self.gear[slot] = creature
 		self.checkHindered()
 
 
 	def removeCarry(self,silent=False):
 		if self.carrying is None:
 			return
-		self.gear["left"] = EmptyGear()
+		slot = "left" if self.gear["left"] is self.carrying else "right"
+		assert self.gear[slot] is self.carrying
+
+		self.gear[slot] = EmptyGear()
 		self.carrying.carrier = None
 		if not silent:
 			self.Print(f"You drop {-self.carrying}.")
@@ -3084,17 +3430,18 @@ class Creature():
 		if self is not player and name in Data.privateStatus:
 			silent = True
 		if not self.hasStatus(name) and not silent:
+			allowSilent = self is not player
 			color = "w"
 			if name in Data.buffs | Data.blessings: color = "g"
 			if name in Data.debuffs | Data.curses: color = "r"
 			if name in Data.curses:
-				Print(self+f"have the curse of {name}.",color=color)
+				Print(self+f"have the curse of {name}.",color=color,allowSilent=allowSilent)
 			elif name in Data.blessings:
-				Print(self+f"have the blessing of {name}.",color=color)
+				Print(self+f"have the blessing of {name}.",color=color,allowSilent=allowSilent)
 			elif name == "asleep":
-				Print(self+f"fall {name}.")
+				Print(self+f"falls {name}.",allowSilent=allowSilent)
 			else:
-				Print(self+f"are {name}.",color=color)
+				Print(self+f"are {name}.",color=color,allowSilent=allowSilent)
 
 		insort(self.status,[name,dur])
 		if self is player:
@@ -3186,11 +3533,11 @@ class Creature():
 		if self.invWeight() + self.carryWeight() > self.BRDN():
 			if not self.hasStatus("hindered",-3):
 				self.Print("Your Inventory grows heavy.")
-			self.addStatus("hindered",-3)
+				self.addStatus("hindered",-3)
 		if self.invWeight() + self.carryWeight() <= self.BRDN():
 			if self.hasStatus("hindered",-3):
 				self.Print("Your Inventory feels lighter.")
-			self.removeStatus("hindered",-3)
+				self.removeStatus("hindered",-3)
 
 
 	def checkHungry(self):
@@ -3394,7 +3741,8 @@ class Creature():
 		self.Uncover()
 
 		prevparent = self.parent
-		prevparent.exit(self)
+		if prevparent:
+			prevparent.exit(self)
 		if self is player and isinstance(newparent,Room):
 			game.changeRoom(newparent)
 		# when not riding or being carried, platform becomes new room's floor
@@ -3426,6 +3774,52 @@ class Creature():
 		self.waitInput("You teleport!",color="b")
 		self.changeLocation(newroom)
 		self.changePosture("stand")
+
+
+	def replace(self,newObj):
+		if isinstance(newObj,str) or newObj.id is None:
+			newObj = game.spawn(newObj)
+		# if we fail to place this object in parent, displace the newObj
+		if not self.parent.replaceObj(self,newObj):
+			self.destroy()
+			return newObj.displace(self.parent)
+		for covered in self.covering.copy():
+			covered.removeCover()
+			covered.addCover(newObj)
+		if self.rider:
+			self.rider.replaceObj(self,newObj)
+		if self.carrying:
+			c = self.carrying
+			self.removeCarry()
+			c.Fall(self.Size()//2)
+
+		if self.anchor():
+			if self.carrier:
+				self.carrier.replaceObj(self,newObj)
+			elif self.riding:
+				r = self.riding
+				self.removeRiding()
+				newObj.Fall(r.Size()//2)
+			elif self.platform:
+				p = self.platform
+				self.platform.removeOccupant(self)
+				if getattr(p,"open",True) and hasMethod(p,"canAdd") and p.canAdd(newObj):
+					if hasMethod(p,"changeLocation"):
+						p.changeLocation(newObj)
+					else:
+						p.add(newObj)
+				elif isinstance(newObj,Creature):
+					p.addOccupant(newObj)
+				else:
+					newObj.Fall(p.Size()//2)
+
+		self.destroy()
+		# spawn() will have already registered newObj
+		if newObj.id in game.objRegistry:
+			del game.objRegistry[newObj.id]
+		game.objRegistry[self.id] = newObj
+		newObj.id = self.id
+		return newObj
 
 
 	def act(self):
@@ -3528,7 +3922,7 @@ class Creature():
 			if self.ATHL() > restrainer.ATHL() or self.EVSN() > restrainer.ATHL():
 				restrainer.Print(f"You fail to restrain {-self}!",color="r")
 				return False
-		self.addStatus("restrained",-3)
+		self.addStatus("restrained",-3,silent=True)
 		restrainer.Print(f"You restrain {-self}!",color="g")
 		return True
 
@@ -3908,14 +4302,10 @@ class Creature():
 	def carryWeight(self):
 		return 0 if self.carrying is None else self.carrying.Weight()
 
-	# returns a list of names of all items in player inventory
-	def invNames(self):
-		return [item.nounPhrase() if isinstance(item,Creature) else item.name for item in self.inv]
-
 
 	# just a function wrapper for functions that call itemNames on objects
 	def itemNames(self):
-		return self.invNames()
+		return [item.nounPhrase() if isinstance(item,Creature) else item.name for item in self.inv]
 
 
 	def weapons(self):
@@ -4082,6 +4472,10 @@ class Creature():
 		return strname
 
 
+	def displayName(self):
+		return self.nounPhrase()
+
+
 	def describe(self):
 		Print(f"It's {~self}.")
 		Print(f"{self.desc}.")
@@ -4127,27 +4521,31 @@ class Player(Creature):
 		game.startUp()
 
 
-	def traitMenu(self,QP,prompt="",warning=""):
-		movePrintCursor(8,clear=(QP+1)%10==0) # clear lingering extra digits
-		self.printTraits()
-		movePrintCursor(-2)
-		Print(f"Quality Points:	{QP}",end="",delay=0)
+	def traitMenu(self,QP,prompt="",warning="",nReturn=8):
+		movePrintCursor(nReturn+1,clear=(QP+1)%10==0) # clear lingering extra digits
+		nRowsPrinted = self.printTraits()
+		# backtrack to clear any extra rows from printTraits
+		movePrintCursor(1,clear=False)
+		movePrintCursor(-2,clear=True)
+		displayQP = ambiguateNumbers(QP) if self.hasStatus("stupidity") else QP
+		Print(f"Quality Points:	{displayQP}",end="",delay=0)
 		movePrintCursor(-1,clear=True)
 		Print(prompt,end="",delay=0)
 		movePrintCursor(-1,clear=True)
 		Print(warning,end="",delay=0)
 		movePrintCursor(-1,clear=True)
 		if prompt.endswith("?"):
-			return Input(cue="> ",delay=0)
+			return Input(cue="> ",delay=0), nRowsPrinted + 4
 		waitInput()
-		return ""
+		return "", nRowsPrinted + 4
 
 
 	def gainQP(self,QP):
-		Print("\n"*7)
+		Print("\n"*8)
 		warning = ""
+		rowsPrinted = 7
 		while QP > 0:
-			trait = self.traitMenu(QP,"What trait will you improve?",warning)
+			trait, rowsPrinted = self.traitMenu(QP,"What trait will you improve?",warning,rowsPrinted)
 			if trait not in Data.traits:
 				if trait == "":
 					warning = ""
@@ -4163,13 +4561,14 @@ class Player(Creature):
 			setattr(self,trait,traitval+1)
 			QP -= 1
 			self.display()
-		self.traitMenu(0,"You have no more QP.","")
+		self.traitMenu(0,"You have no more QP.","",rowsPrinted)
 		movePrintCursor(8,clear=True)
 
 
 	# player gets 1 QPs for each level gained, can dispense them into any trait
 	def levelUp(self,oldlv,newlv):
-		waitInput(f"You leveled up to level {newlv}!",color="g")
+		displayLevel = "something" if self.hasStatus("stupidity") else newlv
+		waitInput(f"You leveled up to level {displayLevel}!",color="g")
 		self.gainQP(newlv-oldlv)
 		game.startUp()
 		self.checkStatus()
@@ -4182,6 +4581,8 @@ class Player(Creature):
 	# adds xp, checks for player level up
 	def gainxp(self,newxp):
 		oldlv = self.level()
+		if self.hasStatus("apathy"):
+			newxp = 0
 		Print(f"You gained {newxp} xp.",color="g")
 		self.xp += newxp
 		# Print(f"You have {self.xp}")
@@ -4373,6 +4774,14 @@ class Player(Creature):
 		return len([item for item in self.inv if isinstance(item,Compass)])
 
 
+	def canNavigate(self,location=None):
+		if location is None:
+			location = self.parent
+		if self.hasAnyStatus("blind","stupidity"):
+			return False
+		return self.countCompasses() > 0 or sun in location.fixtures
+
+
 	# returns the sum of the weight of all items being held
 	def handheldWeight(self):
 		carryingWeight = 0 if self.carrying is None else self.carrying.Weight()
@@ -4401,28 +4810,27 @@ class Player(Creature):
 		assert hasattr(self,t.lower()) and hasMethod(self,t.upper())
 		displayTrait = t.upper() + ": "+ str(getattr(self,t))
 
+		if self.hasStatus("stupidity"):
+			displayTrait = ambiguateNumbers(displayTrait)
 		if getattr(self,t.lower()) < getattr(self,t.upper())():
-			return Tinge(displayTrait,color='g')[0]
+			displayTrait = Tinge(displayTrait,color='g')[0]
 		if getattr(self,t.lower()) > getattr(self,t.upper())():
-			ret = Tinge(displayTrait,color='r')[0]
-			return ret
-		else:
-			return displayTrait
+			displayTrait = Tinge(displayTrait,color='r')[0]
+
+		return displayTrait
 
 
 	# prints all 10 player traits
+	# returns number of lines printed
 	def printTraits(self,trait=None,outfile=None):
 		if trait == None:
 			cols = 5
 			traits = [self.displayTrait(t) for t in Data.traits]
-			# if outfile is not None:
-				# reorder traits and print them vertically
-				# cols = 2
-				# traits = [t for pair in zip(traits[:5], traits[5:]) for t in pair]
 
-			columnPrint(traits,cols,10,outfile=outfile)
-			return	
-		Print(f"{trait.upper()}: {getattr(self,trait)}")
+			return columnPrint(traits,cols,outfile=outfile)
+
+		Print(self.displayTrait(trait))
+		return 1
 
 
 	def printAbility(self,ability=None):
@@ -4458,21 +4866,22 @@ class Player(Creature):
 		W = self.invWeight() + self.carryWeight()
 		color = "o" if W / self.BRDN() > 0.80 else "w"
 		color = "r" if W > self.BRDN() else color
-		Print(f"Inv Weight: {W}/{self.BRDN()}", color=color, outfile=outfile)
+		displayInvWeight = f"Inv Weight: {W}/{self.BRDN()}"
+		if self.hasStatus("stupidity"):
+			displayInvWeight = ambiguateNumbers(displayInvWeight)
+		Print(displayInvWeight, color=color, outfile=outfile)
 		if len(self.inv) == 0:
 			if outfile is None:
 				Print("\nYour Inventory is empty.")
 		else:
-			columnPrint(self.invNames(),cols,16,outfile=outfile)
+			columnPrint([I.displayName() for I in self.inv],cols,16,outfile=outfile)
 
 
 	# print each player gear slot and the items equipped in them
 	def printGear(self, *args, outfile=None):
 		Print(outfile=outfile)
 		for slot in self.gear:
-			val = self.gear[slot].name
-			if slot == "left" and self.carrying:
-				val = self.carrying.name
+			val = self.gear[slot].displayName()
 			Print(slot + ":\t",end="", outfile=outfile)
 			Print(val, outfile=outfile)
 
@@ -4536,33 +4945,47 @@ class Player(Creature):
 
 		nDigits = len(str(max(durations)))
 		# make list of strings to display conditions and their durations
-		statusdisplay = []
+		statusDisplay = []
 		for i in range(len(conditions)):
-			condname = conditions[i]
-			if condname in Data.blessings | Data.buffs:
-				condname = Tinge(condname,color="g")[0]
-			elif condname in Data.curses | Data.debuffs:
-				condname = Tinge(condname,color="r")[0]
-			statusdisplay.append(condname)
+			displayCond = conditions[i]
+			
 			if durations[i] < 0:
-				statusdisplay.append("-"*nDigits)
+				displayDur = "-"*nDigits
 			else:
-				statusdisplay.append(str(durations[i]))
+				displayDur = str(durations[i])
+			if self.hasStatus("stupidity"): displayDur = ambiguateNumbers(displayDur)
 
-		columnPrint(statusdisplay,2,outfile=outfile)
+			color = "w"
+			if displayCond in Data.blessings | Data.buffs:
+				color = "g"
+			elif displayCond in Data.curses | Data.debuffs:
+				color = "r"
+
+			statusDisplay.append(Tinge(displayCond,color=color)[0])
+			statusDisplay.append(Tinge(displayDur,color=color)[0])
+
+		columnPrint(statusDisplay,2,outfile=outfile)
 
 
 	# prints player level, money, hp, mp, rp, and status effects
 	def printStats(self, *args, showStatus=True, outfile=None):
-		stats = [self.name,f"LV: {self.level()}",f"§ {self.money}",
+		colWidth = None
+		name = self.name
+		if len(name) > 45:
+			name = name[:42] + "..."
+		stats = [name,f"LV: {self.level()}",f"§ {self.money}",
 		   f"RP: {self.rp}/100",f"HP: {self.hp}/{self.MXHP()}",
 		   f"MP: {self.mp}/{self.MXMP()}"]
 		colors = ["w","o","g","y","r","b"]
 		if self.hasStatus("insanity") and outfile is None:
 			shuffle(colors)
+		if self.hasStatus("stupidity"):
+			stats = [ambiguateNumbers(stat,grammatical=False) for stat in stats]
+		if max(len(term) for term in stats) > 16:
+			colWidth = 16
 		stats = [Tinge(stats[i],color=colors[i])[0] for i in range(len(stats))]
-		
-		columnPrint(stats,3,outfile=outfile)
+
+		columnPrint(stats,3,w=colWidth,outfile=outfile)
 
 		if self.carrying is not None:
 			Print(f"Carrying {self.carrying}", outfile=outfile)
@@ -4578,11 +5001,14 @@ class Player(Creature):
 			sidepanel.open(self.name)
 			self.display()
 		else:
+			self.display()
 			self.Print(f"Your stats panel is already open.",color="k")
 
 
 	def display(self, *args):
 		sidepanel.clear()
+		if self.hasStatus("asleep"):
+			return self.Print("...",color="k",outfile=sidepanel)
 		self.printStats(outfile=sidepanel)
 		self.printGear(outfile=sidepanel)
 		self.Print(outfile=sidepanel)
@@ -4703,7 +5129,7 @@ class Humanoid(Creature):
 		Print(f"{self.desc}.")
 		gearitems = [item for item in self.gear.values() if item is not EmptyGear()]
 		if len(gearitems) != 0:
-			Print(f"It has {listObjects(gearitems)}.")
+			Print(listObjects("It has ", gearitems,"."))
 
 
 	def isArmed():
@@ -5261,6 +5687,8 @@ stars = Fixture("stars","The twinkling stars dot the night sky, each one a dista
 eclipse = Fixture("eclipse","The sun and moon align perfectly, casting an eerie shadow over the land.",0,"fire",aliases=["solar eclipse","sun","moon"])
 meteorshower = Fixture("meteor shower","A dazzling meteor shower streaks across the sky, lighting up the darkness with brief flashes of light.",0,"rock",aliases=["meteors","shower"])
 aurora = Fixture("aurora","The sky is painted with vibrant colors as the aurora dances overhead, a mesmerizing display of nature's beauty.",0,"energy",aliases=["auroras"])
+sky = Fixture("sky","The vast expanse of the sky stretches out above, a canvas for the sun, moon, and stars.",0,"air",aliases=["heavens","firmament"])
+celestials = (sky,sun,moon,stars,eclipse,meteorshower,aurora)
 
 class Passage(Portal,Fixture):
 	def __init__(self,name,desc,weight,composition,links,descname,passprep="into",mention=False,**kwargs):
@@ -5334,13 +5762,13 @@ class Projectile(Item):
 
 		# have a chance to randomly hit a different object in room
 		otherObjs = [obj for obj in parent.contents() if obj not in (self,self.item,launcher,target)]
+		# the curse of calamity makes ricocheting objects hit you
+		if launcher.hasStatus("calamity"):
+			otherObjs.append(launcher)
+		if any(obj.hasStatus("calamity") for obj in otherObjs):
+			otherObjs = [o for o in otherObjs if o.hasStatus("calamity")]
 		sizes = [obj.Size() for obj in otherObjs]
-		if isinstance(parent,Room):
-			otherObjs += [None]
-			sizes += [parent.size*10]
-		else:
-			otherObjs += [parent]
-			sizes += [parent.Size()]
+
 		victim = choices(otherObjs,sizes)[0]
 		if victim is None:
 			return False
