@@ -51,14 +51,14 @@
 					{
 						"rapportReq": 1,
 						"isCheckpoint": true,
-						"remark": "So you've come back around?",
+						"remark": "So you've come back around for part 2?",
 						"replies": ["Aye.","What's it to you?","I love you..."],
 						"children": [
 							{
 								"remark": "Alrighty then."
 							},
 							{
-								"remark": "Nuthin"
+								"remark": "Nuthin."
 							},
 							{
 								"remark": "Good golly... I'm not sure what to say..."

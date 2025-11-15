@@ -715,16 +715,16 @@ if the room is simply on fire for 10 more time units, and will ignite any creatu
 curses;
 
 weakness - lowers STR
-slowness - lowers SPD
+slowness - lowers SPD, slows display text
 clumsiness - lowers SKL
-weariness - lowers STM
+weariness - lowers STM, sleep longer
 illness - lowers CON
 
 timidity - lowers CHA
-stupidity - lowers INT
-insanity - lowers WIS
-apathy - lowers FTH
-calamity - lower LCK
+stupidity - lowers INT, can't access glossary, doesn't know numbers
+insanity - lowers WIS, randomizes display colors, sometimes adds voices?
+apathy - lowers FTH, cant gain xp, smell and taste is gone
+calamity - lower LCK, ricochet hits you, getting bad fortunes?
 
 blessings;
 
@@ -767,7 +767,7 @@ some condition summaries:
 - eagle-eyed (something that gives you great ranged aim)
 - throwmaster (gives you bonus to throwing speed?)
 
-
+ironrot, causes rust over time? reduces sharpness?
 'cool' with glasses or something so it says "you are cool"
 raising a base stat
 raising a derived stat
@@ -878,6 +878,8 @@ Norman's etc.
 
 WEAPONS:
 Estoc
+Palstave
+Seaxe
 The Master Boomerang - (always comes back no matter what u do with it)
 other boomerangs
 blade of healing (useless mostly)
@@ -906,6 +908,7 @@ Burnoose
 Tam-o-shanter
 Kirtle
 Liripipe
+Panoply (a full set of plate?)
 
 
 MAGIC ITEMS:
@@ -915,6 +918,7 @@ willow staff, banyan, aspen, birch, baobab, elm, sycamore, oak, pine, cyprus
 nimbus rod, cumulus rod, stratus rod
 the magic map
 (Magic?) Umbrella
+magic 8 ball
 Magic Teapot (or just a normal teapot idk)
 Astra - from hindu myth, divine projectiles
 Olifant - magic horn
@@ -933,6 +937,7 @@ dunce hat
 hourglass item (actually does something useful?)
 map item (maybe at any given room, tells u direction toward a destination)
 deck of card with suits: swords, stars, flowers, something else?
+witchblade (perhaps unlike the comic witchblade)
 
 
 Sci-fi set
@@ -1176,6 +1181,7 @@ blackstone, bluestone, whitestone, whinstone, cinder, fieldstone, lodestone
 marble, basalt, quartz, serpentine, jade, 
 orpiment, realgar, verdigris, amber, azurite, corundum,
 bone ash, grey ash -> potash -> pearl ash, salt ash or natron -> soda ash -> lye
+[also saleratus? pure form of some kind of ash]
 whitestone or chalk -> quicklyme (burns) -> mortar or plaster
 saltpeter, brimstone, coal coke
 gravel, sand, silt, clay, loam, soot
@@ -1241,6 +1247,12 @@ burlap, canvas, denim, tweed, flannel, fustian, russet
 bitumen (ore), pitch (liquid), naphtha,
 peat, lignite, resin, briquette
 horn, ivory, tortoiseshell (from carapace)
+hallucinogenic fish
+wicker man (burned as sacrifice)
+bagasse (cane pulp)
+cornstover (byproduct of corn)
+Monocaine - drug (potion) from exotic flower makes you invisible and also makes you aggressive/insane
+	"Even the moon is frightened of me! Frightened to death!"
 
 
 CRAFTING/RECIPE IDEAS:
@@ -1420,6 +1432,7 @@ aqua regia (strongest acid) salmiac + aqua fortis
 tin + ??? -> pewter
 tin + copper -> bronze
 iron + carbon -> steel
+swaging (adding a swage?)
 
 	COOKING:
 
@@ -1509,7 +1522,11 @@ ADDITIONAL PLACE IDEAS:
 - ophidiarium - snake aquarium
 - town called "fleet-something"
 - town called "___-burn"
-- brothel, when you go in it gives an ellipsis and then you leave.
+- brothel, when you go in it gives a magenta ellipsis and then you leave.
+- saltern
+- ashery
+- calefactory (in a monastery, has a 'cocklestove'?)
+- lion's head tavern - where you learn about monocaine
 
 INSTITUTIONS:
 - royal messengers (mages that maintain teleportation)
@@ -1533,6 +1550,8 @@ MISC WORLD IDEAS:
 - giant eternal clock
 - a story legend of a hero who masters magic in an underground empire, called "ZORK"
 - monolith/obelisk
+- stele
+- wicker man (burned as sacrifice)
 - magic nail (like golden railroad nail?)
 - fighting ur nega/anti self
 - sign that says "no philandering!"
@@ -1541,19 +1560,24 @@ MISC WORLD IDEAS:
 - midden (old garbage heap?)
 - magic art museum?
 - wicklewort trees
+- fizzbuzz (secret code or character name)
 - something called "The Wizard's Fee"
 - Eternal Stew
 - bonefire
 - a deal with a demon (with consequences)
 - label that reads "FOR SCIENTIFIC USE ONLY"
 - RICKROLL
+- "the old covenant" deal between kings/kingdoms. Perhaps the mountain king and the high king, it is defied and now a conflict begins
 - the four horsemen of awesomeness (or happiness)
 - pandora box "banishment box" which unleashes all creatures the player has ever banished with the banish spell
 - limericks/poems/poem book?
 - the mist
+- "the otherworld" like welsh otherworld, enter through mist or by given maiden a silver apple
+- quicksand
 - a jar that is REALLY hard to open
+- Animated snowman "Does it smell like carrots to you?" as a secret code?
 - bottomless pit
-- An orb "ponder the orb?" maybe multiple orbs to ponder in the world like 7
+- An orb (palantir?) "ponder the orb?" maybe like seven 7 orbs in the world
 	- fortune telling orbs which might alter your future?
 - the four humors
 - "sphinx of black quartz, judge my vow"
@@ -1579,6 +1603,8 @@ QUEST IDEAS:
 - bone faeries which will give you money for bones
 - fighting bones malone and the spooky boys
 - impersonating someone to gain entry to a place
+- "A christmas story" type plotline?
+- greatest knight in the world retiring to be a baker. Need to persuade him to return
 
 
 CHARACTER NAME IDEAS:
@@ -1611,6 +1637,7 @@ CHARACTER NAME IDEAS:
 	The Green Goddess
 	Galigantus the giant
 	Grendel
+	Halfdan
 	Sylvain - hero
 	Pergynt - from myth, maybe an ex-hero guy
 	Archons (regional rulers? maybe names for the giants)
@@ -1633,11 +1660,18 @@ CHARACTER NAME IDEAS:
 	Wayland the Smith/Volund the Smith
 	Egil the Archer (from myth)
 	Dietrich Von ___ hero, along with Regin Smith, Heimir, Wittich
+	time traveler who sublty appears to be from our earth
+	Thomas Swinsword (playwright)
+	River Jack
+	Grand Vizier
+	A Huckster
+	Rozbiz the Wizard
 
 	Somnus, Orion, Pax, Tyro, Cogg, Garl, Ike, Uther, Kess, Roach, Mito, Lugh, Muriel
 	Eadmer, Godfrey, Einhard, Vixen, Aloy, Eilonwy, Beowin, Rook, Alahad, Galatea, Grin
 	Spiridon, Khartoum, Heironymus, Gundahar, Wace, Leofwyn, Drythelm, Hengran, Hardeck
-	Harcourt, Aecury, Aelfwyne
+	Harcourt, Aecury, Aelfwyne, Arwald, Merwin, Ichabod, Alcuin, Dwint, Egfrith, Gildaz,
+	Wulfstan, Salome, Ewart, Ephraim, Bragwen, Bran, Ulysses
 
 
 	polemarch,commodore,margrave,
@@ -1799,7 +1833,8 @@ Immolate, Invigorate, Invisibility, Iridescence
 Jackpot, Jamboree, Jargon, Jeopardy, Judgement
 Lampoon, Lash, Lethargy, Levitate, Lignify, Limerence, Lure
 Maelstrom, Malaise, Manumit, Melancholy, Micturate, Miracle (random effect), Mirage, Moonshot
-Nyctophobia
+Nyctophobia,
+Osculation
 Parley, Paroxysm, Parry, Penumbra, Petrify, Phantasm, Pilfer, Ponder, Prescience, Psychosis, Putrefaction
 Refection, Rend, Repast, Resurrect, Revelry, Riposte, Ruin
 Sanctuary, Sequester, Scintillate, Scry, Serein, Shivaree, Simper, Simulacrum, Smite, Smithereens, Spangle, Squib, Sunder, Sunshower, Synapse

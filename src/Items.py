@@ -49,8 +49,8 @@ class Bottle(Core.Item):
 			return False
 		if self.weight > 2 and self.composition == "glass":
 			Core.Print("Shards of glass scatter everywhere.",color="o")
-		while self.weight > 2 and self.composition == "glass":
-			shardWeight = randint(1,3)
+		while self.weight > 1 and self.composition == "glass":
+			shardWeight = randint(1,max(self.weight,4))
 			self.weight -= shardWeight
 			shard = Shard("glass shard","a sharp shard of glass",shardWeight,-1,"glass",{"shard"})
 			Core.game.currentroom.add(shard)
@@ -134,7 +134,7 @@ class Box(Core.Portal):
 				text += ", apart from you"
 			looker.Print(f"{text}.")
 		else:
-			looker.Print(f"Inside there is {Core.listObjects(displayItems)}.")
+			looker.Print(Core.listObjects("Inside there is ", displayItems,"."))
 			Core.game.setPronouns(self.items[-1])
 		return True
 
@@ -252,6 +252,17 @@ class Box(Core.Portal):
 
 	def remove(self,I):
 		self.items.remove(I)
+
+
+	def replaceObj(self,oldItem,newItem):
+		assert oldItem in self.items
+		if not self.canAdd(newItem):
+			return False
+		index = self.items.index(oldItem)
+		self.items[index] = newItem
+		newItem.parent = self
+		oldItem.parent = None
+		return True
 
 
 	def passTime(self,t):
@@ -651,6 +662,17 @@ class Table(Core.Item):
 			self.descname = f"{self.name}"
 
 
+	def replaceObj(self,oldItem,newItem):
+		assert oldItem in self.items
+		if not self.canAdd(newItem):
+			return False
+		index = self.items.index(oldItem)
+		self.items[index] = newItem
+		newItem.parent = self
+		oldItem.parent = None
+		return True
+
+
 	### Getters ###
 
 	# the weight of a table is equal to its own weight + weights of its items
@@ -682,7 +704,7 @@ class Table(Core.Item):
 	def describe(self):
 		Core.Print(f"It's {~self}.")
 		if len(self.items) != 0:
-			Core.Print(f"On it is {Core.listObjects(self.items)}.")
+			Core.Print(Core.listObjects("On it is ", self.items,"."))
 		else:
 			Core.Print("There is nothing on it.")
 
@@ -860,10 +882,10 @@ class Door(Window):
 
 
 factory = {
-	"blue potion": lambda: Potion("blue potion", "A bubbling blue liquid in a glass bottle",6,3,"glass",["bottle","glass","potion"]),
+	"blue potion": lambda: Potion("blue potion", "A bubbling blue liquid in a glass bottle",6,3,"glass",["bottle","glass","potion"],2),
 	"bottle": lambda: Bottle("bottle","an empty glass bottle",6,3,"glass",["glass","glass bottle"]),
-	"coffee": lambda: Potion("bottle of coffee","A bottle of frothy dark brown liquid",6,3,"glass",["coffee","espresso","bottle"]),
-	"green potion": lambda: Potion("green potion", "A bubbling green liquid in a glass bottle",6,3,"glass",["bottle","glass","potion"]),
-	"red potion": lambda: Potion("red potion", "A bubbling red liquid in a glass bottle",6,3,"glass",["bottle","glass","potion"]),
+	"coffee": lambda: Potion("bottle of coffee","A bottle of frothy dark brown liquid",6,3,"glass",["coffee","espresso","bottle"],1),
+	"green potion": lambda: Potion("green potion", "A bubbling green liquid in a glass bottle",6,3,"glass",["bottle","glass","potion"],2),
+	"red potion": lambda: Potion("red potion", "A bubbling red liquid in a glass bottle",6,3,"glass",["bottle","glass","potion"],2),
 	"shard": lambda: Shard("glass shard","a black glass shard",2,1,"glass",["shard"])
 }

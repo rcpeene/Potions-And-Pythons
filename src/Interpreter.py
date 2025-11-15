@@ -32,7 +32,7 @@ commandQueue = []
 # this is used to disambiguate user input...
 # when the object name given is not specific enough
 # takes the object name and list of matching objects
-# prints the list of objects with entry 'tags' to help the user distinguish them
+# prints the list of objects with labels to help the user distinguish them
 # will return when user cancels or when they select an object by name or number
 def chooseObject(name,objects,verb=None):
 	if objects is None or len(objects) == 0:
@@ -56,7 +56,9 @@ def chooseObject(name,objects,verb=None):
 		elif isinstance(obj,Core.Room):
 			labels.append("here")
 		elif obj in getattr(obj.parent,"surfaces",[]):
-			labels.append(obj.parent.name.lower())
+			labels.append("here")
+		elif obj in Core.celestials:
+			labels.append("sky")
 		elif obj is Core.player.carrying:
 			labels.append("carrying")
 		elif obj is Core.player.riding:
@@ -85,7 +87,7 @@ def chooseObject(name,objects,verb=None):
 					return obj
 
 	prompt = f"\nWhich {name}{f' to {verb}' if verb else ''}?"
-	choice = Core.InputLoop(prompt,acceptKey=acceptKey,refuseMsg="That is not one of the options.",color="k")
+	choice = Core.InputLoop(prompt,acceptKey=acceptKey,refuseMsg="That is not one of the options.",color="w")
 	return choice
 
 
@@ -184,7 +186,7 @@ def enforceVerbScope(verb,obj,permitAnchor=True,permitParent=False,permitSelf=Fa
 				if not Core.player.hasAnyStatus("clingfast","flying"):
 					Core.Print(f"You can't {verb} {-obj}, it is too high.")
 					return True
-	if obj in (Core.moon,Core.sun,Core.stars,Core.eclipse,Core.meteorshower,Core.aurora):
+	if obj in Core.celestials:
 		Core.Print(f"You can't {verb} {-obj},", obj/"is much too far away.")
 		return True
 
@@ -322,14 +324,15 @@ def parse(cmdInput):
 # called in interpret() when a command fails, it simply recurs interpret(), and...
 # prints a helpful message if user has provided invalid input 3 or more times
 # n is the number of times interpret() has recurred
-def promptHelp(msg):
+def promptHelp(msg,tip=None):
 	global helpCounter
+	if tip is None: tip = "Type 'help' for instructions."
 	commandQueue.clear()
 	if msg != "":
 		Core.Print(msg,color="k")
 	helpCounter += 1
 	if helpCounter >= 3:
-		Core.Print("Enter 'help' for instructions.",color="k")
+		Core.Print(tip,color="k")
 	return False
 
 
@@ -362,9 +365,9 @@ def dispatchShortCommand(command,verb):
 # it is called on infinite loop until it returns True
 # it returns True only when the player performs some action
 def interpret():
+	global helpCounter
 	if not Core.player.isAlive():
 		return True
-	global helpCounter
 	if commandQueue:
 		queuedInput = commandQueue.pop(0)
 		Core.waitInput("\n& " + "".join(queuedInput))
@@ -388,11 +391,11 @@ def interpret():
 	dobj,iobj,prep = parse(command[1:])
 	# this line calls the action function using the 'actions' dict
 	actionCompleted = actions[verb](dobj,iobj,prep)
-	helpCounter = 0
 	# if action didn't succeed, return False
 	if not actionCompleted:
 		commandQueue.clear()
 		return False
+	helpCounter = 0
 	return True
 
 
@@ -477,6 +480,12 @@ def Fortify(command):
 		obj.heal(1000)
 	if Core.hasMethod(obj,"resurge"):
 		obj.resurge(1000)
+	for cond in Data.debuffs:
+		obj.removeStatus(cond)
+	if hasattr(obj,"lastAte"):
+		obj.lastAte = Core.game.time
+	if hasattr(obj,"lastSlept"):
+		obj.lastSlept = Core.game.time
 
 
 def Get(command):
@@ -754,7 +763,7 @@ def Warp(command):
 	Core.game.silent = True
 	Core.Print(f"Warping {t}",color="k")
 	Core.game.passTime(t)
-	Core.Print("Time: ", Core.game.time,color="k")
+	return Time()
 
 
 def Zap(command):
@@ -855,6 +864,15 @@ def Smile(*args):
 
 def Time(*args):
 	Core.Print("Time:",Core.game.time,color="k")
+	Core.Print(f"It is the hour of the {Core.game.hour()}.",color="k")
+
+
+def Where(*args):
+	if not Core.player.canNavigate():
+		Core.Print("You're not sure which way is which... Try a cardinal direction or a nearby landmark.",color="k")
+	else:
+		for dir in list(set(Core.player.parent.allDirs())):
+			Core.Print(dir,color="k")
 
 
 def Wink(*args):
@@ -885,6 +903,7 @@ def Attack(dobj,iobj,prep,target=None,weapon=None,weapon2=None):
 	if iobj is not None and iobj.startswith("my "):
 		iobj = iobj[3:]
 
+	print(dobj,iobj,prep)
 	# assigning weapons based on input and what is in player's hand
 	if weapon is None and weapon2 is not None:
 		weapon, weapon2 = weapon2, None
@@ -909,6 +928,7 @@ def Attack(dobj,iobj,prep,target=None,weapon=None,weapon2=None):
 			weapon = Core.player.gear["right"]
 		elif Core.player.gear["left"] != Core.EmptyGear():
 			weapon = Core.player.gear["right"]
+	print(dobj,iobj,prep,target,weapon,weapon2)
 
 	if target is None:
 		target = findObject(dobj,"attack","room")
@@ -1145,6 +1165,9 @@ def Define(dobj,iobj,prep):
 		dobj = getNoun("What term would you like defined?")
 		if dobj in Data.cancels: return False
 
+	if Core.player.hasStatus("stupidity"):
+		Core.Print("You have the curse of stupidity, you don't know anything!",color="k")
+		return False
 	if dobj in Data.glossary:
 		Core.Print("\n"+Data.glossary[dobj])
 		return True
@@ -1153,7 +1176,7 @@ def Define(dobj,iobj,prep):
 	elif dobj == Core.player.name.lower():
 		Core.Print(f"\n{Core.player.name}\nThat is you!")
 		return True
-	Core.Print(f"'{dobj}' is not in the glossary",color="k")
+	Core.Print(f"'{dobj}' is not in the glossary.",color="k")
 	return False
 
 
@@ -1571,6 +1594,7 @@ def Go(dobj,iobj,prep):
 			Core.game.setPronouns(Core.player.riding)
 			return False
 
+	tip = "Type 'where' for a list of destinations."
 	preps = ("across","away","away from","down","through","to","toward","up","in","inside","into","on","onto","out","over",None)
 	if prep in ("to", "toward", "away", "away from"):
 		prep = None
@@ -1579,12 +1603,14 @@ def Go(dobj,iobj,prep):
 	if dobj in Data.cancels: return False
 	if dobj in ("back", "backward", "backwards"): dobj = Core.game.prevroom.name.lower()
 	if dobj in ("ahead", "forward", "forwards"): dobj = getNoun("In which direction?")
+	if prep == "behind":
+		return Hide(dobj,iobj,prep)
 	if dobj is None and iobj is not None: dobj,iobj = iobj,dobj
 
 	# if any terms are abbreviations for a direction, expand them
 	dobj,iobj,prep = map(Core.expandDir,[dobj,iobj,prep])
 	if prep not in preps or (dobj,iobj,prep) == (None,None,None):
-		return promptHelp("Command not understood.")
+		return promptHelp("Command not understood.",tip=tip)
 
 	locReminder = "" if Core.player.parent is Core.game.currentroom else f" You are in {~Core.player.parent}."
 	# get dir, dest, and passage and validate them
@@ -1595,10 +1621,9 @@ def Go(dobj,iobj,prep):
 	if (dir,dest,passage) == (None,None,None):
 		if dobj is None: dobj = iobj
 		if dobj is None:
-			Core.Print(f"There is no way '{prep}' here.{locReminder}",color="k")
+			return promptHelp(f"There is no way '{prep}' here.{locReminder}",tip=tip)
 		else:
-			Core.Print(f"There is no '{dobj}' here.{locReminder}",color="k")
-		return False
+			return promptHelp(f"There is no '{dobj}' here.{locReminder}",tip=tip)
 	if dir is None and dest is not None:
 		dir, passage = Core.player.parent.getDirPortalPair(dest.name.lower())
 	# print(dir,dest,passage)
@@ -1621,8 +1646,7 @@ def Go(dobj,iobj,prep):
 			return False
 	# print(dir,dest,passage)
 	if (dest,passage) == (None,None):
-		Core.Print(f"There is no exit leading '{dir}' here.{locReminder}",color="k")
-		return False
+		return promptHelp(f"There is no exit leading '{dir}' here.{locReminder}",tip=tip)
 	if passage is None and Core.player.parent is dest:
 		Core.Print(f"You are already there!")
 		return False
@@ -1640,8 +1664,8 @@ def Go(dobj,iobj,prep):
 	# if just dest given
 	if dest is not None:
 		return Core.player.changeLocation(dest)
-	Core.Print(f"There is no exit leading to a '{dobj}' here.{locReminder}",color="k")
-	return False
+	return promptHelp(f"There is no exit leading to a '{dobj}' here.{locReminder}",tip=tip)
+
 
 
 def Hide(dobj,iobj,prep,I=None,posture=None):
@@ -1844,6 +1868,9 @@ def Lick(dobj,iobj,prep):
 	if Core.hasMethod(I,"Lick"):
 		return I.Lick(Core.player)
 
+	if Core.player.hasStatus("apathy"):
+		Core.Print("You have the curse of apathy. It tastes bland...")
+		return False
 	if I.composition in Data.tastes:
 		Core.Print(Data.tastes[I.composition])
 	if I.composition in Data.scents:
@@ -2224,6 +2251,8 @@ def Sleep(dobj,iobj,prep):
 		Core.waitInput("Your sleep will not be very restful...")
 
 	sleeptime = 90 + randint(1,20)
+	if Core.player.hasStatus("weariness"):
+		sleeptime *= 2
 	Core.player.addStatus("asleep",sleeptime)
 	Core.ellipsis(sleeptime//30)
 	Core.game.silent=True
@@ -2249,6 +2278,9 @@ def Smell(dobj,iobj,prep):
 		Core.Print("You smell nothing.")
 		return True
 
+	if Core.player.hasStatus("apathy"):
+		Core.Print("You have the curse of apathy. It smells like nothing...")
+		return False
 	if I.composition in Data.scents:
 		Core.Print(Data.scents[I.composition])
 	if I.composition in Data.tastes:
@@ -2665,6 +2697,7 @@ statcommands = {
 "traits":Core.Player.printTraits,
 "verbs":Commands,
 "weapons":Core.Player.printWeapons,
+"where":Where,
 "xp":Core.Player.printXP,
 "yawn":Yawn,
 ":)": Smile,
@@ -2910,10 +2943,12 @@ actions = {
 # deactivate/turn [off]
 # dress/undress/strip
 # spit
+# approach (redirect to go or talk)
 # ponder (the orb, to see future?)
 # douse,drench -> reverse of pour on?
 # converse/communicate/discuss
 # say hello -> hello
+# run away -> flee/escape
 # sprint/run
 # flick/tap
 # knock/bang
