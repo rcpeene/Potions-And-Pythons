@@ -8,7 +8,7 @@ os.chdir(dname)
 sys.path.append("../src")
 
 import PoPy
-from Core import TeeLogger
+import Core
 
 
 # test the main menu
@@ -18,9 +18,11 @@ def testMenu():
 		for filename in os.listdir("saves/testsave"):
 			os.remove("saves/testsave/" + filename)
 		os.rmdir("saves/testsave")
+	Core.game.mode = 1 # set to test mode to speed input
 	PoPy.main(testing=True)
 	PoPy.main(testing=True)
 	PoPy.main(testing=True)
+	Core.game.mode = 1 # set to test mode to speed input
 
 
 # tests each of the cheatcodes
@@ -87,7 +89,7 @@ def testSpells():
 
 if __name__ == "__main__":
 	os.chdir("..")
-	logger = TeeLogger("test/test.log")
+	logger = Core.TeeLogger("test/test.log")
 	sys.stdin = logger
 	sys.stdout = logger
 	sys.stderr = logger

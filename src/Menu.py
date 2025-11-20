@@ -450,16 +450,16 @@ def newGame():
 
 # automatically starts a new game with a premade character for easy testing
 def testGame():
-	inv = [Core.Compass("compass","a plain steel compass with a red arrow",2,10,"steel",plural="compasses")]
-	status = [["fireproof",-1], ["poisoned",5], ["cursed",-2], ["immortal",-1],
-	["sharpshooter",50], ["invisible",15], ["poisoned",-1], ["flying",5]]
+	inv = [Items.factory["compass"]()]
+	status = [["fireproof",-1], ["cursed",-2], ["immortal",-1],
+	["sharpshooter",50], ["invisible",15], ["flying",5]]
 	Core.player = Core.Player("Norman","a hero",10,[4]*10,100,100,1000,50,inv=inv,love=100,fear=100,spells=[],status=status)
 
 	# world must be defined after player
 	Core.world = readJSON("World.json",object_hook=worldDecoder)
 
 	dlogDict = readDialogue("Dialogue.json")
-	Core.game = Core.Game(0,Core.world["cave"],Core.world["tunnel"],0,set(),dlogDict,Creatures.factory)
+	Core.game = Core.Game(0,Core.world["cave"],Core.world["tunnel"],0,set(),dlogDict,Creatures.factory,Items.factory)
 
 	Core.buildWorld()
 
@@ -469,7 +469,7 @@ def testGame():
 	# describe the current room
 	Core.game.startUp()
 
-	Core.game.mode = 1
+	# Core.game.mode = 1
 	Core.game.silent = False
 
 

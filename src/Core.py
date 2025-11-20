@@ -20,6 +20,7 @@ import atexit
 
 try:
 	import msvcrt
+	sys.stdout.reconfigure(encoding='utf-8')
 except:
 	import termios, select, tty, shlex
 
@@ -109,7 +110,6 @@ def Tinge(*args,color=None):
 		c = Data.colorMap[color]
 		args[0] = f"\033[{c}m" + args[0]
 		args[-1] = args[-1] + f"\033[37m"
-
 	return tuple(args)
 
 
@@ -121,33 +121,47 @@ def displayLength(text):
 	return l
 
 
-def Print(*args,end="\n",sep="",delay=None,color=None,allowSilent=True,outfile=None):
+def Print(*args,end="\n",sep=None,delay=None,color=None,allowSilent=True,outfile=None):
+	if game.silent and allowSilent:
+		return 0
+
+	# set outfile, color, delay, sep
 	if outfile is None:
 		outfile = sys.stdout
-	if player.hasStatus("insanity") and color != "k" and outfile is sys.stdout:
+	if player.hasStatus("apathy") and color != "k":
+		color = "w"
+	elif player.hasStatus("insanity") and color != "k" and outfile is sys.stdout:
 		color = choices(list(Data.colorMap.keys()),[1]*7 + [28])[0]
 	if delay is None:
 		if player.hasAnyStatus("dead","slowness"): delay = 0.02
-		else: delay = 0.001		
-	if game.silent and allowSilent:
-		return 0
-	if len(args) > 1 and sep=="":
-		sep=" "
+		else: delay = 0.001
+	if sep is None:
+		sep=" " if len(args) > 1 else ""
+
+	# preprocessing to handle conditions that affect text content
 	args = [str(arg) for arg in args]
+	if not player.canNavigate():
+		args = [ambiguateDirections(arg) for arg in args]
 	if player.hasStatus("stupidity") and color not in ('k','y'):
 		args = [ambiguateNumbers(arg,grammatical=True) for arg in args]
+		# don't misspell in stats sidepanel
+		if outfile is sys.stdout:
+			args = [misspellFilter(arg) for arg in args]
+
+	# save printLength for return, add color formatting
 	printLength = sum(displayLength(s) for s in args) + displayLength(sep)*(len(args)-1) + displayLength(end)
 	if color is not None:
 		args = Tinge(*args,color=color)
+	
+	# output text
 	if game.mode == 1 or delay is None or outfile is not sys.stdout:
 		print(*args,end=end,sep=sep,file=outfile)
 		return printLength
-
 	sleep(delay)
 	outfile.flush()
-	sleep(delay)
 	for arg in args:
 		for char in str(arg):
+			# user keyboard input speeds up text output
 			if kbInput() and not player.hasStatus("slowness"):
 				delay = 0
 			outfile.write(char)
@@ -163,10 +177,10 @@ def Print(*args,end="\n",sep="",delay=None,color=None,allowSilent=True,outfile=N
 
 
 # waits for any keyboard input
-def waitInput(text=None,delay=None,color=None):
+def waitInput(text=None,end="\n",delay=None,color=None):
 	sys.stdout.flush
 	if text is not None:
-		Print(text,delay=delay,color=color,allowSilent=False)
+		Print(text,end=end,delay=delay,color=color,allowSilent=False)
 	# just pass if in test mode
 	if game.mode == 1:
 		return True
@@ -208,7 +222,8 @@ def movePrintCursor(nlines,clear=False,clearLast=True,outfile=None):
 def Input(text="",cue="\n> ",low=True,delay=None,color=None):
 	sys.stdout.flush()
 	# should never be silent when asking for input
-	Print(text+cue,end="",delay=delay,color=color,allowSilent=False)
+	Print(text,end="",delay=delay,color=color,allowSilent=False)
+	Print(cue,end="",delay=0,color=color,allowSilent=False)
 	ret = input()
 	if low:
 		ret = ret.lower()
@@ -341,42 +356,65 @@ def findFirst(text,substrs):
 	idxs = [text.find(substr) for substr in substrs]
 	idxs = [i for i in idxs if i != -1]
 	if not idxs:
-		return -1
+		return len(text)
 	return min(idxs)
 
 
-def copulate(str1,str2):
-	irregulars = (('has','have'),('is','are'),('was','were'),('does','do'),('goes','go'))
+def conjugate(noun,verbString):
+	irregulars = (('has','have'),('is','are'),('was','were'))
+	sibilants = ("s","sh","ch","x","z","o")
 
-	def conjugateFirstPerson(string):
+	def infinitive(string):
 		firstWordEnd = findFirst(string," .,!?")
-		# conjugate irregular verbs
-		for t,f in irregulars:
-			if string[:firstWordEnd] == t:
-				return f + string[firstWordEnd:]
-		# assume for other verbs just remove the 's'
-		if firstWordEnd > 0 and string[firstWordEnd-1] == "s":
-			return string[:firstWordEnd-1] + string[firstWordEnd:]
-		return string
+		verb = string[:firstWordEnd]
+		remainder = string[firstWordEnd:]
+		assert len(verb) > 1
+		# irregular verbs (is -> are)
+		for ptp,inf in irregulars:
+			if verb == ptp:
+				return inf + remainder
+		if verb.endswith("ies") and len(verb) > 3:
+			# flies -> fly
+			return verb[:-3] + "y" + remainder
+		elif verb.endswith("es") and verb[:-2].endswith(sibilants):
+			# mixes, mashes, goes -> mix, mash, go
+			return verb[:-2] + remainder
+		elif verb.endswith("s") and not verb.endswith("ss"):
+			# runs -> run, but kiss -> kiss
+			return verb[:-1] + remainder
+		else:
+			# run, fly, mix -> run, fly, mix
+			return verb + remainder
 
-	def conjugateThirdPerson(string):
+	def presentThirdPerson(string):
 		firstWordEnd = findFirst(string," .,!?")
-		# conjugate irregular verbs
-		for t,f in irregulars:
-			if string[:firstWordEnd] == f:
-				return t + string[firstWordEnd:]
-		# assume for other verbs just add an 's'
-		if firstWordEnd > 0 and string[firstWordEnd-1] != "s":
-			return string[:firstWordEnd-1] + "s" + string[firstWordEnd:]
-		return string
+		verb = string[:firstWordEnd]
+		remainder = string[firstWordEnd:]
+		assert len(verb) > 1
+		# irregular verbs (is -> are)
+		for ptp,inf in irregulars:
+			if verb == inf:
+				return ptp + remainder
+		# flies, runs, mixes -> flies, runs, mixes
+		if verb.endswith("s"):
+			return verb + remainder
+		# fly -> flies
+		if verb.endswith("y") and verb[-2] not in "aeiou":
+			return verb[:-1] + "ies" + remainder
+		# mix, mash, go -> mixes, mashes, goes
+		elif verb.endswith(sibilants):
+			return verb + "es" + remainder
+		# run -> runs
+		else:
+			return verb + "s" + remainder
 
-	if str2.startswith(" "):
-		str2 = str2[1:]
-	if str1.lower() in ("you","they"):
-		str2 = conjugateFirstPerson(str2)
+	if verbString.startswith(" "):
+		verbString = verbString[1:]
+	if noun.lower() in ("you","they"):
+		verbString = infinitive(verbString)
 	else:
-		str2 = conjugateThirdPerson(str2)
-	return str1 + ' ' + str2
+		verbString = presentThirdPerson(verbString)
+	return verbString
 
 
 # returns the ordinal string for a number n
@@ -387,6 +425,20 @@ def ordinal(n):
 	elif lastDigit == 3: suffix = "rd"
 	else: suffix = "th"
 	return str(n) + suffix
+
+
+def clean(token):
+	return token.lower().rstrip(Data.symbols) if token else None
+
+
+def subsume(lst,idx):
+	if idx > 0 and lst[idx][-1] in Data.symbols:
+		if lst[idx-1][-1] in Data.symbols:
+			lst[idx-1] = lst[idx-1][:-1]
+		lst[idx-1] += lst[idx][-1]
+	if idx < len(lst)-1 and lst[idx][0].isupper():
+		lst[idx+1] = lst[idx+1].capitalize()
+	lst.pop(idx)
 
 
 def ambiguateDirections(text):
@@ -421,20 +473,8 @@ def ambiguateDirections(text):
 			replacedYet = True
 		return newToken
 
-	def clean(token):
-		return token.lower().rstrip(Data.symbols) if token else None
-
-	def subsume(lst,idx):
-		if idx > 0 and lst[idx][-1] in Data.symbols:
-			if lst[idx-1][-1] in Data.symbols:
-				lst[idx-1] = lst[idx-1][:-1]
-			lst[idx-1] += lst[idx][-1]
-		if idx < len(lst)-1 and lst[idx][0].isupper():
-			lst[idx+1] = lst[idx+1].capitalize()
-		lst.pop(idx)
-
 	def dirIsNoun(t1,t2):
-		return t1[-1] in Data.symbols or clean(t2) in followsNounDir or clean(t2).endswith("s")
+		return t1[-1] in Data.symbols or clean(t2) in followsNounDir|dirPreps or clean(t2).endswith("s")
 
 	# 0. remove adjectives like 'the far north'
 	# 1. If the direction term ends in "ward", "wards", then replace it with its stem eg. (northern -> north),
@@ -478,6 +518,8 @@ def ambiguateDirections(text):
 				subsume(tokens,i)
 		elif clean(t1) in directions:
 			tokens[i+1] = getReplacement((tokens[i+1],),adjectivalUnknownDirs)
+		# TODO: may need a case for removing the direction when it is followed by a dirPrep
+		# 'a brook flows from the east into a pond' -> 'a brook flows into a pond'
 		else:
 			i += 1
 		# print(tokens)
@@ -549,6 +591,104 @@ def ambiguateNumbers(text,grammatical=False):
 	return re.sub(pattern, repl, text)
 
 
+def misspellFilter(text):
+	replacementMap = {
+		"to": "too",
+		"there": "their",
+		"where": "wear",
+		"sword": "sord",
+		"shield": "sheild",
+		"library": "libary",
+		"higher": "hire",
+	}
+	def getReplacement(oldToken):
+		newToken = replacementMap[clean(oldToken)]
+		if oldToken[0].isupper():
+			newToken = newToken.capitalize()
+		if any(oldToken.endswith(s) for s in Data.symbols):
+			newToken += oldToken[-1]
+		return newToken
+
+	# Chance to replace predetermined words with common misspellings
+	tokens = text.split(" ")
+	i = 0
+	while i < len(tokens):
+		if clean(tokens[i]) in replacementMap and randint(0,3) == 0:
+			tokens[i] = getReplacement(tokens[i])
+		i += 1
+	text = " ".join(tokens)
+
+
+	# used to exclude None when concatenated chars
+	def cat(*parts):
+		return "".join(p for p in parts if p)
+
+	# For every character, chance to make a common misspelling
+	i = 0
+	while i < len(text):
+		if i < 0: i = 0
+		t0 = text[i]
+		t1 = text[i+1] if i+1 < len(text) else None
+		t2 = text[i+2] if i+2 < len(text) else None
+
+		# 25% chance of misspelling
+		if randint(0,3) != 0:
+			i += 1
+			continue
+		# print(text+"\n",i,t0,t1,t2,"\n")
+		match (t0,t1,t2):
+			# double letter -> single letter
+			case (x,y,z) if x ==y and x in "sltfrmnbdcz": repl = cat(x,z)
+			# oor -> or
+			case ("o","o","r"): repl = "or"
+			# ore -> or
+			case ("o","r","e"): repl = "or"
+			# ie -> ei
+			case ("i","e",z): repl = cat("ei",z)
+			# ea -> ee
+			case (x,"e","a") if x != "h": repl = cat(x,"ee")
+			# ais -> aze
+			case ("a","i","s"): repl = "aze"
+			# air,ain,aid -> are,ane,ade
+			case ("a","i",z) if z in ("d","l","m","n","p","r"): repl = cat("a",z,"e")
+			# ign -> ine
+			case ("i","g","n"): repl = "ine"
+			# th[End] -> the[End]
+			case ("t","h",z) if z in (" ",None): repl = cat("the",z)
+			# gh[Vowel] -> w[Vowel]
+			case ("g","h",z) if z in Data.vowels: repl = cat("w",z)
+			# ght -> te
+			case ("g","h","t"): repl = "te"
+			# ue[End] -> ew[End]
+			case ("u","e",z) if z in (" ",None): repl = cat("ew",z)
+			# u[Vowel] -> w[Vowel] (except not gua or nue)
+			case (x,"u",z) if x not in ("n","g") and z in Data.vowels: repl = cat(x,"w",z)
+			# ou -> ow
+			case ("o","u",z) if z not in ("g"," ",None): repl = cat("ow",z)
+			# tio -> shu
+			case ("t","i","o"): repl = "shu"
+			# tch -> ch
+			case ("t","c","h"): repl = "ch"
+			# ce -> se
+			case (a,"c","e"): repl = a+"se"
+			# ck -> k
+			case (a,"c","k"): repl = a+"k"
+			# c -> k
+			case ("c",y,z) if y not in ("e","h","l"):  repl = cat("k",y,z)
+			# wr -> r
+			case ("w","r",z): repl = cat("r",z)
+			# wh -> w
+			case ("w","h",z): repl = cat("w",z)
+			# default case
+			case (x,y,z): repl = cat(x,y,z)
+
+		text = text[:i] + repl + text[i+3:]
+		i += 1
+
+	return text
+
+
+
 # returns an abbreviated direction into an expanded one
 # for example, converts 'nw' -> 'northwest' or 'u' -> 'up'
 def expandDir(term):
@@ -562,10 +702,7 @@ def expandDir(term):
 def namesList(L):
 	names = []
 	for elem in L:
-		if hasattr(elem,"descname"):
-			names.append(elem.descname)
-		else:
-			names.append(elem.name)
+		names.append(elem.descname)
 	return names
 
 
@@ -888,7 +1025,7 @@ class TeeLogger:
 		self.originalStdin = sys.stdin
 		self.errorTerminal = sys.stderr
 		os.makedirs(os.path.dirname(logFile),exist_ok=True)
-		self.log = open(logFile,"w")
+		self.log = open(logFile,"w",encoding="utf-8", errors="replace")
 		self.stdin = open(inputFile,"r") if inputFile else self.originalStdin
 		self.logbuffer = ""
 
@@ -1566,7 +1703,7 @@ class Game():
 		self.time += t
 		self.silent = player.hasAnyStatus("asleep","dead")
 		for room in self.renderedRooms():
-			self.silent = room is not self.currentroom or player.hasAnyStatus("asleep","dead")
+			# self.silent = room is not self.currentroom or player.hasAnyStatus("asleep","dead")
 			room.passTime(t)
 		self.silent = player.hasAnyStatus("asleep","dead")
 		if prev_hour != self.hour():
@@ -1602,11 +1739,11 @@ class Game():
 			self.it = obj
 		if isinstance(obj,Creature):
 			self.they = obj
-		if hasattr(obj,"pronoun"):
-			if obj.pronoun == "he":
-				self.he = obj
-			elif obj.pronoun == "she":
-				self.she = obj
+		pronoun = getattr(obj,"pronoun",None)
+		if pronoun == "he":
+			self.he = obj
+		elif pronoun == "she":
+			self.she = obj
 
 
 	### Getters ###
@@ -1738,6 +1875,8 @@ class Game():
 
 	def startUp(self):
 		clearScreen()
+		if not sidepanel.isOpen():
+			player.openDisplay()
 		self.describeRoom()
 		if self.currentroom.ceiling is None:
 			game.checkDaytime()
@@ -1867,6 +2006,9 @@ class Room():
 		self.size = size
 		self.passprep = "at" if passprep is None else passprep
 		self.status = status if status else []
+		for cond,dur in self.status:
+			assert isinstance(cond,str) and isinstance(dur,int)
+
 		self.parent = None
 		self.pronoun = "it"
 		
@@ -1875,15 +2017,15 @@ class Room():
 		self.walls = None
 		self.floor = None
 		if ceiling:
-			ceiling = Fixture("ceiling",f"A ceiling of {ceiling}",size//3,ceiling,aliases={"roof"})
+			ceiling = Fixture("ceiling",f"A ceiling of {ceiling}.",size//3,ceiling,aliases={"roof"})
 			fixtures.append(ceiling)
 			self.ceiling = ceiling
 		if walls:
-			walls = Fixture("wall",f"Walls of {walls}",size//3,walls,aliases={"walls"})
+			walls = Fixture("wall",f"Walls of {walls}.",size//3,walls,aliases={"walls"})
 			fixtures.append(walls)
 			self.walls = walls
 		if floor:
-			floor = Fixture("ground",f"A floor of {floor}",size//3,floor,aliases={"floor"},determiner="the")
+			floor = Fixture("ground",f"A floor of {floor}.",size//3,floor,aliases={"floor"},determiner="the")
 			fixtures.append(floor)
 			self.floor = floor
 		self.surfaces = (self.ceiling,self.walls,self.floor)
@@ -2045,7 +2187,7 @@ class Room():
 
 
 	# add a status condition to the room with a name and duration
-	def addStatus(self,name,dur,stackable=False):
+	def addStatus(self,name,dur,stackable=True):
 		if self.hasStatus(name) and not stackable:
 			return False
 		insort(self.status,[name,dur])
@@ -2104,9 +2246,9 @@ class Room():
 			applyCond = False
 			if cond.startswith("AREA"):
 				applyCond = True
-			elif cond.startswith("ITEM") and isinstance(obj,Item):
-				applyCond = True
 			elif cond.startswith("CREATURE") and isinstance(obj,Creature):
+				applyCond = True
+			elif cond.startswith("ITEM") and not isinstance(obj,Creature):
 				applyCond = True
 			if applyCond:
 				[name,dur] = extractConditionInfo(cond)
@@ -2116,7 +2258,7 @@ class Room():
 	# remove any room effects from the obj exiting
 	def exit(self,obj):
 		# remove status conditions from this room
-		condsToRemove = [pair for pair in obj.status if pair[1] == -1]
+		condsToRemove = [pair for pair in obj.status if pair[1] == -2]
 		for cond,dur in condsToRemove:
 			obj.removeStatus(cond,-1)
 		self.remove(obj)
@@ -2129,6 +2271,8 @@ class Room():
 
 
 	def canAdd(self,I):
+		if self.ceiling and I in celestials:
+			return False
 		# TODO: maybe make rooms have a capacity? perhaps 10*size
 		if I in self.contents():
 			return False
@@ -2187,10 +2331,12 @@ class Room():
 
 
 	# wrapper for objQuery, sets the degree of the query to 2 by default
-	def query(self,key=None,d=2):
+	def query(self,key=None,d=2,includeSelf=False):
 		# querying player inventory must be explicitly provided
 		if key is None: key = lambda obj: player not in obj.ancestors()
 		matches = objQuery(self,key=key,d=d)
+		if not includeSelf and self in matches:
+			matches.remove(self)
 		return matches
 
 
@@ -2239,7 +2385,7 @@ class Room():
 	def listableItems(self):
 		# don't list fixtures which are not 'mentioned'
 		condition = lambda x: not (isinstance(x,Fixture) and not x.mention)
-		objects = list(filter(condition,self.items))
+		objects = list(filter(condition,self.items+self.fixtures))
 		return objects
 
 
@@ -2248,10 +2394,10 @@ class Room():
 	# prints room name, description, all its items and creatures
 	def describe(self):
 		displayDesc = "\n" + self.desc
-		if not player.canNavigate(self):
-			displayDesc = ambiguateDirections(displayDesc)
-		if player.hasStatus("stupidity"):
-			displayDesc = ambiguateNumbers(displayDesc)
+		# if not player.canNavigate(self):
+		# 	displayDesc = ambiguateDirections(displayDesc)
+		# if player.hasStatus("stupidity"):
+		# 	displayDesc = ambiguateNumbers(displayDesc)
 		Print(displayDesc)
 		self.describeItems()
 		self.describeCreatures()		
@@ -2267,9 +2413,6 @@ class Room():
 
 	# prints all the creatures in the room in sentence form
 	def describeCreatures(self):
-		select = lambda creature: creature is not player and creature.carrier is None and creature.rider is None
-		listCreatures = [creature for creature in self.creatures if select(creature)]
-
 		select = lambda creature: creature not in (player, player.carrying, player.riding) and creature.rider is None
 		listCreatures = [creature for creature in self.creatures if select(creature)]
 		if len(listCreatures) != 0:
@@ -2295,13 +2438,14 @@ class Room():
 # Anything in a Room that is not a Creature will be an Item
 # All items come with a name, description, weight, and durability
 class Item():
-	def __init__(self,name,desc,weight,durability,composition,aliases=None,rarity=1,status=None,plural=None,determiner=None,pronoun="it",longevity=None,despawnTimer=None,scent=None,taste=None,texture=None,occupants=None,covering=None,id=None):
+	def __init__(self,name,desc,weight,durability,composition,aliases=None,rarity=1,status=None,plural=None,descname=None,determiner=None,pronoun="it",longevity=None,despawnTimer=None,scent=None,taste=None,texture=None,occupants=None,covering=None,id=None):
 		self.name = name
 		self.desc = desc
 		self.weight = weight
 		self.durability = durability
 		self.composition = composition
 		self.rarity = rarity
+		self.descname = descname if descname else name
 		# how long it lasts in despawnable conditions
 		self.longevity = longevity
 		self.despawnTimer = despawnTimer
@@ -2309,6 +2453,11 @@ class Item():
 		self.taste = taste
 		self.texture = texture
 		self.status = status if status else []
+		for cond,dur in self.status:
+			assert isinstance(cond,str) and isinstance(dur,int)
+		# sort status effects by duration; change idx '1' to '0' to sort by name
+		self.status.sort(key=lambda x: x[1])
+
 		self.aliases = set(aliases) if aliases else set()
 		if plural is None:
 			self.plural = self.name + 's'
@@ -2333,7 +2482,7 @@ class Item():
 	### Dunder Methods ###
 
 	def __repr__(self):
-		return f"Item({self.name}, {self.desc}, {self.weight}, {self.durability})"
+		return f"{self.__class__.__name__}({self.name}, {self.weight}, {self.durability})"
 
 
 	def __str__(self):
@@ -2353,19 +2502,19 @@ class Item():
 
 
 	def __add__(self,other):
-		return copulate(+self,other)
+		return +self + " " + conjugate(+self,other)
 
 
 	def __sub__(self,other):
-		return copulate(-self,other)
+		return -self + " " + conjugate(-self,other)
 
 
 	def __mul__(self,other):
-		return copulate(self.pronoun.capitalize(),other)
+		return self.pronoun.capitalize() + " " + conjugate(self.pronoun,other)
 
 
 	def __truediv__(self,other):
-		return copulate(self.pronoun.lower(),other)
+		return self.pronoun.lower() + " " + conjugate(self.pronoun,other)
 
 
 	def __lt__(self,other):
@@ -2389,23 +2538,22 @@ class Item():
 		jsonDict = self.__dict__.copy()
 		jsonDict["occupants"] = [o.id for o in self.occupants] if self.occupants else None
 		jsonDict["covering"] = [c.id for c in self.covering] if self.covering else None
-		if "surfaces" in jsonDict:
-			del jsonDict["surfaces"]
 		return jsonDict
 
 
 	### Operation ###
 
 	def destroy(self,silent=True):
-		if self.parent is player.parent and not silent:
-			Print(f"{+self} disappears.")
+		if not silent:
+			self.Print(f"{+self} disappears.")
 		for occupant in self.occupants.copy():
 			occupant.Fall()
 		for covered in self.covering:
 			covered.removeCover()
 		self.Disoccupy()
+		self.Uncover()
 
-		if self in self.parent.contents():
+		if self.parent and self in self.parent.contents():
 			self.parent.remove(self)
 
 		# TODO: first drop all items from contents? or just some important ones?
@@ -2430,8 +2578,9 @@ class Item():
 			if self.despawnTimer <= 0 and self.parent is not game.currentroom:
 				self.destroy()
 
-		if self.parent.floor is None:
-			self.Fall()
+		if self.parent.floor is None and not self.hasStatus("flying"):
+			if not isinstance(self,Fixture):
+				self.Fall()
 
 
 	def changeLocation(self,newparent):
@@ -2441,7 +2590,7 @@ class Item():
 		if prevparent:
 			prevparent.exit(self)
 		if self is player.parent:
-			player.Print(f"{+self} rumbles for a moment...")
+			Print(f"{+self} rumbles for a moment...")
 
 		newparent.enter(self)
 		for occupant in self.occupants.copy():
@@ -2449,6 +2598,13 @@ class Item():
 		for covered in self.covering:
 			covered.removeCover()
 		return True
+
+
+	def Teleport(self,newroom):
+		self.Uncover()
+		self.Disoccupy()
+		self.Print(f"{+self} disappears!",color="w")
+		self.changeLocation(newroom)
 
 
 	def displace(self,newparent):
@@ -2485,10 +2641,10 @@ class Item():
 			return newObj.displace(self.parent)
 		for occupant in self.occupants.copy():
 			self.removeOccupant(occupant)
-			if isinstance(newObj,Item):
-				newObj.addOccupant(occupant)
-			else:
+			if isinstance(newObj,Creature):
 				occupant.Fall(self.Size()//2)
+			else:
+				newObj.addOccupant(occupant)
 		for covered in self.covering.copy():
 			covered.removeCover()
 			covered.addCover(newObj)
@@ -2510,9 +2666,36 @@ class Item():
 			if not game.silent:
 				Print(f"{+self} cannot be broken.")
 			return False
-		if self.room() is game.currentroom:
-			Print(f"{+self} breaks.")
+		self.Print(f"{+self} breaks.")
 		self.destroy()
+		return True
+
+
+	def Taste(self,taster):
+		if taster.hasStatus("apathy"):
+			msg = "You have the curse of apathy; it tastes like nothing..."
+		elif self.composition in Data.tastes:
+			msg = Data.tastes[self.composition]
+		elif self.composition in Data.scents:
+			msg = Data.scents[self.composition]
+			msg = msg.replace("scent","taste").replace("smelling","tasting")
+		else:
+			msg = f"Tastes like nothing in particular."
+		taster.Print(msg)
+		return True
+
+
+	def Smell(self,smeller):
+		if smeller.hasStatus("apathy"):
+			msg = f"You have the curse of apathy; {self+'smells like nothing...'}"
+		elif self.composition in Data.scents:
+			msg = Data.scents[self.composition]
+		elif self.composition in Data.tastes:
+			msg = Data.tastes[self.composition]
+			msg = msg.replace("taste","smell").replace("tasting","smelling")
+		else:
+			msg = f"Smells like nothing in particular."
+		smeller.Print(msg)
 		return True
 
 
@@ -2538,7 +2721,6 @@ class Item():
 			return True
 		self.occupants.append(occupant)
 		occupant.platform = self
-		
 		return True
 
 
@@ -2603,8 +2785,7 @@ class Item():
 		contents = (self.contents() if hasMethod(self,"contents") else []).copy()
 		if room is None:
 			room = self.room()
-		if self.room() is game.currentroom:
-			Print(f"{+self} falls down.")
+		self.Print(f"{+self} falls down.")
 		for occupant in self.occupants.copy():
 			occupant.Fall(height,room)
 		self.Disoccupy()
@@ -2614,14 +2795,16 @@ class Item():
 			room = room.links["down"]
 		if room != self.room():
 			self.changeLocation(room)
-			if self.room() is game.currentroom:
-				Print(f"{+self} falls from above.")
+			self.Print(f"{~self} falls from above!".capitalize())
 
-		force = maxm(height,20*self.weight)
-		self.takeDamage(force,"b")
-		for item in contents:
-			item.takeDamage(force//3,"b")
+		# TODO: add some collision checking for composition of the floor?
+		if room.floor is not None:
+			force = maxm(height,20*self.weight)
+			self.takeDamage(force,"b")
+			for item in contents:
+				item.takeDamage(force//3,"b")
 		return True
+
 
 
 	def Use(self,user):
@@ -2632,6 +2815,11 @@ class Item():
 
 
 	def takeDamage(self,dmg,type):
+		# TODO: add damage type vulnerabilities based on composition
+		# i.e. wood is extra weak to fire and slashing
+		if self.composition in Data.liquids:
+			self.Print("Splish splash...")
+			return True
 		if self in player.surroundings().objTree():
 			Print(f"{+self} took {dmg} {Data.dmgtypes[type]} damage.")
 		if self.durability != -1:
@@ -2656,7 +2844,7 @@ class Item():
 		self.despawnTimer = self.longevity
 
 
-	def addStatus(self,name,dur,stackable=False):
+	def addStatus(self,name,dur,stackable=True):
 		if self.hasStatus(name) and not stackable:
 			return False
 		insort(self.status,[name,dur])
@@ -2666,7 +2854,6 @@ class Item():
 	# removes all condition of the same name
 	# if reqDuration is given, only removes conditions with that duration
 	def removeStatus(self,reqName=None,reqDuration=None):
-		# copy to prevent removing-while-iterating errors
 		for name,duration in self.status.copy():
 			if name == reqName or reqName is None:
 				if duration == reqDuration or reqDuration is None:
@@ -2675,17 +2862,15 @@ class Item():
 
 	### Getters ###
 
-	def posture(self):
-		return None
-
-
 	def Weight(self):
-		return self.weight
+		return self.weight + self.occupantsWeight()
 
 
 	def Size(self):
 		# under normal conditions, size is equal to weight
-		# I realize this doesn't count for density... whatever
+		# I realize this doesn't account for density... whatever
+		# TODO: account for density->volume based on composition
+		# probably a few heavy materials will just have some reduction in weight
 		return self.weight
 
 
@@ -2697,7 +2882,12 @@ class Item():
 		return sum(o.Weight() for o in self.occupants)
 
 
-	# should be empty for items that aren't containers
+	def occupantsSize(self):
+		return sum(o.Size() for o in self.occupants)
+
+
+	# wrapper for objQuery
+	# should be empty for items that aren't containers or creatures
 	def objTree(self,includeSelf=False):
 		matches = objQuery(self,d=3)
 		if not includeSelf:
@@ -2707,7 +2897,7 @@ class Item():
 
 	# wrapper for objQuery, sets the degree of the query to 2 by default
 	def query(self,key=None,d=2):
-		# querying player inventory must be explicitly provided
+		# querying into player inventory must be explicitly demanded
 		if key is None: key = lambda obj: player not in obj.ancestors()
 		matches = objQuery(self,key=key,d=d)
 		return matches
@@ -2734,6 +2924,15 @@ class Item():
 		return self.ancestors()[-1]
 
 
+	# gets the first ancestor that isn't open, or the final ancestor (room)
+	# used to determine the 'root' of a Creature's available surroundings
+	def surroundings(self):
+		for anc in self.ancestors():
+			if not getattr(anc,"open",True):
+				return anc
+		return self.room()
+
+
 	def asProjectile(self):
 		return Projectile(self.name,self.desc,self.weight,self.durability,self.composition,min1(self.weight//4),0,"b",item=self)
 
@@ -2755,6 +2954,8 @@ class Item():
 	def hasAnyStatus(self,*names):
 		if type(names) is str:
 			names = (names,)
+		if type(names[0]) in (tuple,list):
+			names = names[0]
 		if len(names) == 0:
 			return len(self.status) > 0
 		assert isinstance(names,Iterable)
@@ -2767,11 +2968,17 @@ class Item():
 
 	### User Output ###
 
+	def Print(self,*args,end="\n",sep="",delay=None,color=None,allowSilent=True,outfile=None):
+		if self.surroundings() is not player.surroundings():
+			return False
+		return Print(*args,end=end,sep=sep,delay=delay,color=color,allowSilent=allowSilent,outfile=outfile)
+
+
 	def nounPhrase(self,det="",n=-1,plural=False,cap=0):
 		if det.lower() == "the":
 			strname = self.name
 		else:
-			strname = getattr(self,"descname",self.name)
+			strname = self.descname
 		if len(strname) == 0:
 			return ""
 		if n > 1:
@@ -2802,12 +3009,13 @@ class Item():
 
 	def displayName(self):
 		color = Data.rarityColors.get(self.rarity,"w")
+		if player.hasStatus("apathy"): color = "w"
 		return Tinge(self.name,color=color)[0]
 
 
 	def describe(self):
 		Print(f"It's {~self}.")
-		Print(f"{self.desc}.")
+		Print(f"{self.desc}")
 
 
 	def reflexive(self):
@@ -2822,20 +3030,9 @@ class Item():
 # The player is a Creature too
 # Creatures have 10 base stats, called traits
 # They also have abilities; stats which are derived from traits through formulas
-class Creature():
-	def __init__(self,name,desc,weight,traits,hp,mp=0,money=0,inv=None,gear=None,love=0,fear=0,carrying=None,carrier=None,riding=None,rider=None,platform=None,cover=None,covering=None,id=None,composition="flesh",memories=None,appraisal=None,status=None,descname=None,aliases=None,plural=None,determiner=None,pronoun="it",timeOfDeath=None,lastAte=0,lastSlept=0,regenTimer=0,alert=False,seesPlayer=False,sawPlayer=-1):
-		self.name = name
-		self.desc = desc
-		self.descname = descname if descname else name
-		self.aliases = set(aliases) if aliases else set()
-		self.determiner = determiner
-		if plural is None:
-			self.plural = self.name + 's'
-		else:
-			self.plural = plural
-		self.weight = weight
-		self.pronoun = pronoun
-
+class Creature(Item):
+	def __init__(self,name,desc,weight,traits,hp,mp=0,money=0,inv=None,gear=None,love=0,fear=0,carrying=None,carrier=None,riding=None,rider=None,platform=None,cover=None,composition="flesh",memories=None,appraisal=None,timeOfDeath=None,lastAte=0,lastSlept=0,regenTimer=0,alert=False,lastSawPlayer=None,**kwargs):
+		super().__init__(name,desc,weight,-1,composition,**kwargs)
 		self.str = traits[0]
 		self.spd = traits[1]
 		self.skl = traits[2]
@@ -2847,10 +3044,6 @@ class Creature():
 		self.fth = traits[8]
 		self.lck = traits[9]
 
-		self.status = status if status else []
-		# sort status effects by duration; change '1' to '0' to sort by name
-		self.status.sort(key=lambda x: x[1])
-
 		self.hp = hp
 		self.mp = mp
 		self.money = money
@@ -2861,15 +3054,12 @@ class Creature():
 		self.appraisal = appraisal if appraisal else set()
 		
 		# this gets decompressed or reassigned by assignRefs
-		self.parent = None
-		self.id = id
 		self.riding = riding
 		self.rider = rider
 		self.carrying = carrying
 		self.carrier = carrier
 		self.platform = platform
 		self.cover = cover
-		self.covering = covering if covering else []
 		self.gear = gear if gear else Data.initgear
 		self.gear = {k:(EmptyGear() if v is None else v) for k,v in self.gear.items()}
 
@@ -2878,7 +3068,6 @@ class Creature():
 		self.shield = EmptyGear()
 		self.shield2 = EmptyGear()
 
-		self.composition = composition
 		self.timeOfDeath = timeOfDeath
 		# health regens very slowly
 		self.regenTimer = regenTimer
@@ -2887,70 +3076,20 @@ class Creature():
 		self.lastSlept = lastSlept
 		# these attributes remain unused in the Player subclass
 		self.alert = alert
-		self.seesPlayer = seesPlayer
-		self.sawPlayer = sawPlayer
+		self.sawPlayer = lastSawPlayer
 
 
 	### Dunder Methods ###
 
 	def __repr__(self):
 		traits = [self.str, self.spd, self.skl, self.stm, self.con, self.cha, self.int, self.wis, self.fth, self.lck]
-		return f"Creature({self.name}, {self.desc}, {self.hp}, {self.mp}, {traits}, {self.money} ...)"
-
-
-	def __str__(self):
-		return self.nounPhrase()
-
-
-	def __neg__(self):
-		return self.nounPhrase('the')
-
-
-	def __pos__(self):
-		return self.nounPhrase('the',cap=1)
-
-
-	def __invert__(self):
-		return self.nounPhrase('a')
-
-
-	def __add__(self,other):
-		return copulate(+self,other)
-
-
-	def __sub__(self,other):
-		return copulate(-self,other)
-
-
-	def __mul__(self,other):
-		return copulate(self.pronoun.capitalize(),other)
-
-
-	def __truediv__(self,other):
-		return copulate(self.pronoun.lower(),other)
-
-
-	def __eq__(self,other) :
-		if isinstance(other,self.__class__):
-			return self.__dict__ == other.__dict__
-		else:
-			return False
-
-
-	def __hash__(self):
-		return hash(id(self))
-
-
-	def __lt__(self,other):
-		if isinstance(other,Creature):
-			return self.MVMT() < other.MVMT()
-		return self.name.lower() < other.name.lower()
+		return f"{self.__class__.__name__}({self.name}, {self.hp}, {self.mp}, {traits}, {self.money}...)"
 
 
 	### File I/O ###
 
 	def assignRefs(self,parent):
-		self.parent = parent
+		super().assignRefs(parent)
 
 		self.carrying = game.objRegistry[self.carrying]
 		self.carrier = game.objRegistry[self.carrier]
@@ -2958,7 +3097,6 @@ class Creature():
 		self.rider = game.objRegistry[self.rider]
 		self.cover = game.objRegistry[self.cover]
 		self.platform = game.objRegistry[self.platform]
-		self.covering = [game.objRegistry[c] for c in self.covering]
 
 		uncompGear = {}
 		for slot, id in self.gear.items():
@@ -2993,7 +3131,7 @@ class Creature():
 	def convertToJSON(self):
 		# convert the gear dict to a form more easily writable in a JSON object
 		compressedGear = self.compressGear()
-		jsonDict = self.__dict__.copy()
+		jsonDict = super().convertToJSON()
 
 		jsonDict["carrying"] = self.carrying.id if self.carrying else None
 		jsonDict["carrier"] = self.carrier.id if self.carrier else None
@@ -3002,6 +3140,7 @@ class Creature():
 		jsonDict["cover"] = self.cover.id if self.cover else None
 		jsonDict["platform"] = self.platform.id if self.platform else None
 		jsonDict["covering"] = [c.id for c in self.covering] if self.covering else None
+		del jsonDict["occupants"]
 
 		dictkeys = list(jsonDict.keys())
 		# these attributes do not get stored between saves (except gear)
@@ -3011,40 +3150,32 @@ class Creature():
 		jsonDict["gear"] = compressedGear
 		# convert traits to a form more easily writable in a JSON object
 		jsonDict["traits"] = [self.str,self.skl,self.spd,self.stm,self.con,self.cha,self.int,self.wis,self.fth,self.lck]
-
-		# these lines seem redundant (the menu functions handle parent and __class__ attributes)
-		# but they're required specifically for reading/writing the Player object
-		# they're in Creature class because otherwise I'd have to copy a nearly identical method
-		if "parent" in jsonDict:
-			del jsonDict["parent"]
-		jsonDict["__class__"] = self.__class__.__name__
+		
 		return jsonDict
 
 
 	### Operation ###
 
 	def destroy(self,silent=True):
-		if self.parent is player.parent and not silent:
-			Print(f"{+self} disappears.")
+		if not silent:
+			self.Print(f"{+self} disappears.")
+		if self.cover:
+			self.removeCover()
 		if self.rider:
 			self.rider.Fall()
 			self.rider.removeRiding()
-		if self.carrier:
-			self.carrier.removeCarry()
-		if self.cover:
-			self.removeCover()
-		if self.platform:
-			self.platform.removeOccupant(self)
 		if self.carrying:
 			self.carrying.Fall()
-		self.Uncover()
+		if self.platform:
+			self.platform.removeOccupant(self)
+		if self.carrier:
+			self.carrier.removeCarry()
 		self.removeCarry()
 		self.removeRiding()
 		if self in self.parent.contents():
 			self.parent.remove(self)
 		# TODO: drop all items from inventory? or just some important ones?
-		assert game.objRegistry[self.id] is self
-		del game.objRegistry[self.id]
+		super().destroy(silent=True)
 
 
 	def awaken(self,wellRested=True):
@@ -3127,8 +3258,7 @@ class Creature():
 
 
 	def asProjectile(self):
-		comp = getattr(self,"composition","flesh")
-		return Projectile(self.name,self.desc,self.weight,self.DFNS(),comp,self.weight//4,0,"b",item=self,pronoun=self.pronoun)
+		return Projectile(self.name,self.desc,self.weight,self.DFNS(),self.composition,self.weight//4,0,"b",item=self,pronoun=self.pronoun)
 
 
 	# check if item can fit in inventory
@@ -3148,6 +3278,8 @@ class Creature():
 		if msg:
 			if not silent:
 				self.Print(msg)
+				if self is player:
+					game.setPronouns(I)
 			return False
 		return True
 
@@ -3203,6 +3335,8 @@ class Creature():
 			if self.add(I):
 				oldParent.remove(I)
 			self.Print(f"You take {strname}{suffix}.",allowSilent=silent)
+			if self is player:
+				game.setPronouns(I)
 			I.Obtain(self)
 			self.checkHindered()
 			return True
@@ -3242,7 +3376,7 @@ class Creature():
 
 
 	def replaceItem(self,oldObj,newObj):
-		assert oldObj in self.inv and isinstance(oldObj,Item)
+		assert oldObj in self.inv and not isinstance(oldObj,Creature)
 		if isinstance(newObj,Creature):
 			carriedSlot = "left" if self.gear["left"] is oldObj else "right"
 			carriedSlot = carriedSlot if self.gear[carriedSlot] is oldObj else None
@@ -3424,7 +3558,7 @@ class Creature():
 			self.platform = None
 
 
-	def addStatus(self,name,dur,stackable=False,silent=False):
+	def addStatus(self,name,dur,stackable=True,silent=False):
 		if self.hasStatus(name) and not stackable:
 			return False
 		if self is not player and name in Data.privateStatus:
@@ -3448,7 +3582,7 @@ class Creature():
 			self.display()
 		return True
 
-	
+
 	def removeStatus(self,reqName=None,reqDuration=None,silent=False):
 		wasSleeping = self.hasStatus("asleep")
 		wellRested = False
@@ -3460,11 +3594,19 @@ class Creature():
 				if duration == reqDuration or reqDuration is None:
 					self.status.remove([name,duration])
 					anyRemoved = True
-					if name == "asleep" and duration < 20:
+					if name == "asleep" and duration < 30:
 						wellRested = True
-					if reqName != "asleep" and not self.hasStatus(reqName,reqDuration):
-						if not silent:
-							self.Print(self+f"is no longer {name}.")
+					if reqName != "asleep" and not self.hasStatus(reqName):
+						if silent:
+							continue
+						verb = conjugate(+self,"has")
+						if name in Data.curses:
+							Print(f"{+self} no longer {verb} the curse of {name}.")
+						elif name in Data.blessings:
+							Print(f"{+self} no longer {verb} the blessing of {name}.")
+						else:
+							verb = conjugate(-self,"is")
+							Print(f"{+self} {verb} no longer {name}.")
 
 		if wasSleeping and not self.hasStatus("asleep"):
 			self.awaken(wellRested=wellRested)
@@ -3482,19 +3624,10 @@ class Creature():
 
 
 	def passTime(self,t):
-		for condition in self.status:
-			# if condition is has a special duration, ignore it
-			if condition[1] < 0:
-				continue
-			# subtract remaining duration on condition
-			elif condition[1] > 0:
-				condition[1] = min0(condition[1] - t)
-
-		# remove conditions with 0 duration left
-		self.removeStatus(reqDuration=0)
+		super().passTime(t)
 
 		# take damage from damaging status conditions
-		for condition, _ in [_ for _ in self.status]:
+		for condition, _ in self.status.copy():
 			if condition in Data.conditionDmg:
 				factor, type = Data.conditionDmg[condition]
 				dmg = min1(randint(1,factor) - self.LCK())
@@ -3504,7 +3637,9 @@ class Creature():
 		self.checkHungry()
 
 		# natural healing is faster with a higher endurance
-		if not self.hasAnyStatus("hungry","starving") or self.hasStatus("mending"):
+		if self.hasAnyStatus("hungry","starving") and not self.hasStatus("mending"):
+			self.regenTimer = 0
+		elif not self.hasStatus("dead"):
 			self.regenTimer += 1
 			if self.regenTimer >= 50 - self.ENDR() or self.hasStatus("mending"):
 				self.regenTimer = 0
@@ -3516,9 +3651,6 @@ class Creature():
 			if self.parent is not player.parent and isinstance(self.parent,Room):
 				if halfRangeRoll(game.time - self.timeOfDeath) > 1000:
 					self.destroy()
-
-		if self.parent.floor is None and not self.hasStatus("flying"):
-			self.Fall()
 
 
 	def checkHidden(self):
@@ -3595,6 +3727,7 @@ class Creature():
 			self.removeStatus("dead")
 		else:
 			Print(f"{+self} has been reanimated!")
+			self.removeStatus("dead")
 		return True
 
 
@@ -3611,7 +3744,7 @@ class Creature():
 			Print(f"But {self.pronoun} is flying.")
 			return False
 
-		if not isinstance(room, Room):
+		if room is None:
 			room = self.room()
 		while room.floor is None and "down" in room.links:
 			height += room.size
@@ -3621,59 +3754,17 @@ class Creature():
 				self.carrying.Fall(height,room)
 			self.changeLocation(room)
 			if self.room() is game.currentroom:
-				Print(f"{+self} falls from above.")
+				Print(f"{~self} falls from above!".capitalize())
 
 		if self.anchor() is not self.parent.floor:
 			self.parent.floor.addOccupant(self)
 
-		force = maxm(height,20*self.weight)
-		if not self.hasStatus("fleetfooted"):
+		if not self.hasStatus("fleetfooted") and room.floor is not None:
+			force = maxm(height,20*self.weight)
 			self.takeDamage(force,"b")
 			self.changePosture("laying")
 			if self.rider:
 				self.rider.takeDamage(force//3,"b")
-		return True
-
-
-	def addCovering(self,covered):
-		if covered in self.covering:
-			Print(f"{+self} is already covering {-covered}.")
-			return False
-		if self.availableCover(covered) < 0:
-			nCovered = len(self.covering)
-			msg = f"{+self} has no space to cover {-covered}. "
-			if nCovered == 0:
-				addendum = self+"is too small."
-			elif nCovered == 1:
-				addendum = self+f"is already covering {~self.covering[0]}."
-			elif nCovered == 2:
-				addendum = self+f"is already covering {~self.covering[0]} and {~self.covering[1]}."
-			else:
-				addendum = self+f"is covering {nCovered} others."
-			Print(msg+addendum)
-			return False
-
-		self.covering.append(covered)
-		covered.cover = self
-		if covered.carrying:
-			covered.carrying.addCovering(covered)
-		return True
-
-
-	def removeCovering(self,covered):
-		if covered in self.covering:
-			self.covering.remove(covered)
-			covered.cover = None
-			if covered.carrying:
-				covered.carrying.removeCovering(covered)
-			return True
-		return False
-
-
-	def Uncover(self):
-		for covered in self.covering:
-			self.removeCovering(covered)
-		self.covering.clear()
 		return True
 
 
@@ -3771,6 +3862,8 @@ class Creature():
 		self.removeCarry()
 		self.removeRiding()
 		self.removeCover()
+		self.Uncover()
+		self.Disoccupy() # should do nothing, but just in case
 		self.waitInput("You teleport!",color="b")
 		self.changeLocation(newroom)
 		self.changePosture("stand")
@@ -3866,7 +3959,7 @@ class Creature():
 		# if a creature is found creating a loop with the actor and attempted target,
 		# identify the culprit
 		if looplink:
-			self.Print(f"You can't {dverb} {-target}, {target.pronoun} is {iverb} {looplink}")
+			self.Print(f"You can't {dverb} {-target},", target/f"is {iverb} {looplink}")
 			return True
 		return False
 
@@ -3886,7 +3979,7 @@ class Creature():
 
 
 	def Carry(self,carrier):
-		assert not isinstance(carrier,Item)
+		assert isinstance(carrier,Creature)
 		if self.checkTetherLoop(carrier,self,"carry"):
 			return False
 		if self.Weight() > carrier.BRDN()//2:
@@ -3895,7 +3988,7 @@ class Creature():
 		if self.carrier:
 			self.Print(f"{+self} is already being carried by {self.carrier}.")
 			if roll(carrier.ATHL()) > roll(self.carrier.ATHL()):
-				carrier.Print()(f"You wrest {-self} away from {-self.carrier}!")
+				carrier.Print(f"You wrest {-self} away from {-self.carrier}!")
 			else:
 				carrier.Print(f"{+self.carrier} holds onto {-self}.")
 				return False
@@ -3969,9 +4062,9 @@ class Creature():
 		if I is self.cover:
 			self.Print(f"You are already hidden behind {-I}.")
 			return False
-		rec = " Try crouching." if posture != "crouch" else ""
+		tip = " Try crouching." if posture != "crouch" else ""
 		if I.availableCover(self) < 0:
-			self.Print(f"{+I} is too small to hide behind.{rec}")
+			self.Print(f"{+I} is too small to hide behind.{tip}")
 			return False
 		if isinstance(I,Fixture):
 			self.Print(f"You can't hide behind {-I}.")
@@ -3984,6 +4077,10 @@ class Creature():
 		self.changePosture(posture,silent=True)
 		I.addCovering(self)
 		return True
+
+
+	def addOccupant(self,creature):
+		return self.Ride(creature)
 
 
 	def Ride(self,rider):
@@ -4043,9 +4140,6 @@ class Creature():
 			pass
 		elif self.checkTetherLoop(self,anchor,"get on"):
 			return False
-		elif hasMethod(anchor,"Ride"):
-			if not anchor.Ride(self):
-				return False
 		elif hasMethod(anchor,"addOccupant"):
 			if not anchor.addOccupant(self):
 				return False
@@ -4063,14 +4157,16 @@ class Creature():
 			self.Print("You're not on anything.") if not silent else None
 			return False
 			
+		occupyPrep = getattr(self.anchor(),"occupyprep","on")
+		disoccupyPrep = "out of" if occupyPrep == "in" else "off"
 		if self.riding:
 			if not silent:
-				self.Print(f"You get off {-self.riding}.")
+				self.Print(f"You get {disoccupyPrep} {-self.riding}.")
 			self.riding.rider = None
 			self.riding = None
 		if self.platform and self.platform != self.parent.floor:
 			if not silent:
-				self.Print(f"You get off {-self.platform}.")
+				self.Print(f"You get {disoccupyPrep} {-self.platform}.")
 			self.platform.removeOccupant(self)
 
 		if not self.hasStatus("flying"):
@@ -4080,17 +4176,10 @@ class Creature():
 		return True
 
 
-	def Smell(self,smeller):
-		Print("Smells a little like body odor.")
-
-
 	def Lick(self,licker):
 		# TODO: make creatures evade this or try to
 		Print("Yuck!")
 
-
-	def Touch(self,toucher):
-		Print("Feels soft and fleshy.")
 
 
 	### Getters ###
@@ -4179,7 +4268,7 @@ class Creature():
 	def ACCU(self): return 60 + 2*self.SKL() + self.LCK() + self.weapon.sleight
 	def ATCK(self): return diceRoll(self.STR(), self.weapon.might, self.atkmod())
 	def ATHL(self): return self.STR() + self.SKL() + self.STM()
-	def ATSP(self): return min0(self.SPD() - min0(self.handheldWeight()//4 - self.CON()))
+	def ATSP(self): return min0(self.SPD() - min0(self.handheldWeight()//4 - self.STR() + 10))
 	def BRDN(self): return 12*self.CON() + 6*self.STR() + 3*self.FTH() + self.weight
 	def CAST(self): return min0(self.WIS() + self.FTH() + self.INT() - self.gearToll())
 	def CRIT(self): return self.SKL() + self.LCK() + self.weapon.sharpness
@@ -4218,10 +4307,6 @@ class Creature():
 		return size
 
 
-	def availableCover(self,obj):
-		return self.Size() - sum(c.Size() for c in self.covering if c is not obj) - obj.Size()
-
-
 	def anchor(self):
 		# only one of these may not be None at a time.
 		assert sum(a is not None for a in (self.riding, self.carrier, self.platform)) <= 1
@@ -4233,52 +4318,6 @@ class Creature():
 
 	def contents(self):
 		return self.inv
-
-
-	# wrapper for objQuery()
-	def objTree(self,includeSelf=False):
-		matches = objQuery(self,d=3)
-		if not includeSelf:
-			matches.remove(self)
-		return matches
-
-
-	# wrapper for objQuery, sets the degree of the query to 2 by default
-	def query(self,key=None,d=2):
-		# querying player inventory must be explicitly provided
-		if key is None: key = lambda obj: player not in obj.ancestors()
-		matches = objQuery(self,key=key,d=d)
-		return matches
-
-
-	def nameQuery(self,term,d=2):
-		term = term.lower()
-		# querying player inventory must be explicitly provided
-		key = lambda obj: nameMatch(term,obj) and player not in obj.ancestors()
-		return self.query(key=key,d=d)
-
-
-	def ancestors(self):
-		ancs = []
-		ancestor = self.parent
-		ancs.append(ancestor)
-		while not isinstance(ancestor,Room):
-			ancestor = ancestor.parent
-			ancs.append(ancestor)
-		return ancs
-
-
-	def room(self):
-		return self.ancestors()[-1]
-
-
-	# gets the first ancestor that isn't open, or the final ancestor (room)
-	# used to determine the 'root' of a Creature's available surroundings
-	def surroundings(self):
-		for anc in self.ancestors():
-			if not getattr(anc,"open",True):
-				return anc
-		return self.room()
 
 
 	# TODO: add logic here for conditions which improve atkmod
@@ -4339,33 +4378,11 @@ class Creature():
 
 	# returns sum of all protection values of all items in gear
 	def protection(self):
-		return sum(item.prot for item in self.gear.values() if hasattr(item,"prot"))
+		return sum(getattr(item,"prot",0) for item in self.gear.values())
 
 
 	def coverBonus(self):
 		return min0(self.cover.availableCover(self)) if self.cover else 0
-
-
-	def hasStatus(self,name,reqDuration=None):
-		for condname,duration in self.status:
-			if condname == name:
-				if reqDuration == None or reqDuration == duration:
-					return True
-		return False
-
-
-	def hasAnyStatus(self,*names):
-		if type(names) is str:
-			names = (names,)
-		if type(names[0]) is tuple or type(names[0]) is list:
-			names = names[0]
-		if len(names) == 0:
-			return len(self.status) > 0
-		assert isinstance(names,Iterable)
-		for name in names:
-			if self.hasStatus(name):
-				return True
-		return False
 
 
 	def posture(self):
@@ -4378,9 +4395,9 @@ class Creature():
 
 	# returns the sum of the weight of all items being held
 	def handheldWeight(self):
-		return 0
-		carryingWeight = 0 if self.carrying is None else self.carrying.Weight()
-		return self.gear["left"].Weight() + self.gear["right"].Weight() + carryingWeight
+		left = self.gear.get("left", EmptyGear()).Weight()
+		right = self.gear.get("right", EmptyGear()).Weight()
+		return left + right
 
 
 	def isNaked(self):
@@ -4399,7 +4416,7 @@ class Creature():
 
 
 	def isBloodied(self):
-		# returns true is creature has less than half health
+		# returns true is creature has less than 1/3 health
 		pass
 
 
@@ -4439,7 +4456,7 @@ class Creature():
 
 
 	def nounPhrase(self,det="",n=-1,plural=False,cap=-1):
-		strname = getattr(self,"descname",self.name)
+		strname = self.descname
 		if self.riding and det != "the":
 			strname = f"{strname} on {~self.riding}"
 		elif self.platform not in (None,self.parent.floor) and det != "the":
@@ -4478,7 +4495,7 @@ class Creature():
 
 	def describe(self):
 		Print(f"It's {~self}.")
-		Print(f"{self.desc}.")
+		Print(f"{self.desc}")
 
 
 	def reflexive(self):
@@ -4495,7 +4512,10 @@ class Player(Creature):
 		self.xp = xp
 		self.rp = rp
 		self.spells = spells if spells else []
+		self.pronoun = "he"
 
+
+	### Dunder Methods
 
 	def __neg__(self):
 		return "you"
@@ -4507,6 +4527,18 @@ class Player(Creature):
 
 	def __invert__(self):
 		return "you"
+
+
+	### File I/O ###
+
+	def convertToJSON(self):
+		jsonDict = super().convertToJSON()
+		# these lines seem redundant (the menu functions handle parent and __class__ attributes)
+		# but they aren't
+		if "parent" in jsonDict:
+			del jsonDict["parent"]
+		jsonDict["__class__"] = self.__class__.__name__
+		return jsonDict
 
 
 	### Operation ###
@@ -4777,9 +4809,9 @@ class Player(Creature):
 	def canNavigate(self,location=None):
 		if location is None:
 			location = self.parent
-		if self.hasAnyStatus("blind","stupidity"):
+		if location is None or self.hasAnyStatus("blind","stupidity"):
 			return False
-		return self.countCompasses() > 0 or sun in location.fixtures
+		return self.countCompasses() > 0 or sun in location.contents()
 
 
 	# returns the sum of the weight of all items being held
@@ -4824,9 +4856,9 @@ class Player(Creature):
 	# returns number of lines printed
 	def printTraits(self,trait=None,outfile=None):
 		if trait == None:
-			cols = 5
 			traits = [self.displayTrait(t) for t in Data.traits]
-
+			colWidth = max(displayLength(trait) for trait in traits) + 2
+			cols = maxm(50 // colWidth, 5)
 			return columnPrint(traits,cols,outfile=outfile)
 
 		Print(self.displayTrait(trait))
@@ -4882,8 +4914,7 @@ class Player(Creature):
 		Print(outfile=outfile)
 		for slot in self.gear:
 			val = self.gear[slot].displayName()
-			Print(slot + ":\t",end="", outfile=outfile)
-			Print(val, outfile=outfile)
+			Print(slot + ":\t" + val,outfile=outfile)
 
 
 	def printCarrying(self,*args,silent=False,outfile=None):
@@ -4910,7 +4941,8 @@ class Player(Creature):
 		elif self.platform:
 			pos += self.posture()		
 			if self.platform != self.parent.floor:
-				pos += f" on {-self.platform}"
+				occupyprep = getattr(self.platform,"occupyprep","on")
+				pos += f" {occupyprep} {-self.platform}"
 		else:
 			pos = "floating"
 		if self.cover:
@@ -4924,8 +4956,7 @@ class Player(Creature):
 
 	def printStatus(self, *args, outfile=None):
 		if len(self.status) == 0:
-			if outfile is None:
-				Print("None")
+			Print("None")
 			return
 
 		conditions = []
@@ -4943,32 +4974,38 @@ class Player(Creature):
 			conditions.append(cond)
 			durations.append(dur)
 
-		nDigits = len(str(max(durations)))
-		# make list of strings to display conditions and their durations
+		# display permanent durations as "--", adjust length according to max digit length
+		displayDurations = [str(dur) if dur > 0 else "--" for dur in durations]
+		if self.hasStatus("stupidity"):
+			displayDurations = [ambiguateNumbers(dur) for dur in displayDurations]
+		nDigits = max(len(dur) for dur in displayDurations)
+		displayDurations = ["-"*nDigits if dur == "--" else dur for dur in displayDurations]
+
+		# pad to align and color conditions and their durations for display
+		nChars = max([len(condname) for condname in conditions])
 		statusDisplay = []
-		for i in range(len(conditions)):
-			displayCond = conditions[i]
-			
-			if durations[i] < 0:
-				displayDur = "-"*nDigits
-			else:
-				displayDur = str(durations[i])
-			if self.hasStatus("stupidity"): displayDur = ambiguateNumbers(displayDur)
+		for i,condition in enumerate(conditions):
+			padding = " "*(nChars-len(condition)+2)
+			displayCondition = condition + padding + displayDurations[i]
+			if self.hasStatus("stupidity"):
+				displayCondition = ambiguateNumbers(displayCondition)
 
 			color = "w"
-			if displayCond in Data.blessings | Data.buffs:
+			if self.hasStatus("apathy") and condition != "apathy":
+				color = "w"
+			elif condition in Data.blessings | Data.buffs:
 				color = "g"
-			elif displayCond in Data.curses | Data.debuffs:
+			elif condition in Data.curses | Data.debuffs:
 				color = "r"
+			statusDisplay.append(Tinge(displayCondition,color=color)[0])
 
-			statusDisplay.append(Tinge(displayCond,color=color)[0])
-			statusDisplay.append(Tinge(displayDur,color=color)[0])
-
-		columnPrint(statusDisplay,2,outfile=outfile)
+		# nCols = maxm(3,((len(statusDisplay)-1)//5)+1)
+		nCols = 2 if len(statusDisplay) > 5 else 1
+		columnPrint(statusDisplay,nCols,outfile=outfile)
 
 
 	# prints player level, money, hp, mp, rp, and status effects
-	def printStats(self, *args, showStatus=True, outfile=None):
+	def printStats(self, *args, outfile=None):
 		colWidth = None
 		name = self.name
 		if len(name) > 45:
@@ -4979,6 +5016,8 @@ class Player(Creature):
 		colors = ["w","o","g","y","r","b"]
 		if self.hasStatus("insanity") and outfile is None:
 			shuffle(colors)
+		if self.hasStatus("apathy"):
+			colors = ["w"]*len(colors)
 		if self.hasStatus("stupidity"):
 			stats = [ambiguateNumbers(stat,grammatical=False) for stat in stats]
 		if max(len(term) for term in stats) > 16:
@@ -4986,14 +5025,6 @@ class Player(Creature):
 		stats = [Tinge(stats[i],color=colors[i])[0] for i in range(len(stats))]
 
 		columnPrint(stats,3,w=colWidth,outfile=outfile)
-
-		if self.carrying is not None:
-			Print(f"Carrying {self.carrying}", outfile=outfile)
-		if self.riding is not None:
-			Print(f"Riding {self.riding}", outfile=outfile)
-		if len(self.status) != 0 and showStatus:
-			Print(outfile=outfile)
-			self.printStatus(outfile=outfile)
 
 
 	def openDisplay(self,*args):
@@ -5010,10 +5041,27 @@ class Player(Creature):
 		if self.hasStatus("asleep"):
 			return self.Print("...",color="k",outfile=sidepanel)
 		self.printStats(outfile=sidepanel)
-		self.printGear(outfile=sidepanel)
-		self.Print(outfile=sidepanel)
-		self.printTraits(outfile=sidepanel)
 		Print(outfile=sidepanel)
+
+		self.printTraits(outfile=sidepanel)
+		self.printGear(outfile=sidepanel)
+
+		if len(self.status) > 0:
+			self.Print(outfile=sidepanel)
+			self.printStatus(outfile=sidepanel)
+
+		tethersDisplay  = ""
+		if self.platform is not None and self.platform != self.parent.floor:
+			occuprep = getattr(self.platform,"occupyprep","on")
+			tethersDisplay += f"\n{occuprep.capitalize()} {self.platform}"
+		if self.carrying is not None:
+			tethersDisplay += f"\nCarrying {self.carrying}"
+		if self.riding is not None:
+			tethersDisplay += f"\nRiding {self.riding}"
+		if tethersDisplay:
+			self.Print(tethersDisplay, outfile=sidepanel)
+
+		self.Print(outfile=sidepanel)
 		self.printInv(outfile=sidepanel)
 
 
@@ -5038,8 +5086,7 @@ class Humanoid(Creature):
 	def act(self):
 		if not self.isAlive():
 			return
-		if not game.silent:
-			Print(f"\n{self.name}'s turn!")
+		self.Print(f"\n{self.name}'s turn!")
 		if self.canMove():
 			self.attack()
 
@@ -5126,7 +5173,7 @@ class Humanoid(Creature):
 
 	def describe(self):
 		Print(f"It's {~self}.")
-		Print(f"{self.desc}.")
+		Print(f"{self.desc}")
 		gearitems = [item for item in self.gear.values() if item is not EmptyGear()]
 		if len(gearitems) != 0:
 			Print(listObjects("It has ", gearitems,"."))
@@ -5217,9 +5264,7 @@ class Speaker(Creature):
 
 class Person(Speaker,Humanoid):
 	def __init__(self,name,descname,weight,traits,hp,pronoun,spells=None,desc=None,isChild=False,**kwargs):
-		Speaker.__init__(self,name,"",weight,traits,hp,**kwargs)
-		self.descname = descname
-		self.pronoun = pronoun
+		Speaker.__init__(self,name,"",weight,traits,hp,descname=descname,pronoun=pronoun,**kwargs)
 		self.spells = spells if spells else []
 		if desc:
 			self.desc = desc
@@ -5256,8 +5301,8 @@ class Person(Speaker,Humanoid):
 	def nounPhrase(self,det="",n=-1,plural=False,cap=0):
 		if self.riding and det != "the":
 			suffix = f" riding {self.riding.nounPhrase()}"
-		elif isinstance(self.carrier,Item) and det != "the":
-			suffix = f" {self.posture()} on {self.carrier.nounPhrase()}"
+		elif self.anchor() not in (None,self.parent.floor) and det != "the":
+			suffix = f" {self.posture()} on {self.anchor().nounPhrase()}"
 		else:
 			suffix = ""
 
@@ -5539,7 +5584,7 @@ class Portal(Item):
 
 
 	# method for creatures travelling through the portal
-	def Traverse(self,traverser,dir=None):
+	def Traverse(self,traverser,dir=None,verb=None):
 		if dir in Data.directions: dir = Data.directions[dir]
 		if self in traverser.objTree():
 			if traverser is player:
@@ -5672,9 +5717,9 @@ class Fixture(Item):
 		self.parent = None
 
 
-	def destroy(self):
-		Print(f"{+self} cannot be destroyed.")
-		return False
+	# def destroy(self):
+	# 	Print(f"{+self} cannot be destroyed.")
+	# 	return False
 
 
 	def Break(self):

@@ -43,18 +43,18 @@ class Bed(Core.Item):
 
 
 class Bottle(Core.Item):
-	# breaks the bottle, removes it from player inventory, and generates some shards
 	def Break(self):
+		parent = self.parent
 		if not super().Break():
 			return False
 		if self.weight > 2 and self.composition == "glass":
-			Core.Print("Shards of glass scatter everywhere.",color="o")
+			self.Print("Shards of glass scatter everywhere.",color="o")
 		while self.weight > 1 and self.composition == "glass":
 			shardWeight = randint(1,max(self.weight,4))
 			self.weight -= shardWeight
 			shard = Shard("glass shard","a sharp shard of glass",shardWeight,-1,"glass",{"shard"})
-			Core.game.currentroom.add(shard)
-		return True 
+			parent.add(shard)
+		return True
 
 
 class Box(Core.Portal):
@@ -78,12 +78,13 @@ class Box(Core.Portal):
 	### File I/O ###
 
 	def convertToJSON(self):
-		jsonDict = Core.Item.convertToJSON(self)
+		jsonDict = super().convertToJSON()
 		del jsonDict["ceiling"]
 		del jsonDict["walls"]
 		del jsonDict["floor"]
 		del jsonDict["links"]
 		del jsonDict["descname"]
+		del jsonDict["surfaces"]
 		return jsonDict
 
 
@@ -149,8 +150,8 @@ class Box(Core.Portal):
 		for item in self.items.copy():
 			if item is Core.player:
 				Core.waitInput(f"You are no longer in {-self}.")
-			print(f"{+item} comes out of {-self}.")
 			item.changeLocation(self.parent)
+			item.Print(f"{+item} comes out of {-self}.")
 		return True
 
 
@@ -198,26 +199,26 @@ class Box(Core.Portal):
 				Core.Print(f"{+traverser} can't enter {-self}. It's within {-traverser}'s Inventory.")
 			return False
 		if traverser in self.occupants:
-			Core.Print(f"You can't, you are {traverser.position()}.")
+			traverser.Print(f"You can't, you are {traverser.position()}.")
 			return False
 
 		if dir in ("out","outside","out of"):
 			if self is traverser.parent:
 				if not self.open:
 					self.Open(traverser)
-				Core.Print(f"You get out of {-self}.")
+				traverser.Print(f"You get out of {-self}.")
 				if self.parent is not Core.game.currentroom:
-					Core.waitInput()
+					traverser.waitInput()
 				traverser.changeLocation(self.parent)
 				return True
 			else:
-				Core.Print(f"You're not in {-self}.",color="k")
+				traverser.Print(f"You're not in {-self}.",color="k")
 				return False
 		if traverser.parent is self:
-			Core.Print(f"You're already in {-self}.")
+			traverser.Print(f"You're already in {-self}.")
 			return False
 		if dir not in ("in","into","inside",None):
-			Core.Print(f"{+self} does not go {dir}.",color="k")
+			traverser.Print(f"{+self} does not go {dir}.",color="k")
 			return False
 
 		if dir is None:
@@ -226,8 +227,7 @@ class Box(Core.Portal):
 			verb = "get"
 		self.open = True
 		if not self.canAdd(traverser):
-			if traverser is Core.player:
-				Core.Print(f"You can't enter {-self}. There's not enough room.")
+			traverser.Print(f"You can't enter {-self}. There's not enough room.")
 			return False
 
 		if not self.open:
@@ -384,7 +384,7 @@ class Generator(Controller):
 			self.charge -= self.cost
 			eval(self.effect)
 		else:
-			Core.Print("Nothing happened...")
+			self.Print("Nothing happened...")
 
 
 	def passTime(self,t):
@@ -418,14 +418,14 @@ class Timer(Controller):
 			self.repeats = 0
 			self.fuse = self.delay
 		if self.toggle and self.on:
-			Core.Print(f"{+self} turns off.")
+			self.Print(f"{+self} turns off.")
 			self.on = False
 			return True
 		if self.maxRepeats is not None and self.repeats > self.maxRepeats:
 			return False
 
 		self.on = True
-		Core.Print(f"{+self} turns on.")
+		self.Print(f"{+self} turns on.")
 
 
 	def passTime(self,t):
@@ -474,7 +474,7 @@ class Lockbox(Box):
 	# sets open bool to true, prints its items
 	def Open(self,opener):
 		if self.locked:
-			Core.Print(f"{+self} is locked.")
+			opener.Print(f"{+self} is locked.")
 			return False
 		return Box.Open(self,opener)
 
@@ -486,41 +486,40 @@ class Lockbox(Box):
 		return Box.Look(self,looker)
 
 
-	def Lock(self,key):
+	def Lock(self,locker,key):
 		if self.locked:
-			Core.Print(f"{+self} is already locked.")
+			locker.Print(f"{+self} is already locked.")
 			return False
 		if key.id in self.keyids:
 			self.locked = True
-			Core.Print(f"You lock {-self}.")
+			locker.Print(f"You lock {-self}.")
 			if Core.hasMethod(key,"UnlockWith"):
 				key.UnlockWith(self)
 			return True
-		Core.Print(f"You can't lock {-self} with {-key}.")
+		locker.Print(f"You can't lock {-self} with {-key}.")
 		return True
 
 
-	def Unlock(self,key):
+	def Unlock(self,unlocker,key):
 		if not self.locked:
-			Core.Print(f"{+self} is not locked.")
+			unlocker.Print(f"{+self} is not locked.")
 			return False
 		if key.id in self.keyids:
 			self.locked = False
-			Core.Print(f"You unlock {-self}.")
+			unlocker.Print(f"You unlock {-self}.")
 			if Core.hasMethod(key,"LockWith"):
 				key.LockWith(self)
 			return True
-		Core.Print(f"{+key} won't work!")
+		unlocker.Print(f"{+key} won't work!")
 		return True
 
 
 	def Traverse(self,traverser,dir=None,verb=None):
 		if self.locked:
-			if traverser is Core.player:
-				if self is traverser.parent:
-					Core.Print(f"You can't get out of {-self}. It's locked!")
-				else:
-					Core.Print(f"You can't get in {-self}. It is locked.")					
+			if self is traverser.parent:
+				traverser.Print(f"You can't get out of {-self}. It's locked!")
+			else:
+				traverser.Print(f"You can't get in {-self}. It is locked.")
 			return True
 		else:
 			return Box.Traverse(self,traverser,dir=dir,verb=verb)
@@ -533,16 +532,99 @@ class Mouth(Core.Item):
 
 
 
+class Pool(Core.Fixture):
+	def __init__(self,name,desc,weight,composition,finite=False,**kwargs):
+		assert composition in Data.liquids
+		super().__init__(name,desc,weight,composition,**kwargs)
+		self.occupyprep = "in"
+		self.finite = finite
+
+
+	def canAdd(self,I):
+		if self.occupantsSize() + I.Size() > self.weight:
+			return False
+		return True
+
+	def removeOccupant(self,occupant):
+		if occupant not in self.occupants:
+			return False
+		super().removeOccupant(occupant)
+		occupant.addStatus("wet",21)
+		occupant.removeStatus("wet",-3)
+
+	def Traverse(self,traverser,dir=None,verb=None):
+
+		# if self in traverser.objTree():
+		# 	if traverser is Core.player:
+		# 		Core.Print(f"You can't enter {-self}. It's within your Inventory.")
+		# 	else:
+		# 		Core.Print(f"{+traverser} can't enter {-self}. It's within {-traverser}'s Inventory.")
+		# 	return False
+		if traverser in self.occupants:
+			Core.Print(f"You can't, you are {traverser.position()}.")
+			return False
+
+		if dir in ("out","outside","out of"):
+			if self is traverser.parent:
+				if not self.open:
+					self.Open(traverser)
+				Core.Print(f"You get out of {-self}.")
+				if self.parent is not Core.game.currentroom:
+					Core.waitInput()
+				self.removeOccupant(traverser)
+				return True
+			else:
+				Core.Print(f"You're not in {-self}.",color="k")
+				return False
+		# if traverser.parent is self:
+		# 	Core.Print(f"You're already in {-self}.")
+		# 	return False
+		if dir not in ("in","into","inside",None):
+			Core.Print(f"{+self} does not go {dir}.",color="k")
+			return False
+
+		if dir is None:
+			dir = "into"
+		if verb is None:
+			verb = "get"
+		self.open = True
+		if not self.canAdd(traverser):
+			if traverser is Core.player:
+				Core.Print(f"You can't enter {-self}. There's not enough room.")
+			return False
+
+		traverser.Print(f"You {verb} {dir} {-self}.")
+		self.addOccupant(traverser)
+		traverser.addStatus("wet",-3)
+		return True
+
+
+	def Eat(self,eater):
+		return self.Drink(eater)
+
+	def Drink(self,drinker):
+		Core.Print(f"You drink from {-self}.")
+		self.Taste(drinker)
+
+		if self.finite:
+			self.weight -= 3	
+		if self.weight <= 0:
+			self.Print(f"{+self} becomes empty.")
+			return self.destroy()
+
+
+
+
 class Potion(Bottle):
 	# heals the player hp 1000, replaces potion with an empty bottle
-	def Drink(self):
-		Core.Print(f"You drink {-self}.")
-		Core.player.heal(1000)
+	def Drink(self,drinker):
+		drinker.Print(f"You drink {-self}.")
+		drinker.heal(1000)
 		self.replace("bottle")
 
 	# TODO: when breaking, spill potion out and then call bottle.Break
 
-	def Pour(self,obj=None):
+	def Pour(self,pourer,obj=None):
 		if obj != None:
 			if Core.hasMethod(obj,"Drench"):
 				obj.Drench(self)
@@ -559,14 +641,14 @@ class Shard(Core.Item):
 
 	def Lick(self,licker):
 		if self.composition in ("glass","bronze","iron","steel"):
-			Core.Print("It tastes like... blood.")
+			licker.Print("It tastes like... blood.")
 			licker.takeDamage(3,"s")
 			return True
 
 		if self.composition in Data.tastes:
-			Core.Print(Data.tastes[self.composition])
+			licker.Print(Data.tastes[self.composition])
 		if self.composition in Data.scents:
-			Core.Print(Data.scents[self.composition].replace("scent","taste"))
+			licker.Print(Data.scents[self.composition].replace("scent","taste"))
 
 
 
@@ -578,7 +660,7 @@ class Sign(Core.Item):
 
 	# prints the text on the sign in quotes
 	def Look(self,looker):
-		Core.Print(f'\n"{self.text}"',color='y')
+		looker.Print(f'\n"{self.text}"',color='y')
 
 
 
@@ -600,9 +682,9 @@ class Switch(Core.Fixture):
 
 
 class Sword(Core.Weapon):
-	def Cut(self):
+	def Cut(self,cutter):
 		# TODO: once again, do something with this?
-		Core.Print("[you cut something?]")
+		cutter.Print("[you cut something?]")
 
 
 
@@ -617,6 +699,13 @@ class Table(Core.Item):
 		self.surfaces = (self.ceiling,self.walls,self.floor)
 
 
+	### File I/O ###
+	def convertToJSON(self):
+		jsonDict = super().convertToJSON()
+		del jsonDict["surfaces"]
+		return jsonDict
+
+
 	### Operation ###
 
 	def Break(self):
@@ -624,7 +713,7 @@ class Table(Core.Item):
 			return False
 		# drop things it contains into parent
 		if self.items:
-			Core.Print(f"It's contents fall onto the ground.")
+			self.Print(f"It's contents fall onto the ground.")
 		for item in self.items:
 			self.parent.add(item)
 		return True
@@ -648,10 +737,10 @@ class Table(Core.Item):
 			self.descname = f"{self.name} with things on it"
 
 		if self.itemsWeight() > self.durability*2:
-			print(f"{+self} collapses under the weight.")
+			self.Print(f"{+self} collapses under the weight.")
 			self.Break()
 		elif self.itemsWeight() > self.durability:
-			Core.Print(f"{+self} creaks under the weight.")
+			self.Print(f"{+self} creaks under the weight.")
 
 
 	def remove(self,I):
@@ -730,7 +819,7 @@ class Wall(Core.Passage):
 		if dir == "over": dir = "across"
 		if dir in Data.directions: dir = Data.directions[dir]
 		if dir not in self.links:
-			Core.Print(f"{+self} does not go '{dir}'.")
+			traverser.Print(f"{+self} does not go '{dir}'.")
 			return False
 
 		if traverser.hasStatus("flying") and verb is None: verb = "fly"
@@ -742,7 +831,7 @@ class Wall(Core.Passage):
 		if traverser.riding:
 			return self.Traverse(traverser.riding,dir=dir)
 		if traverser.carrying and verb in ("climb","crawl"):
-			Core.Print(f"You can't climb, you are carrying {~traverser.carrying}.")
+			traverser.Print(f"You can't climb, you are carrying {~traverser.carrying}.")
 			return False
 
 		traverser.waitInput(f"You {verb} {dir} {-self}.")
@@ -797,7 +886,7 @@ class Window(Core.Passage):
 		self.durability = -1
 		self.passprep = "through"
 		if self.weight > 2 and self.composition == "glass":
-			Core.Print("Shards of glass scatter everywhere.",color="o")
+			self.Print("Shards of glass scatter everywhere.",color="o")
 		while self.weight > 2 and self.composition == "glass":
 			shardWeight = randint(1,3)
 			self.weight -= shardWeight
@@ -814,7 +903,7 @@ class Window(Core.Passage):
 	def Traverse(self,traverser,dir=None,verb="go"):
 		if dir in Data.directions: dir = Data.directions[dir]
 		if not (self.broken or self.open):
-			Core.Print(f"{+self} is closed.")
+			traverser.Print(f"{+self} is closed.")
 			return False
 
 		if dir == None:
@@ -826,7 +915,7 @@ class Window(Core.Passage):
 		if dir in Data.cancels:
 			return False
 		if dir not in self.links:
-			Core.Print(f"{+self} does not go '{dir}'.")
+			traverser.Print(f"{+self} does not go '{dir}'.")
 			return False
 
 		if traverser.riding:
@@ -834,12 +923,11 @@ class Window(Core.Passage):
 
 		newloc = self.getNewLocation(dir)
 		if not newloc.canAdd(traverser):
-			if traverser is Core.player:
-				Core.Print(f"You can't enter {-self}. There's not enough room.")
+			traverser.Print(f"You can't enter {-self}. There's not enough room.")
 			return False
 		if traverser.hasStatus("flying"): verb = "fly"
 		elif traverser is Core.player.riding: verb = "ride"
-		Core.Print(f"You {verb} {dir} {-self}.")
+		traverser.Print(f"You {verb} {dir} {-self}.")
 		traverser.changeLocation(newloc)
 		return True
 
@@ -882,10 +970,11 @@ class Door(Window):
 
 
 factory = {
-	"blue potion": lambda: Potion("blue potion", "A bubbling blue liquid in a glass bottle",6,3,"glass",["bottle","glass","potion"],2),
+	"blue potion": lambda: Potion("blue potion", "A bubbling blue liquid in a glass bottle",10,3,"glass",["bottle","glass","potion"],2),
 	"bottle": lambda: Bottle("bottle","an empty glass bottle",6,3,"glass",["glass","glass bottle"]),
-	"coffee": lambda: Potion("bottle of coffee","A bottle of frothy dark brown liquid",6,3,"glass",["coffee","espresso","bottle"],1),
-	"green potion": lambda: Potion("green potion", "A bubbling green liquid in a glass bottle",6,3,"glass",["bottle","glass","potion"],2),
-	"red potion": lambda: Potion("red potion", "A bubbling red liquid in a glass bottle",6,3,"glass",["bottle","glass","potion"],2),
-	"shard": lambda: Shard("glass shard","a black glass shard",2,1,"glass",["shard"])
+	"coffee": lambda: Potion("bottle of coffee","A bottle of frothy dark brown liquid",10,3,"glass",["coffee","espresso","bottle"],1),
+	"compass": lambda: Core.Compass("compass","a plain steel compass with a red arrow",2,10,"steel",rarity=2,plural="compasses"),
+	"green potion": lambda: Potion("green potion", "A bubbling green liquid in a glass bottle",10,3,"glass",["bottle","glass","potion"],2),
+	"red potion": lambda: Potion("red potion", "A bubbling red liquid in a glass bottle",10,3,"glass",["bottle","glass","potion"],2),
+	"shard": lambda: Shard("glass shard","a small glass shard",2,1,"glass",["shard"])
 }

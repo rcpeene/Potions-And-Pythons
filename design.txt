@@ -695,8 +695,8 @@ STATUS EFFECTS:
 status conditions exist in the creatures status list as list pairs
 of condition name and duration.
 negative durations have special meanings:
--1 means the condition is inflicted by being in the current room. It will end when the player leaves the room or when the room's condition's duration ends
--2 means the condition is permanent until it is removed by some general source
+-1 means the condition is permanent until it is removed by some general source
+-2 means the condition is inflicted by being in the current room. It will end when the player leaves the room or when the room's condition's duration ends
 -3 or lower means the condition is permanent until removed by a specific source
 
 rooms have status effects too. And rooms can harbor condition which afflict creatures in the room with other status conditions. When this happens, the room condition's name will contain the information about the condition to inflict upon the creatures. For instance, if a room is filled with poisonous gas for 30 time units and will poison all creatures that enter until they leave (or until the rooms condition wears off). the rooms condition pair would be of the form:
@@ -909,6 +909,7 @@ Tam-o-shanter
 Kirtle
 Liripipe
 Panoply (a full set of plate?)
+Arasaid (scottish dress)
 
 
 MAGIC ITEMS:
@@ -1253,6 +1254,8 @@ bagasse (cane pulp)
 cornstover (byproduct of corn)
 Monocaine - drug (potion) from exotic flower makes you invisible and also makes you aggressive/insane
 	"Even the moon is frightened of me! Frightened to death!"
+Magic Item that functions like a metal detector?
+	- detects metal in room or inside an object (or under the floor, must dig?)
 
 
 CRAFTING/RECIPE IDEAS:
@@ -1527,6 +1530,8 @@ ADDITIONAL PLACE IDEAS:
 - ashery
 - calefactory (in a monastery, has a 'cocklestove'?)
 - lion's head tavern - where you learn about monocaine
+- "___ grotto"
+- store called "goodly goods"
 
 INSTITUTIONS:
 - royal messengers (mages that maintain teleportation)
@@ -1550,6 +1555,7 @@ MISC WORLD IDEAS:
 - giant eternal clock
 - a story legend of a hero who masters magic in an underground empire, called "ZORK"
 - monolith/obelisk
+- cairn
 - stele
 - wicker man (burned as sacrifice)
 - magic nail (like golden railroad nail?)
@@ -1589,8 +1595,8 @@ MISC WORLD IDEAS:
 	giant library (Athenaeum), cathedral, tower of some kind, colosseum/arena, 
 	catacombs/necropolis, pavilion, stonehenge type (the __ stones)
 - obelisks at different leylines, maybe they're called leystones or monoliths
-
-
+- Jeremiad (book talking about the ancient cataclysm?)
+- hillforts
 
 
 QUEST IDEAS:
@@ -1603,11 +1609,11 @@ QUEST IDEAS:
 - bone faeries which will give you money for bones
 - fighting bones malone and the spooky boys
 - impersonating someone to gain entry to a place
-- "A christmas story" type plotline?
+- "A christmas carol" type plotline?
 - greatest knight in the world retiring to be a baker. Need to persuade him to return
 
 
-CHARACTER NAME IDEAS:
+CHARACTER NAMES IDEAS:
 	The zodiac signs
 	The Lady of the Lake
 	Enchantress of Number(Numeral)
@@ -1637,7 +1643,6 @@ CHARACTER NAME IDEAS:
 	The Green Goddess
 	Galigantus the giant
 	Grendel
-	Halfdan
 	Sylvain - hero
 	Pergynt - from myth, maybe an ex-hero guy
 	Archons (regional rulers? maybe names for the giants)
@@ -1664,18 +1669,20 @@ CHARACTER NAME IDEAS:
 	Thomas Swinsword (playwright)
 	River Jack
 	Grand Vizier
-	A Huckster
-	Rozbiz the Wizard
+	Talking raven that speaks in deep speech (scary looking text?)
 
 	Somnus, Orion, Pax, Tyro, Cogg, Garl, Ike, Uther, Kess, Roach, Mito, Lugh, Muriel
-	Eadmer, Godfrey, Einhard, Vixen, Aloy, Eilonwy, Beowin, Rook, Alahad, Galatea, Grin
+	Eadmer, Godfrey, Einhard, Vixen, Aloy, Eilonwy, Beowin, Alahad, Galatea, Grin
 	Spiridon, Khartoum, Heironymus, Gundahar, Wace, Leofwyn, Drythelm, Hengran, Hardeck
 	Harcourt, Aecury, Aelfwyne, Arwald, Merwin, Ichabod, Alcuin, Dwint, Egfrith, Gildaz,
-	Wulfstan, Salome, Ewart, Ephraim, Bragwen, Bran, Ulysses
+	Wulfstan, Salome, Ewart, Ephraim, Bragwen, Bran, Ulysses, Ambrose, Conomor, Hengist,
+	Cherdic, Osca, Chester, Ned, Rhiannon, Tethra, Lir, Donne, Phane, Blinda, Rozbeth,
+	Saladin, Flynwirt, Lalona, Wendell, Jane, Queldin, Pipin, Graley, Helen, Halfdan,
+	Clyde, Boffin, Wren, Eloise, Nora, Hawken
 
 
 	polemarch,commodore,margrave,
-	thane,earl,baron,duke,burgess,
+	thane,earl,baron,duke,count,burgess,
 	reeve,magistrate,warden,alderman,franklin,manciple,chamberlain,seneschal
 	dame,lady,"hostess",courtesan,
 	bailiff,steward,sheriff,guard,watchman,usher
@@ -1686,12 +1693,12 @@ CHARACTER NAME IDEAS:
 	librarian,scribe/scrivener,historian,clerk,cartographer,
 	playwright,painter,poet,sculptor
 	bard,trumpeteer,fiddler,flautist,lyrist,puppeteer,jester,dancer
-	wizards,witches,warlocks,druid,shaman
+	wizard,witch,warlock,druid,shaman
 	apothecary,alchemist,herbalist,dyer,potion seller
 	doctor,midwife,surgeon,barber
 	undertaker,groundskeeper
-	baker,butcher,miller,brewer,vintner,cheesemonger,spiceman,milkmaid
-	merchant,trader,peddler,salesmen,jeweler
+	baker,butcher,miller,brewer,vintner,cheesemonger,spiceman,milkmaid,chef
+	merchant,trader,peddler,huckster,salesmen,jeweler
 	blacksmith,brownsmith,whitesmith,goldsmith,silversmith,locksmith,gunsmith,puddler
 	carpenter,mason,glassmaker,wainwright,sawyer
 	cooper,potter,chandler,fletcher,bowyer,luthier
@@ -1701,7 +1708,7 @@ CHARACTER NAME IDEAS:
 	rancher,stablekeeper,cowboy,shepherd,ostler
 	farmer,gardener,sweeper,yeoman
 	innkeeper,tavernkeeper
-	traveler,pilgrim,
+	traveler,pilgrim,wanderer,nomad
 	ragpicker/junkman,confectioner,collier
 
 
@@ -1745,11 +1752,11 @@ The King of the Gods, gave writing to humans, appears as a bearded older man. Gi
 Brym - God of strength, storms, war, fighting, victory
 Fought and defeated Ixis the Dragoness, represented by lightning. Appears as a severe bald man in armor. Gives the blessing of brawniness.
 
-Istur - God of skill, rain, rivers, crafting, art, discipline
+Istur - God of skill, rain, rivers, crafting, art, discipline, memories
 Appears as a long-haired man in robes with tools or a brush. Gives the blessing of prowess.
 
-Saqul - God of luck, the sea, money, alcohol, humor
-Appears as a hairy man with a long beard. Gives the blessing of prosperity. Has a pet goose.
+Saqemir - God of luck, the sea, money, alcohol, humor
+Aphpears as a hairy man with a long beard. Gives the blessing of prosperity. Has a pet goose.
 
 Haeron - God of speed, the sky, wind, messages, flight, loyalty
 Is the loyal servant of Arunius. Appears as a man with wings or a cape and curly hair. Gives the blessing of swiftness.
@@ -1760,7 +1767,7 @@ The ruler of the underworld. Oftentimes appears as a man with no eyes and skelet
 Veia - Goddess of charisma, sun, love, magic, music
 The Queen of the Gods, gave music to humans. Appears as a golden older women with a bright crown. Gives the blessing of felicity.
 
-Caillef - Goddess of stamina, beasts, summer, freedom
+Cassifern - Goddess of stamina, beasts, summer, freedom
 A woman with antlers and a tail. She plays the flute. Sometimes appears as a huntress. Gives the blessing of liveliness. Symbolized by a squirrel.
 
 Astrathe - Goddess of wisdom, stars, prophecy, fate, time
@@ -1769,13 +1776,13 @@ An older woman in long starry robes and a tall hat and a third eye. Gives the bl
 Zet - Goddess of faith, harvest, peace, protection, fertility, earth
 Symbolized by a blue rose. Usually appears as a woman in a white robe with a blue halo. Sometimes shown pregnant or with babies. Gives the blessing of fidelity.
 
-Selanna - Goddess of constitution, plants, healing, patience, mercy
+Galeanna - Goddess of constitution, plants, healing, patience, mercy
 A woman with a flower garland and very long light hair. Sometimes shown covered in vines. Gives the blessing of toughness.
 
 Ixis - Goddess of fire, rebirth, dragons, chaos
 Rebelled and lost to Brym. Often appears as a large red Dragoness. Gives a random buff from {flying, fireproof, blazing, total heal}
 
-Uramut - Deity of the unknown, secrets, darkness
+Uramut - Deity of the unknown, secrets, darkness, sleep, dreams
 Symbolized by a yellow eye. Shown as a shadowy creature or a tentacle beast.
 
 https://www.ancient.eu/article/885/egyptian-gods---the-complete-list/

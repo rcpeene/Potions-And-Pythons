@@ -88,13 +88,60 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
+# test replace with cover
+
+# think about hiding, occupying pools. Items and Creatures.
+
+# for removing status conditions what about for curses/blessings?
+# we need a new conjugation operator?
+# ___ no longer has brawniness
+# perhaps use / and * now?
+# use some kind of formatitng marker?
+# "{creature} no longer /(has/) brawniness"?
+# you could probbly just modify copulate to find the first verb?
+
+
+# prevent standing on water, should be "in" water
 
 ################################################################################
 
 # BUG BACKLOG
 
-# displaying traits when have stupidity and a trait is up to 'some'
-# displaying taking money with stupidity 'you take the a small amount of gold'
+# What will you do?
+# > get in brook
+# You get into the brook.
+# You are wet.
+# What will you do?
+# > get out
+# You can't go anywhere, you are standing in the brook.
+
+# > go up
+# You fly up!
+# --> Cabin Basement
+# ???
+
+# go in pond ('when pond isn't an appropriate target') goes into cabin
+
+# > hide behind the dragon
+# You crouch behind the dragon.
+# What will you do?
+# > get up
+# You are no longer crouching.
+# You are hidden.
+
+# > take all
+# You take the fiery portal from the capsule.
+# You take the capsule.
+
+# The green potion breaks.
+# Shards of glass scatter everywhere.
+# The shelf creaks under the weight.
+# The shelf creaks under the weight.
+
+# saving then loading fails
+	# test saving and loading while in a box
+
+# "kick the stream" crashes
 
 # > attack table with sword
 # You attack the table with your broken sword.
@@ -104,17 +151,42 @@ if __name__ == "__main__":
 # You attack the table with your broken sword.
 # The table took 5 bludgeoning damage.
 
-# saving then loading fails
-
 ################################################################################
 
 # FUTURE IMPROVEMENTS
 
+# using operators might require a generic gameObject class
+	# refactor item and creature to be gameObject
+		# refactor mount to check for Creature type and never addOccupant?
+			# make addOccupant -> Ride?
+	# refactor Box to inherit from Container
+		# container should inherit from room
+		# containers should have their own creatures, items, fixtures
+		# should containers isolate you from parent area effects?
+		# make box be a container which can be opened and closed
+# add "in" operator to objects
+# think about adding other operators
+	# operators should probably only be used for read-only operations?
+	# | for status conditions or adding items?
+	# << and >> used for comparing size? < and > for weight?
+	# // and ** for further string functionality?
+	# modula for pluralization?
+	# maybe use one of these as alias for "canAdd"?
+	# bitwise | and & used for listObjects
+# account for density. Just give a few compositions 'density' coefficients to divide weight
+# reorganize methods, capital or lowercase them based on if creature is subject or object
+# consider using occupants to handle riders in Creature class
+	# occupants would need to be handled in Fall(), probably other methods too
+# consider using nullDespawn and timeDespawn for dead creatures and passTime
+
+
+# consider making Pool a container
+# handle "get in stream", "go in stream", "leave stream", "get out of stream"
 # test drinking an object when inv is full, see if bottle goes on ground
 # hide/get in a body of water?
 # try "jump in the pond"
 # add "swim"
-# handle bodies of water; what about fall dammage, being weighed down
+# handle bodies of water; what about fall damage, or being weighed down
 # add magic beans or food to pour stuff on
 # "drink from the pond"
 # think about a broken water container or leaking/draining
@@ -135,22 +207,12 @@ if __name__ == "__main__":
 # throw 'grappling hook' which creates a new passage?, throw up a cliff or across a gap
 # consider how attacking with foot, head, mouth, hand, tail works
 
-# add "in" operator to objects
-# think about adding other operators
-	# operators should probably only be used for read-only operations?
-	# | for status conditions or adding items?
-	# << and >> used for comparing size? < and > for weight?
-	# // and ** for further string functionality?
-	# modula for pluralization?
-	# maybe use one of these as alias for "canAdd"?
-	# bitwise | and & used for listObjects
-	# using operators might require a generic gameObject class
-# reorganize methods, capital or lowercase them based on if creature is subject or object
-
 # give passages a capacity limit, so a dragon can't fit through a doorway?
 # assert room contents types during instantiation
 # during instantiation assert items weight can fit in space or size of container
 
+# add damage type vulnerabilities and resistance, i.e. wood is weak to fire and slashing
+	# for items, vulnerability just temporarily mitgates durability penalty to damage?
 # add chopping tree
 # add a "tree" item? item which can be climbed but isn't a passage
 # add destroying objects with fire, burning creatures
@@ -167,6 +229,7 @@ if __name__ == "__main__":
 
 # add turn order, so you aren't the first to move when you enter a room, makes MVMT more useful
 	# allow moving multiple times if you have enough speed? (maybe max 5 for vs 1 for slowest creature)
+# refactor sleep into a player method. right now, 'mbu sleep' has strange behavior
 # add time to verbs?
 # add action queue to sort initiative among rooms
 # add in "knockback"?, if you get hit on top of the cliff, have a chance to fall off?
@@ -248,6 +311,7 @@ if __name__ == "__main__":
 # add a wait command (cant wait with enemies nearby, cuz they could just kill you)
 # more switches, levers, buttons
 # add douse function
+# allow stats display to scroll?
 
 # add output effects to blessings and curses?
 # slowness/swiftness already affects output speed
@@ -267,7 +331,6 @@ if __name__ == "__main__":
 	# maybe allow "feel something" and randomly select
 	# during Go, just choose a random direction
 # deaf -> bang doesn't affect you, and you can't talk to creatures
-
 
 # add spells
 # add some preliminary spells and add effects file
