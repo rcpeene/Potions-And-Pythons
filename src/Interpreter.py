@@ -96,7 +96,7 @@ def chooseObject(name,objects,verb=None):
 # queryPlayer and queryRoom indicate which places to look for matching objects
 # roomD and playerD are the 'degree' of the query.
 # Look at Core.py objQuery for details on query degree
-def findObject(term,verb=None,queryType="both",filter=None,roomD=0,playerD=2,reqParent=None,silent=False,allowRooms=False):
+def findObject(term,verb=None,queryType="both",filter=None,roomD=0,playerD=2,reqParent=None,silent=False):
 	if term is None and not silent and verb is not None:
 		term = getNoun(f"What will you {verb}?")
 	if term in Data.cancels or term is None or term == "nothing":
@@ -113,16 +113,15 @@ def findObject(term,verb=None,queryType="both",filter=None,roomD=0,playerD=2,req
 		matches |= Core.player.nameQuery(term,d=playerD)
 	if queryType == "room" or queryType == "both":
 		matches |= Core.player.surroundings().nameQuery(term,d=roomD)
-
 	if queryType == "player" and Core.nameMatch(term,Core.player.carrying):
 		matches.add(Core.player.carrying)
 	if term in ("me","myself","player","self"):
 		matches.add(Core.player)
-	if term in ("here","there"):
+	if term in ("here","room","place","surroundings"):
 		matches.add(Core.player.parent)
 
-	if not allowRooms:
-		matches = {match for match in matches if not isinstance(match,Core.Room)}
+	# if not allowRooms:
+	# 	matches = {match for match in matches if not isinstance(match,Core.Room)}
 	if filter:
 		matches = {match for match in matches if filter(match)}
 	if reqParent:
@@ -370,7 +369,8 @@ def interpret():
 		return True
 	if commandQueue:
 		queuedInput = commandQueue.pop(0)
-		Core.waitInput("\n& " + "".join(queuedInput))
+		Core.waitInput("\n& " + "".join(queuedInput),end="")
+		Core.Print()
 		command = tokenize(queuedInput)
 	else:
 		command = tokenize(read("\n\nWhat will you do?",storeRawCmd=True))
@@ -552,7 +552,7 @@ def Honor(command):
 
 def Imbue(command):
 	objname = "self"
-	duration = -2
+	duration = -1
 	if len(command) < 2:
 		Core.Print("Error: No status condition given",color="k")
 		return
@@ -726,7 +726,7 @@ def Spawn(command):
 	else:
 		try:
 			obj = eval(objname)
-			if not (isinstance(obj,Core.Creature) or isinstance(obj,Core.Item)):
+			if not isinstance(obj,Core.Item):
 				raise TypeError
 		except Exception as e:
 			Core.Print("Error: Object could not be instantiated:",color="k")
@@ -781,10 +781,10 @@ def Zap(command):
 		matches = Core.game.queryRooms(key=key)
 	# Core.Print(f"Zapped objects: {len(matches)}",color="k")
 	for obj in matches:
-		if isinstance(obj,Core.Item):
-			obj.Break()
-		elif isinstance(obj,Core.Creature):
+		if isinstance(obj,Core.Creature):
 			obj.death()
+		elif isinstance(obj,Core.Item):
+			obj.Break()
 
 
 
@@ -804,7 +804,7 @@ def Dance(*args):
 
 def Examples(*args):
 	Core.clearScreen()
-	Core.Print(Data.examples,color="k",delay=0.0001)
+	Core.Print(Data.examples,color="k",delay=0)
 	Core.waitInput()
 	Core.clearScreen()
 
@@ -869,7 +869,9 @@ def Time(*args):
 
 def Where(*args):
 	if not Core.player.canNavigate():
-		Core.Print("You're not sure which way is which... Try a cardinal direction or a nearby landmark.",color="k")
+		# TODO: just remove cardinal directions and keep others?
+		# replace with question marks
+		Core.Print("You're not sure which way is which...\nTry a cardinal direction or a nearby landmark.",color="k")
 	else:
 		for dir in list(set(Core.player.parent.allDirs())):
 			Core.Print(dir,color="k")
@@ -962,7 +964,7 @@ def Bite(dobj,iobj,prep):
 	if enforceVerbScope("bite",I): return False
 	Core.game.setPronouns(I)
 	if Core.hasMethod(I,"Eat"):
-		I.Eat()
+		I.Eat(Core.player)
 		return True
 	else:
 		return Attack(dobj,"mouth",prep,target=I)
@@ -1000,7 +1002,7 @@ def Caress(dobj,iobj,prep):
 	I = findObject(dobj,"caress")
 	if I is None: return False
 	Core.game.setPronouns(I)
-	if enforceVerbScope("caress",I,allowSelf=True,allowParent=True): return False
+	if enforceVerbScope("caress",I,permitSelf=True,permitParent=True): return False
 
 	if Core.hasMethod(I,"Caress"):
 		return I.Caress(Core.player)
@@ -1166,7 +1168,7 @@ def Define(dobj,iobj,prep):
 		if dobj in Data.cancels: return False
 
 	if Core.player.hasStatus("stupidity"):
-		Core.Print("You have the curse of stupidity, you don't know anything!",color="k")
+		Core.Print("You have the curse of stupidity; you don't know anything!",color="k")
 		return False
 	if dobj in Data.glossary:
 		Core.Print("\n"+Data.glossary[dobj])
@@ -1272,8 +1274,9 @@ def Don(dobj,iobj,prep):
 
 
 def Drink(dobj,iobj,prep):
-	if prep not in ("using","with",None):
+	if prep not in ("from","using","with",None):
 		return promptHelp("Command not understood.")
+	if prep == "from": dobj = iobj
 
 	I = findObject(dobj,"drink")
 	if I is None: return False
@@ -1283,7 +1286,7 @@ def Drink(dobj,iobj,prep):
 	if not Core.hasMethod(I,"Drink"):
 		Core.Print(f"You can't drink {-I}.")
 		return False
-	I.Drink()
+	I.Drink(Core.player)
 	return True
 
 
@@ -1407,12 +1410,17 @@ def Escape(dobj,iobj,prep):
 
 
 def Exit(dobj,iobj,prep):
-	if isinstance(Core.player.carrier, Items.Bed):
-		if Core.nameMatch(dobj, Core.player.carrier):
+	if isinstance(Core.player.anchor(), (Items.Bed,Items.Pool)):
+		if Core.nameMatch(dobj, Core.player.anchor()):
 			return Dismount(dobj,iobj,prep)
 	if dobj is None and "out" in Core.player.parent.allDirs():
 		return Go("out",iobj,prep)
-	return Go(None,iobj,"out")
+	if Core.player.anchor() not in (None,Core.player.parent.floor):
+		return Go(dobj,iobj,"out")
+	if len(Core.player.parent.allLinks()) == 0:
+		dir,portal = Core.player.parent.allLinks().keys()[0]
+		return Go(dir,getattr(portal,"name",None),None)
+	return Go(None,None,None)
 
 
 def Feed(dobj,iobj,prep):
@@ -1657,6 +1665,7 @@ def Go(dobj,iobj,prep):
 		return GoVertical(dir,passage,dobj)
 	# if just passage is given
 	if passage is not None:
+		Core.game.setPronouns(passage)
 		if not Core.hasMethod(passage,"Traverse"):
 			Core.Print(f"{+passage} cannot be traversed.")
 			return False
@@ -1748,10 +1757,12 @@ def Jump(dobj,iobj,prep):
 	jumpTo = None
 	jumpFrom = Core.player.anchor()
 	suffix = ""
+	# swap dobj and iobj if using 'from' prep
 	if prep == "from":
-		# swap dobj and iobj if using 'from' prep
 		return JumpFrom(iobj,dobj,prep)
 	if dobj is None: dobj = iobj
+
+	# determine what to jump to, if anything, based on prep and dobj
 	if prep in ("d","down","off"):
 		if Core.player.anchor() not in (None,Core.player.parent.floor):
 			if dobj is not None and not Core.nameMatch(dobj,Core.player.anchor()):
@@ -1775,6 +1786,7 @@ def Jump(dobj,iobj,prep):
 			return False
 		suffix = f" {prep} {-jumpTo}"
 
+	# traverse jump target if possible/commanded
 	if prep in ("d","down","off") and jumpTo is Core.player.parent.floor:
 		return Dismount(dobj,iobj,prep)
 	if prep in ("across","d","down","off","over","through"):
@@ -1787,6 +1799,7 @@ def Jump(dobj,iobj,prep):
 		if Core.hasMethod(jumpTo,"Traverse") and getattr(jumpTo,"open",True):
 			return jumpTo.Traverse(Core.player,dir=prep,verb="jump")
 
+	# actually try the jump, with an ATHL contest to determine success
 	jumpFromSize = jumpFrom.Size() if jumpFrom else 1
 	jumpToSize = jumpTo.Size() if jumpTo else 1
 	difficulty = Core.min1(20 - (jumpFromSize // 10) - (jumpToSize // 5))
@@ -1796,6 +1809,7 @@ def Jump(dobj,iobj,prep):
 	if contest <= 0:
 		return Core.player.Fall(max(3,abs(contest)//5))
 
+	# do extra position changing
 	if prep in ("behind","below","beneath","under"):
 		return Hide(dobj,iobj,prep,I=jumpTo,posture="crouch")
 	if prep in ("in","inside","into","on","onto","to","upon"):
@@ -1868,14 +1882,8 @@ def Lick(dobj,iobj,prep):
 	if Core.hasMethod(I,"Lick"):
 		return I.Lick(Core.player)
 
-	if Core.player.hasStatus("apathy"):
-		Core.Print("You have the curse of apathy. It tastes bland...")
-		return False
-	if I.composition in Data.tastes:
-		Core.Print(Data.tastes[I.composition])
-	if I.composition in Data.scents:
-		Core.Print(Data.scents[I.composition].replace("scent","taste").replace("smelling","tasting"))
-	return True
+	return I.Taste(Core.player)
+	
 
 
 def Light(dobj,iobj,prep):
@@ -1923,10 +1931,10 @@ def Look(dobj,iobj,prep):
 		return True
 	if dobj in ("sky","sun","moon","stars","aurora","auroras","meteor shower","eclipse","solar eclipse") or prep == "up":
 		return Core.game.LookUp(dobj)
-	elif prep == "around":
+	elif prep == "around" or dobj in ("around","room","here"):
 		L = Core.player.parent
 	else:
-		L = findObject(dobj,"look at",allowRooms=True)
+		L = findObject(dobj,"look at")
 		if L is None: return False
 
 	Core.game.setPronouns(L)
@@ -2264,7 +2272,10 @@ def Smell(dobj,iobj,prep):
 		return promptHelp("Command not understood.")
 
 	# TODO: if blinded, randomly smell something in the room?
-	I = findObject(dobj,"smell",allowRooms=True)
+	if dobj in ("here","room"):
+		I = Core.player.parent.floor
+	else:
+		I = findObject(dobj,"smell")
 	if I is None: return False
 	Core.game.setPronouns(I)
 	if enforceVerbScope("smell",I,permitSelf=True,permitParent=True): return False
@@ -2272,20 +2283,10 @@ def Smell(dobj,iobj,prep):
 	if Core.hasMethod(I,"Smell"):
 		return I.Smell(Core.player)
 
-	if isinstance(I,Core.Room):
-		I = I.floor
 	if I is None:
 		Core.Print("You smell nothing.")
 		return True
-
-	if Core.player.hasStatus("apathy"):
-		Core.Print("You have the curse of apathy. It smells like nothing...")
-		return False
-	if I.composition in Data.scents:
-		Core.Print(Data.scents[I.composition])
-	if I.composition in Data.tastes:
-		Core.Print(Data.tastes[I.composition].replace("taste","smell").replace("tasting","smelling"))
-	return True
+	return I.Smell(Core.player)
 
 
 def Spur(dobj,iobj,prep):
@@ -2613,7 +2614,8 @@ def Use(dobj,iobj,prep):
 
 
 def Wait(dobj,iobj,prep):
-	Core.Print("You wait...")
+	Core.waitInput("You wait...")
+	Core.Print()
 	return True
 
 
@@ -2656,7 +2658,7 @@ cheatcodes = {
 	"\x12":lambda x: None,  # Ctrl-R ↕ (reserved for future use)
 	"\x13":Quicksave,  # Ctrl-S ‼
 	"\x14": lambda x: None,  # Ctrl-T ¶ (reserved for future use) 
-	"\x15":lambda x: Pypot(["",10000]),  # Ctrl-U §
+	"\x15":lambda x: Pypot(["",1000]),  # Ctrl-U §
 	"\x17":lambda x: Imbue(["","flying"]), # Ctrl-W ↨
 	"\x18":Grow, # Ctrl-X ↑
 	"\x19":Shrink, # Ctrl-Y ↓

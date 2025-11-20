@@ -138,7 +138,13 @@ dayhours = hours[:9]
 nighthours = hours[9:]
 
 
-scents = {}
+liquids = {"water","freshwater","saltwater","mudwater","lava","oil","slime","acid"}
+
+# tastes dict is used if key isn't present in scents
+# this should be used only when it has no taste or its scent is distinct from taste
+scents = {
+	"flesh": "It smells a little like body odor."
+}
 
 
 tastes = {
@@ -153,11 +159,15 @@ tastes = {
 	"iron": "It tastes like iron.",
 	"rust": "It tastes like dirty iron.",
 	"steel": "It has a sharp metallic taste.",
-	"bread": "It tastes like dreams and joy"
+	"bread": "It tastes like fluffy dreams and joy.",
+	"freshwater": "It tastes crisp and pure.",
+	"saltwater": "It tastes salty and foamy.",
+	"mudwater": "It tastes dank and dirty."
 }
 
 
 textures = {
+	"flesh": "It feels soft and fleshy.",
 	"earth": "It feels dry and crumbly.",
 	"soil": "It feels loamy and moist.",
 	"mud": "It feels wet and sticky.",
@@ -170,7 +180,11 @@ textures = {
 	"rust": "It feels rough.",
 	"steel": "It feels smooth and sturdy.",
 	"bread": "It is soft and fluffy.",
-	"python": "It feels smooth and scaly. Ew."
+	"python": "It feels smooth and scaly. Ew.",
+	"water": "It feels wet.",
+	"freshwater": "It feels cold and wet.",
+	"saltwater": "It feels wet and foamy.",
+	"mudwater": "It feels wet and slightly slimy."
 }
 
 

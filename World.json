@@ -49,7 +49,7 @@
 		"links": {
 			"north": "treeline",
 			"east": "boulder",
-			"south": "brook",
+			"south": "babbling brook",
 			"west": "mound"
 		},
 		"fixtures": [
@@ -83,9 +83,9 @@
 		"status": [],
 		"floor": "soil"
 	},
-	"brook": {
+	"babbling brook": {
 		"__class__": "Room",
-		"name": "Brook",
+		"name": "Babbling Brook",
 		"domain": "Woodlands",
 		"desc": "A softly babbling brook flows here. Only a few feet wide, it rolls past moist rocks and a muddy bank. In the north there is a large tree. The brook flows to the east. To the south is a clearing with a grassy hill. To the west, a man-made structure can be seen through the trees.",
 		"links": {
@@ -94,7 +94,16 @@
 			"south": "glen",
 			"west": "cliffside"
 		},
-		"fixtures": [],
+		"fixtures": [
+			{
+				"__class__": "Pool",
+				"name": "brook",
+				"desc": "A gently flowing brook. The water is cool and clear. It carves a muddy bank as it pushes eastward.",
+				"weight": 100,
+				"composition": "freshwater",
+				"aliases": ["stream","creek"]
+			}
+		],
 		"items": [],
 		"creatures": [],
 		"status": [],
@@ -326,7 +335,21 @@
 			"out": "cabin hallway",
 			"doorway": "cabin hallway"
 		},
-		"fixtures": [],
+		"fixtures": [
+			{
+				"__class__": "Box",
+				"name": "bathtub",
+				"desc": "A fine stone bathtub with a drain in the bottom.",
+				"aliases": ["tub","bath"],
+				"weight": 100,
+				"durability": 100,
+				"composition": "stone",
+				"open": true,
+				"capacity": 100,
+				"status": [["AREA wet -2",-2]],
+				"items": []
+			}
+		],
 		"items": [
 			{
 				"__class__": "Lockbox",
@@ -449,14 +472,8 @@
 		"fixtures": [],
 		"items": [
 			{
-				"__class__": "Compass",
-				"name": "compass",
-				"desc": "a plain steel compass with a red arrow",
-				"weight": 2,
-				"durability": 30,
-				"rarity": 2,
-				"composition": "steel",
-				"plural": "compasses"
+				"__class__": "factoryItem",
+				"name": "compass"
 			}
 		],
 		"creatures": [
@@ -476,7 +493,7 @@
 		"desc": "A small log cabin resides here. Moss and vines cover what may have once been a reddish colored home. Rays of light peak through the canopy, landing on the dusty roof. There is also a wooden shed no taller than a person. In the north and south, there are more woods. A stream flows eastward. The west side of this cabin is guarded by a tall pale cliff.",
 		"links": {
 			"north": "mound",
-			"east": "brook",
+			"east": "babbling brook",
 			"south": "big stump",
 			"in": "cabin hallway",
 			"cabin": "cabin hallway",
@@ -496,7 +513,16 @@
 					"up": "port:white cliff"
 				},
 				"descname": "pale cliff"
+			},
+			{
+				"__class__": "Pool",
+				"name": "stream",
+				"desc": "A small stream flowing out from a crack at the base of the cliff. The water seems to coax you eastward.",
+				"weight": 100,
+				"composition": "freshwater",
+				"aliases": ["brook","creek"]
 			}
+
 		],
 		"items": [],
 		"creatures": [],
@@ -619,9 +645,9 @@
 		"__class__": "Room",
 		"name": "Glen",
 		"domain": "Woodlands",
-		"desc": "A small grassy glen, surrounded on most sides by a dense forest. To the north, you see no end to the trees. To the east there is a rocky ridge. The grassy hill on the south shows a gaping cave entrance. To the west, a small stream flows.",
+		"desc": "A small grassy glen, surrounded on most sides by a dense forest. To the north, you see no end to the trees. To the east there is a rocky ridge. The grassy hill on the south shows a gaping cave entrance. To the west, the clearing continues.",
 		"links": {
-			"north": "brook",
+			"north": "babbling brook",
 			"east": "large pit",
 			"rocky ridge": "large pit",
 			"ridge": "large pit",
@@ -667,7 +693,7 @@
 		"fixtures": [],
 		"items": [],
 		"creatures": [],
-		"status": [["AREA burning -1",10]],
+		"status": [["AREA burning -2",10]],
 		"ceiling": "smoke",
 		"floor": "sand"
 	},
@@ -736,15 +762,16 @@
 		"links": {
 			"north": "boulder",
 			"south": "large pit",
-			"west": "brook"
+			"west": "babbling brook"
 		},
 		"fixtures": [
 			{
-				"__class__": "Fixture",
+				"__class__": "Pool",
 				"name": "pond",
-				"desc": "A murky medium-sized pond with clear water, lilypads",
-				"weight": 100,
-				"composition": "water"
+				"desc": "A murky medium-sized pond with some algae-covered water",
+				"weight": 20,
+				"composition": "mudwater",
+				"finite": true
 			}
 		],
 		"items": [],
