@@ -126,7 +126,6 @@
 					"up": "cabin hallway",
 					"out": "cabin hallway"
 				},
-				"mention": true,
 				"descname": "stairway that goes up",
 				"aliases": ["stairs","staircase","stairwell"]
 			}
@@ -258,7 +257,7 @@
 				"weight": 50,
 				"durability": 20,
 				"composition": "wood",
-				"items": [
+				"occupants": [
 					{
 						"__class__": "factoryItem",
 						"name": "blue potion"
@@ -292,7 +291,7 @@
 				"weight": 25,
 				"durability": 28,
 				"composition": "wood",
-				"items": [],
+				"occupants": [],
 				"descname": "table"
 			},
 			{
@@ -313,7 +312,7 @@
 			{
 				"__class__": "Item",
 				"name": "wooden chair",
-				"desc": "A sturdy oaken kitchen chair",
+				"desc": "A sturdy oaken kitchen chair.",
 				"aliases": ["chair"],
 				"weight": 10,
 				"durability": 20,
@@ -337,14 +336,13 @@
 		},
 		"fixtures": [
 			{
-				"__class__": "Box",
+				"__class__": "Container",
 				"name": "bathtub",
 				"desc": "A fine stone bathtub with a drain in the bottom.",
 				"aliases": ["tub","bath"],
 				"weight": 100,
 				"durability": 100,
 				"composition": "stone",
-				"open": true,
 				"capacity": 100,
 				"status": [["AREA wet -2",-2]],
 				"items": []
@@ -354,7 +352,7 @@
 			{
 				"__class__": "Lockbox",
 				"name": "capsule",
-				"desc": "a bronze capsule which is remarkably durable",
+				"desc": "A bronze capsule which is remarkably durable.",
 				"aliases": ["bronze capsule"],
 				"weight": 1,
 				"durability": 100,

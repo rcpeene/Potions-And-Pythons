@@ -88,39 +88,26 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# test replace with cover
+# test replace with cover and platform
 
 # think about hiding, occupying pools. Items and Creatures.
 
-# for removing status conditions what about for curses/blessings?
-# we need a new conjugation operator?
-# ___ no longer has brawniness
-# perhaps use / and * now?
-# use some kind of formatitng marker?
-# "{creature} no longer /(has/) brawniness"?
-# you could probbly just modify copulate to find the first verb?
-
-
 # prevent standing on water, should be "in" water
+
+# reorganize methods, capital or lowercase them based on if creature is subject or object
+# consider using occupants to handle multiple riders in Creature class
+	# occupants would need to be handled in Fall(), probably other methods too
+# consider using nullDespawn and timeDespawn for dead creatures and passTime
+# give passages a capacity limit, so a dragon can't fit through a doorway?
+# assert room contents types during instantiation
+# during instantiation assert items weight can fit in space or size of container
+
+# set platform when throwing objects
+# i.e. throw snake onto table or onto ground, we don't want them to fall after impact
 
 ################################################################################
 
 # BUG BACKLOG
-
-# What will you do?
-# > get in brook
-# You get into the brook.
-# You are wet.
-# What will you do?
-# > get out
-# You can't go anywhere, you are standing in the brook.
-
-# > go up
-# You fly up!
-# --> Cabin Basement
-# ???
-
-# go in pond ('when pond isn't an appropriate target') goes into cabin
 
 # > hide behind the dragon
 # You crouch behind the dragon.
@@ -129,14 +116,26 @@ if __name__ == "__main__":
 # You are no longer crouching.
 # You are hidden.
 
-# > take all
-# You take the fiery portal from the capsule.
-# You take the capsule.
-
 # The green potion breaks.
 # Shards of glass scatter everywhere.
 # The shelf creaks under the weight.
 # The shelf creaks under the weight.
+
+# What will you do?
+# > jump to dragon
+# You jump on the dragon!
+# You can't get on the dragon, you're riding your horse. Try jumping to it.
+
+# > jump on bed
+# None bed on
+# The bed creaks under the weight...
+# You get in the bed.
+# You are laying.
+# You are cozy.
+
+# > "Throw bread at chest"
+# "you throw the bread in"
+# ^ we don't want it to say 'in' automatically, we don't know if it will go in yet
 
 # saving then loading fails
 	# test saving and loading while in a box
@@ -155,40 +154,17 @@ if __name__ == "__main__":
 
 # FUTURE IMPROVEMENTS
 
-# using operators might require a generic gameObject class
-	# refactor item and creature to be gameObject
-		# refactor mount to check for Creature type and never addOccupant?
-			# make addOccupant -> Ride?
-	# refactor Box to inherit from Container
-		# container should inherit from room
-		# containers should have their own creatures, items, fixtures
-		# should containers isolate you from parent area effects?
-		# make box be a container which can be opened and closed
-# add "in" operator to objects
-# think about adding other operators
-	# operators should probably only be used for read-only operations?
-	# | for status conditions or adding items?
-	# << and >> used for comparing size? < and > for weight?
-	# // and ** for further string functionality?
-	# modula for pluralization?
-	# maybe use one of these as alias for "canAdd"?
-	# bitwise | and & used for listObjects
-# account for density. Just give a few compositions 'density' coefficients to divide weight
-# reorganize methods, capital or lowercase them based on if creature is subject or object
-# consider using occupants to handle riders in Creature class
-	# occupants would need to be handled in Fall(), probably other methods too
-# consider using nullDespawn and timeDespawn for dead creatures and passTime
-
-
 # consider making Pool a container
 # handle "get in stream", "go in stream", "leave stream", "get out of stream"
 # test drinking an object when inv is full, see if bottle goes on ground
 # hide/get in a body of water?
 # try "jump in the pond"
-# add "swim"
-# handle bodies of water; what about fall damage, or being weighed down
-# add magic beans or food to pour stuff on
 # "drink from the pond"
+# add "swim", adding drowning and holding breath
+# handle bodies of water; what about fall damage, or being weighed down
+# add fishing
+# add magic beans or food to pour stuff on
+# pour multiple bottles of stuff into one pot
 # think about a broken water container or leaking/draining
 
 # refactor drop into a creature method?
@@ -197,6 +173,14 @@ if __name__ == "__main__":
 # add Steal
 # implement steal
 	# "take bird from earl"
+# do a name query for plurals; if user tries to input plural; then chooseObject?
+# add possession? (so you can say 'break goblin's sword', 'take his food')... these could be easily restructured as "break sword from goblin", "take food from him"
+	# 'take goblins sword from him'
+	# on second thought, using findObject with reqParent might be sufficient
+		# checking for parent by removing the final s
+
+# make sinceLastAte, sinceLast actual meters like hungriness and sleepiness, that rise or decay
+# add 'open' to box descname when it is open
 
 # readjust throw force formula; compare to BRDN (shouldn't be able to throw heavier than you can have in inv, or more than you can carry in hands?
 # check if throwing a creature which has another riding it?
@@ -206,10 +190,6 @@ if __name__ == "__main__":
 # add in a whip or hook which is a projectile that allows you to grab an item?
 # throw 'grappling hook' which creates a new passage?, throw up a cliff or across a gap
 # consider how attacking with foot, head, mouth, hand, tail works
-
-# give passages a capacity limit, so a dragon can't fit through a doorway?
-# assert room contents types during instantiation
-# during instantiation assert items weight can fit in space or size of container
 
 # add damage type vulnerabilities and resistance, i.e. wood is weak to fire and slashing
 	# for items, vulnerability just temporarily mitgates durability penalty to damage?
@@ -244,15 +224,6 @@ if __name__ == "__main__":
 	# include hiding ability?
 	# you are hiding (if in one)
 
-# add character creation/customization
-# gender: male (+1 STR), female (+1 CHA), other (+1 LCK)
-# build: slender (+2 SPD), medium (+2 DEX), heavy (+2 CON)
-# age: youth (+3 STM), mature (+3 INT), aged (+3 WIS), elderly (+3 FTH)
-# hair color: black, brown, blonde, red, grey, no hair 
-	# (maybe just cosmetic or maybe affects something minor/dialogue)
-# character always has purple eyes?
-# add a secondary display window
-
 # sift through TODOs
 # account for being restrained when doing stuff
 # add asserts to most class methods
@@ -264,10 +235,11 @@ if __name__ == "__main__":
 # make a list of all possible uses and inputs for each action and systematically test them. Revise the world to accomodate them
 # implement escape/run away
 
-# use both items and fixtures array to contain fixtures. Just use fixtures array to determine which ones not to list and query normally. remove fixtures mention property
-# refactor Switch into just inheriting fixture and controller?
-# add possession? (so you can say 'break goblin's sword', 'take his food')... these could be easily restructured as "break sword from goblin", "take food from him"
-	# 'take goblins sword from him'
+# add in crafting recipes. Probably store this as a JSON?
+# add cooking/brewing/crafting/tinkering
+# ^^^sharpening/smithing items?
+	# create system for 'recipes' with this
+# protect rare items from certain kinds of damage/effects
 
 # fix/add Creature.isNaked or Player.isNaked
 # add total traversal limit on dlog nodes?
@@ -276,17 +248,27 @@ if __name__ == "__main__":
 	# maybe blessings actually would be the course of action of the NPC with which you speak... I guess, find a way to do that
 # add dialect processor to tritepool output?
 
+# add character creation/customization
+# build: slender (+3 SPD), medium (+3 DEX), bulky (+3 CON)
+# gender: male (+2 STR, +10 FEAR), female (+2 CHA, +10 LOVE), other (+2 LCK, +5 FEAR, +5 LOVE)
+# age: young (+1 STM), mature (+1 INT), aged (+1 WIS), elderly (+1 FTH)
+# hair color: black, brown, blonde, red, grey, no hair 
+	# (maybe just cosmetic or maybe affects something minor/dialogue)
+# character always has purple eyes?
+
 # fill out glossary more, change definitions of some things to be more expository and fantastical
 # add knowledge/intelligence value for glossary, 
 # player only knows something if the term is in their "knowledge" set or their KNWL fits the requirement
 # perhaps don't allow crafting certain things without it in their glossary?
 # or add items to glossary through trial and error in crafting?
 
-# add in crafting recipes. Probably store this as a JSON?
-# add cooking/brewing/crafting/tinkering
-# ^^^sharpening/smithing items?
-	# create system for 'recipes' with this
-# protect rare items from certain kinds of damage/effects
+# make Player a subclass of Humanoid
+# main creature forms:
+	# humanoid, quadruped, serpentine, insectoid, avian, aquatic, amorphous, tentacular
+# handle posture for different forms
+# make limbs be objects in a organ list? so they can be target or chopped off?
+# add creatures with many limbs (or can equip more than 2 weapons/shields)
+
 
 # behavior
 	# what if horse goes wild while riding it, doesn't obey your directions
@@ -302,7 +284,6 @@ if __name__ == "__main__":
 	# add monsters/monster behavior
 	# creatures attacking?
 	# improve attack tests
-	# add creatures with many limbs (or can equip more than 2 weapons/shields)
 	# figure out combat? attack items?
 # examine output grammar/statements for lower level actions (in case non-player creatures do actions, we dont want it to print the same msgs), alter print to use G.print which depends on silent
 

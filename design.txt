@@ -893,12 +893,16 @@ Carnwennan (Shadow Dagger)
 Sword with the same name as a princess (sounds like Eilonwy maybe)
 Swords Gram and Mimung (from Wayland)
 Courtain - shortsword owned by Ogier or Karaheut
+Clarent - sword in the stone
+Solfaine (sword of light/fire)
+Lunafrith (moon shield)
 Joyeuse - sparkling rainbow sword, owned by Baligant
 
 
 GEAR:
 Cloak of Bees
 Nebula Shroud/Cloak
+Aegis (shield)
 
 Hauberk, Hauburgeon, Cuirass 
 Jerkin, Tabard, Surcoat, Gambeson
@@ -924,6 +928,10 @@ Magic Teapot (or just a normal teapot idk)
 Astra - from hindu myth, divine projectiles
 Olifant - magic horn
 glyph totem (or rune totem?)
+Diadem
+Evil cauldron that creates silent undead from corpses (quest item?)
+something that functions like a metal detector?
+	- detects metal in room or inside an object (or under the floor, must dig?)
 
 
 MISC EQUIPMENT:
@@ -1089,6 +1097,7 @@ hops (to make beer)
 herb of immortality (makes potion, can be smoked? made into quintessence?)
 mushrooms - glowing ones too
 poisonwood
+witchwood
 juniper - gin, oil, wood
 myrtle - oil/scent
 cork trees - to make cork
@@ -1181,8 +1190,10 @@ flint, granite, chert, sandstone, shale, slate, feldspar, soapstone, greywacke, 
 blackstone, bluestone, whitestone, whinstone, cinder, fieldstone, lodestone
 marble, basalt, quartz, serpentine, jade, 
 orpiment, realgar, verdigris, amber, azurite, corundum,
-bone ash, grey ash -> potash -> pearl ash, salt ash or natron -> soda ash -> lye
+bone ash, grey ash -> potash -> pearl ash, salt ash or natron -> soda ash
+soda ash + quicklyme -> lye
 [also saleratus? pure form of some kind of ash]
+glitterash (ash from witchwood?)
 whitestone or chalk -> quicklyme (burns) -> mortar or plaster
 saltpeter, brimstone, coal coke
 gravel, sand, silt, clay, loam, soot
@@ -1213,6 +1224,7 @@ something called "ersatz ___"
 something called "tentacular __"
 congerie
 molasses
+sheaf of wheat
 cassone
 brine (can get salt/salmiac from it?)
 albumen (egg whites)
@@ -1221,6 +1233,7 @@ elixir of immortality (also requires venom)
 strange milk - makes you high, made from cows fed certain mushrooms
 Catgut
 ambergris
+coprolite
 chaff - inedible plant matter
 volcano snail teeth (strongest biological substance)
 urim and thummim
@@ -1229,7 +1242,7 @@ something called "vim"
 lodestone
 wooden spoon
 crocs - made from crocodile
-papyrus (made from plant stems)
+papyrus (made from plant stems or tomeleaf)
 paper (cotton, linen, hemp, wood)
 parchment (white, vellum, purple)
 inks (black, blue, red, silver, golden)
@@ -1254,8 +1267,6 @@ bagasse (cane pulp)
 cornstover (byproduct of corn)
 Monocaine - drug (potion) from exotic flower makes you invisible and also makes you aggressive/insane
 	"Even the moon is frightened of me! Frightened to death!"
-Magic Item that functions like a metal detector?
-	- detects metal in room or inside an object (or under the floor, must dig?)
 
 
 CRAFTING/RECIPE IDEAS:
@@ -1481,6 +1492,7 @@ several settlements exist in the world (aim for like at least 9)
 - Goosetower
 - Bellfort
 - Dandelot
+- Dalmerry
 
 HISTORICAL CITY IDEAS:
 phillopolos (feldiv/pilov) - still exists
@@ -1530,10 +1542,13 @@ ADDITIONAL PLACE IDEAS:
 - ashery
 - calefactory (in a monastery, has a 'cocklestove'?)
 - lion's head tavern - where you learn about monocaine
-- "___ grotto"
+- "___ grotto" (blue grotto, gold grotto, red grotto, white grotto)
 - store called "goodly goods"
+- "wasteland" (maybe orcs are from here)
+- copse
 
-INSTITUTIONS:
+
+INSTITUTIONS/FACTIONS:
 - royal messengers (mages that maintain teleportation)
 - royal guard (spellswords)
 - clothier's guild
@@ -1541,9 +1556,12 @@ INSTITUTIONS:
 - builder's guild
 - smiths are unguilded (independent)
 - ranger's guild (robinhood types? not a real guild?)
-- raveneers (Neurtal mercenaries/adventurers/assassins)
+- raveneers (Neutral mercenaries/adventurers/assassins)
 - frith guild
-- beghards and beguines
+- beghards and beguines (austere group, shaves heads and wears brown robes)
+- a group that all wears masks and dark cloaks (all look the same, don't speak)
+- group of 7 legendary heroes/antiheroes/fighters
+
 
 MISC WORLD IDEAS:
 - witengamot
@@ -1566,8 +1584,10 @@ MISC WORLD IDEAS:
 - midden (old garbage heap?)
 - magic art museum?
 - wicklewort trees
-- fizzbuzz (secret code or character name)
+- fizzbuzz (secret code of some kind)
+- "alu" runic charm word
 - something called "The Wizard's Fee"
+- Animated snowman "Does it smell like carrots to you?" as a secret code?
 - Eternal Stew
 - bonefire
 - a deal with a demon (with consequences)
@@ -1575,13 +1595,14 @@ MISC WORLD IDEAS:
 - RICKROLL
 - "the old covenant" deal between kings/kingdoms. Perhaps the mountain king and the high king, it is defied and now a conflict begins
 - the four horsemen of awesomeness (or happiness)
+- suspicious black cube (maybe something like pandoras box, unleashes evil?)
 - pandora box "banishment box" which unleashes all creatures the player has ever banished with the banish spell
 - limericks/poems/poem book?
 - the mist
 - "the otherworld" like welsh otherworld, enter through mist or by given maiden a silver apple
 - quicksand
+- a gag/parody/twist of the sword in the stone
 - a jar that is REALLY hard to open
-- Animated snowman "Does it smell like carrots to you?" as a secret code?
 - bottomless pit
 - An orb (palantir?) "ponder the orb?" maybe like seven 7 orbs in the world
 	- fortune telling orbs which might alter your future?
@@ -1597,6 +1618,10 @@ MISC WORLD IDEAS:
 - obelisks at different leylines, maybe they're called leystones or monoliths
 - Jeremiad (book talking about the ancient cataclysm?)
 - hillforts
+- the king is portrayed as a gardener. gardening important for royalty "rooting out snakes"
+- wend
+- futhark/runes
+- codex
 
 
 QUEST IDEAS:
@@ -1611,11 +1636,14 @@ QUEST IDEAS:
 - impersonating someone to gain entry to a place
 - "A christmas carol" type plotline?
 - greatest knight in the world retiring to be a baker. Need to persuade him to return
+- nine witches to be defeated
+- "a fools errand"
 
 
 CHARACTER NAMES IDEAS:
 	The zodiac signs
 	The Lady of the Lake
+	Fisher King (old fisherman named Anfortas, looking for Grail, limping/wounded leg)
 	Enchantress of Number(Numeral)
 	All-knowing demon that follows you (Laplace's Demon)
 	villain king of people
@@ -1670,6 +1698,11 @@ CHARACTER NAMES IDEAS:
 	River Jack
 	Grand Vizier
 	Talking raven that speaks in deep speech (scary looking text?)
+	Falstaff (from shakespeare)
+	bird named Kwock
+	merchant named Pryce
+	goblin wizard named Pukwudgie
+	pair of honest guys "Frank and Ernest"
 
 	Somnus, Orion, Pax, Tyro, Cogg, Garl, Ike, Uther, Kess, Roach, Mito, Lugh, Muriel
 	Eadmer, Godfrey, Einhard, Vixen, Aloy, Eilonwy, Beowin, Alahad, Galatea, Grin
@@ -1678,8 +1711,9 @@ CHARACTER NAMES IDEAS:
 	Wulfstan, Salome, Ewart, Ephraim, Bragwen, Bran, Ulysses, Ambrose, Conomor, Hengist,
 	Cherdic, Osca, Chester, Ned, Rhiannon, Tethra, Lir, Donne, Phane, Blinda, Rozbeth,
 	Saladin, Flynwirt, Lalona, Wendell, Jane, Queldin, Pipin, Graley, Helen, Halfdan,
-	Clyde, Boffin, Wren, Eloise, Nora, Hawken
-
+	Clyde, Boffin, Wren, Eloise, Nora, Hawken, Questley, Hal, Gwyssa, Zinmere, Hette,
+	Reinhart, Sarge, Leor, Merrick, Everett, Thena, Anju, Zelda, Leif, Cato, Jezebel,
+	Sapna, Arden, Fiona, Euphemia, Asta, Zagler
 
 	polemarch,commodore,margrave,
 	thane,earl,baron,duke,count,burgess,
@@ -1688,7 +1722,7 @@ CHARACTER NAMES IDEAS:
 	bailiff,steward,sheriff,guard,watchman,usher
 	knight,archer,cavalier,squire,page,knave,
 	boatman,sailor,pilot,ferryman,shipman,
-	messenger,envoy,herald,cryer
+	messenger,courier,envoy,herald,cryer
 	priest,nun,parson,rector,prior,chaplain,vicar,monk,abbott,bishop,friar,deacon
 	librarian,scribe/scrivener,historian,clerk,cartographer,
 	playwright,painter,poet,sculptor
@@ -1707,31 +1741,42 @@ CHARACTER NAMES IDEAS:
 	beekeeper,aviarist,falconist,ratcatcher,
 	rancher,stablekeeper,cowboy,shepherd,ostler
 	farmer,gardener,sweeper,yeoman
-	innkeeper,tavernkeeper
+	innkeeper,tavernkeeper,wench
 	traveler,pilgrim,wanderer,nomad
 	ragpicker/junkman,confectioner,collier
 
 
 
 CREATURE IDEAS:
+SNAKES
 yellow python -- red python -- brown python -- white python -- black python -- giant python -- aeormungand
-sirens
 nagas
 basilisks
+
+ANIMALS
+sirens
 stoats
 lemmings
+
+MERS
+Vodyanoys and Vodyantsar (where the 'kappa horn' item would be) ("The Hasterman")
+mermaid (captive?)
+
+GOBLINS
+goblins - intelligent small green bipedal creatures
+redcap - goblin warriors with red hats
+hobgoblin - mischevious kind goblins
+
+OTHER
 stork babies
 messenger demons
 biblically accurate angels
 Troll?
 the questing beast - Glatisant (giraffe)
 argentavis (big bird)
-mermaid (captive?)
 fey - a class of intelligent creatures
-goblins - intelligent small green bipedal creatures
 orcs - disturbing creatures that resemble large mutant humans
 dragons - large majestic serpentine winged creatrues
-Vodyanoys and Vodyantsar (where the 'kappa horn' item would be) ("The Hasterman")
 slime skeletons
 slime armor monster
 snark
