@@ -31,20 +31,6 @@ physicaldmg = "bps"
 elementaldmg = "acfltx"
 magicaldmg = "inrv"
 
-colors = {
-	"red": "r",
-	"orange": "o",
-	"yellow": "y",
-	"green": "g",
-	"blue": "b",
-	"magenta": "m",
-	"grey": "k",
-	"white": "w"
-}
-
-rarityColors = {-1:"r",0:"k",1:"w",2:"o",3:"g",4:"b",5:"m"}
-
-emoticons = {":)",":d",":(",";)",":o",":p"}
 
 
 #################
@@ -61,7 +47,7 @@ yesses = {"absolutely","affirmative","aye","certainly","definitely","indeed","ja
 
 noes = {"absolutely not","certainly not","definitely not","n","na","nah","nahh","nahhh","nay","negative","negatory","nein","no","noo","nooo","noooo","nope"}
 
-hellos = {"ahoy","ahoy there","greetings","good tidings","hail","hail thee","hello","hello there","hi","hi there","howdy","peace to you","salutations","salute thee","omens aghast","well met","why, hello there"}
+hellos = {"ahoy","ahoy there","aloha","greetings","good tidings","hail","hail thee","hello","hello there","hi","hi there","howdy","peace to you","salutations","salute thee","omens aghast","well met","why, hello there"}
 
 goodbyes = {"adieu","bye","bye bye","bye then","prosper and live long","may luck","omens beware","fare thee well","farewell","gods be with ye","goodbye","goodbye then","peace be with you","so long"}
 
@@ -80,7 +66,7 @@ compounds = {"downstairs":["down","stairs"], "upstairs":["up","stairs"]}
 # used in nounify() in Parser.py to combine multiple words that might have a single meaning as a whole term
 miscexpressions = {"it all","meteor shower","solar eclipse"}
 
-directions = {"n":"north","ne":"northeast","e":"east","se":"southeast","s":"south","sw":"southwest","w":"west","nw":"northwest","u":"up","d":"down","inside":"in","into":"in","o":"out","b":"beyond","onto":"on","upon":"on","off":"down","over":None,"to":None}
+directions = {"n":"north","ne":"northeast","e":"east","se":"southeast","s":"south","sw":"southwest","w":"west","nw":"northwest","u":"up","d":"down","inside":"in","into":"in","o":"out","b":"beyond","upward":"up","downward":"down","onto":"on","upon":"on","off":"down","off of":"down","out of":"out","over":None,"to":None}
 
 cardinalDirs = ("north","east","south","west")
 ordinalDirs = ("northeast","southeast","southwest","northwest")
@@ -122,6 +108,21 @@ spawnpools = {
 	"Plains": (("red python",1), ("horse",1))
 }
 
+colors = {
+	"red": "r",
+	"orange": "o",
+	"yellow": "y",
+	"green": "g",
+	"blue": "b",
+	"magenta": "m",
+	"grey": "k",
+	"white": "w"
+}
+
+rarityColors = {-1:"r",0:"k",1:"w",2:"o",3:"g",4:"b",5:"m",6:"y"}
+
+emoticons = {":)",":d",":(",";)",":o",":p"}
+
 # the following are tuples because their order should be preserved for printing
 
 # base Creature stats
@@ -138,7 +139,20 @@ dayhours = hours[:9]
 nighthours = hours[9:]
 
 
-liquids = {"water","freshwater","saltwater","mudwater","lava","oil","slime","acid"}
+liquids = {"acid","freshwater","lava","mudwater","oil","saltwater","slime","water"}
+
+densities = {
+	"brick": 2,
+	"bronze": 4,
+	"glass": 2,
+	"gold": 6,
+	"iron": 4,
+	"lava": 2,
+	"silver": 5,
+	"steel": 4,
+	"stone": 2,
+}
+
 
 # tastes dict is used if key isn't present in scents
 # this should be used only when it has no taste or its scent is distinct from taste
@@ -153,7 +167,7 @@ tastes = {
 	"mud": "It is wet and pungent, tasting mildly of dirt.",
 	"stone": "It has a dull taste of chalk and lime.",
 	"wood": "It doesn't taste like much.",
-	"brick": "It tastes like dry clay.",
+	"brick": "It tastes like dry gritty clay.",
 	"glass": "It has little taste.",
 	"bronze": "It has a light metallic taste.",
 	"iron": "It tastes like iron.",
@@ -162,7 +176,11 @@ tastes = {
 	"bread": "It tastes like fluffy dreams and joy.",
 	"freshwater": "It tastes crisp and pure.",
 	"saltwater": "It tastes salty and foamy.",
-	"mudwater": "It tastes dank and dirty."
+	"mudwater": "It tastes dank and dirty.",
+	"water": "It doesn't taste like much.",
+	"flesh": "Yuck!",
+	"acid": "It tastes painful...",
+	"oil": "It tastes oily."
 }
 
 

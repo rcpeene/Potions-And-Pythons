@@ -45,8 +45,11 @@ class Bed(Core.Item):
 class Bottle(Core.Item):
 	def Break(self):
 		parent = self.parent
-		if not super().Break():
+		if self.durability == -1:
+			if not Core.game.silent:
+				Core.Print(f"{+self} cannot be broken.")
 			return False
+		self.Print(f"{+self} breaks.")
 		if self.weight > 2 and self.composition == "glass":
 			self.Print("Shards of glass scatter everywhere.",color="o")
 		while self.weight > 1 and self.composition == "glass":
@@ -54,17 +57,16 @@ class Bottle(Core.Item):
 			self.weight -= shardWeight
 			shard = Shard("glass shard","a sharp shard of glass",shardWeight,-1,"glass",{"shard"})
 			parent.add(shard)
+		self.destroy()
 		return True
 
 
-class Box(Core.Portal):
-	def __init__(self,name,desc,weight,durability,composition,open,capacity,items,passprep=None,**kwargs):
-		Core.Portal.__init__(self,name,desc,weight,durability,composition,{},name,None,**kwargs)
+class Container(Core.Portal):
+	def __init__(self,name,desc,weight,durability,composition,items,passprep=None,**kwargs):
+		super().__init__(name,desc,weight,durability,composition,{},**kwargs)
 		self.parent = None
 		self.passprep = "in" if passprep is None else passprep
 		self.links = {self.passprep:self}
-		self.open = open
-		self.capacity = capacity
 		self.items = items
 		self.ceiling = self.composition
 		self.walls = self.composition
@@ -78,12 +80,11 @@ class Box(Core.Portal):
 	### File I/O ###
 
 	def convertToJSON(self):
-		jsonDict = super().convertToJSON()
+		jsonDict = Core.Item.convertToJSON(self)
 		del jsonDict["ceiling"]
 		del jsonDict["walls"]
 		del jsonDict["floor"]
 		del jsonDict["links"]
-		del jsonDict["descname"]
 		del jsonDict["surfaces"]
 		return jsonDict
 
@@ -97,46 +98,18 @@ class Box(Core.Portal):
 				item.addStatus(name,dur,stackable)
 
 
-	# sets open bool to true, prints its items
-	def Open(self,opener):
-		if self.open:
-			opener.Print(f"{+self} is already open.")
-		else:
-			opener.Print(f"You open {-self}.")
-		self.open = True
-		for elem in self.items:
-			if isinstance(elem,Core.Creature):
-				elem.removeStatus("hidden",-3)
-		for occupant in self.occupants.copy():
-			occupant.Fall()
-		if Core.player not in self.items:
-			self.Look(opener)
-		return True
-
-
-	# sets open bool to false
-	def Close(self,closer):
-		self.open = False
-		closer.Print(f"You close {-self}.")
-		for elem in self.items:
-			if isinstance(elem,Core.Creature):
-				elem.addStatus("hidden",-4)
-		return True
-
-
 	def Look(self,looker):
-		if Core.player not in self.items:
-			self.open = True
 		# exclude player if they are inside the box
-		displayItems = [item for item in self.items if item is not Core.player]
+		displayItems = [item for item in self.items if item is not looker]
 		if len(displayItems) == 0:
 			text = "It is empty"
-			if Core.player in self.items:
+			if looker in self.items:
 				text += ", apart from you"
 			looker.Print(f"{text}.")
 		else:
 			looker.Print(Core.listObjects("Inside there is ", displayItems,"."))
-			Core.game.setPronouns(self.items[-1])
+			if looker is Core.player:
+				Core.game.setPronouns(self.items[-1])
 		return True
 
 
@@ -144,12 +117,11 @@ class Box(Core.Portal):
 		if not super().Break():
 			return False
 		if len(self.items) > 0:
-			if self.parent is Core.player.parent:
+			if self in Core.player.surroundings():
 				Core.Print("Its contents spill out.")
 		# drop things it contains into parent
 		for item in self.items.copy():
-			if item is Core.player:
-				Core.waitInput(f"You are no longer in {-self}.")
+			item.waitInput(f"You are no longer in {-self}.")
 			item.changeLocation(self.parent)
 			item.Print(f"{+item} comes out of {-self}.")
 		return True
@@ -158,7 +130,7 @@ class Box(Core.Portal):
 	def Bombard(self,missile):
 		assert isinstance(missile,Core.Projectile)
 		if Core.roll(100) < Core.bound(missile.aim+self.Size()+10,1,99):
-			if not self.open:
+			if not getattr(self,"open",True):
 				Core.Print(f"{+self} is closed.")
 				missile.Collide(self)
 			elif missile.item.parent is self:
@@ -175,17 +147,17 @@ class Box(Core.Portal):
 
 
 	def enter(self,traverser):
+		# TODO, this is too player-centirc, does it work to remove? 9have this link by default)
 		self.links["out"] = self.parent
-		if traverser in self.contents():
+		self.links["out of"] = self.parent
+		if traverser in self:
 			return False
-		self.open = True
 		self.add(traverser)
 
 
 	def exit(self,traverser):
-		if traverser not in self.contents():
+		if traverser not in self:
 			return False
-		self.open = True
 		self.remove(traverser)
 		traverser.removeStatus("hidden",-3)
 
@@ -204,8 +176,8 @@ class Box(Core.Portal):
 
 		if dir in ("out","outside","out of"):
 			if self is traverser.parent:
-				if not self.open:
-					self.Open(traverser)
+				if Core.hasMethod(self,"Open") and not getattr(self,"open",True):
+					self.Open(traverser,silent=True)
 				traverser.Print(f"You get out of {-self}.")
 				if self.parent is not Core.game.currentroom:
 					traverser.waitInput()
@@ -290,11 +262,14 @@ class Box(Core.Portal):
 
 
 	def canAdd(self,I):
+		if self.capacity == -1:
+			return True
 		return I.Size() <= self.space() and self not in I.objTree()
 
 
 	def contents(self):
-		return self.items
+		cts = self.items + [s for s in self.surfaces if s not in (None,self)]
+		return cts
 
 
 	def itemNames(self):
@@ -307,9 +282,60 @@ class Box(Core.Portal):
 
 
 
+class Box(Container):
+	def __init__(self,name,desc,weight,durability,composition,items,open=False,**kwargs):
+		super().__init__(name,desc,weight,durability,composition,items,**kwargs)
+		self.open = open
+
+	def enter(self,traverser):
+		self.open = True
+		super().enter(traverser)
+
+
+	def exit(self,traverser):
+		self.open = True
+		super().exit(traverser)
+
+
+	def Look(self,looker):
+		if looker not in self.items:
+			self.open = True
+		return super().Look(looker)
+
+
+	# sets open bool to true, prints its items
+	def Open(self,opener,silent=False):
+		if self.open:
+			if not silent:
+				opener.Print(f"{+self} is already open.")
+			return False
+		elif not silent:
+			opener.Print(f"You open {-self}.")
+		self.open = True
+		for elem in self.items:
+			if isinstance(elem,Core.Creature):
+				elem.removeStatus("hidden",-3)
+		for occupant in self.occupants.copy():
+			occupant.Fall()
+		if Core.player not in self.items:
+			self.Look(opener)
+		return True
+
+
+	# sets open bool to false
+	def Close(self,closer):
+		self.open = False
+		closer.Print(f"You close {-self}.")
+		for elem in self.items:
+			if isinstance(elem,Core.Creature):
+				elem.addStatus("hidden",-4)
+		return True
+
+
+
 class Controller(Core.Item):
-	def __init__(self,name,desc,weight,durability,composition,triggers,effect,**kwargs):
-		Core.Item.__init__(self,name,desc,weight,durability,composition,**kwargs)
+	def __init__(self,name,desc,weight,durability,composition,effect,triggers=None,**kwargs):
+		super().__init__(name,desc,weight,durability,composition,**kwargs)
 		self.triggers = triggers if triggers else ["Use"]
 		self.effect = effect
 		for trigger in self.triggers:
@@ -336,7 +362,7 @@ class Controller(Core.Item):
 
 class Food(Core.Item):
 	def __init__(self,name,desc,weight,durability,composition,heal,**kwargs):
-		Core.Item.__init__(self,name,desc,weight,durability,composition,**kwargs)
+		super().__init__(name,desc,weight,durability,composition,**kwargs)
 		self.heal = heal
 
 	# heals hp to the player, removes food from inventory
@@ -372,7 +398,7 @@ class Fountain(Core.Fixture):
 
 class Generator(Controller):
 	def __init__(self,name,desc,weight,durability,composition,effect,charge,cap,rate,cost,**kwargs):
-		Core.Controller.__init__(self,name,desc,weight,durability,composition,effect,**kwargs)
+		super().__init__(name,desc,weight,durability,composition,effect,**kwargs)
 		self.charge = charge
 		self.cap = cap
 		self.rate = rate
@@ -388,7 +414,7 @@ class Generator(Controller):
 
 
 	def passTime(self,t):
-		Controller.passTime(self,t)
+		super().passTime(t)
 		self.charge += self.rate*t
 		if self.charge > self.cap:
 			self.charge = self.cap
@@ -396,12 +422,12 @@ class Generator(Controller):
 
 
 class Timer(Controller):
-	def __init__(self,name,desc,weight,durability,composition,on=False,delay=1,fuse=None,repeats=0,maxRepeats=1,toggle=False,reset=True,**kwargs):
-		Controller.__init__(self,name,desc,weight,durability,composition,**kwargs)
+	def __init__(self,name,desc,weight,durability,composition,effect,on=False,delay=1,fuse=None,repeats=0,maxRepeats=1,toggle=False,reset=True,**kwargs):
+		super().__init__(name,desc,weight,durability,composition,effect,**kwargs)
 		self.on = on
-		# the 'length' of the fuse
+		# the 'length' of the fuse; time between triggers when turned on
 		self.delay = delay
-		# time until next trigger
+		# time left until next effect
 		self.fuse = self.delay if fuse is None else fuse
 		# number of times been triggered
 		self.repeats = repeats
@@ -422,6 +448,7 @@ class Timer(Controller):
 			self.on = False
 			return True
 		if self.maxRepeats is not None and self.repeats > self.maxRepeats:
+			self.Print("Nothing happens...")
 			return False
 
 		self.on = True
@@ -429,15 +456,17 @@ class Timer(Controller):
 
 
 	def passTime(self,t):
-		Controller.passTime(self,t)
+		super().passTime(t)
+		if self.maxRepeats is not None and self.repeats > self.maxRepeats:
+			self.on = False
 		if not self.on:
 			return
 
+		self.fuse -= 1
 		if self.fuse <= 0:
 			eval(self.effect)
 			self.repeats += 1
 			self.fuse = self.delay
-		self.fuse -= 1
 
 
 
@@ -448,11 +477,6 @@ class Hand(Core.Item):
 
 
 class Key(Core.Item):
-	def __init__(self,name,desc,weight,durability,composition,id,**kwargs):
-		Core.Item.__init__(self,name,desc,weight,durability,composition,**kwargs)
-		self.id = id
-
-
 	def LockWith(self,box):
 		pass
 
@@ -464,7 +488,7 @@ class Key(Core.Item):
 
 class Lockbox(Box):
 	def __init__(self,name,desc,weight,durability,composition,keyids,locked,**kwargs):
-		Box.__init__(self,name,desc,weight,durability,composition,**kwargs)
+		super().__init__(name,desc,weight,durability,composition,**kwargs)
 		self.keyids = keyids
 		self.locked = locked
 
@@ -541,9 +565,10 @@ class Pool(Core.Fixture):
 
 
 	def canAdd(self,I):
-		if self.occupantsSize() + I.Size() > self.weight:
+		if self.occupantsSize() + I.Size() > self.Size():
 			return False
 		return True
+
 
 	def removeOccupant(self,occupant):
 		if occupant not in self.occupants:
@@ -654,7 +679,7 @@ class Shard(Core.Item):
 
 class Sign(Core.Item):
 	def __init__(self,name,desc,weight,durability,composition,text,**kwargs):
-		Core.Item.__init__(self,name,desc,weight,durability,composition,**kwargs)
+		super().__init__(name,desc,weight,durability,composition,**kwargs)
 		self.text = text
 
 
@@ -664,20 +689,28 @@ class Sign(Core.Item):
 
 
 
-class Switch(Core.Fixture):
-	def __init__(self,name,desc,weight,durability,composition,mention,effect,**kwargs):
-		Core.Fixture.__init__(self,name,desc,weight,durability,composition,mention,**kwargs)
-		self.effect = effect
+class Switch(Controller):
+	def __init__(self,name,desc,weight,durability,composition,effect,offEffect,on=False,toggle=True,**kwargs):
+		super().__init__(name,desc,weight,durability,composition,effect,**kwargs)
+		self.offEffect = offEffect
+		self.on = on
+		# whether or not it can be turned off after turn on
+		self.toggle = toggle
 
 
 	# triggers some effect using the effect name to find related function
 	def Trigger(self):
-		eval(self.effect)
-
-
-	# using the switch triggers the effect
-	def Use(self):
-		self.Trigger()
+		if self.on and not self.toggle:
+			self.Print(f"{+self} is already on.")
+			return False
+		elif self.on:
+			self.Print(f"{+self} turns off.")
+			self.on = False
+			eval(self.offEffect)
+		else:
+			self.Print(f"{+self} turns on.")
+			self.on = True
+			eval(self.effect)
 
 
 
@@ -689,119 +722,14 @@ class Sword(Core.Weapon):
 
 
 class Table(Core.Item):
-	def __init__(self,name,desc,weight,durability,composition,items,descname,**kwargs):
-		Core.Item.__init__(self,name,desc,weight,durability,composition,**kwargs)
-		self.items = items
-		self.descname = descname
-		self.ceiling = self
-		self.walls = self
-		self.floor = self
-		self.surfaces = (self.ceiling,self.walls,self.floor)
-
-
-	### File I/O ###
-	def convertToJSON(self):
-		jsonDict = super().convertToJSON()
-		del jsonDict["surfaces"]
-		return jsonDict
-
-
-	### Operation ###
-
-	def Break(self):
-		if not super().Break():
-			return False
-		# drop things it contains into parent
-		if self.items:
-			self.Print(f"It's contents fall onto the ground.")
-		for item in self.items:
-			self.parent.add(item)
-		return True
-
-
-	def add(self,I):
-		# ensure only one bunch of Gold exists here
-		if isinstance(I,Core.Serpens):
-			for item in self.items:
-				if isinstance(item,Core.Serpens):
-					item.merge(I)
-					return
-
-		insort(self.items,I)
-		I.parent = self
-		I.nullDespawn()
-
-		if len(self.items) == 1:
-			self.descname = f"{self.name} with {~self.items[0]} on it"
-		elif len(self.items) > 1:
-			self.descname = f"{self.name} with things on it"
-
-		if self.itemsWeight() > self.durability*2:
-			self.Print(f"{+self} collapses under the weight.")
-			self.Break()
-		elif self.itemsWeight() > self.durability:
-			self.Print(f"{+self} creaks under the weight.")
-
-
-	def remove(self,I):
-		self.items.remove(I)
-		if len(self.items) == 1:
-			self.descname = f"{self.name} with {~self.items[0]} on it"
-		elif len(self.items) == 0:
-			self.descname = f"{self.name}"
-
-
-	def replaceObj(self,oldItem,newItem):
-		assert oldItem in self.items
-		if not self.canAdd(newItem):
-			return False
-		index = self.items.index(oldItem)
-		self.items[index] = newItem
-		newItem.parent = self
-		oldItem.parent = None
-		return True
-
-
-	### Getters ###
-
-	# the weight of a table is equal to its own weight + weights of its items
-	def Weight(self):
-		w = self.weight
-		for i in self.items:
-			w += i.Weight()
-		return w
-
-
-	def itemsWeight(self):
-		return sum(i.weight for i in self.items)
-
-
-	def itemNames(self):
-		return [item.name for item in self.items]
-
-
-	def contents(self):
-		return self.items
-
-
-	def canAdd(self,I):
-		return True
-
-
-	### User Output ###
-
-	def describe(self):
-		Core.Print(f"It's {~self}.")
-		if len(self.items) != 0:
-			Core.Print(Core.listObjects("On it is ", self.items,"."))
-		else:
-			Core.Print("There is nothing on it.")
+	def __init__(self,name,desc,weight,durability,composition,**kwargs):
+		super().__init__(name,desc,weight,durability,composition,**kwargs)
 
 
 
 class Wall(Core.Passage):
-	def __init__(self,name,desc,weight,composition,links,descname,difficulty,passprep=None,**kwargs):
-		Core.Passage.__init__(self,name,desc,weight,composition,links,descname,passprep=passprep,**kwargs)
+	def __init__(self,name,desc,weight,composition,links,difficulty,passprep=None,**kwargs):
+		super().__init__(name,desc,weight,composition,links,passprep=passprep,**kwargs)
 		self.difficulty = difficulty
 		if passprep is None:
 			self.passprep = "onto" if self.getDefaultDir() in ("up","down") else "across"
@@ -832,6 +760,9 @@ class Wall(Core.Passage):
 			return self.Traverse(traverser.riding,dir=dir)
 		if traverser.carrying and verb in ("climb","crawl"):
 			traverser.Print(f"You can't climb, you are carrying {~traverser.carrying}.")
+			return False
+		if not self.canPass(traverser):
+			traverser.Print(f"{+traverser} can't fit on {-self}.")
 			return False
 
 		traverser.waitInput(f"You {verb} {dir} {-self}.")
@@ -866,9 +797,8 @@ class Wall(Core.Passage):
 
 
 class Window(Core.Passage):
-	def __init__(self,name,desc,weight,composition,links,descname,open=False,broken=False,view=None,passprep="through",**kwargs):
-		Core.Passage.__init__(self,name,desc,weight,composition,links,descname,passprep=passprep,**kwargs)
-		self.descname = descname
+	def __init__(self,name,desc,weight,composition,links,open=False,broken=False,view=None,passprep="through",**kwargs):
+		super().__init__(name,desc,weight,composition,links,passprep=passprep,**kwargs)
 		self.view = view
 		if self.view is not None:
 			assert self.view in self.links
@@ -921,13 +851,17 @@ class Window(Core.Passage):
 		if traverser.riding:
 			return self.Traverse(traverser.riding,dir=dir)
 
+		if not self.canPass(traverser):
+			traverser.Print(f"{+traverser} can't fit through {-self}.")
+			return False
+
 		newloc = self.getNewLocation(dir)
 		if not newloc.canAdd(traverser):
 			traverser.Print(f"You can't enter {-self}. There's not enough room.")
 			return False
 		if traverser.hasStatus("flying"): verb = "fly"
 		elif traverser is Core.player.riding: verb = "ride"
-		traverser.Print(f"You {verb} {dir} {-self}.")
+		traverser.waitInput(f"You {verb} {dir} {-self}.")
 		traverser.changeLocation(newloc)
 		return True
 
@@ -947,14 +881,14 @@ class Window(Core.Passage):
 	def Look(self,looker):
 		if self.view:
 			looker.waitInput(f"You look through it...")
-			Core.Print(f"{self.links[self.view].desc}.")
+			Core.Print(f"{self.links[self.view].desc}")
 		return True
 
 
 
 class Door(Window):
 	def __init__(self,name,desc,weight,durability,composition,links,descname,open=False,**kwargs):
-		Window.__init__(self,name,desc,weight,durability,composition,links,descname,**kwargs)
+		super().__init__(name,desc,weight,durability,composition,links,descname,**kwargs)
 		self.descname = descname
 		self.open = open
 
