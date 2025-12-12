@@ -30,20 +30,30 @@ class Bed(Core.Item):
 		return self.Traverse(layer)
 
 	def Traverse(self,traverser,dir=None,verb=None):
-		if traverser.platform is not self and self.addOccupant(traverser):
+		if verb == "jump":
+			if self.occupy(traverser):
+				if traverser is Core.player:
+					Core.Print(f"You jump onto {-self}.")
+				else:
+					Core.Print(f"{+traverser} jumps onto {-self}.")
+				traverser.changePosture("crouch")
+			return True
+		if traverser.platform is not self and self.occupy(traverser):
 			if traverser is Core.player:
 				Core.Print(f"You get in {-self}.")
 			else:
 				Core.Print(f"{+traverser} lies down on {-self}.")
 		if traverser.platform is self:
 			traverser.changePosture("lay")
-			traverser.addStatus("cozy",-3)
+			traverser.addStatus("cozy",-4)
 			return True
 		return False
 
 
 class Bottle(Core.Item):
-	def Break(self):
+	def breaks(self):
+		if self.id not in Core.game.objRegistry:
+			return False
 		parent = self.parent
 		if self.durability == -1:
 			if not Core.game.silent:
@@ -61,228 +71,8 @@ class Bottle(Core.Item):
 		return True
 
 
-class Container(Core.Portal):
-	def __init__(self,name,desc,weight,durability,composition,items,passprep=None,**kwargs):
-		super().__init__(name,desc,weight,durability,composition,{},**kwargs)
-		self.parent = None
-		self.passprep = "in" if passprep is None else passprep
-		self.links = {self.passprep:self}
-		self.items = items
-		self.ceiling = self.composition
-		self.walls = self.composition
-		self.floor = self.composition
-		self.ceiling = self
-		self.walls = self
-		self.floor = self
-		self.surfaces = (self.ceiling,self.walls,self.floor)
 
-
-	### File I/O ###
-
-	def convertToJSON(self):
-		jsonDict = Core.Item.convertToJSON(self)
-		del jsonDict["ceiling"]
-		del jsonDict["walls"]
-		del jsonDict["floor"]
-		del jsonDict["links"]
-		del jsonDict["surfaces"]
-		return jsonDict
-
-
-
-	### Operation ###
-
-	def addStatus(self,name,dur,stackable=False):
-		if Core.Item.addStatus(self,name,dur,stackable):
-			for item in self.items:
-				item.addStatus(name,dur,stackable)
-
-
-	def Look(self,looker):
-		# exclude player if they are inside the box
-		displayItems = [item for item in self.items if item is not looker]
-		if len(displayItems) == 0:
-			text = "It is empty"
-			if looker in self.items:
-				text += ", apart from you"
-			looker.Print(f"{text}.")
-		else:
-			looker.Print(Core.listObjects("Inside there is ", displayItems,"."))
-			if looker is Core.player:
-				Core.game.setPronouns(self.items[-1])
-		return True
-
-
-	def Break(self):
-		if not super().Break():
-			return False
-		if len(self.items) > 0:
-			if self in Core.player.surroundings():
-				Core.Print("Its contents spill out.")
-		# drop things it contains into parent
-		for item in self.items.copy():
-			item.waitInput(f"You are no longer in {-self}.")
-			item.changeLocation(self.parent)
-			item.Print(f"{+item} comes out of {-self}.")
-		return True
-
-
-	def Bombard(self,missile):
-		assert isinstance(missile,Core.Projectile)
-		if Core.roll(100) < Core.bound(missile.aim+self.Size()+10,1,99):
-			if not getattr(self,"open",True):
-				Core.Print(f"{+self} is closed.")
-				missile.Collide(self)
-			elif missile.item.parent is self:
-				missile.Collide(self)				
-			elif not self.canAdd(missile):
-				Core.Print(f"{+self} is too full.")
-				missile.Collide(self)
-			else:
-				Core.Print(f"{+missile} goes into {-self}.")
-				missile = missile.asItem()
-				missile.changeLocation(self)
-			return True
-		return False
-
-
-	def enter(self,traverser):
-		# TODO, this is too player-centirc, does it work to remove? 9have this link by default)
-		self.links["out"] = self.parent
-		self.links["out of"] = self.parent
-		if traverser in self:
-			return False
-		self.add(traverser)
-
-
-	def exit(self,traverser):
-		if traverser not in self:
-			return False
-		self.remove(traverser)
-		traverser.removeStatus("hidden",-3)
-
-
-	def Traverse(self,traverser,dir=None,verb=None):
-		if dir in Data.directions: dir = Data.directions[dir]
-		if self in traverser.objTree():
-			if traverser is Core.player:
-				Core.Print(f"You can't enter {-self}. It's within your Inventory.")
-			else:
-				Core.Print(f"{+traverser} can't enter {-self}. It's within {-traverser}'s Inventory.")
-			return False
-		if traverser in self.occupants:
-			traverser.Print(f"You can't, you are {traverser.position()}.")
-			return False
-
-		if dir in ("out","outside","out of"):
-			if self is traverser.parent:
-				if Core.hasMethod(self,"Open") and not getattr(self,"open",True):
-					self.Open(traverser,silent=True)
-				traverser.Print(f"You get out of {-self}.")
-				if self.parent is not Core.game.currentroom:
-					traverser.waitInput()
-				traverser.changeLocation(self.parent)
-				return True
-			else:
-				traverser.Print(f"You're not in {-self}.",color="k")
-				return False
-		if traverser.parent is self:
-			traverser.Print(f"You're already in {-self}.")
-			return False
-		if dir not in ("in","into","inside",None):
-			traverser.Print(f"{+self} does not go {dir}.",color="k")
-			return False
-
-		if dir is None:
-			dir = "into"
-		if verb is None:
-			verb = "get"
-		self.open = True
-		if not self.canAdd(traverser):
-			traverser.Print(f"You can't enter {-self}. There's not enough room.")
-			return False
-
-		if not self.open:
-			self.Open(traverser)
-		traverser.Print(f"You {verb} {dir} {-self}.")
-		traverser.changeLocation(self)
-		return True
-
-
-	def add(self,I):
-		# ensure only one bunch of Gold exists here
-		if isinstance(I,Core.Serpens):
-			for item in self.items:
-				if isinstance(item,Core.Serpens):
-					item.merge(I)
-					return
-
-		insort(self.items,I)
-		I.parent = self
-		I.nullDespawn()
-
-
-	def remove(self,I):
-		self.items.remove(I)
-
-
-	def replaceObj(self,oldItem,newItem):
-		assert oldItem in self.items
-		if not self.canAdd(newItem):
-			return False
-		index = self.items.index(oldItem)
-		self.items[index] = newItem
-		newItem.parent = self
-		oldItem.parent = None
-		return True
-
-
-	def passTime(self,t):
-		Core.Item.passTime(self,t)
-		for I in self.items:
-			I.passTime(t)
-
-
-	### Getters ###
-
-	def itemsWeight(self):
-		return sum(i.weight for i in self.items)
-
-
-	def itemsSize(self):
-		return sum(i.Size() for i in self.items)
-
-
-	def Weight(self):
-		return self.weight + self.itemsWeight()
-
-
-	def space(self):
-		return self.capacity - self.itemsSize()
-
-
-	def canAdd(self,I):
-		if self.capacity == -1:
-			return True
-		return I.Size() <= self.space() and self not in I.objTree()
-
-
-	def contents(self):
-		cts = self.items + [s for s in self.surfaces if s not in (None,self)]
-		return cts
-
-
-	def itemNames(self):
-		return [item.name for item in self.items]
-
-
-	# get the links dict to use in the parent's allLinks method
-	def getLinksForParent(self):
-		return {self.passprep:self}
-
-
-
-class Box(Container):
+class Box(Core.Container):
 	def __init__(self,name,desc,weight,durability,composition,items,open=False,**kwargs):
 		super().__init__(name,desc,weight,durability,composition,items,**kwargs)
 		self.open = open
@@ -297,14 +87,14 @@ class Box(Container):
 		super().exit(traverser)
 
 
-	def Look(self,looker):
+	def examine(self,looker):
 		if looker not in self.items:
 			self.open = True
-		return super().Look(looker)
+		return super().look(looker)
 
 
 	# sets open bool to true, prints its items
-	def Open(self,opener,silent=False):
+	def open(self,opener,silent=False):
 		if self.open:
 			if not silent:
 				opener.Print(f"{+self} is already open.")
@@ -314,16 +104,16 @@ class Box(Container):
 		self.open = True
 		for elem in self.items:
 			if isinstance(elem,Core.Creature):
-				elem.removeStatus("hidden",-3)
+				elem.removeStatus("hidden",-4)
 		for occupant in self.occupants.copy():
-			occupant.Fall()
+			occupant.fall()
 		if Core.player not in self.items:
-			self.Look(opener)
+			self.look(opener)
 		return True
 
 
 	# sets open bool to false
-	def Close(self,closer):
+	def close(self,closer):
 		self.open = False
 		closer.Print(f"You close {-self}.")
 		for elem in self.items:
@@ -336,7 +126,7 @@ class Box(Container):
 class Controller(Core.Item):
 	def __init__(self,name,desc,weight,durability,composition,effect,triggers=None,**kwargs):
 		super().__init__(name,desc,weight,durability,composition,**kwargs)
-		self.triggers = triggers if triggers else ["Use"]
+		self.triggers = triggers if triggers else ["use"]
 		self.effect = effect
 		for trigger in self.triggers:
 			f = lambda *args: self.Trigger(*args)
@@ -366,7 +156,7 @@ class Food(Core.Item):
 		self.heal = heal
 
 	# heals hp to the player, removes food from inventory
-	def Eat(self,eater):
+	def consume(self,eater):
 		if isinstance(eater,Core.Player):
 			Core.Print(f"You consume {-self}.")
 		else:
@@ -376,7 +166,7 @@ class Food(Core.Item):
 		if h == 0 and isinstance(eater,Core.Player):
 			Core.Print("Yummy...")
 		eater.checkHungry()
-		self.parent.remove(self)
+		self.destroy(self)
 
 
 
@@ -387,11 +177,11 @@ class Foot(Core.Item):
 
 
 class Fountain(Core.Fixture):
-	def Douse():
+	def douse():
 		pass
 
 
-	def Drink(self):
+	def imbibe(self):
 		Core.Print(f"You drink from {-self.name}.")
 
 
@@ -477,11 +267,11 @@ class Hand(Core.Item):
 
 
 class Key(Core.Item):
-	def LockWith(self,box):
+	def lockWith(self,box):
 		pass
 
 
-	def UnlockWith(self,box):
+	def unlockWith(self,box):
 		pass
 
 
@@ -496,43 +286,43 @@ class Lockbox(Box):
 	### Operation ###
 
 	# sets open bool to true, prints its items
-	def Open(self,opener):
+	def open(self,opener):
 		if self.locked:
 			opener.Print(f"{+self} is locked.")
 			return False
-		return Box.Open(self,opener)
+		return Box.open(self,opener)
 
 
-	def Look(self,looker):
+	def examine(self,looker):
 		if self.locked == True and Core.player not in self.items:
 			looker.Print(f"{+self} is locked.")
 			return False
-		return Box.Look(self,looker)
+		return Box.look(self,looker)
 
 
-	def Lock(self,locker,key):
+	def lock(self,locker,key):
 		if self.locked:
 			locker.Print(f"{+self} is already locked.")
 			return False
 		if key.id in self.keyids:
 			self.locked = True
 			locker.Print(f"You lock {-self}.")
-			if Core.hasMethod(key,"UnlockWith"):
-				key.UnlockWith(self)
+			if Core.hasMethod(key,"unlockWith"):
+				key.unlockWith(self)
 			return True
 		locker.Print(f"You can't lock {-self} with {-key}.")
 		return True
 
 
-	def Unlock(self,unlocker,key):
+	def unlock(self,unlocker,key):
 		if not self.locked:
 			unlocker.Print(f"{+self} is not locked.")
 			return False
 		if key.id in self.keyids:
 			self.locked = False
 			unlocker.Print(f"You unlock {-self}.")
-			if Core.hasMethod(key,"LockWith"):
-				key.LockWith(self)
+			if Core.hasMethod(key,"lockWith"):
+				key.lockWith(self)
 			return True
 		unlocker.Print(f"{+key} won't work!")
 		return True
@@ -570,12 +360,13 @@ class Pool(Core.Fixture):
 		return True
 
 
-	def removeOccupant(self,occupant):
+	def disoccupy(self,occupant):
 		if occupant not in self.occupants:
 			return False
-		super().removeOccupant(occupant)
+		super().disoccupy(occupant)
 		occupant.addStatus("wet",21)
-		occupant.removeStatus("wet",-3)
+		occupant.removeStatus("wet",-4)
+
 
 	def Traverse(self,traverser,dir=None,verb=None):
 
@@ -589,14 +380,14 @@ class Pool(Core.Fixture):
 			Core.Print(f"You can't, you are {traverser.position()}.")
 			return False
 
-		if dir in ("out","outside","out of"):
+		if dir in ("out","outside"):
 			if self is traverser.parent:
 				if not self.open:
-					self.Open(traverser)
+					self.open(traverser)
 				Core.Print(f"You get out of {-self}.")
 				if self.parent is not Core.game.currentroom:
 					Core.waitInput()
-				self.removeOccupant(traverser)
+				self.disoccupy(traverser)
 				return True
 			else:
 				Core.Print(f"You're not in {-self}.",color="k")
@@ -619,15 +410,16 @@ class Pool(Core.Fixture):
 			return False
 
 		traverser.Print(f"You {verb} {dir} {-self}.")
-		self.addOccupant(traverser)
-		traverser.addStatus("wet",-3)
+		self.occupy(traverser)
+		traverser.addStatus("wet",-4)
 		return True
 
 
-	def Eat(self,eater):
-		return self.Drink(eater)
+	def consume(self,eater):
+		return self.imbibe(eater)
 
-	def Drink(self,drinker):
+
+	def imbibe(self,drinker):
 		Core.Print(f"You drink from {-self}.")
 		self.Taste(drinker)
 
@@ -642,7 +434,7 @@ class Pool(Core.Fixture):
 
 class Potion(Bottle):
 	# heals the player hp 1000, replaces potion with an empty bottle
-	def Drink(self,drinker):
+	def imbibe(self,drinker):
 		drinker.Print(f"You drink {-self}.")
 		drinker.heal(1000)
 		self.replace("bottle")
@@ -684,7 +476,7 @@ class Sign(Core.Item):
 
 
 	# prints the text on the sign in quotes
-	def Look(self,looker):
+	def examine(self,looker):
 		looker.Print(f'\n"{self.text}"',color='y')
 
 
@@ -774,9 +566,9 @@ class Wall(Core.Passage):
 				return True
 
 		if "down" in self.links:
-			traverser.Fall(self.difficulty,room=self.getNewLocation("down"))
+			traverser.fall(self.difficulty,room=self.getNewLocation("down"))
 		else:
-			traverser.Fall(self.difficulty)
+			traverser.fall(self.difficulty)
 		return True
 
 
@@ -785,12 +577,12 @@ class Wall(Core.Passage):
 			return self.Traverse(item,dir=self.getDefaultDir())
 
 		if "down" in self.links:
-			return item.Fall(height=self.difficulty,room=self.links["down"])
+			return item.fall(height=self.difficulty,room=self.links["down"])
 
 		# item can't randomly go up
 		dir = choice([dir for dir in self.links])
 		if self.links[dir] == self.links.get("up",None):
-			return item.Fall()
+			return item.fall()
 
 		# Print(f"{+item} goes {self.passprep} {-self}.")	
 		item.changeLocation(self.getNewLocation(dir))
@@ -809,7 +601,9 @@ class Window(Core.Passage):
 
 
 	# breaks the window, removes it from player inventory, and generates some shards
-	def Break(self):
+	def breaks(self):
+		if self.id not in Core.game.itemRegistry:
+			return False
 		Core.Print(f"{+self} breaks.")
 		self.broken = True
 		self.open = True
@@ -823,8 +617,8 @@ class Window(Core.Passage):
 			shard = Shard("glass shard","a sharp shard of glass",shardWeight,-1,"glass",{"shard"})
 			Core.game.currentroom.add(shard)
 		for occupant in self.occupants.copy():
-			occupant.Fall(room=self.getNewLocation())
-			self.removeOccupant(occupant)
+			occupant.fall(room=self.getNewLocation())
+			self.disoccupy(occupant)
 		if self.covering:
 			self.covering.removeCover()
 		return True
@@ -866,7 +660,7 @@ class Window(Core.Passage):
 		return True
 
 
-	def Bombard(self,missile):
+	def bombard(self,missile):
 		assert isinstance(missile,Core.Projectile)
 		if Core.roll(100) < Core.bound(missile.aim+self.Size()+10,1,99):
 			if not self.open:
@@ -878,7 +672,7 @@ class Window(Core.Passage):
 		return False
 
 
-	def Look(self,looker):
+	def examine(self,looker):
 		if self.view:
 			looker.waitInput(f"You look through it...")
 			Core.Print(f"{self.links[self.view].desc}")
@@ -894,7 +688,7 @@ class Door(Window):
 
 
 	# sets open bool to true, prints its items
-	def Open(self,opener):
+	def open(self,opener):
 		if self.open:
 			Core.Print(f"{+self} is already open.")
 		else:
@@ -904,11 +698,13 @@ class Door(Window):
 
 
 factory = {
-	"blue potion": lambda: Potion("blue potion", "A bubbling blue liquid in a glass bottle",10,3,"glass",["bottle","glass","potion"],2),
-	"bottle": lambda: Bottle("bottle","an empty glass bottle",6,3,"glass",["glass","glass bottle"]),
-	"coffee": lambda: Potion("bottle of coffee","A bottle of frothy dark brown liquid",10,3,"glass",["coffee","espresso","bottle"],1),
-	"compass": lambda: Core.Compass("compass","a plain steel compass with a red arrow",2,10,"steel",rarity=2,plural="compasses"),
-	"green potion": lambda: Potion("green potion", "A bubbling green liquid in a glass bottle",10,3,"glass",["bottle","glass","potion"],2),
-	"red potion": lambda: Potion("red potion", "A bubbling red liquid in a glass bottle",10,3,"glass",["bottle","glass","potion"],2),
-	"shard": lambda: Shard("glass shard","a small glass shard",2,1,"glass",["shard"])
+	"black hole": lambda: Core.Item("black hole","A spherical vortex of darkness.",10000,-1,"void"),
+	"blue potion": lambda: Potion("blue potion", "A bubbling blue liquid in a glass bottle.",10,3,"glass",["bottle","glass","potion"],2),
+	"bottle": lambda: Bottle("bottle","An empty glass bottle",6,3,"glass",["glass","glass bottle"]),
+	"coffee": lambda: Potion("bottle of coffee","A bottle of frothy dark brown liquid.",10,3,"glass",["coffee","espresso","bottle"],1),
+	"compass": lambda: Core.Compass("compass","A plain steel compass with a red arrow.",2,10,"steel",rarity=2,plural="compasses"),
+	"green potion": lambda: Potion("green potion", "A bubbling green liquid in a glass bottle.",10,3,"glass",["bottle","glass","potion"],2),
+	'iron ingot': lambda: Core.Item("iron ingot","A solid bar of iron.",20,200,"iron",["ingot","bar","iron"]),
+	"red potion": lambda: Potion("red potion", "A bubbling red liquid in a glass bottle.",10,3,"glass",["bottle","glass","potion"],2),
+	"shard": lambda: Shard("glass shard","A small glass shard.",2,1,"glass",["shard"])
 }

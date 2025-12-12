@@ -38,7 +38,7 @@ def main(testing=False):
 		# try:
 		if Core.game.quit: return Menu.quit()
 		Core.game.silent = False
-		Core.game.whoseturn = Core.player
+		Core.game.whoseTurn = Core.player
 		if not Core.player.isAlive(): 
 			if not Menu.restart():
 				return False
@@ -52,26 +52,26 @@ def main(testing=False):
 		# creatures in current room's turn
 		for creature in Core.game.currentroom.allCreatures():
 			if not Core.player.isAlive(): continue
-			Core.game.whoseturn = creature
-			creature.act()
+			Core.game.whoseTurn = creature
+			creature.Act()
 
 		# creatures in nearby rooms' turn
 		Core.game.silent = True
 		for room in Core.game.nearbyRooms():
 			for creature in room.allCreatures():
 				if not Core.player.isAlive(): continue
-				Core.game.whoseturn = creature
-				creature.act()
+				Core.game.whoseTurn = creature
+				creature.Act()
 
 		if not Core.player.isAlive(): continue
 		# cleanup before looping
-		Core.game.whoseturn = None
+		Core.game.whoseTurn = None
 		# pass the time for all rooms and creatures
 		Core.game.passTime()
 
 		if not Core.player.isAlive(): continue
 		# save game every so often just in case
-		if Core.game.time >= Core.game.lastsave+20: Menu.quickSave("autosave")
+		if Core.game.time >= Core.game.lastSave+20: Menu.quickSave("autosave")
 		# except Exception as e:
 		# 	if testing: raise e
 		# 	Core.Print(f"\n\nAn error has occurred. The game will attempt to continue, but you may want to restart.\nThe error message is as follows:\n")
@@ -88,19 +88,14 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# test replace with cover and platform
-
-# think about hiding, occupying pools. Items and Creatures.
-
-# prevent standing on water, should be "in" water
-
 # reorganize methods, capital or lowercase them based on if creature is subject or object
 # consider using occupants to handle multiple riders in Creature class
 	# occupants would need to be handled in Fall(), probably other methods too
-# consider using nullDespawn and timeDespawn for dead creatures and passTime
 # give passages a capacity limit, so a dragon can't fit through a doorway?
 # assert room contents types during instantiation
 # during instantiation assert items weight can fit in space or size of container
+# add asserts to most class methods
+# add better comments to methods
 
 # set platform when throwing objects
 # i.e. throw snake onto table or onto ground, we don't want them to fall after impact
@@ -109,38 +104,58 @@ if __name__ == "__main__":
 
 # BUG BACKLOG
 
-# > hide behind the dragon
-# You crouch behind the dragon.
 # What will you do?
-# > get up
-# You are no longer crouching.
-# You are hidden.
+# > get in chest
+# You get in the wooden chest.
+# What will you do?
+# > get out of chest
+# Where will you go?
 
-# The green potion breaks.
-# Shards of glass scatter everywhere.
-# The shelf creaks under the weight.
-# The shelf creaks under the weight.
+# make sure to call 'sky' as 'the sky' like 'the ground'
 
 # What will you do?
-# > jump to dragon
-# You jump on the dragon!
-# You can't get on the dragon, you're riding your horse. Try jumping to it.
+# > take horse
+# You try to pick up the horse.
+#... then nothing
 
-# > jump on bed
-# None bed on
-# The bed creaks under the weight...
-# You get in the bed.
-# You are laying.
-# You are cozy.
+# It's a shelf with things on it.
+# A sturdy oaken kitchen shelf
+# but there's nothing on it??
 
-# > "Throw bread at chest"
-# "you throw the bread in"
-# ^ we don't want it to say 'in' automatically, we don't know if it will go in yet
+# There is a table with a green python standing on the table on it.
+# There is a green python standing on the table.
+
+# What will you do?
+# > take blue potion from shelf
+# There is no 'blue potion' in a 'shelf' that you can see.
+
+# > put key in chest
+# You put your rusty key on your wooden chest.
+# we want to be able to put stuff in containers, not on them
+
+# What will you do?
+# > look at adorned man
+# It's an adorned man.
+# An adorned man
+# It has a sky, a rusty key and a blue jay.
+
+# What will you do?
+# > put red potion on shelf
+# You can't put the red potion on the shelf.
+
+# > put coffee machine on chair
+# You put your coffee machine on your wooden chair.
+# this happens when both in inventory. objs in inv should not be occupiable
+
+# What will you do?
+# > get out
+# You get out of the brook.
+# What will you do?
+# > get in
+# There is no way 'in' here.
 
 # saving then loading fails
 	# test saving and loading while in a box
-
-# "kick the stream" crashes
 
 # > attack table with sword
 # You attack the table with your broken sword.
@@ -154,6 +169,9 @@ if __name__ == "__main__":
 
 # FUTURE IMPROVEMENTS
 
+# WATER AND LIQUIDS
+# think about hiding, occupying pools. Items and Creatures.
+# prevent standing on water, should be "in" water
 # consider making Pool a container
 # handle "get in stream", "go in stream", "leave stream", "get out of stream"
 # test drinking an object when inv is full, see if bottle goes on ground
@@ -161,12 +179,17 @@ if __name__ == "__main__":
 # try "jump in the pond"
 # "drink from the pond"
 # add "swim", adding drowning and holding breath
+# if swimming, prevent jump (maybe automatically prevented because no anchor?)
 # handle bodies of water; what about fall damage, or being weighed down
 # add fishing
 # add magic beans or food to pour stuff on
 # pour multiple bottles of stuff into one pot
+	# will need to use a method 'merge'
 # think about a broken water container or leaking/draining
 
+# DROPPING, PUTTING, STEALING
+# instead of always checking for hasattr("open"), use Container.canPass()
+# consider if 'put item on ground' should actually redirect to drop or no
 # refactor drop into a creature method?
 # make sure Touch method is called when player 'takes' an item (unless they use a hook or smth?)
 # try to pull creature off of its mount?
@@ -178,10 +201,9 @@ if __name__ == "__main__":
 	# 'take goblins sword from him'
 	# on second thought, using findObject with reqParent might be sufficient
 		# checking for parent by removing the final s
+# when catching, drop it if it inventory is full?
 
-# make sinceLastAte, sinceLast actual meters like hungriness and sleepiness, that rise or decay
-# add 'open' to box descname when it is open
-
+# RANGED AND IMPACT
 # readjust throw force formula; compare to BRDN (shouldn't be able to throw heavier than you can have in inv, or more than you can carry in hands?
 # check if throwing a creature which has another riding it?
 # knock stuff off of a table if it takes impact?
@@ -190,7 +212,9 @@ if __name__ == "__main__":
 # add in a whip or hook which is a projectile that allows you to grab an item?
 # throw 'grappling hook' which creates a new passage?, throw up a cliff or across a gap
 # consider how attacking with foot, head, mouth, hand, tail works
+# add in "knockback"?, if you get hit on top of the cliff, have a chance to fall off?
 
+# FIRE AND WOOD
 # add damage type vulnerabilities and resistance, i.e. wood is weak to fire and slashing
 	# for items, vulnerability just temporarily mitgates durability penalty to damage?
 # add chopping tree
@@ -200,6 +224,8 @@ if __name__ == "__main__":
 # a "campfire" item which can be used to cook food and provide light
 # if something is on fire (or other condition) when entering a room, say it
 
+# FIGHTING AND EQUIPPING
+# try to 'knock over' and 'shove' items?
 # redo the attack and auto equipping system
 # try out using a creature as a weapon
 # correctly factor DFNS into takeDamage (it should probably be in takeDamage method itself), but consider different damage source like collision and falling
@@ -207,13 +233,7 @@ if __name__ == "__main__":
 # add in armor and shields and protection and test them
 # add new weapons
 
-# add turn order, so you aren't the first to move when you enter a room, makes MVMT more useful
-	# allow moving multiple times if you have enough speed? (maybe max 5 for vs 1 for slowest creature)
-# refactor sleep into a player method. right now, 'mbu sleep' has strange behavior
-# add time to verbs?
-# add action queue to sort initiative among rooms
-# add in "knockback"?, if you get hit on top of the cliff, have a chance to fall off?
-
+# LOOKING AND HIDING
 # add room property which is description of directions ("look up", "look east", "look out", etc.)
 # try "boom" effect. It will only effect current room/container (unless container breaks or is open?)
 # restrict Read to readable objects?
@@ -223,24 +243,34 @@ if __name__ == "__main__":
 	# replace references to currentroom with player.parent when needed
 	# include hiding ability?
 	# you are hiding (if in one)
+# add 'open' to box descname when it is open
+# add 'floating' to objects descname that are floating
 
+# TIME AND SLEEP
+# make sinceLastAte, sinceLast actual meters like hungriness and sleepiness, that rise or decay
+# make separate timer for mana regeneration
+# add turn order, so you aren't the first to move when you enter a room, makes MVMT more useful
+	# allow moving multiple times if you have enough speed? (maybe max 5 for vs 1 for slowest creature)
+# refactor sleep into a player method. right now, '\mbu sleep' has strange behavior
+# add time to verbs?
+# add action queue to sort initiative among rooms
+
+# HOUSEKEEPING
 # sift through TODOs
-# account for being restrained when doing stuff
-# add asserts to most class methods
-# add better comments to methods
-
 # add basic equipment and clothing items
+# account for being restrained when doing stuff
 # restructure map and revise tests
 # add a coin purse? which holds your money? required to collect money?
 # make a list of all possible uses and inputs for each action and systematically test them. Revise the world to accomodate them
-# implement escape/run away
 
+# CRAFTING
 # add in crafting recipes. Probably store this as a JSON?
 # add cooking/brewing/crafting/tinkering
 # ^^^sharpening/smithing items?
 	# create system for 'recipes' with this
 # protect rare items from certain kinds of damage/effects
 
+# DIALOGUE
 # fix/add Creature.isNaked or Player.isNaked
 # add total traversal limit on dlog nodes?
 # add link nodes and effect nodes to dialogue after all
@@ -248,6 +278,50 @@ if __name__ == "__main__":
 	# maybe blessings actually would be the course of action of the NPC with which you speak... I guess, find a way to do that
 # add dialect processor to tritepool output?
 
+# KNOWLEDGE
+# fill out glossary more, change definitions of some things to be more expository and fantastical
+# add knowledge/intelligence value for glossary, 
+# player only knows something if the term is in their "knowledge" set or their KNWL fits the requirement
+# perhaps don't allow crafting certain things without it in their glossary?
+# or add items to glossary through trial and error in crafting?
+# create a curated list of verbs commands to show and separate out the complete list
+
+# CREATURE FORMS
+# make Player a subclass of Humanoid
+# main creature forms:
+	# humanoid, quadruped, serpentine, insectoid, avian, aquatic, amorphous, tentacular
+# handle posture for different forms
+# right now it says "there is a python standing on a table"
+# make limbs be objects in a organ list? so they can be target or chopped off?
+# add creatures with many limbs (or can equip more than 2 weapons/shields)
+
+# BEHAVIOR
+# what if horse goes wild while riding it, doesn't obey your directions
+# implement creature.Go
+	# make sure they can't go if they're riding something dead or occupying something
+# add Escape to creature behavior. Make sure that if they escape a container thats in an inventory, to put them in the room??
+# make fear lowered by taking damage on player's turn, but make love go down if player does something they don't like (like restraining them)
+# create system for behavior 'regimens'
+# make sure creatures can see/select targets from open containers as well
+# design persons and person behavior all of the RP system?
+# add reactions to being healed or being attacked
+# figure out animal behavior
+# add monsters/monster behavior
+# creatures attacking?
+# improve attack tests
+# figure out combat? attack items?
+# examine output grammar/statements for lower level actions (in case non-player creatures do actions, we dont want it to print the same msgs), alter print to use G.print which depends on silent
+
+# VERBS AND ACTIONS
+# FLESH OUT MORE VERBS (and add items to go with them)
+# add "insert the key into the lock"
+# add a wait command (cant wait with enemies nearby, cuz they could just kill you)
+# more switches, levers, buttons
+# add douse function
+# allow stats display to scroll?
+# implement escape/run away
+
+# CHARACTER CREATION
 # add character creation/customization
 # build: slender (+3 SPD), medium (+3 DEX), bulky (+3 CON)
 # gender: male (+2 STR, +10 FEAR), female (+2 CHA, +10 LOVE), other (+2 LCK, +5 FEAR, +5 LOVE)
@@ -256,43 +330,12 @@ if __name__ == "__main__":
 	# (maybe just cosmetic or maybe affects something minor/dialogue)
 # character always has purple eyes?
 
-# fill out glossary more, change definitions of some things to be more expository and fantastical
-# add knowledge/intelligence value for glossary, 
-# player only knows something if the term is in their "knowledge" set or their KNWL fits the requirement
-# perhaps don't allow crafting certain things without it in their glossary?
-# or add items to glossary through trial and error in crafting?
-
-# make Player a subclass of Humanoid
-# main creature forms:
-	# humanoid, quadruped, serpentine, insectoid, avian, aquatic, amorphous, tentacular
-# handle posture for different forms
-# make limbs be objects in a organ list? so they can be target or chopped off?
-# add creatures with many limbs (or can equip more than 2 weapons/shields)
-
-
-# behavior
-	# what if horse goes wild while riding it, doesn't obey your directions
-	# implement creature.Go
-		# make sure they can't go if they're riding something dead or occupying something
-	# add Escape to creature behavior. Make sure that if they escape a container thats in an inventory, to put them in the room??
-	# make fear lowered by taking damage on player's turn, but make love go down if player does something they don't like (like restraining them)
-	# create system for behavior 'regimens'
-	# make sure creatures can see/select targets from open containers as well
-	# design persons and person behavior all of the RP system?
-	# add reactions to being healed or being attacked
-	# figure out animal behavior
-	# add monsters/monster behavior
-	# creatures attacking?
-	# improve attack tests
-	# figure out combat? attack items?
-# examine output grammar/statements for lower level actions (in case non-player creatures do actions, we dont want it to print the same msgs), alter print to use G.print which depends on silent
-
-# FLESH OUT MORE VERBS (and add items to go with them)
-# add "insert the key into the lock"
-# add a wait command (cant wait with enemies nearby, cuz they could just kill you)
-# more switches, levers, buttons
-# add douse function
-# allow stats display to scroll?
+# SPELLS AND MAGIC
+# add some preliminary spells and add effects file
+	# reevaluate effect functions, is there a way to reference a function by string?
+	# how will amulet effects work??
+	# add spells functions and fill in spells dict
+	# added spell/effects tests
 
 # add output effects to blessings and curses?
 # slowness/swiftness already affects output speed
@@ -313,19 +356,9 @@ if __name__ == "__main__":
 	# during Go, just choose a random direction
 # deaf -> bang doesn't affect you, and you can't talk to creatures
 
-# add spells
-# add some preliminary spells and add effects file
-	# reevaluate effect functions, is there a way to reference a function by string?
-	# how will amulet effects work??
-	# add spells functions and fill in spells dict
-	# added spell/effects tests
-
 # add trading, buying, selling with npcs
-
 # update design doc
-# add signal handling: ctrl+s to save, ctrl+q to quit?
 # add a world map/record visited rooms
-# add a window which shows player stats/possible commands/instructions
 
 
 ################################################################################

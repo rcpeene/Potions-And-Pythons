@@ -170,7 +170,12 @@
 				"passprep": "into",
 				"descname": "cracked mirror",
 				"aliases": ["mirror"]
+			},
+			{
+				"__class__": "factoryItem",
+				"name": "green potion"
 			}
+
 		],
 		"creatures": [],
 		"status": [],
@@ -267,10 +272,6 @@
 						"name": "green potion"
 					},
 					{
-						"__class__": "factoryItem",
-						"name": "green potion"
-					},
-					{
 						"__class__": "Food",
 						"name": "bread roll",
 						"desc": "A stale wheat roll of baked bread. Very Dry!",
@@ -306,7 +307,7 @@
 				"durability": 100,
 				"composition": "steel",
 				"aliases": ["button","machine","coffee machine","nespresso"],
-				"triggers": ["Use", "Press", "Run"],
+				"triggers": ["use", "press", "run"],
 				"effect": "Effects.spawnObject('coffee')"
 			},
 			{
@@ -343,6 +344,7 @@
 				"weight": 100,
 				"durability": 100,
 				"composition": "stone",
+				"fixed": true,
 				"capacity": 100,
 				"status": [["AREA wet -2",-2]],
 				"items": []
@@ -495,8 +497,7 @@
 			"south": "big stump",
 			"in": "cabin hallway",
 			"cabin": "cabin hallway",
-			"up": "clifftop",
-			"down":"burning shore"
+			"up": "clifftop"
 		},
 		"fixtures": [
 			{
@@ -541,7 +542,7 @@
 				"__class__": "Wall",
 				"name": "cliff",
 				"desc": "A mossy grey cliff",
-				"weight": 500,
+				"weight": 250,
 				"composition": "earth",
 				"aliases": ["cliffside","white cliff"],
 				"difficulty": 30,
@@ -558,7 +559,7 @@
 				"__class__": "Animal",
 				"name": "horse",
 				"desc": "A strong dun mustang",
-				"weight": 300,
+				"weight": 100,
 				"aliases": ["mustang"],
 				"determiner": "your",
 				"traits": [8,10,3,12,12,3,1,2,2,5],
@@ -577,7 +578,7 @@
 				"__class__": "Animal",
 				"name": "dragon",
 				"desc": "A small golden dragon",
-				"weight": 600,
+				"weight": 500,
 				"traits": [10,14,6,12,15,3,7,11,1,1],
 				"hp": 100,
 				"mp": 0,
@@ -678,7 +679,7 @@
 		],
 		"creatures": [],
 		"status": [],
-		"floor": "soil"
+		"floor": "grass"
 	},
 	"burning shore": {
 		"__class__": "Room",
@@ -713,6 +714,7 @@
 				"weight": 1000,
 				"durability": -1,
 				"composition": "stone",
+				"fixed": true,
 				"aliases": ["statue", "maiden", "maiden statue"],
 				"triggers": ["Pray"],
 				"effect": "Core.Print('You feel enlightened.'); Core.player.gainQP(10)"
@@ -741,8 +743,7 @@
 				"composition": null,
 				"links": {
 					"down": "burning shore",
-					"in": "burning shore",
-					"across": "clifftop"
+					"in": "burning shore"
 				},
 				"descname": "dark pit",
 				"difficulty": 20
@@ -825,9 +826,10 @@
 				"inv": [
 					{
 						"__class__": "Armor",
+						"id": 4,
 						"name": "beret",
 						"desc": "A suspiciously robust beret",
-						"weight": 100,
+						"weight": 10,
 						"durability": 1000,
 						"composition": "cloth",
 						"aliases": ["hat"],
@@ -836,6 +838,7 @@
 					},
 					{
 						"__class__": "Armor",
+						"id": 5,
 						"name": "iron tunic",
 						"desc": "A shiny iron tunic",
 						"weight": 5,
@@ -847,8 +850,8 @@
 					}
 				],
 				"gear": {
-					"head": 0,
-					"torso": 1,
+					"head": 4,
+					"torso": 5,
 					"left": "carrying",
 					"right": null,
 					"legs": null
