@@ -155,37 +155,38 @@ main() runs a parsing loop, that loops taking valid input
 HOW PARSING INPUT WORKS (EXAMPLE)
 ```
 What will you do?
-> I will attack the Green Snake, with my Iron Sword.
+> I will take my Sword of Legend, from out of the Great Stone.
 ```
 
-In the above example, the user provides the raw input:
-	"I will attack the Green Snake, with my Iron Sword."
+- input processing in tokenize():
 
-- input processing in processCmd():
+First, the input is purified by removing extraneous symbols:
+"I will take my Sword of Legend from out of the Great Stone"
 
-First, the raw input is turned to lowercase:
-	"i will attack the green snake, with my iron sword."
-Then, the input is purified by removing extraneous symbols:
-	"i will attack the green snake with my iron sword"
+Then, the raw input is turned to lowercase:
+"i will take my sword of legend from out of the great stone"
+
 Then, the input is split by spaces into a list of words:
-	["i","will","attack","the","green","snake","with","my","iron","sword"]
-Next, articles and determiners (and other extraneous words) are removed:
-	["attack","green","snake","with","iron","sword"]
+["i","will","take","my","sword","of","legend","from","out","of","the","great","stone"]
+
 The nounify() step combines words which appear to be a single meaningful term:
-	["attack","green snake","with","iron sword"]
+["i","will","take","my","sword of legend","from","out","of","the","great stone"]
+
+Next, articles and determiners (and other extraneous words) are removed:
+["take","sword of legend","from","out","great stone"]
 
 - parsing input in parse():
 
 the verb is assumed to be the first term of the processed command:
-	verb = "attack"
+	verb = "take"
 If the command is multiple terms, the preposition is found (if it exists) by comparing each term to a set of known prepositions. In this case:
-	prep = "with"
+	prep = "from"
 if there are more terms, the direct object is assumed to be the first term after the verb that is not a preposition. In this case:
-	dobj = "green snake"
+	dobj = "sword of legend"
 if there are still more terms, the indirect object is the first term after the preposition or direct object. In this case:
-	iobj = "iron sword"
+	iobj = "great stone"
 
-So parse() assigns terms to verb, dobj, iobj, and prep. Often, some or all of these parts may not exist in the user input, in which case they are set to the value of None.
+So parse() assigns terms to verb, dobj, iobj, and prep. Often, some or all of these parts may not exist in the user input, in which case they are set to None.
 
 You might notice that, if a direct object is not given, 'dobj' will be set to what is actually the indirect object, and 'iobj' will remain None. Usually, this is acceptable, and the action functions are designed to handle this situation.
 
@@ -194,6 +195,7 @@ The nature of this input parser is such that it cannot accurately parse input wi
 Once these four parts are determined from parsing, the verb is used to identify the corresponding action function to call with the other three parts as parameters. Like so:
 
 	actionFunc(dobj,iobj,prep)
+	actions["take"]("sword of legend","great stone","from")
 
 At which point the action function may ask for more input, do additional interpretation, or execute the action.
 
@@ -312,6 +314,13 @@ Lean +1 SPD
 Medium +1 SKL
 Hefty +1 CON
 
+Hair:
+Black
+Brown
+Red
+Blond
+White
+None
 
 
 LEVELING:
@@ -677,7 +686,7 @@ b: bludgeoning	[phys] - weapons that can crush
 f: fire	[elem] - weapons that can burn [can cause burning condition]
 c: cold	[elem] - weapons that can freeze [can cause frozen condition]
 l: lightning [elem] - weapons that can shock [can cause paralyzed condition]
-t: thunder [elem] - weapons that can burst [can cause deafened condition]
+t: thunder [elem] - weapons that can boom [can cause deafened condition]
 a: acid [elem] - weapons that can corrode
 x: poison [elem] - weapons that can poison (duh)
 
@@ -695,13 +704,15 @@ STATUS EFFECTS:
 status conditions exist in the creatures status list as list pairs
 of condition name and duration.
 negative durations have special meanings:
--1 means the condition is permanent until it is removed by some general source
--2 means the condition is inflicted by being in the current room. It will end when the player leaves the room or when the room's condition's duration ends
--3 or lower means the condition is permanent until removed by a specific source
+-1 means the condition is permanent (should be rarely used)
+-2 means the condition is permanent until removed by any general source
+-3 means the condition is inflicted by being in the current room
+-4 or lower means the condition is permanent until removed by some specific source
+
 
 rooms have status effects too. And rooms can harbor condition which afflict creatures in the room with other status conditions. When this happens, the room condition's name will contain the information about the condition to inflict upon the creatures. For instance, if a room is filled with poisonous gas for 30 time units and will poison all creatures that enter until they leave (or until the rooms condition wears off). the rooms condition pair would be of the form:
 
-["afflict poisoned -1", 30]
+["afflict poisoned -2", 30]
 
 if the room is simply on fire for 10 more time units, and will ignite any creatures in the room for 15 units, even leaving the room will not save them after being set ablaze. In this case, the room's condition pair would be of the form:
 
@@ -897,6 +908,7 @@ Clarent - sword in the stone
 Solfaine (sword of light/fire)
 Lunafrith (moon shield)
 Joyeuse - sparkling rainbow sword, owned by Baligant
+Frostbite - ice greatsword
 
 
 GEAR:
@@ -947,6 +959,7 @@ hourglass item (actually does something useful?)
 map item (maybe at any given room, tells u direction toward a destination)
 deck of card with suits: swords, stars, flowers, something else?
 witchblade (perhaps unlike the comic witchblade)
+fishweir (basically a structure fish trap)
 
 
 Sci-fi set
@@ -1564,6 +1577,7 @@ INSTITUTIONS/FACTIONS:
 
 
 MISC WORLD IDEAS:
+- "he's not the guy... I am!"
 - witengamot
 - "omens aghast" as a greeting
 - grimoire, book of spells
@@ -1680,6 +1694,7 @@ CHARACTER NAMES IDEAS:
 	Dovregubben (the mountain king) from Peer Gynt. Rescuing three dairy maids?
 	Polemarch (archon of war)
 	Hazelnut farmer with children named, fil, bert, hazel, and pet nut
+		quest to retrieve a comb? (maybe get a diamond?) from Hazelnut Child tale
 	The Benevolent Frog King (looking for his son the frog prince?) - Vodyantsar?
 	The Frog Prince (vodyanoy)
 	Frog Wizard - Zazmoze
@@ -1697,7 +1712,7 @@ CHARACTER NAMES IDEAS:
 	Thomas Swinsword (playwright)
 	River Jack
 	Grand Vizier
-	Talking raven that speaks in deep speech (scary looking text?)
+	Talking raven that speaks poetic scary omens
 	Falstaff (from shakespeare)
 	bird named Kwock
 	merchant named Pryce
@@ -1706,14 +1721,14 @@ CHARACTER NAMES IDEAS:
 
 	Somnus, Orion, Pax, Tyro, Cogg, Garl, Ike, Uther, Kess, Roach, Mito, Lugh, Muriel
 	Eadmer, Godfrey, Einhard, Vixen, Aloy, Eilonwy, Beowin, Alahad, Galatea, Grin
-	Spiridon, Khartoum, Heironymus, Gundahar, Wace, Leofwyn, Drythelm, Hengran, Hardeck
-	Harcourt, Aecury, Aelfwyne, Arwald, Merwin, Ichabod, Alcuin, Dwint, Egfrith, Gildaz,
+	Spiridon, Khartoum, Heironymus, Gundahar, Wace, Leofwyn, Drythelm, Hengran, Harbeck
+	Hancourt, Aecury, Aelfwyne, Arwald, Merwin, Ichabod, Alcuin, Dwint, Egfrith, Gildaz,
 	Wulfstan, Salome, Ewart, Ephraim, Bragwen, Bran, Ulysses, Ambrose, Conomor, Hengist,
 	Cherdic, Osca, Chester, Ned, Rhiannon, Tethra, Lir, Donne, Phane, Blinda, Rozbeth,
 	Saladin, Flynwirt, Lalona, Wendell, Jane, Queldin, Pipin, Graley, Helen, Halfdan,
 	Clyde, Boffin, Wren, Eloise, Nora, Hawken, Questley, Hal, Gwyssa, Zinmere, Hette,
 	Reinhart, Sarge, Leor, Merrick, Everett, Thena, Anju, Zelda, Leif, Cato, Jezebel,
-	Sapna, Arden, Fiona, Euphemia, Asta, Zagler
+	Sapna, Arden, Fiona, Euphemia, Asta, Zagler, Olaf, Sybith, Matilda, Rusebrook
 
 	polemarch,commodore,margrave,
 	thane,earl,baron,duke,count,burgess,
@@ -1784,7 +1799,8 @@ wumpus
 albatross
 muskrat
 bellbird
-horses: palfrey, destier, "bony nag", bay horse, palomino
+horses: palfrey, destrier, "bony nag", bay horse, palomino, garron, 
+	pony, colt, foal, courser, rouncey, stallion, mustang, charger
 dormouse (known for sleep)
 
 
@@ -1940,7 +1956,7 @@ DIALOGUE IDEAS:
 - some will ask you to give them stuff
 
 - TALK TO ANIMALS:
-	- there will be a spell to talk to animal (maybe called beastspeak)
+	- there will be a spell to talk to animal (maybe called wildspeak)
 	- octopi will speak to you in an undecipherable text (maybe jumbled letters or other symbols)
 	- horses will be bold cowboy-like talk
 	- goats will be rude
@@ -1956,3 +1972,14 @@ DIALOGUE IDEAS:
 	- reptiles will use cryptic speech with old grammar and simple ideas
 	- fish will say glub glub or say simple words
 	- bugs will just make weird sounds
+
+
+
+Bodies of Water:
+- trickle
+- rill
+- rivulet
+- stream
+- brook
+- creek
+- river

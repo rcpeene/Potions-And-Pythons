@@ -211,7 +211,7 @@ def readDialogue(filename):
 
 # reads the global game class file, probably named "game.txt"
 # takes the world dict as input, returns the Game object
-def readGame(filename,World,dlogDict):
+def readGame(filename,World,dlogForest):
 	gfd = open(filename,"r")
 	gametext = gfd.readlines()			# split game file into a list of lines
 	mode = int(gametext[0][:-1])		# first line is gamemode int
@@ -220,7 +220,7 @@ def readGame(filename,World,dlogDict):
 	time = int(gametext[3][:-1])		# fourth line is time int
 	events = eval(gametext[4][:-1])
 	gfd.close()
-	return Core.Game(mode,World[currentroom],World[prevroom],time,events,dlogDict,Creatures.factory,Items.factory)
+	return Core.Game(mode,World[currentroom],World[prevroom],time,events,dlogForest,Creatures.factory,Items.factory)
 
 
 
@@ -323,8 +323,8 @@ def loadGame(filename=None):
 	# try:
 	Core.player = readJSON("player.json",object_hook=objDecoder)
 	Core.world = readJSON("world.json",object_hook=worldDecoder)
-	dlogDict = readDialogue("../../Dialogue.json")
-	Core.game = readGame("game.txt",Core.world,dlogDict)
+	dlogForest = readDialogue("../../Dialogue.json")
+	Core.game = readGame("game.txt",Core.world,dlogForest)
 	# hopefully load doesn't fail, that would suck
 	# except:
 	# 	Core.Print("Could not load game, save data corrupted\n",delay=0,color="k")
@@ -416,14 +416,14 @@ def createCharacter():
 	name = Core.InputLock(delay=0).title()
 	Core.Print("Describe yourself.",end="",delay=0,color="k")
 	desc = Core.InputLock(cue="\nYou are ",delay=0)
-	return Core.Player(name,desc,29,[1]*10,2,2,0,0)
+	return Core.Player(name,desc,29,[1]*10,0,0)
 
 
 # starts a new game and returns player, world, and game objects
 def newGame():
 	# initializes the game at the "cave" room
-	dlogDict = readDialogue("Dialogue.json")
-	Core.game = Core.Game(0,Core.defaultRoom,Core.defaultRoom,0,set(),dlogDict,Creatures.factory,Items.factory)
+	dlogForest = readDialogue("Dialogue.json")
+	Core.game = Core.Game(0,Core.defaultRoom,Core.defaultRoom,0,set(),dlogForest,Creatures.factory,Items.factory)
 	# initializes from the character creation screen
 	Core.player = createCharacter()
 	# tries to load a clean new world from initial world file, must be defined after player
@@ -453,13 +453,13 @@ def testGame():
 	inv = [Items.factory["compass"]()]
 	status = [["fireproof",-1], ["cursed",-2], ["immortal",-1],
 	["sharpshooter",50], ["invisible",15], ["flying",5]]
-	Core.player = Core.Player("Norman","a hero",10,[4]*10,100,100,1000,50,inv=inv,love=100,fear=100,spells=[],status=status)
+	Core.player = Core.Player("Norman","a hero",10,[4]*10,1000,50,inv=inv,love=100,fear=100,spells=[],status=status)
 
 	# world must be defined after player
 	Core.world = readJSON("World.json",object_hook=worldDecoder)
 
-	dlogDict = readDialogue("Dialogue.json")
-	Core.game = Core.Game(0,Core.world["cave"],Core.world["tunnel"],0,set(),dlogDict,Creatures.factory,Items.factory)
+	dlogForest = readDialogue("Dialogue.json")
+	Core.game = Core.Game(0,Core.world["cave"],Core.world["tunnel"],0,set(),dlogForest,Creatures.factory,Items.factory)
 
 	Core.buildWorld()
 

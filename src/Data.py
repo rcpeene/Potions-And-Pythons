@@ -17,9 +17,9 @@
 
 menuinstructions = "\nType 'info' for information on how to play.\nType 'new' to start a new game.\nType 'load' to load a save file.\nType 'delete' to delete a save file.\nType 'quit' to quit the game.\n"
 
-gameinfo = "="*70 + "\n\n\tPotions & Pythons\n\tv.Alpha\n\tBy Carter Peene, 2022\n\n" + "-"*70 + "\n\n\tTo play, type a command of the form:\n\t[verb] [*noun] [*preposition] [*noun]\n\tOR\n\t[verb] [*preposition] [*noun]\n\t* denotes a term that can be omitted when unnecessary.\n\tArticles, determiners, and most symbols are ignored.\n\n" + "-"*70 + "\n\n\tDuring the game, you may type...\n\tSee these instructions:\t\t'info' or 'help'\n\tGet a list of valid commands:\t'commands'\n\tGet a list of command examples:\t'examples'\n\tSee your player statistics:\t'stats' and 'abilities'\n\tSee your items:\t\t\t'inv' and 'gear'\n\tLearn about your location:\t'here'\n\tLearn about most game terms:\t'define [term]'\n\tSave the game:\t\t\t'save' and 'quicksave'\n\tQuit:\t\t\t\t'quit'\n\n" + "="*70
+gameinfo = "="*70 + "\n\n\tPotions & Pythons\n\tv.Alpha\n\tBy Carter Peene, 2022\n\n" + "-"*70 + "\n\n\tTo play, type a command of the form:\n\t[verb] [*noun] [*preposition] [*noun]\n\tOR\n\t[verb] [*preposition] [*noun]\n\t* denotes a term that can be omitted when unnecessary.\n\tArticles, determiners, and most symbols are ignored.\n\n" + "-"*70 + "\n\n\tDuring the game, you may type...\n\tSee these instructions:\t\t'info' or 'help'\n\tGet a list of valid commands:\t'commands'\n\tGet a list of command examples:\t'examples'\n\tSee your player statistics:\t'stats' and 'abilities'\n\tSee your items:\t\t\t'inv' and 'gear'\n\tLearn about your location:\t'here' and 'where'\n\tLearn about most game terms:\t'define [term]'\n\tSave the game:\t\t\t'save' and 'quicksave'\n\tQuit:\t\t\t\t'quit'\n\n" + "="*70
 
-examples = "\nValid input examples include:\n- go\n- go north\n- go nw\n- go up the stairs\n- go back\n- go to tunnel\n- look around\n- look at python\n- i will fight the python!\n- hit the python with my sword\n- attack python sword\n- fight it\n- equip a sword\n- unequip sword\n- take red potion\n- take the potion from the chest\n- take all\n- put red potion in the chest\n- put potion chest\n- drop the red potion\n- pour it out\n- close chest\nGet an exhaustive list of commands by typing 'commands'."
+examples = "\nValid input examples include:\n- go\n- go north\n- go nw\n- go up the stairs\n- go back\n- go to tunnel\n- look around\n- look at python\n- i will fight the python!\n- hit the python with my sword\n- attack python sword\n- fight it\n- equip a sword\n- unequip sword\n- take red potion\n- take the potion from the chest\n- take all\n- put red potion in the chest\n- put potion chest\n- drop the red potion\n- pour it out\n- close chest\nGet a precise list of commands by typing 'commands'."
 
 symbols = ".,!?~`\"[]{}<>+=/*&^%$#@\t"
 
@@ -37,7 +37,7 @@ magicaldmg = "inrv"
 ## USEFUL SETS ##
 #################
 
-articles = {"a","again","an","her","his","i","ill","i'll","its","some","that","the","then","their","this","will"}
+superfluous = {"a","again","an","her","his","i","ill","i'll","its","of","some","that","the","then","their","this","will"}
 
 shortactions = {"cast","here","room","clear","cls"}
 
@@ -51,6 +51,8 @@ hellos = {"ahoy","ahoy there","aloha","greetings","good tidings","hail","hail th
 
 goodbyes = {"adieu","bye","bye bye","bye then","prosper and live long","may luck","omens beware","fare thee well","farewell","gods be with ye","goodbye","goodbye then","peace be with you","so long"}
 
+laughs = {"haha","hahaha","hehe","hehehe","heehee","lol","rofl","lmao"}
+
 # note that "u" and "d" are included here as abbreviations of "up" and "down"
 # this is because "up" and "down" are also in the "directions" dict
 # they are not necessary entries here, but make interpreting more consistent...
@@ -59,20 +61,20 @@ prepositions = {"above","across","around","at","away","away from","behind","belo
 
 pronouns = {"she","he","they","her","him","them","it"}
 
-reflexives = {"she":"herself","he":"himself","they":"themselves","it":"itself","me":"myself","you":"yourself"}
+reflexives = {"she":"herself","he":"himself","they":"themself","it":"itself","me":"myself","you":"yourself"}
 
 compounds = {"downstairs":["down","stairs"], "upstairs":["up","stairs"]}
 
 # used in nounify() in Parser.py to combine multiple words that might have a single meaning as a whole term
-miscexpressions = {"it all","meteor shower","solar eclipse"}
+miscexpressions = {"it all"}
 
 directions = {"n":"north","ne":"northeast","e":"east","se":"southeast","s":"south","sw":"southwest","w":"west","nw":"northwest","u":"up","d":"down","inside":"in","into":"in","o":"out","b":"beyond","upward":"up","downward":"down","onto":"on","upon":"on","off":"down","off of":"down","out of":"out","over":None,"to":None}
 
-cardinalDirs = ("north","east","south","west")
-ordinalDirs = ("northeast","southeast","southwest","northwest")
+cardinals = ("north","east","south","west","northeast","southeast","southwest","northwest")
 
 
 dmgtypes = {"a":"acid","b":"bludgeoning","c":"cold","e":"essential","f":"fire","h":"hunger","i":"psychic","l":"lightning","n":"necrotic","p":"piercing","r":"radiant","s":"slashing","t":"thunder","v":"force","x":"poison"}
+dmgclasses = {"a":"elem","b":"phys","c":"elem","e":"dev","f":"elem","h":"phys","i":"mag","l":"elem","n":"mag","p":"phys","r":"mag","s":"phys","t":"elem","v":"mag","x":"elem"}
 
 # gear dict used to initialize the player object
 initgear = {"head":None, "torso":None, "left":None, "right":None, "legs":None}
@@ -81,7 +83,7 @@ blessings = {"brawniness","swiftness","prowess","liveliness","toughness","felici
 
 curses = {"weakness","slowness","clumsiness","tiredness","illness","timidity","stupidity","insanity","apathy","calamity"}
 
-buffs = {"anointed","fleetfooted","flying","invigorated","mending","wildtongued"}
+buffs = {"anointed","fleetfooted","flying","invigorated","mending","wildspeaking"}
 
 debuffs = {"dead","hindered","hungry","starving","tired","fatigued"}
 
@@ -89,15 +91,16 @@ privateStatus = {"dead","invisible","hidden","hindered"}
 
 immobileStatus = ("laying","sitting","asleep","frozen","paralyzed","unconscious","stunned","dead","restrained")
 
-colorMap = {
+# ANSI color codes for terminal output
+colorCodes = {
 	"r":"31", "o": "38;5;215", "y":"38;5;227", "g":"32", 
 	"b":"34", "m":"35", "k":"90", "w":"37"
 }
 
 conditionDmg = {
 	"burning":(50,"f"),
-	"drowning":(50,"n"),
-	"bleeding":(25,"n"),
+	"drowning":(50,"e"),
+	"bleeding":(25,"e"),
 	"frozen":(15,"c"),
 	"poisoned":(5,"x"),
 	"starving":(1,"h"),
@@ -162,48 +165,62 @@ scents = {
 
 
 tastes = {
-	"earth": "It has a sharp taste of ancient musty dirt.",
-	"soil": "It has a deep and full fresh earthy taste.",
-	"mud": "It is wet and pungent, tasting mildly of dirt.",
-	"stone": "It has a dull taste of chalk and lime.",
-	"wood": "It doesn't taste like much.",
-	"brick": "It tastes like dry gritty clay.",
-	"glass": "It has little taste.",
-	"bronze": "It has a light metallic taste.",
-	"iron": "It tastes like iron.",
-	"rust": "It tastes like dirty iron.",
-	"steel": "It has a sharp metallic taste.",
-	"bread": "It tastes like fluffy dreams and joy.",
-	"freshwater": "It tastes crisp and pure.",
-	"saltwater": "It tastes salty and foamy.",
-	"mudwater": "It tastes dank and dirty.",
-	"water": "It doesn't taste like much.",
-	"flesh": "Yuck!",
 	"acid": "It tastes painful...",
-	"oil": "It tastes oily."
+	"bread": "It tastes like fluffy dreams and joy.",
+	"brick": "It tastes like dry gritty clay.",
+	"bronze": "It has a light metallic taste.",
+	"earth": "It has a sharp taste of ancient musty dirt.",
+	"flesh": "Yuck!",
+	"freshwater": "It tastes crisp and pure.",
+	"glass": "It has little taste.",
+	"grass": "It tastes like grass.",
+	"iron": "It tastes like iron.",
+	"mud": "It is wet and pungent, tasting mildly of dirt.",
+	"mudwater": "It tastes dank and dirty.",
+	"oil": "It tastes oily.",
+	"rust": "It tastes like dirty iron.",
+	"saltwater": "It tastes salty and foamy.",
+	"soil": "It has a deep and full fresh earthy taste.",
+	"steel": "It has a sharp metallic taste.",
+	"stone": "It has a dull taste of chalk and lime.",
+	"water": "It doesn't taste like much.",
+	"wood": "It doesn't taste like much.",
 }
 
 
 textures = {
-	"flesh": "It feels soft and fleshy.",
-	"earth": "It feels dry and crumbly.",
-	"soil": "It feels loamy and moist.",
-	"mud": "It feels wet and sticky.",
-	"stone": "It feels slighty rough and very solid.",
-	"wood": "It feels like a hard sturdy wood.",
-	"brick": "It feels flat and gritty.",
-	"glass": "It is very smooth.",
-	"bronze": "It feels slick and clean.",
-	"iron": "It feels smooth and sturdy.",
-	"rust": "It feels rough.",
-	"steel": "It feels smooth and sturdy.",
 	"bread": "It is soft and fluffy.",
-	"python": "It feels smooth and scaly. Ew.",
-	"water": "It feels wet.",
+	"brick": "It feels flat and gritty.",
+	"earth": "It feels dry and crumbly.",
+	"flesh": "It feels soft and fleshy.",
 	"freshwater": "It feels cold and wet.",
+	"glass": "It is very smooth.",
+	"grass": "It feels soft and grassy.",
+	"iron": "It feels smooth and sturdy.",
+	"mud": "It feels wet and sticky.",
+	"mudwater": "It feels wet and slightly slimy.",
+	"oil": "It feels wet and oily.",
+	"python": "It feels smooth and scaly. Ew.",
+	"rust": "It feels rough.",
 	"saltwater": "It feels wet and foamy.",
-	"mudwater": "It feels wet and slightly slimy."
+	"soil": "It feels loamy and moist.",
+	"steel": "It feels smooth and sturdy.",
+	"stone": "It feels slighty rough and very solid.",
+	"water": "It feels wet.",
+	"wood": "It feels like a hard sturdy wood.",
 }
+
+### Celestial Descriptions:
+eclipseDesc = "The bold bronze sun is blackened by the ominous moon. The world is dark above and below but for the ring of violet light tracing the moon. Those golden lines of fire that scar the moon's surface seem like cracks through which the sun's rays seep faintly through. All is still in the heavens as they bear witness to this solemn union."
+morningSunDesc = "A burning ball of red fire marches upward in the sky. In the morning air it paints the heavens a tinge of pale green."
+highSunDesc = "A burning ball of bronze fire hangs high in the verdant sky. It warms your face with its bold glow."
+eveningSunDesc = "A burning ball of red fire rests in the sky. As it descends toward the horizon it draws a curtain of violet across the world above."
+fullMoonDesc = "A shimmering silver orb dances in the sky pouring whispers of light. You can make out traces of strange golden fire on its surface. The stars seem to dance around it joyously. You can make out the constellations of Zork, Norman, and Glycon acting out the tales of fate."
+newMoonDesc = "On a night without the moon the world is full of silence and cold. The stars seem to shiver lonesomely. You can make out the constellations of Zork, Norman, and Glycon acting out the tales of fate."
+moonDesc = "A shimmering silver orb dances in the sky pouring whispers of light. You can make out traces of strange golden fire on its surface. It hangs amongst a scattering of sparkling drops on all sides. You can make out the constellations of Zork, Norman, and Glycon acting out the tales of fate."
+eveningStarsDesc = "The stars are just starting to appear as tiny pinpricks of silver light. They shimmer faintly against the deepening teal of the evening sky."
+auroraDesc = "Tides of the red, blue, and green aurora gently sweep over the sky. The colors seem to bathe the heavens as it caresses the shimmering silver stars."
+meteorDesc = "Bolts of yellow light streak deftly across the sky, leaving their imprint for no more than a moment. They almost seem to take turns whizzing past like a flock of sparrows, eager to follow one another toward the edge of the heavens."
 
 
 ##########################
@@ -529,7 +546,51 @@ titleMask = [""*40,
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # you're still here? it's over! go home.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
