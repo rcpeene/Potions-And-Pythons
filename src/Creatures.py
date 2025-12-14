@@ -26,4 +26,3 @@ factory = {
 for domain, spawnpool in Data.spawnpools.items():
 	for name, prob in spawnpool:
 		assert name in factory, f"name {name} not in Creatures factory"
-		

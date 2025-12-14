@@ -74,7 +74,8 @@ def main(testing=False):
 		if Core.game.time >= Core.game.lastSave+20: Menu.quickSave("autosave")
 		# except Exception as e:
 		# 	if testing: raise e
-		# 	Core.Print(f"\n\nAn error has occurred. The game will attempt to continue, but you may want to restart.\nThe error message is as follows:\n")
+		# 	Core.Print(f"\n\nAn error has occurred. The game will attempt to continue," \
+		# 	" but you may want to restart.\nThe error message is as follows:\n")
 		# 	traceback.print_exc()
 		# 	Core.waitInput("\nPress any key to continue...")
 		# 	# return Menu.quit()
@@ -103,13 +104,6 @@ if __name__ == "__main__":
 ################################################################################
 
 # BUG BACKLOG
-
-# What will you do?
-# > get in chest
-# You get in the wooden chest.
-# What will you do?
-# > get out of chest
-# Where will you go?
 
 # make sure to call 'sky' as 'the sky' like 'the ground'
 
@@ -188,6 +182,9 @@ if __name__ == "__main__":
 # think about a broken water container or leaking/draining
 
 # DROPPING, PUTTING, STEALING
+# redo put to account for occupancy versus containment
+	# consider "put maiden on horse" versus "put sword on table"
+	# consider "put maiden in chest" versus "put sword in chest"
 # instead of always checking for hasattr("open"), use Container.canPass()
 # consider if 'put item on ground' should actually redirect to drop or no
 # refactor drop into a creature method?
@@ -234,6 +231,7 @@ if __name__ == "__main__":
 # add new weapons
 
 # LOOKING AND HIDING
+# don't print contents of a container unless its open, and only open them when given "look in" rather than "look at"
 # add room property which is description of directions ("look up", "look east", "look out", etc.)
 # try "boom" effect. It will only effect current room/container (unless container breaks or is open?)
 # restrict Read to readable objects?

@@ -629,7 +629,7 @@ def misspell(text):
 	replacementMap = {
 		"to":"too", "too":"to", "there":"their", "where":"wear", "sword":"sord",
 		"library":"libary", "higher":"hire", "break":"brake", "window":"windo",
-		"above":"abuv",
+		"above":"abuv", "python":"pithon"
 	}
 	def getReplacement(oldToken):
 		newToken = replacementMap[clean(oldToken)]
@@ -709,7 +709,7 @@ def misspell(text):
 			# ck -> k
 			case (a,"c","k"): repl = a+"k"
 			# c -> k
-			case ("c",y,z) if y not in ("e","h","l") and randint(0,1): repl = cat("k",y,z)
+			case ("c",y,z) if y not in ("e","h","k") and randint(0,1): repl = cat("k",y,z)
 			# wr -> r
 			case ("w","r",z): repl = cat("r",z)
 			# wh -> w
@@ -822,27 +822,27 @@ def percentChance(p):
 
 
 
-# the room, creatures, and some items can contain items within themselves
+# the Room, Creatures, and some Items can contain Items within themselves
 # thus all objects within a room can be thought of as a tree
-# where each node is an item or creature, and the root is the room
+# where each node is an item or creature, and the root is the Room
 # the player object can also be thought of this way where the player is the root
-# this function recursively queries the tree of objects for those that pass the key method
+# this function recursively queries the tree of objects for those that pass the given key
 # the object tree might look as follows:
 #           _____Room_____
-#         /    /     \     \
+#         /     /    \     \
 #     cat  trunk   sword  wizard
 #    /     /   \         /   |   \
-# key   jar  candle  potion wand scroll
+# bell lockbox candle potion wand scroll
 #        |
 #     saffron
 # d is the 'degree' of the query; how thorough it is
-# if d is 3: looks in all objects from the root
-# elif d is 2: looks in objects which are "accessible" to the player
-# i.e. all objects which are not locked
-# elif d is 1: look in objects which are "available" to the player
-# i.e. objects that are not locked and not in creature inventories;
-# if d is 0: looks in objects which are "visible" to the player
-# i.e. objects which are not "closed" and not in creature inventories;
+# if d is 0: looks in objects which are not "closed" and not in creature inventories
+# i.e. "visible" to the player (only cat, trunk, sword, wizard)
+# if d is 1: look in objects that are not locked and not in creature inventories
+# i.e. objects which are "available" to the player (also lockbox, candle)
+# if d is 2: looks in all objects which are not locked
+# i.e. objects which are "accessible" to the player (also bell, potion, wand, scroll)
+# if d is 3: looks in all objects from the root  (also saffron)
 
 # this function is a wrapper for objQueryRecur()
 def objQuery(root,key=None,d=0):
@@ -859,8 +859,8 @@ def objQueryRecur(node,matches,key,d):
 	for obj in node:
 		# check if obj is a match
 		if key(obj): matches.add(obj)
-		# depending on the degree, may skip closed, locked, or creature objects
-		if d == 0 and hasattr(obj,"open") and not obj.open: continue
+		# depending on the degree, dont query into closed, Creature or locked objects
+		if d == 0 and hasattr(obj,"closed") and obj.closed: continue
 		elif (d <= 1) and isinstance(obj,Creature): continue
 		elif d <= 2 and hasattr(obj,"locked") and obj.locked: continue
 		# recur the query on each object's subtree
@@ -1795,7 +1795,7 @@ class GameObject():
 		term = term.lower()
 		# querying  into player inventory must be explicitly demanded
 		key = lambda obj: nameMatch(term,obj) and player not in obj.ancestors()
-		return self.query(key=key,d=d)
+		return self.query(key=key,d=d,includeSelf=True)
 
 
 	# wrapper for objQuery() (see comments)
@@ -1941,7 +1941,7 @@ class Game():
 
 		### General game state
 
-		# the room play is in now, room player was in last
+		# the Room play is in now, room player was in last
 		self.currentroom = currentroom
 		self.prevroom = prevroom
 		# the number of action loops that have elapsed since the game's start
@@ -1969,7 +1969,7 @@ class Game():
 		self.nextObjId = 0
 		# counter for portal link ids (distinct from Item ids)
 		# used for saving portals in the world with unique links
-		self.portallinks = 0
+		self.portalLinkIds = 0
 
 		### User I/O
 
@@ -2067,7 +2067,7 @@ class Game():
 		self.checkAstrology(silent=True)
 
 		self.describeRoom()
-		# then can print any celestial messages after describing the room
+		# then can print any celestial messages after describing the Room
 		if self.prevroom.ceiling and not self.currentroom.ceiling:
 			self.checkDaytime()
 			self.checkAstrology()
@@ -2344,7 +2344,7 @@ class Game():
 
 
 
-# The Room class is the fundamental unit of the game's world.
+# the Room class is the fundamental unit of the game's world.
 # The world dict, consists of key:value pairs of the form {"room name":Room}
 
 # Importantly, each room contains a links dict, where keys are directions
@@ -2355,7 +2355,7 @@ class Game():
 class Room(GameObject):
 	def __init__(self,name,domain,desc,links,fixtures,items,creatures,size=1000,
 	passprep=None,ceiling=None,walls=None,floor=None,status=None):
-		# name serves as the room's unique id
+		# name serves as the Room's unique id
 		self.name = name
 		# domains are regions within the world, used for determining creatures to spawn
 		# typically many rooms near eachother belong to the same domain
@@ -2377,7 +2377,7 @@ class Room(GameObject):
 			assert isinstance(c,Creature), \
 			f"Non-creature {c} in Room {self.name} creatures list"
 
-		# determines how much mass the room can hold, objects too large cannot enter
+		# determines how much mass the Room can hold, objects too large cannot enter
 		self.size = size
 
 		self.status = status if status else []
@@ -2409,7 +2409,7 @@ class Room(GameObject):
 	### Dunder Methods ###
 
 	def __repr__(self):
-		return f"Room({self.name}, {[room.name for room in self.links.values()]})"
+		return f"Room({self.name})"
 
 
 	### File I/O ###
@@ -2489,19 +2489,19 @@ class Room(GameObject):
 		return False
 
 
-	# apply an area condition to all objs in the room
+	# apply an area condition to all objs in the Room
 	def addAreaCondition(self,areacond):
 		key,cond,dur = extractConditionInfo(areacond)
 		for obj in self.query(key=key):
 			obj.addStatus(cond,dur)
 
 
-	# add a status condition to the room with a name and duration
+	# add a status condition to the Room with a name and duration
 	def addStatus(self,name,dur,stackable=True):
 		if self.hasStatus(name) and not stackable:
 			return False
 		insort(self.status,[name,dur])
-		if name.startswith("AREA"):
+		if name.startswith(("AREA","ITEM","CREATURE")):
 			self.addAreaCondition(name)
 		return True
 
@@ -2533,11 +2533,11 @@ class Room(GameObject):
 		self.remove(obj)
 
 
-	# pass time for the room, chance to spawn creatures, sort creatures by MVMT speed
+	# pass time for the Room, chance to spawn creatures, sort creatures by MVMT speed
 	def passTime(self,t):
 		super().passTime(t)
 
-		# chance to spawn up to 1 creature in the room
+		# chance to spawn up to 1 creature in the Room
 		# type of creature depends on the domain
 		for name, prob in Data.spawnpools.get(self.domain,()):
 			if len(self.creatures) > 0 or self is game.currentroom:
@@ -2547,7 +2547,7 @@ class Room(GameObject):
 			if percentChance(prob):
 				self.enter(name)
 
-		# sort all Creatures occupying the room by their MVMT() value, descending
+		# sort all Creatures occupying the Room by their MVMT() value, descending
 		self.creatures.sort(key=lambda x: x.MVMT(), reverse=True)
 
 
@@ -2572,14 +2572,17 @@ class Room(GameObject):
 		return False
 
 
-	# try to remove an area condition from all affected objs in the room
+	# try to remove an area condition from all affected objs in the Room
 	def removeAreaCondition(self,areacond):
 		key,cond,dur = extractConditionInfo(areacond)
+		# -3 indicates the condition is caused by being in the Room, otherwise ignore
+		if dur != -3:
+			return
 		for obj in self.query(key=key):
 			obj.removeStatus(cond,dur)
 
 
-	# given an object, try to replace it with another object in the room
+	# given an object, try to replace it with another object in the Room
 	# returns True if successful, False if newObj was not added
 	def replaceObj(self,oldObj,newObj):
 		assert oldObj in self
@@ -2610,7 +2613,7 @@ class Room(GameObject):
 		return {dest for dest in self.allLinks().values()}
 
 
-	# get the set of all directions leading out of the room
+	# get the set of all directions leading out of the Room
 	def allDirs(self):
 		return {tuple[0] for tuple in self.allLinks()}
 
@@ -2622,7 +2625,7 @@ class Room(GameObject):
 
 
 	# returns dict of links, where keys are (direction,Portal) and values are rooms
-	# portal is None if the link is direct from the room
+	# portal is None if the link is direct from the Room
 	# d is the degree of the portal search, see objQuery() for details
 	def allLinks(self,d=3):
 		links = {}
@@ -2640,7 +2643,7 @@ class Room(GameObject):
 		return []
 
 
-	# typically called before trying to add an object to the room
+	# typically called before trying to add an object to the Room
 	# if this fails, object will not be added
 	def canAdd(self,I):
 		if self.ceiling and I in celestials:
@@ -2656,7 +2659,7 @@ class Room(GameObject):
 	def contents(self):
 		cts = self.fixtures + self.items + self.creatures
 		cts += [s for s in self.surfaces if s not in (None,self)]
-		if not self.ceiling: cts += celestials
+		if not self.ceiling: cts += game.celestials
 		return cts
 
 
@@ -2670,8 +2673,8 @@ class Room(GameObject):
 		return portals
 
 
-	# if the given room object, dest, is in one of the rooms links,
-	# then find the direction it is in from the room.
+	# if the given room object, dest, is in one of the Rooms links,
+	# then find the direction it is in from the Room.
 	# not that this will return None if dest is not linked to from this room
 	def getDirPortalPair(self,dest):
 		for (dir,portal), room in self.allLinks().items():
@@ -2680,7 +2683,7 @@ class Room(GameObject):
 		return None, None
 
 
-	# total size of all items in the room (note this ignores celestials and surfaces)
+	# total size of all items in the Room (note this ignores celestials and surfaces)
 	def itemsSize(self):
 		spatialObjects = self.items + self.creatures + self.fixtures
 		return sum(obj.Size() for obj in spatialObjects)
@@ -2698,7 +2701,7 @@ class Room(GameObject):
 		return self.size
 
 
-	# get vacant space in the room
+	# get vacant space in the Room
 	def vacancy(self):
 		return self.size - self.itemsSize()
 
@@ -2712,7 +2715,7 @@ class Room(GameObject):
 		self.describeCreatures()		
 
 
-	# prints all the items of the room in sentence form
+	# prints all the items of the Room in sentence form
 	def describeItems(self):
 		items = self.listableItems()
 		if len(items) != 0:
@@ -2720,7 +2723,7 @@ class Room(GameObject):
 			game.setPronouns(items[-1])
 
 
-	# prints all the creatures in the room in sentence form
+	# prints all the creatures in the Room in sentence form
 	def describeCreatures(self):
 		# don't directly describe creatures which are anchored to player
 		# or creatures being ridden by another creature
@@ -2761,7 +2764,9 @@ class Item(GameObject):
 	status=None,plural=None,descname=None,determiner=None,pronoun="it",fixed=False,
 	mention=True,longevity=None,despawnTimer=None,scent=None,flavor=None,texture=None,
 	platform=None,occupants=None,covering=None,id=None):
-		### basic properties
+
+		### Basic Properties
+	
 		self.name = name
 		self.desc = desc
 		self.weight = weight
@@ -2769,7 +2774,8 @@ class Item(GameObject):
 		# used to determine obj density and for crafting
 		self.composition = composition
 
-		### additional properties
+		### Additional Properties
+
 		# rarities are:
 		# -1. hazardous (red) 0. worthless (grey) 1. common (white) 2. uncommon (orange)
 		# 3. rare (green) 4. sterling (blue) 5. legendary (magenta) 6. unique (yellow)
@@ -2787,7 +2793,8 @@ class Item(GameObject):
 		self.flavor = flavor
 		self.texture = texture
 
-		### grammatical properties
+		### Grammatical Properties
+
 		self.plural = plural
 		if self.plural is None:
 			self.plural = self.name + 's'
@@ -2796,20 +2803,23 @@ class Item(GameObject):
 		# used for identifying object from player input
 		self.aliases = set(aliases) if aliases else set()
 
-		### world properties -- may be reassigned during assignRefs() 
+		### World Properties -- may be reassigned during assignRefs() 
+
 		# used to uniquely identify this object instance
 		self.id = id
 		# the parent object containing this object (usually a Room or Container)
 		self.parent = None
 
-		### status effects
+		### Status Effects
+
 		self.status = status if status else []
 		for cond,dur in self.status:
 			assert isinstance(cond,str) and isinstance(dur,int)
 		# sort status effects by duration; change idx '1' to '0' to sort by name
 		self.status.sort(key=lambda x: x[1])
 
-		### tethers
+		### Tethers
+
 		# these describe physical position relative to other objects
 		self.platform = platform
 		self.occupants = occupants if occupants else []
@@ -3057,7 +3067,7 @@ class Item(GameObject):
 		if self.platform not in (None,self.parent) and newObj.parent:
 			p = self.platform
 			self.removePlatform()
-			if getattr(p,"open",True) and hasMethod(p,"canAdd") and p.canAdd(newObj):
+			if not getattr(p,"closed",True) and hasMethod(p,"canAdd") and p.canAdd(newObj):
 				newObj.changeLocation(p)
 			else:
 				p.occupy(newObj)
@@ -3394,7 +3404,7 @@ class Item(GameObject):
 	def surroundings(self):
 		# print(self,self.ancestors())
 		for anc in self.ancestors():
-			if not getattr(anc,"open",True):
+			if getattr(anc,"closed",False):
 				return anc
 		return self.room()
 
@@ -3524,7 +3534,8 @@ class Creature(Item):
 		super().__init__(name,desc,weight,-1,composition,fixed=False,longevity=1000,
 		**kwargs)
 
-		### Main statistics
+		### Main Statistics
+
 		# physical traits are strength, speed, skill, stamina, and constitution
 		# mental traits are charisma, intelligence, wisdom, faith, and luck
 		# traits should normally be between 1 and 20
@@ -3546,6 +3557,7 @@ class Creature(Item):
 		self.money = money
 
 		### Contents
+
 		self.inv = inv if inv else []
 		# values of gear must either be EmptyGear() or an Item in the inventory
 		self.gear = gear if gear else Data.initgear
@@ -3557,6 +3569,7 @@ class Creature(Item):
 		self.shield2 = EmptyGear()
 
 		### Behavior
+
 		self.memories = memories if memories else set()
 		self.appraisal = appraisal if appraisal else set()
 		# love and fear are the creature's attraction and aversion to the player
@@ -3564,6 +3577,7 @@ class Creature(Item):
 		self.fear = fear
 
 		### Tethers
+
 		# these represent relationships to other Items in the Creature's parent
 		# during __init__(), these are given as object IDs or None
 		# but are replaced with real object references in assignRefs()
@@ -3575,6 +3589,7 @@ class Creature(Item):
 		self.cover = cover
 
 		### Timers
+
 		# health regens very slowly
 		self.regenTimer = regenTimer
 		# eventually creatures get hungry and sleepy
@@ -3815,9 +3830,11 @@ class Creature(Item):
 	# add/remove hidden status based on cover
 	def checkHidden(self):
 		transparent = ("glass","ice","water")
-		if self.coverBonus() >= 5 and self.cover.composition not in transparent:
+		if getattr(self.parent,"closed",False):
 			self.addStatus("hidden",-4)
-		if self.coverBonus() < 5:
+		elif self.coverBonus() >= 5 and self.cover.composition not in transparent:
+			self.addStatus("hidden",-4)
+		elif self.coverBonus() < 5:
 			self.removeStatus("hidden",-4)
 
 
@@ -4064,11 +4081,8 @@ class Creature(Item):
 		elif self.platform:
 			p = self.platform
 			self.removePlatform()
-			if getattr(p,"open",True) and hasMethod(p,"canAdd") and p.canAdd(newObj):
-				if hasMethod(p,"changeLocation"):
-					newObj.changeLocation(p)
-				else:
-					p.add(newObj)
+			if isinstance(p,Portal) and p.canPass(newObj) and p.canAdd(newObj):
+				p.transfer(newObj)
 			else:
 				p.occupy(newObj)
 
@@ -4659,10 +4673,10 @@ class Creature(Item):
 			self.Print(f"{+anchor} cannot be mounted.")
 			return False
 
-		if hasMethod(anchor,"Traverse") and getattr(anchor,"open",True):
-			if getattr(anchor,"open",False):
+		if hasMethod(anchor,"traverse") and not getattr(anchor,"closed",False):
+			if not getattr(anchor,"closed",True):
 				self.Print(f"{+anchor} is open.")
-			anchor.Traverse(self)
+			anchor.traverse(self)
 			return False
 		if anchor is self.platform or anchor is self.riding:
 			pass
@@ -4741,7 +4755,7 @@ class Creature(Item):
 		return missile.Launch(speed,aim,self,target)
 
 
-	### Stats ###
+	### Statistics ###
 
 	# the following are the player's traits, which can be modified by status effects
 	def STR(self):
@@ -4883,7 +4897,9 @@ class Creature(Item):
 	# check if item can fit in inventory, print relevant refusal msg if not
 	def canObtain(self,I,silent=False):
 		refusal = None
-		if isinstance(I,Creature) or I.fixed:
+		if isinstance(I,Serpens):
+			pass
+		elif isinstance(I,Creature) or I.fixed:
 			refusal = f"You can't put {-I} in your Inventory."
 		elif I in self:
 			refusal = f"You already have {-I} in your Inventory."
@@ -5157,7 +5173,7 @@ class Creature(Item):
 			Print(f"It is{' and '.join(tethersMsgs)}.")
 
 
-	# intelligently get name of this item in various grammatical forms
+	# intelligently get name of this Item in various grammatical forms
 	def nounPhrase(self,det="",n=-1,plural=False,cap=-1):
 		strname = self.descname
 		# if self.riding and det != "the":
@@ -5303,7 +5319,8 @@ class Player(Creature):
 		warning = ""
 		rowsPrinted = 7
 		while QP > 0:
-			trait, rowsPrinted = self.traitMenu(QP,"What trait will you improve?",warning,rowsPrinted)
+			trait, rowsPrinted = self.traitMenu(QP,"What trait will you improve?",
+			warning,rowsPrinted)
 			if trait not in Data.traits:
 				if trait == "":
 					warning = ""
@@ -5994,6 +6011,7 @@ class Speaker(Creature):
 
 	### Interaction ###
 
+	# talk to this speaker
 	def converse(self):
 		if "met" not in self.memories:
 			self.firstImpression(player)
@@ -6002,6 +6020,7 @@ class Speaker(Creature):
 			Print(f"{self.name} says nothing...")
 
 
+	# offer something to this speaker
 	def offer(self,I):
 		if not self.canObtain(I):
 			Print(f"{+self} can't carry any more!")	
@@ -6046,12 +6065,15 @@ class Person(Speaker,Humanoid):
 
 	### Operation ###
 
+	# act on Person's turn
 	def Act(self):
 		pass
 
 
 	### User Output ###
 
+	# intelligently get name of this Item in various grammatical forms
+	# display a description of them (descname) if they haven't met Player yet
 	def nounPhrase(self,det="",n=-1,plural=False,cap=0):
 		# if self.riding and det != "the":
 		# 	suffix = f" riding {self.riding.nounPhrase()}"
@@ -6093,6 +6115,7 @@ class Person(Speaker,Humanoid):
 
 
 
+# Animals can only speak when player has 'wildspeaking' status
 class Animal(Speaker):
 	def __init__(self,name,desc,weight,traits,species=None,dlogName=None,**kwargs):
 		super().__init__(name,desc,weight,traits,**kwargs)
@@ -6101,6 +6124,8 @@ class Animal(Speaker):
 		self.dlogName = self.species if dlogName is None else dlogName
 
 
+	# build dialogue tree from dictionary in game.dlogForest
+	# or make a default tree based on species
 	def buildDialogue(self):
 		# dlogTree actually just records the visitCounts & checkpoint when written to json
 		dlogRefs = self.dlogTree
@@ -6118,13 +6143,15 @@ class Animal(Speaker):
 		self.dlogTree.ensureIntegrity(self)
 
 
+	# perform action on Animal's turn
 	def Act(self):
 		if not self.isAlive():
 			return
 		self.printNearby(f"\n{self.name}'s turn!")
-		self.attack()
+		self.Attack()
 
 
+	# eat offer if it is edible otherwise ignore
 	def offer(self,I):
 		if hasMethod(I,"consume"):
 			I.consume(self)
@@ -6134,7 +6161,8 @@ class Animal(Speaker):
 			Print(f"{+self} ignores your offer.")
 
 
-	def Talk(self):
+	# talk to this Animal
+	def converse(self):
 		if not player.hasStatus("wildspeaking"):
 			sounds = game.dlogForest["sounds"][self.species]
 			sound = sample(sounds,1)[0]
@@ -6147,6 +6175,7 @@ class Animal(Speaker):
 			Print(f"{self.name} says nothing...")
 
 
+	# touch this Animal
 	def touch(self,toucher):
 		if self.species in Data.textures:
 			Print(Data.textures[self.species])
@@ -6239,7 +6268,8 @@ Set status
 # Item that is fixed and not mentioned by default
 class Fixture(Item):
 	def __init__(self,name,desc,weight,composition,durability=-1,mention=False,**kwargs):
-		super().__init__(name,desc,weight,durability,composition,mention=mention,fixed=True,**kwargs)
+		super().__init__(name,desc,weight,durability,composition,mention=mention,
+		fixed=True,**kwargs)
 
 
 	# def destroy(self):
@@ -6247,44 +6277,66 @@ class Fixture(Item):
 	# 	return False
 
 
+	# Fixtures shouldn't be breakable by normal means
 	def breaks(self):
 		Print(f"{+self} cannot be broken.")
 		return False
 
 
+
+# Surfaces are Fixtures that surround a Room or Container
 class Surface(Fixture):
 	def __init__(self,name,desc,weight,composition,**kwargs):
 		super().__init__(name,desc,weight,composition,**kwargs)
 
 
+	# Surfaces can't take damage
+	def takeDamage(self,dmg,type):
+		pass
+
+
+	# Surfaces don't have a density, so size is just weight
 	def Size(self):
 		return self.weight
 
 
+
+# Celestials are Fixtures that can be in Room contents depending on the time
 class Celestial(Fixture):
 	def __init__(self,name,desc,weight,composition,**kwargs):
 		super().__init__(name,desc,weight,composition,**kwargs)
+		self.determiner = "the"
 
 
+	# Celestials have no ancestors, they don't belong in any one Room
 	def ancestors(self):
 		return []
 
 
-moon = Celestial("moon","The glowing moon hangs in the sky, illuminating the world below.",0,"cheese",aliases=["full moon","new moon"])
-sun = Celestial("sun","The blazing sun shines down from above, its warmth felt by all.",0,"fire",aliases=["sun"])
-stars = Celestial("stars","The twinkling stars dot the night sky, each one a distant sun.",0,"fire",aliases=["star"],pronoun="they")
-eclipse = Celestial("eclipse","The sun and moon align perfectly, casting an eerie shadow over the land.",0,"fire",aliases=["solar eclipse","sun","moon"])
-meteorshower = Celestial("meteor shower","A dazzling meteor shower streaks across the sky, lighting up the darkness with brief flashes of light.",0,"rock",aliases=["meteors","shower"])
-aurora = Celestial("aurora","The sky is painted with vibrant colors as the aurora dances overhead, a mesmerizing display of nature's beauty.",0,"energy",aliases=["auroras"])
-sky = Celestial("sky","The vast expanse of the sky stretches out above, a canvas for the sun, moon, and stars.",0,"air",aliases=["heavens","firmament"],determiner="the")
+moon = Celestial("moon","The glowing moon hangs in the sky, illuminating the world below.",
+0,"cheese",aliases=["full moon","new moon"])
+sun = Celestial("sun","The blazing sun shines down from above, its warmth felt by all.",
+0,"fire",aliases=["sun"])
+stars = Celestial("stars","The twinkling stars dot the night sky, each one a distant sun.",
+0,"fire",aliases=["star"],pronoun="they")
+eclipse = Celestial("eclipse","The sun and moon align perfectly, casting an eerie shadow" \
+" over the land.",0,"fire",aliases=["solar eclipse","sun","moon"])
+meteorshower = Celestial("meteor shower","A dazzling meteor shower streaks across the" \
+" sky, lighting up the darkness with brief flashes of light.",0,"rock",
+aliases=["meteors","shower"])
+aurora = Celestial("aurora","The sky is painted with vibrant colors as the aurora dances" \
+" overhead, a mesmerizing display of nature's beauty.",0,"energy",aliases=["auroras"])
+sky = Celestial("sky","The vast expanse of the sky stretches out above, a canvas for " \
+"the sun, moon, and stars.",0,"air",aliases=["heavens","firmament"],determiner="the")
 celestials = (sky,sun,moon,stars,eclipse,meteorshower,aurora)
 
 
-
-
-# Portals are guaranteed to have a traverse and transfer method and a links and passprep attribute
+# Just as Rooms link to Rooms to allow creatures to move, Portals can link to Rooms too
+# But a Portal can link to another Portals as well 
+# They have traverse(), transfer(), a links dict and a passprep
 class Portal(Item):
-	def __init__(self,name,desc,weight,durability,composition,links,capacity=None,passprep="into",**kwargs):
+	def __init__(self,name,desc,weight,durability,composition,links,capacity=None,
+	passprep="into",**kwargs):
 		super().__init__(name,desc,weight,durability,composition,**kwargs)
 		self.links = links
 		self.capacity = capacity if capacity else self.Size()
@@ -6293,70 +6345,91 @@ class Portal(Item):
 
 	### File I/O ###
 
-	# search in world for the portal that has a link with the same pairkey
+	# In JSON, Portals' links eachother are represented by a unique link ID
+	# search in the World for the Portal that has a link with the same link ID
 	# and link that portal to self
-	def linkPortals(self, pairkey):
+	def linkPortals(self,linkId):
+		# find paired portal in world
 		pairedPortals = set()
+		pairKey = lambda x: isinstance(x,Portal) and linkId in x.links.values()
 		for room in world.values():
-			pairedPortals |= objQuery(room,key=lambda x: isinstance(x,Portal) and pairkey in x.links.values(),d=3)
+			pairedPortals |= objQuery(room,key=pairKey,d=3)
 		pairedPortals.remove(self)
-		if len(pairedPortals) != 1:
-			raise Exception(f"Error: Portal {self.name} has an ambiguous connection for '{pairkey}'. Found {len(pairedPortals)} matches.")
+		assert len(pairedPortals) == 1, f"Portal {self.name} has an ambiguous" \
+		f" connection for '{linkId}'. Found {len(pairedPortals)} matches."
 		pairedPortal = list(pairedPortals)[0]
+
 		# link paired portal to self
 		for dir, dest in self.links.items():
-			if dest == pairkey:
+			if dest == linkId:
 				self.links[dir] = pairedPortal
 		# link self to the paired portal
 		for dir, dest in pairedPortal.links.items():
-			if dest == pairkey:
+			if dest == linkId:
 				pairedPortal.links[dir] = self
 
 
+	# after reading objects in from JSON portals must be linked to their destinations
+	# links to Rooms are stored as the Room's unique name
+	# for convenience, links to Portals are stored as int IDs or "port:<name>" strings
 	def assignRefs(self,parent):
 		super().assignRefs(parent)
 
 		for dir, dest in self.links.items():
+			# set one-way link to Room
 			if isinstance(dest,str) and dest in world:
 				self.links[dir] = world[dest]
+			# set two-way link to Portal with string pair ID
 			elif isinstance(dest,str) and dest.startswith("port:"):
 				self.linkPortals(dest)
+			# set two-way link to Portal with int pair ID
 			elif isinstance(dest,int):
 				self.linkPortals(dest)
+			# link is an object, so its already assigned
 			elif isinstance(dest,Room) or isinstance(dest,Portal):
 				continue
 			else:
-				raise Exception(f"Error: Portal {self.name} has a connection to unknown destination '{dest}'.")
+				raise Exception(f"Portal {self.name} has a connection to unknown" \
+				f" destination '{dest}'")
 
 
-	def assignLinkIDs(self,pairportal,linkid):
+	# replace link to paired Portal with given linkId for storing to json
+	# sometimes called from self, sometimes from the paired Portal
+	def assignLinkIDs(self,pairPortal,linkId):
 		if not hasattr(self, "compressedLinks"):
 			self.compressedLinks = self.links.copy()
 
-		assert pairportal in self.compressedLinks.values()
+		assert pairPortal in self.compressedLinks.values()
 		for dir, dest in self.compressedLinks.items():
-			if dest is pairportal:
-				self.compressedLinks[dir] = linkid
+			if dest is pairPortal:
+				self.compressedLinks[dir] = linkId
 
 
+	# replace object references in Portal Links with json-serializable values
 	def convertToJSON(self):
-		# must copy links for saving to JSON so real links remain intact if game continues
+		# must copy links for saving to JSON so real links remain
 		if not hasattr(self, "compressedLinks"):
 			self.compressedLinks = self.links.copy()
 
-		# convert room links to strings, and portal links to unique link ids
+		# convert Portal links to int IDs
 		for portal in {v for v in self.compressedLinks.values() if isinstance(v,Portal)}:
-			linkId = game.portallinks
+			# get next available linkId
+			linkId = game.portalLinkIds
+			# replace this reference link with unique linkId in both Portals
 			self.assignLinkIDs(portal,linkId)
 			portal.assignLinkIDs(self,linkId)
-			game.portallinks += 1
+			# mark this linkId as used
+			game.portalLinkIds += 1
 
+		# convert Room links to unique name strings
 		for dir, dest in self.compressedLinks.items():
 			if isinstance(dest,Room):
 				self.compressedLinks[dir] = dest.name.lower()
-		# all links should now be either strings or ints
-		assert all([isinstance(dest,(str,int)) for dest in self.compressedLinks.values()])
 
+		# all links should now be either strings or ints
+		for dir,dest in self.compressedLinks.items():
+			assert isinstance(dest,(str,int)), f"Portal {self.name} failed to convert" \
+			f" link {dest} at direction {dir} into string or int"
 		jsonDict = self.__dict__.copy()
 		jsonDict["links"] = jsonDict["compressedLinks"]
 		del jsonDict["compressedLinks"]
@@ -6365,6 +6438,8 @@ class Portal(Item):
 
 	### Operation ###
 
+	# when going through a portal without a concerted direction, pick a default one
+	# if there's 1 destination, pick that. if there's "down", pick that. otherwise random
 	def getDefaultDir(self):
 		if len(set(self.links.values())) == 1:
 			return list(self.links.keys())[0]
@@ -6373,6 +6448,8 @@ class Portal(Item):
 		return choice(list(self.links.keys()))
 
 
+	# given a direction, get the new location that the Portal leads to
+	# if self links to another Portal, the new location is other Portal's parent
 	def getNewLocation(self,dir=None):
 		if dir is None:
 			dir = self.getDefaultDir()
@@ -6384,14 +6461,16 @@ class Portal(Item):
 		return newloc
 
 
-	# method for creatures travelling through the portal
-	def Traverse(self,traverser,dir=None,verb=None):
+	# for Creatures intentionally travelling through the portal
+	# takes a verb because some subclasses may take verbs to traverse
+	def traverse(self,traverser,dir=None,verb=None):
 		if dir in Data.directions: dir = Data.directions[dir]
 		if self in traverser.objTree():
 			if traverser is player:
 				Print(f"You can't enter {-self}. It's within your Inventory.")
 			else:
-				Print(f"{+traverser} can't enter {-self}. It's within {-traverser}'s Inventory.")
+				Print(f"{+traverser} can't enter {-self}. It's within {-traverser}'s" \
+				" Inventory.")
 			return False
 
 		if dir == None or dir not in self.links:
@@ -6421,13 +6500,13 @@ class Portal(Item):
 		return True
 
 
-	# method for items travelling through portal
-	def Transfer(self,item):
+	# for Items/Creatures travelling through Portal unintentionally
+	def transfer(self,item):
 		if isinstance(item,Creature):
 			dir = self.getDefaultDir()
 			if dir == "down":
 				return item.fall(1,room=self.getNewLocation("down"))
-			return self.Traverse(item,dir=dir)
+			return self.traverse(item,dir=dir)
 		if self in item.objTree():
 			Print(f"{+item} can't enter {-self}. It's within {-item}'s contents.")
 			return False
@@ -6435,6 +6514,7 @@ class Portal(Item):
 			item.Print(f"{+item} can't fit through {-self}.")
 			return False
 
+		# fall through Portal if possible
 		if "down" in self.links:
 			return item.fall(room=self.links["down"])
 
@@ -6451,12 +6531,13 @@ class Portal(Item):
 		item.changeLocation(newloc)
 
 
+	# for Projectiles colliding with the Portal
 	def bombard(self,missile):
 		assert isinstance(missile,Projectile)
 		if percentChance(bound(missile.aim+self.Size()+10,1,99)):
-			if getattr(self,"open",True):
+			if getattr(self,"closed",False):
 				Print(f"{+missile} goes {self.passprep} {-self}.")
-				self.Transfer(missile.asItem())
+				self.transfer(missile.asItem())
 			else:
 				missile.Collide(self)
 			return True
@@ -6465,18 +6546,11 @@ class Portal(Item):
 
 	### Getters ###
 
-	# returns dict of links, where keys are directions and values are rooms
+	# returns dict of links, where keys are directions and values are Rooms/Portals
 	def allLinks(self,d=3):
 		links = {}
 		for dir in self.links:
 			links[(dir,None)] = self.links[dir]
-		# get a list of portals in the room
-		portals = self.query(key=lambda x: isinstance(x,Portal),d=d)
-		# for each portal, add its connections to links
-		for portal in portals:
-			for dir in portal.getLinksForParent():
-				if dir not in links:
-					links[(dir,portal)] = portal.links[dir]
 		return links
 
 
@@ -6495,7 +6569,8 @@ class Portal(Item):
 		return portals
 
 
-	# if the given room object, dest, is in one of the rooms links, then find the direction and portal it is in from the room.
+	# if the given room object dest, is in one of the Rooms links, 
+	# then find the (dir,Portal) link key for it.
 	def getDirPortalPair(self,dest):
 		for (dir,portal), room in self.allLinks().items():
 			if nameMatch(dest,room):
@@ -6519,16 +6594,19 @@ class Portal(Item):
 
 
 
+# In addition to Rooms and Creatures, Containers can also contain Items and be a 'parent'
+# Containers special Portals. they have traverse and transfer methods
+# but they link to themselves, adding traversers into their items list
+# see Container.links()
 class Container(Portal):
-	def __init__(self,name,desc,weight,durability,composition,items,passprep=None,**kwargs):
-		super().__init__(name,desc,weight,durability,composition,{},**kwargs)
-		self.parent = None
-		self.passprep = "in" if passprep is None else passprep
-		self.links = {self.passprep:self}
+	def __init__(self,name,desc,weight,durability,composition,items,capacity=None,
+	passprep=None,exitprep="out",**kwargs):
+		Item.__init__(self,name,desc,weight,durability,composition,**kwargs)
+		self.capacity = capacity if capacity else self.Size()
+		self.passprep = passprep if passprep else "in"
+		self.exitprep = exitprep if exitprep else "out"
 		self.items = items
-		self.ceiling = self.composition
-		self.walls = self.composition
-		self.floor = self.composition
+		# for containers, the surfaces surrounding it are itself
 		self.ceiling = self
 		self.walls = self
 		self.floor = self
@@ -6537,32 +6615,127 @@ class Container(Portal):
 
 	### File I/O ###
 
+	# delete unneeded attributes for storing to json
 	def convertToJSON(self):
 		jsonDict = Item.convertToJSON(self)
 		del jsonDict["ceiling"]
 		del jsonDict["walls"]
 		del jsonDict["floor"]
-		del jsonDict["links"]
 		del jsonDict["surfaces"]
 		return jsonDict
 
 
+	# assign object references after reading from json, ensure capacity is not exceeded
 	def assignRefs(self,parent):
 		super().assignRefs(parent)
 
-		assert self.itemsWeight() <= self.capacity or self.capacity == -1, (f"Error: "
-		f"Container {self.name} has negative vacancy available. Capacity is "
-		f"{self.capacity}, but occupied vacancy is {self.itemsSize()}.")
+		assert self.itemsSize() <= self.capacity or self.capacity == -1, (f"Container" \
+		f" {self.name} has negative vacancy available. Capacity is {self.capacity}," \
+		f" but occupied space is {self.itemsSize()}.")
 
 
 	### Operation ###
 
-	def addStatus(self,name,dur,stackable=False):
-		if Item.addStatus(self,name,dur,stackable):
+	# add Item to Container's items list
+	def add(self,I):
+		# spawn object if given as string or has no ID
+		if isinstance(I,str) or I.id is None:
+			I = game.spawn(I)
+
+		# ensure only one bunch of Gold exists here
+		if isinstance(I,Serpens):
 			for item in self.items:
-				item.addStatus(name,dur,stackable)
+				if isinstance(item,Serpens):
+					item.merge(I)
+					return
+
+		insort(self.items,I)
+		I.parent = self
+		I.nullDespawn()
 
 
+	# apply an area condition to all objs in the Container
+	def addAreaCondition(self,areacond):
+		return Room.addAreaCondition(self,areacond)
+
+
+	# add a status condition to the Container with a name and duration
+	def addStatus(self,name,dur,stackable=True):
+		return Room.addStatus(self,name,dur,stackable=stackable)
+
+
+	# try to break the Container, spill its contents into parent
+	def breaks(self):
+		# self.parent may get deleted during super().breaks()
+		parent = self.parent
+		if not super().breaks():
+			return False
+		if len(self.items) > 0:
+			if self in player.surroundings():
+				Print("Its contents spill out.")
+		# drop things it contains into parent
+		for item in self.items.copy():
+			item.waitInput(f"You are no longer in {-self}.")
+			item.changeLocation(parent)
+			item.Print(f"{+item} comes out of {-self}.")
+		return True
+
+
+	# check that capacity is not exceeded, displacing largest items if so
+	def checkCapacity(self):
+		while self.capacity != -1 and self.itemsSize() > self.capacity:
+			item = max(self.items, key=lambda x: x.Size())
+			self.Print(f"{+item} falls out of {-self}.")
+			item.displace(self.parent)
+
+
+	# remove Item
+	def remove(self,I):
+		self.items.remove(I)
+
+
+	# try to remove an area condition from all affected objs in the Container
+	def removeAreaCondition(self,areacond):
+		return Room.removeAreaCondition(self,areacond)
+
+
+	# removes all conditions with the given name and duration
+	# when nothing given, remove all status conditions
+	def removeStatus(self,reqName=None,reqDuration=None):
+		return Room.removeStatus(self,reqName=reqName,reqDuration=reqDuration)
+
+
+	### Interaction ###
+
+	# try to bombard the Container with a Projectile
+	# if it hits, go in it if possible, otherwise collide with it
+	def bombard(self,missile):
+		assert isinstance(missile,Projectile)
+		if roll(100) < bound(missile.aim+self.Size()+10,1,99):
+			if getattr(self,"closed",False):
+				self.printNearby(f"{+self} is closed.")
+				missile.Collide(self)
+			elif missile.item.parent is self:
+				missile.Collide(self)				
+			elif not self.canAdd(missile):
+				self.printNearby(f"{+self} is too full.")
+				missile.Collide(self)
+			else:
+				self.printNearby(f"{+missile} goes into {-self}.")
+				missile = missile.asItem()
+				missile.changeLocation(self)
+			return True
+		return False
+
+
+	# try to enter the Container, applying any relevant status effects
+	def enter(self,traverser):
+		if traverser in self:
+			return False
+		return Room.enter(self,traverser)
+
+
+	# be looked at be a looking Creature and show description of contents
 	def examine(self,looker):
 		# exclude player if they are inside the box
 		displayItems = [item for item in self.items if item is not looker]
@@ -6578,125 +6751,15 @@ class Container(Portal):
 		return True
 
 
-	def breaks(self):
-		if not super().breaks():
-			return False
-		if len(self.items) > 0:
-			if self in player.surroundings():
-				Print("Its contents spill out.")
-		# drop things it contains into parent
-		for item in self.items.copy():
-			item.waitInput(f"You are no longer in {-self}.")
-			item.changeLocation(self.parent)
-			item.Print(f"{+item} comes out of {-self}.")
-		return True
-
-
-	def bombard(self,missile):
-		assert isinstance(missile,Projectile)
-		if roll(100) < bound(missile.aim+self.Size()+10,1,99):
-			if not getattr(self,"open",True):
-				Print(f"{+self} is closed.")
-				missile.Collide(self)
-			elif missile.item.parent is self:
-				missile.Collide(self)				
-			elif not self.canAdd(missile):
-				Print(f"{+self} is too full.")
-				missile.Collide(self)
-			else:
-				Print(f"{+missile} goes into {-self}.")
-				missile = missile.asItem()
-				missile.changeLocation(self)
-			return True
-		return False
-
-
-	def enter(self,traverser):
-		# TODO, this is too player-centirc, does it work to remove? 9have this link by default)
-		self.links["out"] = self.parent
-		if traverser in self:
-			return False
-		self.add(traverser)
-
-
+	# try to exit the Container, removing any relevant status effects
 	def exit(self,traverser):
 		if traverser not in self:
 			return False
-		self.remove(traverser)
 		traverser.removeStatus("hidden",-4)
+		return Room.exit(self,traverser)
 
 
-	def Traverse(self,traverser,dir=None,verb=None):
-		if dir in Data.directions: dir = Data.directions[dir]
-		if self in traverser.objTree():
-			if traverser is player:
-				Print(f"You can't enter {-self}. It's within your Inventory.")
-			else:
-				Print(f"{+traverser} can't enter {-self}. It's within {-traverser}'s Inventory.")
-			return False
-		if traverser in self.occupants:
-			traverser.Print(f"You can't, you are {traverser.position()}.")
-			return False
-
-		if dir in ("out","outside"):
-			if self is traverser.parent:
-				if hasMethod(self,"open") and not getattr(self,"open",True):
-					self.open(traverser,silent=True)
-				traverser.Print(f"You get out of {-self}.")
-				if self.parent is not game.currentroom:
-					traverser.waitInput()
-				traverser.changeLocation(self.parent)
-				return True
-			else:
-				traverser.Print(f"You're not in {-self}.",color="k")
-				return False
-		if traverser.parent is self:
-			traverser.Print(f"You're already in {-self}.")
-			return False
-		if dir not in ("in","into","inside",None):
-			traverser.Print(f"{+self} does not go {dir}.",color="k")
-			return False
-
-		if dir is None:
-			dir = "into"
-		if verb is None:
-			verb = "get"
-		self.open = True
-		if not self.canAdd(traverser):
-			traverser.Print(f"You can't enter {-self}. There's not enough room.")
-			return False
-
-		if not self.open:
-			self.open(traverser)
-		traverser.Print(f"You {verb} {dir} {-self}.")
-		traverser.changeLocation(self)
-		return True
-
-
-	def add(self,I):
-		# ensure only one bunch of Gold exists here
-		if isinstance(I,Serpens):
-			for item in self.items:
-				if isinstance(item,Serpens):
-					item.merge(I)
-					return
-
-		insort(self.items,I)
-		I.parent = self
-		I.nullDespawn()
-
-
-	def remove(self,I):
-		self.items.remove(I)
-
-
-	def checkCapacity(self):
-		while self.capacity != -1 and self.itemsSize() > self.capacity:
-			item = max(self.items, key=lambda x: x.Size())
-			self.Print(f"{+item} falls out of {-self}.")
-			item.displace(self.parent)
-
-
+	# replace oldItem in items with newItem if possible
 	def replaceObj(self,oldItem,newItem):
 		assert oldItem in self.items
 		if not self.canAdd(newItem):
@@ -6708,50 +6771,134 @@ class Container(Portal):
 		return True
 
 
+	# for Creatures intentionally travelling into/out of the Container
+	def traverse(self,traverser,dir=None,verb=None):
+		# unabbreviate/simplify direction
+		if dir in Data.directions: dir = Data.directions[dir]
+		if self in traverser.objTree():
+			traverser.Print(f"You can't enter {-self}. It's within your Inventory.")
+			return False
+		if traverser in self.occupants:
+			traverser.Print(f"You can't, you are {traverser.position()}.")
+			return False
+
+		# exit the container
+		if dir == self.exitprep:
+			if self is traverser.parent:
+				if hasMethod(self,"open") and getattr(self,"closed",False):
+					if not self.open(traverser,silent=False):
+						return False
+				traverser.Print(f"You get out of {-self}.")
+				if self.parent is not game.currentroom:
+					traverser.waitInput()
+				traverser.changeLocation(self.parent)
+				return True
+			else:
+				traverser.Print(f"You're not in {-self}.",color="k")
+				return False
+
+		# try to enter the container
+		if traverser.parent is self:
+			traverser.Print(f"You're already in {-self}.")
+			return False
+		if dir not in (self.passprep,None):
+			traverser.Print(f"{+self} does not go {dir}.",color="k")
+			return False
+
+		if getattr(self,"closed",False):
+			if not self.open(traverser,silent=False):
+				return False
+		if not self.canAdd(traverser):
+			traverser.Print(f"You can't enter {-self}. There's not enough room.")
+			return False
+
+		if dir is None: dir = "into"
+		if verb is None: verb = "get"
+		traverser.Print(f"You {verb} {dir} {-self}.")
+		traverser.changeLocation(self)
+		return True
+
+
 	### Getters ###
 
-	def itemsWeight(self):
-		return sum(i.weight for i in self.items)
+
+	# returns dict of links, where keys are directions and values are Rooms/Portals
+	def allLinks(self,d=3):
+		links = super().allLinks(d=d)
+		# get a list of Portals in this Container
+		portals = self.query(key=lambda x: isinstance(x,Portal),d=d)
+		# for each Portals, add its links to links
+		for portal in portals:
+			for dir in portal.getLinksForParent():
+				if dir not in links:
+					links[(dir,portal)] = portal.links[dir]
+		return links
 
 
-	def itemsSize(self):
-		return sum(i.Size() for i in self.items)
-
-
-	def Weight(self):
-		return self.weight + self.itemsWeight()
-
-
-	def vacancy(self):
-		return self.capacity - self.itemsSize()
-
-
+	# check if item fits within Container's capacity
 	def canAdd(self,I):
 		if self.capacity == -1:
 			return True
 		return I.Size() <= self.vacancy() and self not in I.objTree()
 
 
+	# return self.items plus surfaces that are not None or self
 	def contents(self):
 		cts = self.items + [s for s in self.surfaces if s not in (None,self)]
 		return cts
 
 
+	# when getting a random direction to go, always go 'into' the Container
+	def getDefaultDir(self):
+		return self.passprep
+
+
 	# get the links dict to use in the parent's allLinks method
+	# we don't want to include the exit link, that is not accessible from the parent
 	def getLinksForParent(self):
 		return {self.passprep:self}
 
 
+	# get total size of all items in Container
+	def itemsSize(self):
+		return sum(i.Size() for i in self.items)
 
+
+	# get total weight of all items in Container
+	def itemsWeight(self):
+		return sum(i.weight for i in self.items)
+
+
+	# for Containers, the links are dynamic, but are used as property for compatibility
+	# entering always links to self and exiting always links to parent
+	@property
+	def links(self):
+		return {self.passprep:self, self.exitprep:self.parent}
+
+
+	# get available capacity in Container
+	def vacancy(self):
+		return self.capacity - self.itemsSize()
+
+
+	# get total weight of Container plus its Items
+	def Weight(self):
+		return self.weight + self.itemsWeight()
+
+
+
+# used as shorthand to make a Portal that is fixed and not mentioned by default
 class Passage(Portal):
 	def __init__(self,name,desc,weight,composition,links,passprep="into",mention=False,durability=-1,**kwargs):
 		super().__init__(name,desc,weight,durability,composition,links,passprep=passprep,mention=mention,fixed=True,**kwargs)
 
 
 
+# Serpens are piles of gold coins
+# they must be merged together if they're in the same contents
 class Serpens(Item):
 	def __init__(self,value,**kwargs):
-		desc = f"{str(value)} glistening coins made of an ancient metal"
+		desc = f"{str(value)} glistening coins made of an ancient metal."
 		Item.__init__(self,"Gold",desc,value,-1,"gold",**kwargs)
 		self.aliases = {"coin","coins","money","serpen","serpens",str(value),str(value)+" gold"}
 		self.plural = "gold"
@@ -6772,25 +6919,31 @@ class Serpens(Item):
 
 	### Operation ###
 
+	# don't obtain normally, just increase obtainer's money
 	def obtain(self,obtainer):
 		super().obtain(obtainer)
 		obtainer.updateMoney(self.value)
 
 
+	# absorb value of other into self, then update description
 	def merge(self,other):
 		if not isinstance(other,Serpens):
 			raise TypeError("Cannot merge non-Serpens with Serpens")
 
 		self.status += other.status
 		self.value += other.value
-		self.desc = f"{str(self.value)} glistening coins made of an ancient metal"
+		self.desc = f"{str(self.value)} glistening coins made of an ancient metal."
 
 
 	### User Output ###
 
+	# intelligently get phrase to represent this in different grammatical contexts
 	def nounPhrase(self,det="",n=-1,plural=False,cap=0):
 		strname = "Gold"
 		if det:
+			# "a" only applies if there's 1, otherwise use indefinite plural
+			if det == "a" and self.value != 1:
+				det = "some"
 			strname = det + " " + strname
 		else:
 			strname = str(self.value) + " " + strname
@@ -6799,18 +6952,24 @@ class Serpens(Item):
 		return strname
 
 
-
+# Projectiles are Items that can be launched at targets
+# it can be a standalone "true" Item when Projectile.item is None
+# or it could be a temporary wrapper for another Item stored in Projectile.item
+# __getattribute__ and __setattr__ pass through any attribute access to self.item first
+# if it exists, otherwise to self
 class Projectile(Item):
 	def __init__(self,name,desc,weight,durability,composition,might,sharpness,type,speed=0,item=None,**kwargs):
 		# must be first or setattr will fail
-		object.__setattr__(self, "item", item)
+		object.__setattr__(self,"item",item)
 		if self.item is None:
-			Item.__init__(self, name, desc, weight, durability, composition, **kwargs)
-		object.__setattr__(self, "might", might)
-		object.__setattr__(self, "sharpness", sharpness)
-		object.__setattr__(self, "type", type)
-		object.__setattr__(self, "speed", speed)
-		object.__setattr__(self, "parent", getattr(self.item, "parent", None))
+			Item.__init__(self,name,desc,weight,durability,composition,**kwargs)
+		object.__setattr__(self,"might",might)
+		object.__setattr__(self,"sharpness",sharpness)
+		object.__setattr__(self,"type",type)
+		object.__setattr__(self,"speed",speed)
+		# self.parent may be borrowed from self.item
+		# in this case, the Projectile instance won't show up in parent's contents
+		object.__setattr__(self,"parent",getattr(self.item,"parent",None))
 
 
 	### Dunder Methods ###
@@ -6831,9 +6990,9 @@ class Projectile(Item):
 		return super().__invert__() if self.item else "a " + self.name
 
 
-	# projectile can serve as a wrapper for an item stored in self.item
-	# but an item can also be a true projectile, where self.item = None
-	# always try to call the method from self.item first, otherwise try own method
+	# if accessing .item or .asProjectile(), get from self
+	# otherwise always try to get attributes from self.item first,
+	# and then only get attribute from self if not found on self.item
 	def __getattribute__(self, attr):
 		if attr in ("item","asProjectile"):
 			return object.__getattribute__(self, attr)
@@ -6843,6 +7002,9 @@ class Projectile(Item):
 			return object.__getattribute__(self, attr)
 
 
+	# if setting .item, always set on self
+	# otherwise, set it in self.item if it exists and has that attribute
+	# else set it on self
 	def __setattr__(self, attr, value):
 		# always allow setting the wrapped item itself
 		if attr == "item":
@@ -6858,48 +7020,57 @@ class Projectile(Item):
 
 	### Operation ###
 
+	# launch the Projectile at target from launcher with given speed and aim accuracy
 	def Launch(self,speed,aim,launcher,target):
 		self.speed = speed
 		self.aim = 90 if self.hasStatus("homing") and aim < 90 else aim
 
+		# when launching into another Room, just change location
 		if isinstance(target,Room):
 			self = self.asItem()
 			self.changeLocation(target)
 			return self.fall(speed//4)
+		# if has occupants, then make them fall off
 		if isinstance(self.item,Item):
-			for occupant in getattr(self.item,"occupants",[]):
+			for occupant in self.occupants.copy():
 				occupant.fall(speed//4)
 			self.item.clearOccupants()
 
-		# when throwing something in a Box at something outside the box
+		# when launching from within in a Container at something outside the Container
 		if self.item.parent not in (target,target.parent):
-			if not getattr(self.item.parent,"open",True):
-				return self.item.parent.bombard(self)
+			# if parnet is closed, bombard the parent
+			if getattr(self.parent,"closed",False):
+				return self.parent.bombard(self)
+			# otherwise change location to parent first
 			self.item.changeLocation(target.parent)
 
+		# try to bombard the target
 		if not target.bombard(self):
 			Print(f"{self.pronoun.title()} misses!")
 			self.Miss(launcher,target)
 
+		# if not a true projectile, then fall to ground
 		if self.item:
 			if self.item.anchor() is None and not self.hasStatus("flying"):
 				self.fall(speed//4)
 		return True
 
 
+	# when missed the target, have a chance to hit another object in the room
 	def Miss(self,launcher,target):
 		self.aim = -10 if self.asItem().hasStatus("homing") else min1(self.aim-10)
-		parent = self.item.parent
 
-		# have a chance to randomly hit a different object in room
-		otherObjs = [obj for obj in parent if obj not in (self,self.item,launcher,target)]
-		# the curse of calamity makes ricocheting objects hit you
+		# can't hit itself, the launcher, or the intended target
+		otherObjs = [obj for obj in self.parent if obj not in \
+		(self,self.item,launcher,target)]
+		# having the curse of calamity makes ricocheting objects hit oneself
 		if launcher.hasStatus("calamity"):
 			otherObjs.append(launcher)
 		if any(obj.hasStatus("calamity") for obj in otherObjs):
 			otherObjs = [o for o in otherObjs if o.hasStatus("calamity")]
 		sizes = [obj.Size() for obj in otherObjs]
 
+		# more likely to hit larger objects
 		victim = choices(otherObjs,sizes)[0]
 		if victim is None:
 			return False
@@ -6910,6 +7081,7 @@ class Projectile(Item):
 			Print(f"{self.pronoun.title()} misses...")
 
 
+	# when colliding with target, deal damage and take self damage
 	def Collide(self,target):
 		if target is player:
 			Print(f"{+self} hits you!",color="o")
@@ -6923,9 +7095,7 @@ class Projectile(Item):
 			Print("Critical hit!",color="o")
 			self.dull(1)
 		damage = diceRoll(0,d,d)
-		# surfaces can't be damaged by projectiles
-		if target not in target.parent.surfaces:
-			target.takeDamage(damage,self.type)
+		target.takeDamage(damage,self.type)
 
 		# take self damage
 		if self.item:
@@ -6946,39 +7116,50 @@ class Projectile(Item):
 		return True
 
 
+	# get the wrapped Item if it exists, otherwise return self
 	def asItem(self):
-		if self.item is not None:
-			return self.item
-		else:
-			return self
+		return self.item if self.item else self
 
 
+	# its already a projectile!
 	def asProjectile(self):
 		return self
 
 
 
+# Weapons are Items that can be used to attack
+# they have might, sleight, sharpness, range, type and twohanded attributes
 class Weapon(Item):
-	def __init__(self,name,desc,weight,durability,composition,might,sleight,sharpness,range,type,twohanded=False,**kwargs):
+	def __init__(self,name,desc,weight,durability,composition,might,sleight,sharpness,
+	range,type,twohanded=False,**kwargs):
 		Item.__init__(self,name,desc,weight,durability,composition,**kwargs)
+		# amount of damage weapon deals
 		self.might = might
+		# accuracy of weapon
 		self.sleight = sleight
+		# chance of critical hits, degrades over time
 		self.sharpness = sharpness
+		# effective distance weapon can reach
 		self.range = range
+		# whether weapon requires two hands to wield
 		self.twohanded = twohanded
+		# damage type
 		self.type = type
 
 
+	# decrease sharpness by dec unless keen
 	def dull(self,dec):
 		if not self.hasStatus("keen"):
 			self.sharpness = min0(self.sharpness - dec)
 
 
+	# display weapon and stats
 	def show(self):
 		Print(f"{self.name} {self.might} {self.sleight}")
 		Print(f"{self.sharpness} {self.twohanded} {self.range}")
 
 
+	# licking shark weapons hurts!
 	def lick(self,licker):
 		# TODO: don't check for composition, check for if its sharp?
 		if self.composition in ("glass","bronze","iron","steel"):
@@ -6992,10 +7173,13 @@ class Weapon(Item):
 			Print(Data.scents[self.composition].replace("scent","taste"))
 
 
+	# wrap as Projectile for temporary use while launching
 	def asProjectile(self):
-		return Projectile(self.name,self.desc,self.weight,self.durability,self.composition,self.might,self.sharpness,self.type,item=self)
+		return Projectile(self.name,self.desc,self.weight,self.durability,
+		self.composition,self.might,self.sharpness,self.type,item=self)
 
 
+	# if given keen status, maximize sharpness
 	def addStatus(self,name,dur,stackable=True):
 		if super().addStatus(name,dur,stackable=stackable):
 			if self.hasStatus("keen"):

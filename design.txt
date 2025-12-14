@@ -1037,6 +1037,7 @@ tonic - medicinal, nonmagical, described by contents, energizing/antidote effect
 brew - unknown brewed things
 tincture - dyes
 elixir of truth - (mark dlog nodes as lies), dlog becomes green, red if its a lie
+soma
 
 
 Fruits:
@@ -1232,6 +1233,8 @@ coal coke, grey ash, bone ash are used for iron and steel
 MISC ITEM IDEAS:
 cadeuceus
 uroboros
+adder stone (glassy stone with a hole in it), perhaps can see invisibility through it?
+toadstone (cure to poison?)
 holy water
 something called "ersatz ___"
 something called "tentacular __"
@@ -1589,6 +1592,7 @@ MISC WORLD IDEAS:
 - monolith/obelisk
 - cairn
 - stele
+- serpentine column
 - wicker man (burned as sacrifice)
 - magic nail (like golden railroad nail?)
 - fighting ur nega/anti self
@@ -1652,9 +1656,10 @@ QUEST IDEAS:
 - greatest knight in the world retiring to be a baker. Need to persuade him to return
 - nine witches to be defeated
 - "a fools errand"
+- rescuing a maiden, have to put her on a horse?
 
 
-CHARACTER NAMES IDEAS:
+CHARACTER NAME IDEAS:
 	The zodiac signs
 	The Lady of the Lake
 	Fisher King (old fisherman named Anfortas, looking for Grail, limping/wounded leg)
@@ -1698,6 +1703,8 @@ CHARACTER NAMES IDEAS:
 	The Benevolent Frog King (looking for his son the frog prince?) - Vodyantsar?
 	The Frog Prince (vodyanoy)
 	Frog Wizard - Zazmoze
+	"Emperor Ophidian"
+	Falak - serpent
 	another bbg (Behemoth)
 	also an evil wizard ofc
 	a cultist of Uramut who becomes possessed and tries to unleash him
@@ -1718,6 +1725,7 @@ CHARACTER NAMES IDEAS:
 	merchant named Pryce
 	goblin wizard named Pukwudgie
 	pair of honest guys "Frank and Ernest"
+	snake cultists Moin and Goin
 
 	Somnus, Orion, Pax, Tyro, Cogg, Garl, Ike, Uther, Kess, Roach, Mito, Lugh, Muriel
 	Eadmer, Godfrey, Einhard, Vixen, Aloy, Eilonwy, Beowin, Alahad, Galatea, Grin
@@ -1725,10 +1733,12 @@ CHARACTER NAMES IDEAS:
 	Hancourt, Aecury, Aelfwyne, Arwald, Merwin, Ichabod, Alcuin, Dwint, Egfrith, Gildaz,
 	Wulfstan, Salome, Ewart, Ephraim, Bragwen, Bran, Ulysses, Ambrose, Conomor, Hengist,
 	Cherdic, Osca, Chester, Ned, Rhiannon, Tethra, Lir, Donne, Phane, Blinda, Rozbeth,
-	Saladin, Flynwirt, Lalona, Wendell, Jane, Queldin, Pipin, Graley, Helen, Halfdan,
+	Saladin, Flynwirt, Lalona, Wendell, Jane, Quildin, Pipin, Graley, Helen, Halfdan,
 	Clyde, Boffin, Wren, Eloise, Nora, Hawken, Questley, Hal, Gwyssa, Zinmere, Hette,
 	Reinhart, Sarge, Leor, Merrick, Everett, Thena, Anju, Zelda, Leif, Cato, Jezebel,
-	Sapna, Arden, Fiona, Euphemia, Asta, Zagler, Olaf, Sybith, Matilda, Rusebrook
+	Sapna, Arden, Fiona, Euphemia, Asta, Zagler, Olaf, Sybith, Matilda, Rusebrook, Sporus,
+	Olfred, Sayid, Mohammed, Ahad, Kess, Ashara, Pella, Mina, Jasmine, Mohs, Sophia,
+	Frome, Herman, Coronis,
 
 	polemarch,commodore,margrave,
 	thane,earl,baron,duke,count,burgess,
@@ -1767,6 +1777,7 @@ SNAKES
 yellow python -- red python -- brown python -- white python -- black python -- giant python -- aeormungand
 nagas
 basilisks
+hypnalis
 
 ANIMALS
 sirens
