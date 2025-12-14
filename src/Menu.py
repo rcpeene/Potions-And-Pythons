@@ -177,8 +177,10 @@ def objDecoder(jsonDict):
 			try:
 				return objClass(**objAttributes)
 			except TypeError as e:
-				attributeStr = "\n".join(f"{key}: {value}" for key, value in objAttributes.items())
-				raise TypeError(f"Failed to instantiate object: '{objClassname}' from JSON with attributes above: {attributeStr}", e)
+				attributeStr = "\n".join(f"{key}: {value}" for \
+				key, value in objAttributes.items())
+				raise TypeError(f"Failed to instantiate object: '{objClassname}'" \
+				f"from JSON with attributes above: {attributeStr}", e)
 		else:
 			raise Exception("ERROR in decoding JSON object class type: " + objClassname)
 	else:
@@ -202,7 +204,7 @@ def readDialogue(filename):
 	jsonDict = readJSON(filename)
 	resDict = {}
 	resDict["sounds"] = jsonDict["sounds"]
-	resDict["trites"] = jsonDict["trites"]
+	resDict["pools"] = jsonDict["pools"]
 	resDict["trees"] = {}
 	for treeLabel, treeJson in jsonDict["trees"].items():
 		resDict["trees"][treeLabel] = Core.DialogueTree(treeLabel,treeJson)
@@ -220,7 +222,8 @@ def readGame(filename,World,dlogForest):
 	time = int(gametext[3][:-1])		# fourth line is time int
 	events = eval(gametext[4][:-1])
 	gfd.close()
-	return Core.Game(mode,World[currentroom],World[prevroom],time,events,dlogForest,Creatures.factory,Items.factory)
+	return Core.Game(mode,World[currentroom],World[prevroom],time,events,dlogForest,
+	Creatures.factory,Items.factory)
 
 
 
@@ -237,7 +240,7 @@ def quickSave(savename):
 	writeWorld("world.json", Core.world)
 	writePlayer("player.json", Core.player)
 	writeGame("game.txt", Core.game, Core.world)
-	Core.game.lastsave = Core.game.time
+	Core.game.lastSave = Core.game.time
 	os.chdir("../..")
 
 
@@ -253,7 +256,8 @@ def saveGame(savename=None):
 	if savename is None:
 		# player names their save
 		Core.columnPrint(saves,10,10,delay=0,color="k")
-		savename = Core.Input("\nWhat name will you give this save file?",delay=0,color="k").lower()
+		prompt = "\nWhat name will you give this save file?"
+		savename = Core.Input(prompt,delay=0,color="k").lower()
 	if savename in ("", "all", "autosave", "quicksave") or savename in Data.cancels:
 		if savename == "":
 			Core.Print(f"Save name cannot be empty.",delay=0,color="k")
@@ -423,7 +427,8 @@ def createCharacter():
 def newGame():
 	# initializes the game at the "cave" room
 	dlogForest = readDialogue("Dialogue.json")
-	Core.game = Core.Game(0,Core.defaultRoom,Core.defaultRoom,0,set(),dlogForest,Creatures.factory,Items.factory)
+	Core.game = Core.Game(0,Core.defaultRoom,Core.defaultRoom,0,set(),dlogForest,
+	Creatures.factory,Items.factory)
 	# initializes from the character creation screen
 	Core.player = createCharacter()
 	# tries to load a clean new world from initial world file, must be defined after player
@@ -453,13 +458,15 @@ def testGame():
 	inv = [Items.factory["compass"]()]
 	status = [["fireproof",-1], ["cursed",-2], ["immortal",-1],
 	["sharpshooter",50], ["invisible",15], ["flying",5]]
-	Core.player = Core.Player("Norman","a hero",10,[4]*10,1000,50,inv=inv,love=100,fear=100,spells=[],status=status)
+	Core.player = Core.Player("Norman","a hero",10,[4]*10,1000,50,inv=inv,love=100,
+	fear=100,spells=[],status=status)
 
 	# world must be defined after player
 	Core.world = readJSON("World.json",object_hook=worldDecoder)
 
 	dlogForest = readDialogue("Dialogue.json")
-	Core.game = Core.Game(0,Core.world["cave"],Core.world["tunnel"],0,set(),dlogForest,Creatures.factory,Items.factory)
+	Core.game = Core.Game(0,Core.world["cave"],Core.world["tunnel"],0,set(),dlogForest,
+	Creatures.factory,Items.factory)
 
 	Core.buildWorld()
 

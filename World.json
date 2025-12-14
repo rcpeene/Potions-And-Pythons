@@ -160,10 +160,11 @@
 				"__class__": "Portal",
 				"name": "cracked mirror",
 				"desc": "A cracked mirror that shimmers slightly. It doesn't appear to reflect anything, but instead shows dark rippling shadows.",
-				"weight": 2,
+				"weight": 10,
 				"durability": 10,
 				"rarity": 4,
 				"composition": "glass",
+				"capacity": 50,
 				"links": {
 					"in": "port:mirror"
 				},
@@ -238,17 +239,16 @@
 			},
 			{
 				"__class__": "Window",
-				"name": "window",
+				"name": "kitchen window",
 				"desc": "A brittle, dusty window on the northern wall of this room",
 				"weight": 20,
 				"view": "out",
 				"composition": "glass",
-				"aliases": ["northern window"],
+				"aliases": ["northern window","window"],
 				"links": {
-					"out": "cliffside",
-					"through": "cliffside",
-					"into": "cliffside",
-					"in": "cliffside"
+					"out": "port:cabin window",
+					"through": "port:cabin window",
+					"in": "port:cabin window"
 				},
 				"descname": "dusty window"
 			}
@@ -359,7 +359,7 @@
 				"weight": 1,
 				"durability": 100,
 				"composition": "bronze",
-				"open": false,
+				"closed": true,
 				"capacity": 50,
 				"items": [
 					{
@@ -433,7 +433,7 @@
 				"weight": 8,
 				"durability": 10,
 				"composition": "wood",
-				"open": false,
+				"closed": true,
 				"capacity": 30,
 				"items": [
 					{
@@ -514,6 +514,19 @@
 				"descname": "pale cliff"
 			},
 			{
+				"__class__": "Window",
+				"name": "cabin window",
+				"desc": "A brittle, dusty window on the north side of the cabin",
+				"weight": 20,
+				"composition": "glass",
+				"view": "in",
+				"aliases": ["north window","window"],
+				"links": {
+					"in": "port:cabin window",
+					"through": "port:cabin window"
+				}
+			},
+			{
 				"__class__": "Pool",
 				"name": "stream",
 				"desc": "A small stream flowing out from a crack at the base of the cliff. The water seems to coax you eastward.",
@@ -521,7 +534,6 @@
 				"composition": "freshwater",
 				"aliases": ["brook","creek"]
 			}
-
 		],
 		"items": [],
 		"creatures": [],
@@ -625,16 +637,39 @@
 				"__class__": "Portal",
 				"name": "warped mirror",
 				"desc": "A warped mirror that seems to glow. You can't make out any reflection but dark twisted shapes.",
-				"weight": 2,
+				"weight": 10,
 				"durability": 10,
 				"rarity": 4,
 				"composition": "glass",
+				"capacity": 30,
 				"links": {
 					"in": "port:mirror"
 				},
 				"passprep": "into",
 				"descname": "warped mirror",
 				"aliases": ["mirror"]
+			},
+			{
+				"__class__": "Container",
+				"name": "photobooth",
+				"desc": "A classic red and white photobooth with a curtain.",
+				"weight": 200,
+				"durability": 50,
+				"aliases": ["booth","photo booth"],
+				"composition": "steel",
+				"capacity": 100,
+				"items": [
+					{
+						"__class__": "Box",
+						"name": "wooden barrel",
+						"desc": "A sturdy wooden barrel",
+						"aliases": ["barrel"],
+						"weight": 30,
+						"durability": 20,
+						"composition": "wood",
+						"items": []
+					}
+				]
 			}
 		],
 		"creatures": [],

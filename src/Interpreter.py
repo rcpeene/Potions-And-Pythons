@@ -88,7 +88,8 @@ def chooseObject(name,objects,verb=None):
 					return obj
 
 	prompt = f"\nWhich {name}{f' to {verb}' if verb else ''}?"
-	choice = Core.InputLoop(prompt,acceptKey=acceptKey,refuseMsg="That is not one of the options.",color="w")
+	choice = Core.InputLoop(prompt,acceptKey=acceptKey,
+	refuseMsg="That is not one of the options.",color="w")
 	return choice
 
 
@@ -97,7 +98,8 @@ def chooseObject(name,objects,verb=None):
 # queryPlayer and queryRoom indicate which places to look for matching objects
 # roomD and playerD are the 'degree' of the query.
 # Look at Core.py objQuery for details on query degree
-def findObject(term,verb=None,queryType="both",filter=None,roomD=0,playerD=2,reqSource=None,silent=False):
+def findObject(term,verb=None,queryType="both",filter=None,roomD=0,playerD=2,
+reqSource=None,silent=False):
 	if term is None and not silent and verb is not None:
 		term = getNoun(f"What will you {verb}?")
 	if term in Data.cancels or term is None or term == "nothing":
@@ -130,7 +132,8 @@ def findObject(term,verb=None,queryType="both",filter=None,roomD=0,playerD=2,req
 			Core.nameMatch(reqSource,obj.anchor())
 		matches = {match for match in matches if isMatch(match)}
 	if my:
-		matches = {match for match in matches if Core.player in match.ancestors() or match.determiner == "your"}
+		isMatch = lambda obj: Core.player in obj.ancestors() or obj.determiner == "your"
+		matches = {match for match in matches if isMatch(match)}
 
 	# if two items are practically identical, only keep one of them
 	uniqueMatches = set()
@@ -158,7 +161,8 @@ def findObject(term,verb=None,queryType="both",filter=None,roomD=0,playerD=2,req
 	return None
 
 
-def enforceVerbScope(verb,obj,permitAnchor=True,permitParent=False,permitSelf=False,permitDistance=False):
+def enforceVerbScope(verb,obj,permitAnchor=True,permitParent=False,permitSelf=False,
+permitDistance=False):
 	parent = Core.player.parent
 	if obj not in parent.objTree(includeSelf=True):
 		Core.Print(f"You can't {verb} {-obj}, you're {parent.passprep} {-parent}.")
@@ -169,7 +173,7 @@ def enforceVerbScope(verb,obj,permitAnchor=True,permitParent=False,permitSelf=Fa
 			return True
 		Core.Print(f"You're {Core.player.position()}, you can't {verb} {obj.pronoun}.")
 		return True
-		# if obj is Core.player.rider: # TODO, what if a bird is 'riding' on your shoulder?
+		# if obj is Core.player.rider: # TODO, what if a bird is riding on your shoulder?
 		# 	Core.Print(f"You can't {verb} {-obj}, {obj.pronoun} is on you.")
 		# 	return True
 	# sometimes parent is also anchor. In this case, permitAnchor takes precedence.
@@ -257,23 +261,25 @@ def decompose(command):
 
 # splits a list based on the present of particular elements as delimiters
 def splitList(lst,delims):
-    result = []
-    current = []
-    i = 0
-    while i < len(lst):
-        if lst[i] in delims:
-            # skip all consecutive delimiters
-            while i < len(lst) and lst[i] in delims:
-                i += 1
-            if current:
-                result.append(current)
-                current = []
-        else:
-            current.append(lst[i])
-            i += 1
-    if current:
-        result.append(current)
-    return result
+	if lst is None or len(lst) == 0:
+		return [[]]
+	result = []
+	current = []
+	i = 0
+	while i < len(lst):
+		if lst[i] in delims:
+			# skip all consecutive delimiters
+			while i < len(lst) and lst[i] in delims:
+				i += 1
+			if current:
+				result.append(current)
+				current = []
+		else:
+			current.append(lst[i])
+			i += 1
+	if current:
+		result.append(current)
+	return result
 
 
 # if the term is a given pronoun, returns the name of the object that
@@ -306,7 +312,7 @@ def read(prompt,storeRawCmd=False):
 # processes it into a command form usable by interpret(),
 # returns a list of words without capitals, symbols, or articles
 # nounify() joins words that may only be meaningful as one term
-def tokenize(command):
+def tokenize(command,allowSequence=True):
 	# lowercase-ify the sentence command, copy it excluding symbols
 	purecommand = "".join([i for i in command if i not in Data.symbols]).lower()
 	# split command into list of words, but combine words that seem to be single terms
@@ -315,6 +321,8 @@ def tokenize(command):
 	splitcommand = decompose(splitcommand)
 	# remove articles and determiners (and other superfluous words)
 	finalcommand = [word for word in splitcommand if word not in Data.superfluous]
+	if not allowSequence:
+		return finalcommand
 	# allow for multiple sequential commands separated by 'and' or 'then'
 	seqcommands = splitList(finalcommand,("and","then"))
 	commandQueue.extend(seqcommands[1:])
@@ -322,7 +330,7 @@ def tokenize(command):
 
 
 def getNoun(prompt):
-	return " ".join(tokenize(read(prompt)))
+	return " ".join(tokenize(read(prompt),allowSequence=False))
 
 
 def parse(cmdInput):
@@ -448,21 +456,25 @@ def Diagnostic(command):
 	sizes.append(sys.getsizeof(Core.game))
 	pythonsizes = [sys.getsizeof(obj) for obj in gc.get_objects()]
 
-	objInfo = lambda objects: [(sys.getsizeof(obj),type(obj),repr(obj)[:50]) for obj in objects]
+	objInfo = lambda objects: [(sys.getsizeof(obj),type(obj),repr(obj)[:50]) \
+	for obj in objects]
 
-	gameObjects = list(Core.game.itemRegistry.values()) + list(Core.world.values()) + [Core.player,Core.world,Core.game]
+	gameObjects = list(Core.game.itemRegistry.values()) + list(Core.world.values()) + \
+	[Core.player,Core.world,Core.game]
 	gameObjInfo = objInfo(gameObjects)
 	gameObjSizes = [info[0] for info in gameObjInfo]
 	print(f"Number of objects in registry: {len(Core.game.itemRegistry)}")
 	print(f"Number of rooms in world: {len(Core.world)}")
-	print(f"Game object sizes (min, avg, max): {min(gameObjSizes)}b, {sum(gameObjSizes)//len(gameObjSizes)}b, {max(gameObjSizes)}b")
+	print(f"Game object sizes (min, avg, max): {min(gameObjSizes)}b," \
+	f" {sum(gameObjSizes)//len(gameObjSizes)}b, {max(gameObjSizes)}b")
 	print(f"Largest game object: {max(gameObjInfo,key=lambda x:x[0])}")
 	print(f"Memory used by game objects: {sum(gameObjSizes)}b")
 
 	pyObjInfo = objInfo(gc.get_objects())
 	pyObjSizes = [info[0] for info in pyObjInfo]
 	print(f"Total number of python objects: {len(pyObjSizes)}")
-	print(f"All python object sizes (min, avg, max): {min(pyObjSizes)}b, {sum(pyObjSizes)//len(pyObjSizes)}b, {max(pyObjSizes)}b")
+	print(f"All python object sizes (min, avg, max): {min(pyObjSizes)}b," \
+	f" {sum(pyObjSizes)//len(pyObjSizes)}b, {max(pyObjSizes)}b")
 	print(f"Largest python object: {max(pyObjInfo,key=lambda x:x[0])}")
 	print(f"Approximate total memory usage: {sum(pyObjSizes)}b")
 
@@ -721,7 +733,8 @@ def Set(command):
 		Core.Print(f"{obj} has no attribute {attrname}",color="k")
 		return False
 	if type(getattr(obj,attrname)) is int and type(value) is not int:
-		Core.Print(f"Can't step {attrname} to {value}. Attribute {attrname} is an integer",color="k")
+		Core.Print(f"Can't set {attrname} to {value}."
+		f" Attribute {attrname} is an integer",color="k")
 		return False
 	Core.Print(f"Setting {obj}.{attrname} to {value}",color="k")
 	setattr(obj,attrname,value)
@@ -810,7 +823,8 @@ def Zap(command):
 		return
 	objname = " ".join(command[1:])
 	if objname == "all":
-		key = lambda x: not (isinstance(x,(Core.Player,Core.Fixture)) or Core.player in x.ancestors())
+		key = lambda x: not (isinstance(x,(Core.Player,Core.Fixture)) or \
+		Core.player in x.ancestors())
 		matches = Core.player.surroundings().query(key=key,d=3)
 	elif objname in ("me","myself","player","self"):
 		matches = [Core.player]
@@ -868,9 +882,11 @@ def Commands(*args):
 	Core.Print("Short Commands (May only be one word)",color="k")
 	shortcommands = sorted(tuple(key for key in statcommands.keys() if key not in Data.emoticons) + Data.traits + Data.abilities)
 	Core.columnPrint(shortcommands,10,10,color="k")
-	Core.Print("\nVerb Commands (Does not include cheat codes and secret commands)",color="k")
+	Core.Print("\nVerb Commands (Does not include cheat codes and secret commands)",
+	color="k")
 	Core.columnPrint(actions.keys(),10,10,color="k")
-	Core.Print("\nDuring the game, type 'info' for information on the game and how to play.",color="k")
+	Core.Print("\nDuring the game, type 'info' for information on the game and" \
+	" how to play.",color="k")
 	Core.waitInput()
 	Core.clearScreen()
 
@@ -881,7 +897,8 @@ def Laugh(*args):
 
 
 def Quit(*args):
-	if Core.yesno("Are you sure you want to quit? (Anything unsaved will be lost)",color="k",delay=0):
+	if Core.yesno("Are you sure you want to quit? (Anything unsaved will be lost)",
+	color="k",delay=0):
 		Core.game.quit = True
 		return True
 
@@ -944,7 +961,8 @@ def Attack(dobj,iobj,prep,target=None,weapon=None,weapon2=None):
 	if iobj is None:
 		if len(Core.player.weapons()) == 0:
 			iobj = "fist"
-		elif Core.player.gear["right"] == Core.EmptyGear() and Core.player.gear["left"] == Core.EmptyGear():
+		elif Core.player.gear["right"] == Core.EmptyGear() and \
+		Core.player.gear["left"] == Core.EmptyGear():
 			iobj = getNoun("What will you attack with?")
 			if iobj in Data.cancels: return False
 	if iobj is not None and iobj.startswith("my "):
@@ -966,7 +984,8 @@ def Attack(dobj,iobj,prep,target=None,weapon=None,weapon2=None):
 			_, weapon = Core.player.inGear(iobj)
 		if weapon is None:
 			weapons = Core.player.inInv(iobj)
-			if len(weapons) == 0: Core.Print(f"There is no '{iobj}' in your Inventory.",color="k")
+			if len(weapons) == 0: Core.Print(f"There is no '{iobj}' in your Inventory.",
+			color="k")
 			elif len(weapons) == 1: weapon = weapons[0]
 			else: weapon = chooseObject(iobj,weapons)
 			if weapon is None: return False
@@ -1111,7 +1130,8 @@ def Catch(dobj,iobj,prep):
 
 
 def Climb(dobj,iobj,prep):
-	if prep not in ("down","in","into","inside","on","onto","out","out of","under","up","upon",None):
+	if prep not in ("down","in","into","inside","on","onto","out","under","up","upon",
+	None):
 		return promptHelp("Command not understood.")
 	verbprep = "on" if prep is None else prep
 
@@ -1132,7 +1152,7 @@ def Climb(dobj,iobj,prep):
 	# TODO: handle 'climb out of here' in a normal room
 
 	elif isinstance(M,Core.Portal):
-		return M.Traverse(Core.player,dir=prep,verb="climb")
+		return M.traverse(Core.player,dir=prep,verb="climb")
 	elif prep in ("down","out","out of"):
 		return Dismount(dobj,iobj,prep)
 	else:
@@ -1167,7 +1187,8 @@ def Cross(dobj,iobj,prep):
 
 
 def Crouch(dobj,iobj,prep):
-	if prep not in ("at","behind","below","beneath","by","in","inside","into","near","on","onto","under","upon",None):
+	if prep not in ("at","behind","below","beneath","by","in","inside","into","near",
+	"on","onto","under","upon",None):
 		return promptHelp("Command not understood.")
 	if dobj is None:
 		dobj = iobj
@@ -1366,7 +1387,7 @@ def Drop(dobj,iobj,prep,I=None):
 				else:
 					Core.player.remove(I)
 					Core.player.parent.add(I)
-				return R.Transfer(I)
+				return R.transfer(I)
 			else:
 				Core.Print(f"{+R} is closed.")
 				return False
@@ -1471,7 +1492,7 @@ def Exit(dobj,iobj,prep):
 	if len(Core.player.parent.allLinks()) == 0:
 		dir,portal = Core.player.parent.allLinks().keys()[0]
 		return Go(dir,getattr(portal,"name",None),None)
-	return Go(None,None,None)
+	return Go(dobj,iobj,"out")
 
 
 def Feed(dobj,iobj,prep):
@@ -1554,7 +1575,7 @@ def GoVertical(dir,passage=None,dobj=None):
 			return Core.player.changeLocation(passage.getNewLocation(dir=dir))
 		return Core.player.changeLocation(newroom)
 
-	hasUpPassage = any(d == "up" for (d,p) in Core.game.currentroom.allLinks() if p is not None)
+	hasUpPassage = any(d == "up" for (d,p) in Core.game.currentroom.allLinks() if p)
 	if passage is None and dir == "up" and dir in Core.game.currentroom.links:
 		if Core.player.riding is None and not Core.player.hasStatus("flying"):
 			goer = Core.player
@@ -1578,9 +1599,9 @@ def GoVertical(dir,passage=None,dobj=None):
 		passage = findObject("",f"go {dir}","room")
 		if passage is None:
 			return False
-	if Core.hasMethod(passage,"Traverse"):
+	if Core.hasMethod(passage,"traverse"):
 		Core.game.setPronouns(passage)
-		return passage.Traverse(Core.player,dir)
+		return passage.traverse(Core.player,dir)
 	else:
 		Core.Print(f"{+passage} can't be traversed.")
 		return False
@@ -1620,9 +1641,10 @@ def parseGo(dobj,iobj,prep):
 
 	# assign passage if unassigned
 	passages = []
-	if not (dobj is None or matchTerm(dobj,dir) or matchObj(dobj,dest)) and passage is None:
+	termMaybePassage = lambda t: not (t is None or matchTerm(t,dir) or matchObj(t,dest))
+	if passage is None and termMaybePassage(dobj):
 		passages = Core.player.surroundings().nameQuery(dobj,d=1)
-	elif not (iobj is None or matchTerm(iobj,dir) or matchObj(iobj,dest)) and passage is None:
+	elif passage is None and termMaybePassage(iobj):
 		passages = Core.player.surroundings().nameQuery(iobj,d=1)
 	if len(passages) == 1:
 		passage = passages.pop()
@@ -1633,8 +1655,10 @@ def parseGo(dobj,iobj,prep):
 
 	# assign dest if unassigned
 	# happens after assigning passage so passage takes precedence when names conflict
-	if dest is None and Core.nameMatch(dobj,Core.player.parent): dest = Core.player.parent
-	elif dest is None and Core.nameMatch(iobj,Core.player.parent): dest = Core.player.parent
+	if dest is None and Core.nameMatch(dobj,Core.player.parent):
+		dest = Core.player.parent
+	elif dest is None and Core.nameMatch(iobj,Core.player.parent):
+		dest = Core.player.parent
 
 	return dir,dest,passage,cancelledAction
 
@@ -1650,13 +1674,17 @@ def Go(dobj,iobj,prep):
 			Core.Print(f"You can't go anywhere, you are {cond}.")
 			return False
 		if Core.player.riding is not None and Core.player.riding.hasStatus(cond):
-			spurRec = f" Try to spur {Core.player.riding.pronoun}." if cond in ("laying","sitting") else ""
-			Core.Print(f"You can't go anywhere, you are riding {-Core.player.riding} which is {cond}.{spurRec}")
+			spurRec = ""
+			if cond in ("laying","sitting"):
+				spurRec = f" Try to spur {Core.player.riding.pronoun}."
+			Core.Print(f"You can't go anywhere, you are riding {-Core.player.riding}" \
+			f" which is {cond}.{spurRec}")
 			Core.game.setPronouns(Core.player.riding)
 			return False
 
 	tip = "Type 'where' for a list of destinations."
-	preps = ("across","away","away from","down","through","to","toward","up","in","inside","into","on","onto","out","over",None)
+	preps = ("across","away","away from","down","through","to","toward","up","in",
+	"inside","into","on","onto","out","over",None)
 	if prep in ("to", "toward", "away", "away from"):
 		prep = None
 	if (dobj,iobj,prep) == (None,None,None):
@@ -1673,7 +1701,9 @@ def Go(dobj,iobj,prep):
 	if prep not in preps or (dobj,iobj,prep) == (None,None,None):
 		return promptHelp("Command not understood.",tip=tip)
 
-	locReminder = "" if Core.player.parent is Core.game.currentroom else f" You are in {~Core.player.parent}."
+	locRemind = ""
+	if Core.player.parent is not Core.game.currentroom:
+		locRemind = f" You are in {~Core.player.parent}."
 	# get dir, dest, and passage and validate them
 	dir,dest,passage,cancelledAction = parseGo(dobj,iobj,prep)
 	if cancelledAction:
@@ -1682,11 +1712,11 @@ def Go(dobj,iobj,prep):
 	if (dir,dest,passage) == (None,None,None):
 		if dobj is None: dobj = iobj
 		if dobj is None:
-			return promptHelp(f"There is no way '{prep}' here.{locReminder}",tip=tip)
+			return promptHelp(f"There is no way '{prep}' here.{locRemind}",tip=tip)
 		else:
-			return promptHelp(f"There is no '{dobj}' here.{locReminder}",tip=tip)
+			return promptHelp(f"There is no '{dobj}' here.{locRemind}",tip=tip)
 	if dir is None and dest is not None:
-		dir, passage = Core.player.parent.getDirPortalPair(dest.name.lower())
+		dir,passage = Core.player.parent.getDirPortalPair(dest.name.lower())
 	# print(dir,dest,passage)
 	if (dest,passage) == (None,None):
 		if dir in Core.player.parent.links:
@@ -1698,6 +1728,8 @@ def Go(dobj,iobj,prep):
 			dir = None
 			passage = list(Core.player.parent.allLinks().keys())[0][1]
 			dest = list(Core.player.parent.allLinks().values())[0]
+	if passage is None and isinstance(Core.player.parent,Core.Portal):
+		passage = Core.player.parent
 	# print(dir,dest,passage)
 	if (dest,passage) == (None,None) and dir not in Core.player.parent.links:
 		passages = Core.player.parent.getPortalsFromDir(dir)
@@ -1707,7 +1739,7 @@ def Go(dobj,iobj,prep):
 			return False
 	# print(dir,dest,passage)
 	if (dest,passage) == (None,None):
-		return promptHelp(f"There is no exit leading '{dir}' here.{locReminder}",tip=tip)
+		return promptHelp(f"There is no exit leading '{dir}' here.{locRemind}",tip=tip)
 	if passage is None and Core.player.parent is dest:
 		Core.Print(f"You are already there!")
 		return False
@@ -1719,14 +1751,14 @@ def Go(dobj,iobj,prep):
 	# if just passage is given
 	if passage is not None:
 		Core.game.setPronouns(passage)
-		if not Core.hasMethod(passage,"Traverse"):
+		if not Core.hasMethod(passage,"traverse"):
 			Core.Print(f"{+passage} cannot be traversed.")
 			return False
-		return passage.Traverse(Core.player,dir)
+		return passage.traverse(Core.player,dir)
 	# if just dest given
 	if dest is not None:
 		return Core.player.changeLocation(dest)
-	return promptHelp(f"There is no exit leading to a '{dobj}' here.{locReminder}",tip=tip)
+	return promptHelp(f"There is no exit leading to a '{dobj}' here.{locRemind}",tip=tip)
 
 
 
@@ -1754,7 +1786,7 @@ def Hide(dobj,iobj,prep,I=None,posture=None):
 		if not isinstance(I,Items.Box):
 			Core.Print(f"You can't get {prep} {-I}.")
 			return False
-		res = I.Traverse(Core.player)
+		res = I.traverse(Core.player)
 		if I.open:
 			I.Close(Core.player)
 		return res
@@ -1772,10 +1804,9 @@ def Insert(dobj,iobj,prep):
 
 def JumpFrom(dobj,iobj,prep):
 	print(dobj,iobj,prep)
-	jpreps = ("across","around","behind","below","beneath","by","d","down","from","in",
-		   "inside","into","near","off","on","onto","over","through","to","toward","u",
-		   "under","up","upon",None)
-	if prep not in jpreps:
+	if prep not in ("across","around","behind","below","beneath","by","d","down","from",
+	"in","inside","into","near","off","on","onto","over","through","to","toward","u",
+	"under","up","upon",None):
 		return promptHelp("Command not understood.")
 	if Core.player.posture() not in ("standing","crouching") or not Core.player.anchor():
 		Core.Print("You need to be standing to jump.")
@@ -1794,10 +1825,9 @@ def JumpFrom(dobj,iobj,prep):
 
 
 def Jump(dobj,iobj,prep):
-	jpreps = ("across","around","behind","below","beneath","by","d","down","from","in",
-		   "inside","into","near","off","on","onto","over","out","through","to","toward","u",
-		   "under","up","upon",None)
-	if prep not in jpreps:
+	if prep not in ("across","around","behind","below","beneath","by","d","down","from",
+	"in","inside","into","near","off","on","onto","over","out","through","to","toward",
+	"u","under","up","upon",None):
 		return promptHelp("Command not understood.")
 	for cond in Data.immobileStatus:
 		if Core.player.hasStatus(cond) and Core.player.riding is None:
@@ -1845,14 +1875,14 @@ def Jump(dobj,iobj,prep):
 	if prep in ("d","down","off") and jumpTo is Core.player.parent.floor:
 		return Dismount(dobj,iobj,prep)
 	if prep in ("across","d","down","off","over","through"):
-		if Core.hasMethod(jumpTo,"Traverse"):
-			return jumpTo.Traverse(Core.player,dir=prep,verb="jump")
+		if Core.hasMethod(jumpTo,"traverse"):
+			return jumpTo.traverse(Core.player,dir=prep,verb="jump")
 		else:
 			Core.Print(f"{+jumpTo} can't be traversed.")
 			return False
 	if prep in ("in","inside","into","on","onto","upon"):
-		if Core.hasMethod(jumpTo,"Traverse") and getattr(jumpTo,"open",True):
-			return jumpTo.Traverse(Core.player,dir=prep,verb="jump")
+		if Core.hasMethod(jumpTo,"traverse") and getattr(jumpTo,"open",True):
+			return jumpTo.traverse(Core.player,dir=prep,verb="jump")
 
 	# actually try the jump, with an ATHL contest to determine success
 	jumpFromSize = jumpFrom.Size() if jumpFrom else 1
@@ -1895,7 +1925,8 @@ def Kill(dobj,iobj,prep):
 
 
 def Lay(dobj,iobj,prep,M=None):
-	if prep not in ("at","behind","below","beneath","by","in","inside","into","near","on","onto","under","upon",None):
+	if prep not in ("at","behind","below","beneath","by","in","inside","into","near",
+	"on","onto","under","upon",None):
 		return promptHelp("Command not understood.")
 	if dobj is None:
 		dobj = iobj
@@ -1975,7 +2006,8 @@ def Lock(dobj,iobj,prep):
 
 
 def Look(dobj,iobj,prep):
-	if prep not in ("around","at","down","in","inside","into","on","out","through","up",None):
+	if prep not in ("around","at","down","in","inside","into","on","out","through","up",
+	None):
 		return promptHelp("Command not understood.")
 	if prep is None: prep = "at"
 
@@ -1984,11 +2016,11 @@ def Look(dobj,iobj,prep):
 		dobj = getNoun(f"What will you look {prep}?")
 		if dobj in Data.cancels: return False
 
-	if dobj in ("me","myself",Core.player.name):
+	if any(Core.nameMatch(dobj,c) for c in Core.game.celestials) or prep == "up":
+		return Core.game.LookUp(dobj)
+	elif dobj in ("me","myself",Core.player.name):
 		Core.Print(f"You are {Core.player.desc}")
 		return True
-	if dobj in ("sky","sun","moon","stars","aurora","auroras","meteor shower","eclipse","solar eclipse") or prep == "up":
-		return Core.game.LookUp(dobj)
 	elif prep == "down" or dobj in ("ground","floor"):
 		L = Core.player.parent.floor
 	elif prep == "around" or dobj in ("around","room","here"):
@@ -2039,9 +2071,9 @@ def Mount(dobj,iobj,prep,M=None,posture=None):
 			return Attack(dobj,"foot","with",target=M)
 
 	if prep in ("in","into","inside"):
-		if not Core.hasMethod(M,"Traverse"):
+		if not Core.hasMethod(M,"traverse"):
 			return Core.Print(f"{+M} cannot be traversed.")
-		return M.Traverse(Core.player)
+		return M.traverse(Core.player)
 
 	if posture is None:
 		posture = "stand"
@@ -2057,8 +2089,8 @@ def Open(dobj,iobj,prep):
 	Core.game.setPronouns(I)
 	if enforceVerbScope("open",I,permitParent=True): return False
 
-	if Core.hasMethod(I,"Open"):
-		return I.Open(Core.player)
+	if Core.hasMethod(I,"open"):
+		return I.open(Core.player)
 	elif hasattr(I,"locked") and I.locked:
 		Core.Print(f"{+I} is locked.")
 		return False
@@ -2150,6 +2182,24 @@ def Put(dobj,iobj,prep):
 		if not Core.yesno(q):
 			return False
 
+
+	if prep in ("in","into","inside"):
+		if not Core.hasMethod(R,"canAdd"):
+			Core.Print(f"You can't put {-I} {prep} {-R}.")
+			return False
+		elif not R.canAdd(I):
+			Core.Print(f"You can't put {-I} {prep} {-R}. There's not enough room.")
+			return False
+		else:
+			Core.player.remove(I)
+			R.add(I)
+			idet = "your" if Core.player in I.ancestors() else 'the'
+			rdet = "your" if Core.player in R.ancestors() else 'the'
+			# outprep = "on" if isinstance(R,Items.Table) else "in"
+			if iobj == "here": Core.Print(f"You put your {I.name} here.")
+			else: Core.Print(f"You put {idet} {I} in {R.nounPhrase(det=rdet)}.")
+			return True
+
 	if isinstance(R,Core.Portal) and "down" in R.links:
 		if getattr(R,"open",True):
 			if isinstance(I,Core.Creature):
@@ -2157,7 +2207,7 @@ def Put(dobj,iobj,prep):
 			else:
 				Core.player.remove(I)
 				Core.player.parent.add(I)
-			return R.Transfer(I)
+			return R.transfer(I)
 		else:
 			Core.Print(f"{+R} is closed.")
 	elif not Core.hasMethod(R,"occupy"):
@@ -2181,11 +2231,6 @@ def Put(dobj,iobj,prep):
 	R.occupy(I)
 	return True
 
-
-def Quicksave(*args):
-	Menu.quickSave("quicksave")
-	Core.waitInput("Quicksaved.",color="k")
-	return interpret()
 
 
 def Release(dobj,iobj,prep):
@@ -2244,9 +2289,13 @@ def Rub(dobj,iobj,prep):
 	return Touch(dobj,iobj,prep)
 
 
-def Save(dobj,iobj,prep):
-	Menu.saveGame(dobj)
-	return interpret()
+def Save(dobj,iobj,prep,quick=False):
+	if quick:
+		Menu.quickSave("quicksave")
+		Core.waitInput("Quicksaved.",color="k")
+	else:
+		Menu.saveGame(dobj)
+	return False
 
 
 def Search(dobj,iobj,prep):
@@ -2262,7 +2311,8 @@ def Shove(dobj,iobj,prep):
 
 
 def Sit(dobj,iobj,prep):
-	if prep not in ("at","behind","below","beneath","by","in","inside","into","near","on","onto","under","upon",None):
+	if prep not in ("at","behind","below","beneath","by","in","inside","into","near",
+	"on","onto","under","upon",None):
 		return promptHelp("Command not understood.")
 	if dobj is None:
 		dobj = iobj
@@ -2295,7 +2345,8 @@ def Sit(dobj,iobj,prep):
 
 
 def Sleep(dobj,iobj,prep):
-	if prep not in ("behind","below","beneath","in","inside","into","on","onto","over","under","upon","using","with",None):
+	if prep not in ("behind","below","beneath","in","inside","into","on","onto","over",
+	"under","upon","using","with",None):
 		return promptHelp("Commmand not understood")
 
 	for condname in Data.conditionDmg.keys():
@@ -2377,7 +2428,8 @@ def Spur(dobj,iobj,prep):
 
 
 def Stand(dobj,iobj,prep):
-	if prep not in ("at","behind","below","beneath","by","in","inside","into","near","on","onto","upon",None):
+	if prep not in ("at","behind","below","beneath","by","in","inside","into","near",
+	"on","onto","upon",None):
 		return promptHelp("Command not understood.")
 	if dobj is None:
 		dobj = iobj
@@ -2486,7 +2538,8 @@ def Take(dobj,iobj,prep):
 		return CarryCreature(objToTake)
 
 	# if it is in a non-player inventory, it will have to be stolen
-	if any(isinstance(anc,Core.Creature) for anc in objToTake.ancestors()) and objToTake not in Core.player.objTree():
+	if any(isinstance(anc,Core.Creature) for anc in objToTake.ancestors()) and \
+	objToTake not in Core.player.objTree():
 		return Steal(dobj,iobj,prep,I=objToTake)
 
 	return Core.player.ObtainItem(objToTake)
@@ -2515,7 +2568,8 @@ def Talk(dobj,iobj,prep):
 
 
 def Throw(dobj,iobj,prep,maxspeed=None):
-	if prep not in ("at","down","in","into","off","on","onto","out","through","to","toward","up",None):
+	if prep not in ("at","down","in","into","off","on","onto","out","through","to",
+	"toward","up",None):
 		return promptHelp("Command not understood.")
 	if prep in ("to","toward"):
 		maxspeed = 0
@@ -2714,7 +2768,7 @@ cheatcodes = {
 	"\x10":lambda _: Learn(["",100]), # Ctrl-P ►
 	"\x11":lambda _: Fortify([""]), # Ctrl-Q ◄
 	"\x12":lambda _: None,  # Ctrl-R ↕ (reserved for future use)
-	"\x13":Quicksave,  # Ctrl-S ‼
+	"\x13":lambda _: Save(None,None,None,quick=True),  # Ctrl-S ‼
 	"\x14": lambda _: None,  # Ctrl-T ¶ (reserved for future use) 
 	"\x15":lambda _: Pypot(["",1000]),  # Ctrl-U §
 	"\x17":lambda _: Imbue(["","flying"]), # Ctrl-W ↨
@@ -2740,6 +2794,7 @@ statcommands = {
 "inv":Core.Player.printInv,
 "inventory":Core.Player.printInv,
 "level":Core.Player.printLV,
+"ligma":lambda _: Core.Print("Ligma balls!"),
 "lv":Core.Player.printLV,
 "money":Core.Player.printMoney,
 "mp":Core.Player.printMP,
@@ -2749,6 +2804,7 @@ statcommands = {
 "riding":Core.Player.printRiding,
 "rp":Core.Player.printRP,
 "size":lambda _: Core.Print("Size:",Core.player.Size()),
+"smile":Smile,
 "spells":Core.Player.printSpells,
 "stats":Core.Player.openDisplay,
 "status":Core.Player.printStatus,
@@ -2758,6 +2814,7 @@ statcommands = {
 "weapons":Core.Player.printWeapons,
 "where":Where,
 "weight":lambda _: Core.Print("Weight:",Core.player.Weight()),
+"wink":Wink,
 "xp":Core.Player.printXP,
 "yawn":Yawn,
 ":)": Smile,
@@ -2897,7 +2954,6 @@ actions = {
 "put down":Drop,
 "put on":Don,
 "quaff":Drink,
-"quicksave":Quicksave,
 "read":Look,
 "release":Release,
 "remove":Unequip,

@@ -37,7 +37,7 @@ magicaldmg = "inrv"
 ## USEFUL SETS ##
 #################
 
-superfluous = {"a","again","an","her","his","i","ill","i'll","its","of","some","that","the","then","their","this","will"}
+superfluous = {"a","again","an","hers","his","i","ill","i'll","its","of","some","that","the","then","their","this","will"}
 
 shortactions = {"cast","here","room","clear","cls"}
 
@@ -68,7 +68,7 @@ compounds = {"downstairs":["down","stairs"], "upstairs":["up","stairs"]}
 # used in nounify() in Parser.py to combine multiple words that might have a single meaning as a whole term
 miscexpressions = {"it all"}
 
-directions = {"n":"north","ne":"northeast","e":"east","se":"southeast","s":"south","sw":"southwest","w":"west","nw":"northwest","u":"up","d":"down","inside":"in","into":"in","o":"out","b":"beyond","upward":"up","downward":"down","onto":"on","upon":"on","off":"down","off of":"down","out of":"out","over":None,"to":None}
+directions = {"n":"north","ne":"northeast","e":"east","se":"southeast","s":"south","sw":"southwest","w":"west","nw":"northwest","u":"up","d":"down","inside":"in","into":"in","o":"out","b":"beyond","upward":"up","downward":"down","onto":"on","upon":"on","off":"down","off of":"down","outside":"out","out of":"out","over":None,"to":None}
 
 cardinals = ("north","east","south","west","northeast","southeast","southwest","northwest")
 
