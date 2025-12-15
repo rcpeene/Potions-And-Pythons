@@ -25,7 +25,7 @@ def main(testing=False):
 		# run intro logo animation
 		Menu.gameIntro()
 
-		logger = Core.TeeLogger("./transcript.log")
+		logger = Core.TeeLogger("./gamedata/transcript.log")
 		sys.stdin = logger
 		sys.stdout = logger
 		sys.stderr = logger
@@ -89,67 +89,10 @@ if __name__ == "__main__":
 
 # CURRENT TASKS
 
-# reorganize methods, capital or lowercase them based on if creature is subject or object
-# consider using occupants to handle multiple riders in Creature class
-	# occupants would need to be handled in Fall(), probably other methods too
-# give passages a capacity limit, so a dragon can't fit through a doorway?
-# assert room contents types during instantiation
-# during instantiation assert items weight can fit in space or size of container
-# add asserts to most class methods
-# add better comments to methods
-
-# set platform when throwing objects
-# i.e. throw snake onto table or onto ground, we don't want them to fall after impact
 
 ################################################################################
 
 # BUG BACKLOG
-
-# make sure to call 'sky' as 'the sky' like 'the ground'
-
-# What will you do?
-# > take horse
-# You try to pick up the horse.
-#... then nothing
-
-# It's a shelf with things on it.
-# A sturdy oaken kitchen shelf
-# but there's nothing on it??
-
-# There is a table with a green python standing on the table on it.
-# There is a green python standing on the table.
-
-# What will you do?
-# > take blue potion from shelf
-# There is no 'blue potion' in a 'shelf' that you can see.
-
-# > put key in chest
-# You put your rusty key on your wooden chest.
-# we want to be able to put stuff in containers, not on them
-
-# What will you do?
-# > look at adorned man
-# It's an adorned man.
-# An adorned man
-# It has a sky, a rusty key and a blue jay.
-
-# What will you do?
-# > put red potion on shelf
-# You can't put the red potion on the shelf.
-
-# > put coffee machine on chair
-# You put your coffee machine on your wooden chair.
-# this happens when both in inventory. objs in inv should not be occupiable
-
-# What will you do?
-# > get out
-# You get out of the brook.
-# What will you do?
-# > get in
-# There is no way 'in' here.
-
-# saving then loading fails
-	# test saving and loading while in a box
 
 # > attack table with sword
 # You attack the table with your broken sword.
@@ -235,6 +178,7 @@ if __name__ == "__main__":
 # add room property which is description of directions ("look up", "look east", "look out", etc.)
 # try "boom" effect. It will only effect current room/container (unless container breaks or is open?)
 # restrict Read to readable objects?
+# determine when to print addStatus messages and removeStatus messages for creatures/items
 # if describing something in own inventory, also print the lore tip in grey (or other color)
 # make items have an invisibility property? but what about if a missed projectile hits something invisible?
 # make player.aware(I) method, which instead of using currentroom, checks if I in player.surroundings.objTree
@@ -246,10 +190,11 @@ if __name__ == "__main__":
 
 # TIME AND SLEEP
 # make sinceLastAte, sinceLast actual meters like hungriness and sleepiness, that rise or decay
+	# for instance, so wrp doesn't randomly cause you to be hungry after eating
 # make separate timer for mana regeneration
 # add turn order, so you aren't the first to move when you enter a room, makes MVMT more useful
 	# allow moving multiple times if you have enough speed? (maybe max 5 for vs 1 for slowest creature)
-# refactor sleep into a player method. right now, '\mbu sleep' has strange behavior
+# refactor sleep into a method. right now, '\mbu sleep' has strange behavior
 # add time to verbs?
 # add action queue to sort initiative among rooms
 

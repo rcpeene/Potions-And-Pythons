@@ -526,12 +526,13 @@ def Fortify(command):
 		obj.heal(1000)
 	if Core.hasMethod(obj,"resurge"):
 		obj.resurge(1000)
-	for cond in Data.debuffs:
-		obj.removeStatus(cond)
 	if hasattr(obj,"lastAte"):
 		obj.lastAte = Core.game.time
 	if hasattr(obj,"lastSlept"):
 		obj.lastSlept = Core.game.time
+	for cond in Data.debuffs:
+		obj.removeStatus(cond)
+	obj.checkStatus()
 
 
 def Get(command):
@@ -924,18 +925,18 @@ def Time(*args):
 
 def Where(*args):
 	allLinks = Core.player.parent.allLinks()
-	dirExits = set(link[0] for link in allLinks)
-	portalExits = set(link[1].name for link in allLinks if link[1] is not None)
-	displayDirs = sorted(dirExits | portalExits)
+	dirExits = [link[0] for link in allLinks]
+	portalExits = [link[1].name for link in allLinks if link[1] is not None]
+	displayDirs = dirExits + portalExits
 	if not Core.player.canNavigate():
-		displayDirs = [d for d in displayDirs if d not in Data.cardinals]
+		displayDirs = ["???" if d in Data.cardinals else d for d in displayDirs]
 	if len(displayDirs) == 0:
 		Core.Print("You're not sure which way is which...\nTry a cardinal direction.")
 	else:
 		if Core.game.prevroom in Core.player.parent.allLinks().values():
-			insort(displayDirs,"back")
+			displayDirs.append("back")
 		Core.Print("You can go...")
-		for d in displayDirs:
+		for d in sorted(set(displayDirs)):
 			Core.Print(d)
 
 
@@ -2182,7 +2183,6 @@ def Put(dobj,iobj,prep):
 		if not Core.yesno(q):
 			return False
 
-
 	if prep in ("in","into","inside"):
 		if not Core.hasMethod(R,"canAdd"):
 			Core.Print(f"You can't put {-I} {prep} {-R}.")
@@ -2190,9 +2190,12 @@ def Put(dobj,iobj,prep):
 		elif not R.canAdd(I):
 			Core.Print(f"You can't put {-I} {prep} {-R}. There's not enough room.")
 			return False
+		elif getattr(R,"closed",False) and not R.open(Core.player):
+			return False
 		else:
 			Core.player.remove(I)
 			R.add(I)
+			I.platform = getattr(R,"floor",None)
 			idet = "your" if Core.player in I.ancestors() else 'the'
 			rdet = "your" if Core.player in R.ancestors() else 'the'
 			# outprep = "on" if isinstance(R,Items.Table) else "in"
@@ -2201,15 +2204,23 @@ def Put(dobj,iobj,prep):
 			return True
 
 	if isinstance(R,Core.Portal) and "down" in R.links:
-		if getattr(R,"open",True):
-			if isinstance(I,Core.Creature):
-					Core.player.removeCarry(I)
-			else:
-				Core.player.remove(I)
-				Core.player.parent.add(I)
-			return R.transfer(I)
-		else:
+		if getattr(R,"closed",False):
 			Core.Print(f"{+R} is closed.")
+			return False
+		if not R.canPass(I):
+			Core.Print(f"There's not enough room in {-R} for {-I}.")
+			return False
+		if isinstance(I,Core.Creature):
+				Core.player.removeCarry(I)
+		else:
+			Core.player.remove(I)
+			Core.player.parent.add(I)
+		return R.transfer(I)
+
+	if R in Core.player:
+		Core.Print(f"You can't put anything {prep} {-R}," \
+		f" {R.pronoun} is in your Inventory.")
+		return False
 	elif not Core.hasMethod(R,"occupy"):
 		Core.Print(f"You can't put {-I} {prep} {-R}.")
 		return False
@@ -2480,7 +2491,7 @@ def TakeAllRecur(objToTake):
 		return False
 	takenAny = False
 	if hasattr(objToTake,"contents") and getattr(objToTake,"open",True):
-		contents = sorted(objToTake.contents(), key=lambda x: x.Weight())
+		contents = sorted(objToTake.contents())
 		for content in contents:
 			takenAny = TakeAllRecur(content) or takenAny
 
@@ -2489,15 +2500,22 @@ def TakeAllRecur(objToTake):
 	return Core.player.ObtainItem(objToTake) or takenAny
 
 
-def TakeAll(parent):
-	if not hasattr(parent,"items"):
-		Core.Print(f"{+parent} doesn't contain anything.")
-		return False
-	if len(parent.items) == 0:
-		Core.Print("There are no items to take.")
+def TakeAll(takeFrom):
+	occupants = getattr(takeFrom,"occupants",[])
+	items = getattr(takeFrom,"items",[])
+	if len(occupants) == 0 and len(items) == 0:
+		Core.Print(f"{+takeFrom} doesn't have anything to take.")
 		return False
 	takenAny = False
-	for obj in sorted(parent.items, key=lambda x: x.Weight()):
+	# take occupants from atop takeFrom
+	for obj in sorted(occupants):
+		takenAny = TakeAllRecur(obj) or takenAny
+	# if there's items to take from within closed takeFrom, try to open it first
+	if len(items) > 0:
+		if getattr(takeFrom,"closed",False) and not takeFrom.open(Core.player):
+			return False
+	# take items from within takeFrom
+	for obj in sorted(items):
 		takenAny = TakeAllRecur(obj) or takenAny
 	return takenAny
 
@@ -2526,6 +2544,9 @@ def Take(dobj,iobj,prep):
 		objToTake = findObject(dobj,"take",reqSource=iobj)
 	if objToTake is None:
 		return False
+	if getattr(objToTake.parent,"closed",False) and Core.player not in objToTake.parent:
+		if not objToTake.parent.open(Core.player):
+			return False
 	Core.game.setPronouns(objToTake)
 	if enforceVerbScope("take",objToTake,permitAnchor=False): return False
 	if objToTake.parent is Core.player:
@@ -2563,7 +2584,7 @@ def Talk(dobj,iobj,prep):
 		Core.Print(f"There is no response...")
 		return False
 
-	target.converse()
+	target.converse(Core.player)
 	return True
 
 
@@ -2584,6 +2605,10 @@ def Throw(dobj,iobj,prep,maxspeed=None):
 
 	I = findObject(dobj,"throw","player")
 	if I is None: return False
+	if isinstance(I,Core.Compass) and Core.player.countCompasses() == 1:
+		q = "Are you sure you want to lose your compass? You might get lost!"
+		if not Core.yesno(q):
+			return False
 
 	if iobj is None:
 		iobj = getNoun(f"What will you {verb} {prep}?")

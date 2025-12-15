@@ -137,7 +137,7 @@ def formatColorCodes(text):
 # print text to user, with options for color, delay, sep, end, and outfile
 # also manipulates the output based on player status effects
 def Print(*args,end="\n",sep=None,delay=None,color=None,allowSilent=True,outfile=None):
-	if game.silent and allowSilent:
+	if (game.silent or player.hasStatus("asleep")) and allowSilent:
 		return 0
 
 	# set outfile, color, delay, sep
@@ -322,7 +322,7 @@ def delay(seconds):
 def ellipsis(n=3,color=None):
 	for _ in range(n):
 		delay(1)
-		Print(".",color=color,delay=0)
+		Print(".",color=color,delay=0,allowSilent=False)
 	delay(1)
 
 
@@ -700,6 +700,10 @@ def misspell(text):
 			case (x,"u",z) if x not in ("n","g") and z in Data.vowels: repl = cat(x,"w",z)
 			# ou -> ow
 			case ("o","u",z) if z not in ("g"," ",None): repl = cat("ow",z)
+			# oi -> oy
+			case ("o","i",z): repl = cat("oy",z)
+			# ph -> f
+			case ("p","h",z): repl = cat("f",z)
 			# tio -> shu
 			case ("t","i","o"): repl = "shu"
 			# tch -> ch
@@ -756,11 +760,11 @@ def listObjects(prepend,objects,append=""):
 	l = len(objBag)
 	for i, (obj, count) in enumerate(objBag):
 		if i == l-1:
-			liststring += obj.nounPhrase(n=count)
+			liststring += obj.nounPhrase(det="a",n=count)
 		elif i == l-2:
-			liststring += obj.nounPhrase(n=count) + " and "
+			liststring += obj.nounPhrase(det="a",n=count) + " and "
 		else:
-			liststring += obj.nounPhrase(n=count) + ", "
+			liststring += obj.nounPhrase(det="a",n=count) + ", "
 	liststring = prepend + liststring
 	liststring += append
 
@@ -906,7 +910,7 @@ def buildWorld():
 			celestial.id = game.getNextID()
 			game.registerItem(celestial)
 
-	# assign IDs to all items and creatures that don't have one
+	# assign IDs to all Items and Creatures that don't have one
 	for room in world.values():
 		for obj in room.objTree():
 			if obj.id is None:
@@ -919,7 +923,7 @@ def buildWorld():
 		room.assignRefs()
 		assignRefsRecur(room)
 
-		# assign the dialogue trees for all creatures and validate them
+		# assign the dialogue trees for all Creatures and validate them
 		for creature in objQuery(room, d=3, key=lambda x: isinstance(x,Speaker)):
 			creature.buildDialogue()
 
@@ -2396,13 +2400,13 @@ class Room(GameObject):
 		self.floor = None
 		if ceiling:
 			self.ceiling = Surface("ceiling",f"A ceiling of {ceiling}.",size//3,ceiling,
-			aliases={"roof"})
+			aliases=["roof"])
 		if walls:
 			self.walls = Surface("wall",f"Walls of {walls}.",size//3,walls,
-			aliases={"walls"})
+			aliases=["walls"])
 		if floor:
 			self.floor = Surface("ground",f"A floor of {floor}.",size//3,floor,
-			aliases={"floor"},determiner="the")
+			aliases=["floor"],determiner="the")
 		self.surfaces = (self.ceiling,self.walls,self.floor)
 
 
@@ -2444,7 +2448,8 @@ class Room(GameObject):
 			jsonDict["walls"] = self.walls.composition
 		if self.floor:
 			jsonDict["floor"] = self.floor.composition
-		del jsonDict["surfaces"]
+
+		del jsonDict["surfaces"], jsonDict["determiner"]
 		return jsonDict
 
 
@@ -2726,10 +2731,10 @@ class Room(GameObject):
 	# prints all the creatures in the Room in sentence form
 	def describeCreatures(self):
 		# don't directly describe creatures which are anchored to player
-		# or creatures being ridden by another creature
+		# or creatures riding another creature
 		select = lambda creature: creature not in \
 		(player, player.carrying, player.riding) and \
-		creature.carrier is None and creature.riding is None
+		creature.anchor() in (creature.parent.floor,None)
 
 		listCreatures = [creature for creature in self.creatures if select(creature)]
 		if len(listCreatures) != 0:
@@ -2801,7 +2806,7 @@ class Item(GameObject):
 		self.determiner = determiner
 		self.pronoun = pronoun
 		# used for identifying object from player input
-		self.aliases = set(aliases) if aliases else set()
+		self.aliases = list(set(aliases)) if aliases else []
 
 		### World Properties -- may be reassigned during assignRefs() 
 
@@ -2847,7 +2852,7 @@ class Item(GameObject):
 		for o in self.occupants:
 			if isID(o):
 				o = game.itemRegistry[o]
-				assert self is o.platform
+				assert self is o.platform or self.id is o.platform
 				continue
 			if self.parent.add(o):
 				# add() might have displaced o and assigned another parent
@@ -2964,10 +2969,7 @@ class Item(GameObject):
 		if not silent:
 			self.Print(f"{+self} disappears.")
 
-		for covered in self.covering:
-			covered.removeCover()
 		self.clearCovering()
-
 		occupants = self.occupants.copy()
 		self.clearOccupants()
 		for occupant in occupants:
@@ -3081,15 +3083,15 @@ class Item(GameObject):
 
 
 	# degrade Item durability if damage is high enough, break if durability goes to 0
-	def takeDamage(self,dmg,type):
+	def takeDamage(self,dmg,type,silent=True):
 		# TODO: add damage type vulnerabilities based on composition
 		# i.e. wood is extra weak to fire and slashing
 		if self.composition in Data.liquids:
 			self.Print("Splish splash...")
 			return True
-		if self in player.surroundings().objTree():
+		if dmg > 0 or not silent:
 			typeDisplay = "" if type == "e" else Data.dmgtypes[type] + " "
-			Print(f"{+self} took {dmg} {typeDisplay}damage.")
+			self.printNearby(f"{+self} took {dmg} {typeDisplay}damage.")
 		if self.durability != -1:
 			dmg = min0(dmg-self.durability)
 			self.durability -= dmg
@@ -3147,7 +3149,7 @@ class Item(GameObject):
 		assert isinstance(missile,Projectile)
 		hitProb = bound(missile.aim+self.Size()+10,1,99)
 		if percentChance(hitProb):
-			return missile.Collide(self)
+			return missile.collide(self)
 		return False
 
 
@@ -3164,6 +3166,8 @@ class Item(GameObject):
 		for occupant in self.occupants:
 			occupant.platform = None
 			if not isinstance(self.parent,Creature):
+				if getattr(occupant,"riding",False):
+					occupant.removeRiding()
 				occupant.platform = self.parent.floor
 		self.occupants.clear()
 
@@ -3196,7 +3200,7 @@ class Item(GameObject):
 			room = room.links["down"]
 		if room != self.room():
 			self.changeLocation(room)
-			self.Print(f"{~self} falls from above!".capitalize())
+			self.printNearby(f"{~self} falls from above!".capitalize())
 
 		if self.anchor() is not self.parent.floor:
 			# self.parent.floor.occupy(self)
@@ -3213,7 +3217,7 @@ class Item(GameObject):
 
 	# Try to add occupant to self.occupants
 	def occupy(self,occupant,silent=False):
-		assert occupant in self.parent
+		assert not isinstance(self.parent,Creature) and occupant in self.parent
 		if occupant in self.occupants:
 			Print(occupant+f"is already on {-self}.")
 			return False
@@ -3221,7 +3225,7 @@ class Item(GameObject):
 		if occupant in self.ancestors():
 			Print(f"{+self} is already carrying {-occupant}.")
 			return False
-		if isinstance(occupant,Creature) and occupant.rider is not None:
+		if isinstance(occupant,Creature) and occupant.riding is not None:
 			occupant.removeRiding()
 		occupant.removePlatform()
 
@@ -3527,7 +3531,7 @@ class Item(GameObject):
 # In addition to platform anchor, Creatures can be carried or riding another Creature
 class Creature(Item):
 	def __init__(self,name,desc,weight,traits,hp=None,mp=0,money=0,inv=None,gear=None,
-	love=0,fear=0,carrying=None,carrier=None,riding=None,rider=None,platform=None,
+	love=0,fear=0,carrying=None,carrier=None,riding=None,platform=None,
 	cover=None,composition="flesh",memories=None,appraisal=None,lastAte=0,lastSlept=0,
 	regenTimer=0,alert=False,lastSawPlayer=None,**kwargs):
 		# Creatures have infinite durability, may not be fixed, and despawn after 1000
@@ -3582,7 +3586,6 @@ class Creature(Item):
 		# during __init__(), these are given as object IDs or None
 		# but are replaced with real object references in assignRefs()
 		self.riding = riding
-		self.rider = rider
 		self.carrying = carrying
 		self.carrier = carrier
 		self.platform = platform
@@ -3626,7 +3629,6 @@ class Creature(Item):
 		self.carrying = game.itemRegistry[self.carrying]
 		self.carrier = game.itemRegistry[self.carrier]
 		self.riding = game.itemRegistry[self.riding]
-		self.rider = game.itemRegistry[self.rider]
 		self.cover = game.itemRegistry[self.cover]
 		self.covering = [game.itemRegistry[o] for o in self.covering]
 		self.occupants = [game.itemRegistry[o] for o in self.occupants]
@@ -3683,7 +3685,6 @@ class Creature(Item):
 		jsonDict["carrying"] = self.carrying.id if self.carrying else None
 		jsonDict["carrier"] = self.carrier.id if self.carrier else None
 		jsonDict["riding"] = self.riding.id if self.riding else None
-		jsonDict["rider"] = self.rider.id if self.rider else None
 		jsonDict["cover"] = self.cover.id if self.cover else None
 		jsonDict["covering"] = [c.id for c in self.covering] if self.covering else None
 		del jsonDict["occupants"]
@@ -3698,7 +3699,9 @@ class Creature(Item):
 		# convert traits to a form more easily writable in a JSON object
 		jsonDict["traits"] = [self.str,self.skl,self.spd,self.stm,self.con,
 		self.cha,self.int,self.wis,self.fth,self.lck]
-		
+
+		# delete attributes that should be given as defaults
+		del jsonDict["fixed"], jsonDict["longevity"], jsonDict["durability"]
 		return jsonDict
 
 
@@ -3746,11 +3749,11 @@ class Creature(Item):
 			if name in Data.curses: displayName = "the curse of " + name
 			if name in Data.blessings: displayName = "the blessing of " + name
 			elif name in Data.curses | Data.blessings:
-				Print(self+f"have {displayName}.",color=color,allowSilent=allowSilent)
+				self.Print(self+f"have {displayName}.",color=color,allowSilent=allowSilent)
 			elif name == "asleep":
-				Print(self+f"falls {name}.",allowSilent=allowSilent)
+				self.Print(self+f"falls {name}.",allowSilent=allowSilent)
 			else:
-				Print(self+f"are {name}.",color=color,allowSilent=allowSilent)
+				self.Print(self+f"are {name}.",color=color,allowSilent=allowSilent)
 
 		# lift off ground if added flying
 		if name == "flying" and self.platform is self.parent.floor:
@@ -3796,8 +3799,9 @@ class Creature(Item):
 		# propagate location change to creatures riding or being carried
 		if self.carrying and self.carrying.parent is not self.parent:
 			self.carrying.changeLocation(newparent)
-		if self.rider and self.rider.parent is not self.parent:
-			self.rider.changeLocation(newparent)
+		for occupant in self.occupants:
+			if occupant.parent is not self.parent:
+				occupant.changeLocation(newparent)
 		assert self.carrying is None or self.carrying.parent is self.parent
 		return True
 
@@ -3880,13 +3884,11 @@ class Creature(Item):
 		if self.hasStatus("anointed"):
 			return self.reanimate()
 
-		if self.rider:
-			self.rider.removeRiding(silent=True)
 		self.removeRiding(silent=True)
 		self.removeCarry(silent=True)
 
 		self.descname = f"dead {self.descname}"
-		self.aliases = self.aliases | {"dead " + a for a in self.aliases}
+		self.aliases.extend(["dead "+a for a in self.aliases])
 
 		n = diceRoll(3,player.LOOT(),-2)
 		self.parent.add(Serpens(n))
@@ -3905,15 +3907,14 @@ class Creature(Item):
 			self.Print(f"{+self} disappears.")
 		if self.cover:
 			self.removeCover()
-		if self.rider:
-			self.rider.fall()
-			self.rider.removeRiding()
-		if self.carrying:
-			self.carrying.fall()
+		self.clearCovering()
+		self.clearOccupants()
 		if self.carrier:
 			self.carrier.removeCarry()
-		self.removePlatform()
+		if self.carrying:
+			self.carrying.fall()
 		self.removeCarry(silent=silent)
+		self.removePlatform()
 		self.removeRiding(silent=silent)
 
 		# may have already been removed from parent
@@ -4057,8 +4058,8 @@ class Creature(Item):
 		for covered in self.covering.copy():
 			covered.removeCover(silent=True)
 			covered.addCover(newObj)
-		if self.rider:
-			self.rider.replaceObj(self,newObj)
+		for occupant in self.occupants.copy():
+			occupant.replaceObj(self,newObj)
 		# if newObj was destroyed by new rider, then we can end here
 		if not newObj.parent:
 			return self.destroy()
@@ -4195,7 +4196,8 @@ class Creature(Item):
 			delay(0.5)
 			color = "r"
 		typeDisplay = "" if type == "e" else Data.dmgtypes[type] + " "
-		Print(f"{+self} took {total_dmg} {typeDisplay}damage{p}",color=color)
+		Print(f"{+self} took {total_dmg} {typeDisplay}damage{p}",color=color,
+		allowSilent=self is not player)
 		if self is player:
 			self.display()
 			delay(0.5)
@@ -4262,10 +4264,8 @@ class Creature(Item):
 	# add riding tether
 	def addRiding(self,creature):
 		assert isinstance(creature,Creature)
-		assert creature.rider is None
 		assert self.anchor() is None
 		self.riding = creature
-		creature.rider = self
 
 
 	# only used by equip and unequip to reassign several attributes
@@ -4315,7 +4315,7 @@ class Creature(Item):
 				if self.Catch(missile):
 					return True
 		if percentChance(bound(missile.aim+missile.speed-dodge,1,99)):
-			return missile.Collide(self)
+			return missile.collide(self)
 		return False
 
 
@@ -4399,7 +4399,7 @@ class Creature(Item):
 		if self.riding or self.carrier:
 			return self.anchor().fall(height,room)
 
-		if player in (self.rider, self.carrying):
+		if player in self.occupants or player is self.carrying:
 			waitInput(f"{+self} falls!",color="o")
 		else:
 			self.printNearby(f"{+self} falls.",color="o")
@@ -4417,8 +4417,7 @@ class Creature(Item):
 			if self.carrying:
 				self.carrying.fall(height,room)
 			self.changeLocation(room)
-			if self.room() is game.currentroom:
-				self.printNearby(f"{~self} falls from above!".capitalize())
+			self.printNearby(f"{~self} falls from above!".capitalize())
 
 		if self.anchor() is not self.parent.floor:
 			# self.parent.floor.occupy(self)
@@ -4428,8 +4427,8 @@ class Creature(Item):
 		if not self.hasStatus("fleetfooted") and force > 0 and room.floor is not None:
 			if force > 0:
 				self.takeDamage(force,"b")
-				if self.rider and force//3 > 0:
-					self.rider.takeDamage(force//3,"b")
+				for rider in self.occupants:
+					rider.takeDamage(force//3,"b")
 			self.changePosture("laying")
 		return True
 
@@ -4477,13 +4476,13 @@ class Creature(Item):
 	# remove riding tether if exists
 	def removeRiding(self,silent=False):
 		if self.riding is not None:
-			# do this because dismounting affects riding.print
+			# store this because dismounting affects riding.print
 			wasRiding = self.riding
-			self.riding.rider = None
+			self.riding.disoccupy(self)
 			self.riding = None
 			if not silent:
 				self.Print(f"You are no longer riding {-wasRiding}.")
-				wasRiding.Print(f"{+self} is no longer riding {wasRiding}.")
+				wasRiding.Print(f"{+self} is no longer riding {-wasRiding}.")
 
 
 	# attempt to restrain this Creature
@@ -4513,18 +4512,26 @@ class Creature(Item):
 			rider.Print(f"You are too heavy to ride {-self}.")
 			rider.fall(self.Size()//5)
 			return False
+		if rider.Size()//2 > self.Size():
+			rider.Print(f"{+self} is too small to ride.")
+			return False
 
 		rider.removeRiding()
 		rider.removePlatform()
 
-		if self.rider:
-			self.Print(f"{+self.rider} is already riding {self}.")
-			if roll(rider.ATHL()) > roll(self.rider.ATHL()):
-				self.rider.Print()(f"You push {-self} off of {-self.rider}!")
-				self.rider.removeRiding()
+		if rider.Size() + self.occupantsSize() > self.Size():
+			pushOff = max(self.occupants, key=lambda x: x.Size())
+			self.Print(f"{+pushOff} is already riding {self}.")
+			if roll(rider.ATHL()) > roll(pushOff.ATHL()):
+				pushOff.Print()(f"You push {-rider} off of {-self}.")
+				pushOff.removeRiding()
 			else:
-				self.rider.Print(f"{+self.rider} holds onto {-self}.")
+				pushOff.Print(f"{+pushOff} holds onto {-self}.")
 				return False
+		if rider.Size() + self.occupantsSize() > self.Size():
+			rider.Print(f"{+self} is too small to ride.")
+			return False
+
 		contest = not self.isFriendly() and self.canMove()
 		if contest:
 			rider.Print(f"{+self} struggles.",color="o")
@@ -4538,8 +4545,14 @@ class Creature(Item):
 					fallHeight = 0
 				rider.fall(fallHeight)
 				return False
+
+		# TODO: some additional checking to prevent too many riders here?
 		rider.addRiding(self)
-		rider.Print(f"You ride {-self}.",color="g" if contest else "w")
+		self.occupants.append(rider)
+		rider.riding = self
+
+		# rider.Print(f"You ride {-self}.",color="g" if contest else "w")
+		rider.printNearby(rider+f"rides {-self}.")
 		return True
 
 
@@ -4547,8 +4560,6 @@ class Creature(Item):
 	def teleport(self,newParent):
 		if self.carrier:
 			self.carrier.removeCarry(silent=True)
-		if self.rider:
-			self.rider.removeRiding(silent=True)
 		self.removePlatform()
 		self.removeCarry()
 		self.removeRiding()
@@ -4598,8 +4609,7 @@ class Creature(Item):
 		if self.riding:
 			if not silent:
 				self.Print(f"You get {disoccupyPrep} {-self.riding}.")
-			self.riding.rider = None
-			self.riding = None
+			self.removeRiding(silent=True)
 		if self.platform and self.platform != self.parent.floor:
 			if not silent:
 				self.Print(f"You get {disoccupyPrep} {-self.platform}.")
@@ -4752,7 +4762,7 @@ class Creature(Item):
 			speed = maxspeed
 
 		aim = self.ACCU()
-		return missile.Launch(speed,aim,self,target)
+		return missile.launch(speed,aim,self,target)
 
 
 	### Statistics ###
@@ -4946,20 +4956,13 @@ class Creature(Item):
 				looplink = carrying
 			carrying = carrying.carrying
 
-		iverb = "riding"
-		rider = actor
-		while rider:
-			if rider.rider == target:
-				looplink = rider
-			rider = rider.rider
-
 		iverb = "being ridden by"
 		riding = actor
 		while riding:
 			if riding.riding == target:
 				looplink = riding
 			riding = riding.riding
-		
+
 		# if a creature is found creating a loop with the actor and attempted target,
 		# identify the culprit
 		if looplink:
@@ -5136,10 +5139,9 @@ class Creature(Item):
 
 	# total size includes size of those riding and those being carried by Creature
 	def totalSize(self):
-		riderSize = 0 if self.rider is None else self.rider.totalSize()
+		ridersSize = sum(r.totalSize() for r in self.occupants)
 		carrySize = 0 if self.carrying is None else self.carrying.totalSize()
-		return self.Size() + riderSize + carrySize
-
+		return self.Size() + ridersSize + carrySize
 
 	# returns list of all weapons in inventory
 	def weapons(self):
@@ -5148,9 +5150,9 @@ class Creature(Item):
 
 	# total weight includes those riding and those being carried by Creature
 	def Weight(self):
-		riderWeight = 0 if self.rider is None else self.rider.Weight()
+		ridersWeight = sum(r.Weight() for r in self.occupants)
 		carryWeight = 0 if self.carrying is None else self.carrying.Weight()
-		return self.weight + riderWeight + carryWeight
+		return self.weight + ridersWeight + carryWeight
 
 
 	### User Output ###
@@ -5160,17 +5162,31 @@ class Creature(Item):
 		return self.nounPhrase()
 
 
+	def tethersDescription(self,name=None,allowRiding=True,allowCarrying=True):
+		if not name:
+			name = self.name
+		tethersMsgs = []
+		if self.carrying and allowCarrying:
+			tethersMsgs.append(f"carrying {-self.carrying}")
+		if self.occupants and allowRiding:
+			if len(self.occupants) < 3:
+				tethersMsgs.append(listObjects("being ridden by ",self.occupants))
+			else:
+				tethersMsgs.append(f"being ridden by {len(self.occupants)} creatures")
+		return f" {' and '.join(tethersMsgs)}" if tethersMsgs else ""
+
+
 	# describe the creature, including tethers
 	def describe(self):
 		Print(f"It's {~self}.")
 		Print(f"{self.desc}")
-		tethersMsgs = []
-		if self.carrying:
-			tethersMsgs.append(f"carrying {-self.carrying}")
-		if self.rider:
-			tethersMsgs.append(f"being ridden by {-self.rider}")
-		if tethersMsgs:
-			Print(f"It is{' and '.join(tethersMsgs)}.")
+		# tethersMsgs = []
+		# if self.carrying:
+		# 	tethersMsgs.append(f"carrying {-self.carrying}")
+		# if self.occupants:
+		# 	tethersMsgs.append(listObjects("being ridden by ",self.occupants))
+		# if tethersMsgs:
+		# 	Print(f"It is {' and '.join(tethersMsgs)}.")
 
 
 	# intelligently get name of this Item in various grammatical forms
@@ -5181,13 +5197,14 @@ class Creature(Item):
 		# self.parent.floor causes error when displacing
 		# elif self.platform not in (None,self.parent.floor) and det != "the":
 		# 	strname = f"{strname} {self.posture()} on {-self.platform}"
-		position = self.position(ignoreStanding=True)
-		if det == "a":
-			if position == "floating":
-				if self.anchor() is None:
-					strname = "floating " + strname
-			elif position != "":
-				strname = f"{strname} {position}"
+		# position = self.position(ignoreStanding=True)
+		if det == "a" and self.determiner != "your":
+			strname = strname + self.tethersDescription(allowCarrying=False)
+			# if position == "floating":
+			# 	if self.anchor() is None:
+			# 		strname = "floating " + strname
+			# elif position != "":
+			# 	strname = f"{strname} {position}"
 
 		if len(strname) == 0:
 			return ""
@@ -5409,8 +5426,6 @@ class Player(Creature):
 		if self.hasStatus("anointed"):
 			return self.reanimate()
 
-		if self.rider:
-			self.rider.removeRiding(silent=True)
 		self.removeRiding(silent=True)
 		self.removeCarry(silent=True)
 
@@ -5516,8 +5531,8 @@ class Player(Creature):
 		if not self.hasStatus("fleetfooted") and force > 0 and room.floor is not None:
 			if force > 0:
 				self.takeDamage(force,"b")
-				if self.rider and force//3 > 0:
-					self.rider.takeDamage(force//3,"b")
+				for rider in self.occupants:
+					rider.takeDamage(force//3,"b")
 			self.changePosture("laying")
 		return True
 
@@ -5531,7 +5546,7 @@ class Player(Creature):
 				if self.Catch(missile):
 					return True
 		if percentChance(bound(missile.aim+missile.speed-dodge,1,99)):
-			return missile.Collide(self)
+			return missile.collide(self)
 		return False
 
 
@@ -5628,6 +5643,13 @@ class Player(Creature):
 			displayTrait = tinge("r",displayTrait)[0]
 
 		return displayTrait
+
+
+	def nounPhrase(self,det="",n=-1,plural=False,cap=-1):
+		strname = "you"
+		if cap > 0:
+			strname = capWords(strname,c=cap)
+		return strname
 
 
 	# takes args because interpreter passes them
@@ -5899,7 +5921,7 @@ class Humanoid(Creature):
 	def Act(self):
 		if not self.isAlive():
 			return
-		self.Print(f"\n{self.name}'s turn!")
+		self.printNearby(f"\n{self.name}'s turn!")
 		if self.canMove():
 			self.Attack()
 
@@ -5953,9 +5975,17 @@ class Humanoid(Creature):
 	def describe(self):
 		Print(f"It's {~self}.")
 		Print(f"{self.desc}")
-		gearitems = [item for item in self.gear.values() if item is not EmptyGear()]
+		gearKey = lambda item: not isinstance(item,(EmptyGear,Creature))
+		gearitems = [item for item in self.gear.values() if gearKey(item)]
 		if len(gearitems) != 0:
 			self.Print(listObjects("It has ", gearitems,"."))
+		# tethersMsgs = []
+		# if self.carrying:
+		# 	tethersMsgs.append(f"carrying {-self.carrying}")
+		# if self.occupants:
+		# 	tethersMsgs.append(listObjects("being ridden by ",self.occupants))
+		# if tethersMsgs:
+		# 	Print(f"It is {' and '.join(tethersMsgs)}.")
 
 
 
@@ -6048,19 +6078,19 @@ class Person(Speaker,Humanoid):
 
 		if self.pronoun == "he":
 			if isChild:
-				self.aliases.update(("boy","male"))
+				self.aliases.extend(["boy","male"])
 			else:
-				self.aliases.update(("man","guy","dude","male"))
+				self.aliases.extend(["man","guy","dude","male"])
 		elif self.pronoun == "she":
 			if isChild:
-				self.aliases.update(("girl","female"))
+				self.aliases.extend(["girl","female"])
 			else:
-				self.aliases.update(("woman","lady","dudette","female"))
+				self.aliases.extend(["woman","lady","dudette","female"])
 		else:
 			self.pronoun = "they"
 		if isChild:
-			self.aliases.update(("child","kid"))
-		self.aliases.add("person")
+			self.aliases.extend(["child","kid"])
+		self.aliases.append("person")
 
 
 	### Operation ###
@@ -6072,6 +6102,26 @@ class Person(Speaker,Humanoid):
 
 	### User Output ###
 
+	# describe the Person using appropriate pronouns, including gear
+	def describe(self):
+		pro = "They're" if self.pronoun == "they" else self.pronoun.capitalize() + "'s"
+		nounPhrase = ~self
+		Print(f"{pro} {nounPhrase}.")
+		if nounPhrase.lower() != self.desc.lower():
+			Print(f"{self.desc}")
+		gearKey = lambda item: not isinstance(item,(EmptyGear,Creature))
+		gearitems = [item for item in self.gear.values() if gearKey(item)]
+		if len(gearitems) != 0:
+			Print(listObjects(self*"has ", gearitems,"."))
+		tethersMsgs = []
+		if self.carrying:
+			tethersMsgs.append(f"carrying {-self.carrying}")
+		# if self.occupants:
+		# 	tethersMsgs.append(listObjects("being ridden by ",self.occupants))
+		if tethersMsgs:
+			Print(self*f"is {' and '.join(tethersMsgs)}.")
+
+
 	# intelligently get name of this Item in various grammatical forms
 	# display a description of them (descname) if they haven't met Player yet
 	def nounPhrase(self,det="",n=-1,plural=False,cap=0):
@@ -6079,14 +6129,18 @@ class Person(Speaker,Humanoid):
 		# 	suffix = f" riding {self.riding.nounPhrase()}"
 		# elif self.anchor() not in (None,self.parent.floor) and det != "the":
 		# 	suffix = f" {self.posture()} on {self.anchor().nounPhrase()}"
-		if det == "a":
-			suffix = self.position(ignoreStanding=True)
-		else:
-			suffix = ""
-		
+		# if det == "a":
+		# 	suffix = self.position(ignoreStanding=True)
+		# else:
+		# 	suffix = ""
+		tethersSuffixes = ""
+		if (self.carrying or self.occupants) and det == "a":
+			tethersSuffixes = self.tethersDescription(allowCarrying=False)
 		if "met" in self.memories:
-			return self.name + suffix
-		strname = self.descname + suffix
+			return self.name + tethersSuffixes
+		else:
+			strname = self.descname + tethersSuffixes
+
 		if len(strname) == 0:
 			return ""
 		if n > 1:
@@ -6162,7 +6216,7 @@ class Animal(Speaker):
 
 
 	# talk to this Animal
-	def converse(self):
+	def converse(self,partner):
 		if not player.hasStatus("wildspeaking"):
 			sounds = game.dlogForest["sounds"][self.species]
 			sound = sample(sounds,1)[0]
@@ -6170,7 +6224,7 @@ class Animal(Speaker):
 			return True
 		if "met" not in self.memories:
 			self.firstImpression(player)
-		self.appraise()
+		self.appraise(partner)
 		if not self.dlogTree.visit(self):
 			Print(f"{self.name} says nothing...")
 
@@ -6267,7 +6321,8 @@ Set status
 
 # Item that is fixed and not mentioned by default
 class Fixture(Item):
-	def __init__(self,name,desc,weight,composition,durability=-1,mention=False,**kwargs):
+	def __init__(self,name,desc,weight,composition,durability=-1,mention=False,fixed=True,
+	**kwargs):
 		super().__init__(name,desc,weight,durability,composition,mention=mention,
 		fixed=True,**kwargs)
 
@@ -6539,7 +6594,7 @@ class Portal(Item):
 				Print(f"{+missile} goes {self.passprep} {-self}.")
 				self.transfer(missile.asItem())
 			else:
-				missile.Collide(self)
+				missile.collide(self)
 			return True
 		return False
 
@@ -6714,12 +6769,12 @@ class Container(Portal):
 		if roll(100) < bound(missile.aim+self.Size()+10,1,99):
 			if getattr(self,"closed",False):
 				self.printNearby(f"{+self} is closed.")
-				missile.Collide(self)
+				missile.collide(self)
 			elif missile.item.parent is self:
-				missile.Collide(self)				
+				missile.collide(self)				
 			elif not self.canAdd(missile):
 				self.printNearby(f"{+self} is too full.")
-				missile.Collide(self)
+				missile.collide(self)
 			else:
 				self.printNearby(f"{+missile} goes into {-self}.")
 				missile = missile.asItem()
@@ -6889,8 +6944,10 @@ class Container(Portal):
 
 # used as shorthand to make a Portal that is fixed and not mentioned by default
 class Passage(Portal):
-	def __init__(self,name,desc,weight,composition,links,passprep="into",mention=False,durability=-1,**kwargs):
-		super().__init__(name,desc,weight,durability,composition,links,passprep=passprep,mention=mention,fixed=True,**kwargs)
+	def __init__(self,name,desc,weight,composition,links,passprep="into",mention=False,
+	durability=-1,fixed=True,**kwargs):
+		super().__init__(name,desc,weight,durability,composition,links,passprep=passprep,
+		mention=mention,fixed=True,**kwargs)
 
 
 
@@ -6899,10 +6956,10 @@ class Passage(Portal):
 class Serpens(Item):
 	def __init__(self,value,**kwargs):
 		desc = f"{str(value)} glistening coins made of an ancient metal."
-		Item.__init__(self,"Gold",desc,value,-1,"gold",**kwargs)
-		self.aliases = {"coin","coins","money","serpen","serpens",str(value),str(value)+" gold"}
+		Item.__init__(self,"gold",desc,value,-1,"gold",**kwargs)
+		self.aliases = ["coin","coins","money","serpens",str(value)+" gold"]
 		self.plural = "gold"
-		self.descname = str(value) + " Gold"
+		self.descname = str(value) + " gold"
 		self.value = value
 
 
@@ -7021,14 +7078,15 @@ class Projectile(Item):
 	### Operation ###
 
 	# launch the Projectile at target from launcher with given speed and aim accuracy
-	def Launch(self,speed,aim,launcher,target):
+	def launch(self,speed,aim,launcher,target):
 		self.speed = speed
 		self.aim = 90 if self.hasStatus("homing") and aim < 90 else aim
 
 		# when launching into another Room, just change location
 		if isinstance(target,Room):
 			self = self.asItem()
-			self.changeLocation(target)
+			if self.parent is not target:
+				self.changeLocation(target)
 			return self.fall(speed//4)
 		# if has occupants, then make them fall off
 		if isinstance(self.item,Item):
@@ -7047,17 +7105,18 @@ class Projectile(Item):
 		# try to bombard the target
 		if not target.bombard(self):
 			Print(f"{self.pronoun.title()} misses!")
-			self.Miss(launcher,target)
+			self.miss(launcher,target)
 
 		# if not a true projectile, then fall to ground
 		if self.item:
-			if self.item.anchor() is None and not self.hasStatus("flying"):
-				self.fall(speed//4)
+			if not self.hasStatus("flying") and target is not target.parent.floor:
+				if target is None or target.anchor() is None:
+					self.fall(speed//4)
 		return True
 
 
 	# when missed the target, have a chance to hit another object in the room
-	def Miss(self,launcher,target):
+	def miss(self,launcher,target):
 		self.aim = -10 if self.asItem().hasStatus("homing") else min1(self.aim-10)
 
 		# can't hit itself, the launcher, or the intended target
@@ -7082,7 +7141,7 @@ class Projectile(Item):
 
 
 	# when colliding with target, deal damage and take self damage
-	def Collide(self,target):
+	def collide(self,target):
 		if target is player:
 			Print(f"{+self} hits you!",color="o")
 		else:
