@@ -51,7 +51,7 @@ class Bed(Core.Item):
 
 class Bottle(Core.Item):
 	def breaks(self):
-		if self.id not in Core.game.objRegistry:
+		if self.id not in Core.game.itemRegistry:
 			return False
 		parent = self.parent
 		if self.durability == -1:
@@ -369,10 +369,10 @@ class Mouth(Core.Item):
 
 
 class Pool(Core.Fixture):
-	def __init__(self,name,desc,weight,composition,finite=False,**kwargs):
+	def __init__(self,name,desc,weight,composition,finite=False,occupyprep="in",**kwargs):
 		assert composition in Data.liquids
 		super().__init__(name,desc,weight,composition,**kwargs)
-		self.occupyprep = "in"
+		self.occupyprep = occupyprep
 		self.finite = finite
 
 
@@ -702,7 +702,7 @@ class Window(Core.Passage):
 		assert isinstance(missile,Core.Projectile)
 		if Core.roll(100) < Core.bound(missile.aim+self.Size()+10,1,99):
 			if self.closed:
-				missile.Collide(self)
+				missile.collide(self)
 			else:
 				Core.Print(f"{+missile} goes {self.passprep} {-self}.")
 				self.transfer(missile.asItem())

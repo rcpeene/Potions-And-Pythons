@@ -1,96 +1,154 @@
 
-DESIGN FOR POTIONS AND PYTHONS ALPHA
-
-Contents:
-SECTION 1 - reading this code project
-SECTION 2 - Fundamental objects
-SECTION 3 - Room objects and world implementation
-SECTION 4 - Saving and loading game data
-SECTION 5 - parsing and interpreting user input
-SECTION 6 - weapons, armor and combat
-SECTION 7 - spells and effects
-SECTION 8 - food, crafting, and cooking
-SECTION 9 - creature behavior and NPCs
+DESIGN FOR POTIONS & PYTHONS
 
 
-SECTION 1 - reading this code project
-code styleguide
-description of each file in source code
-definition of "command", "verb", "action", "object", "source", "P", "W" and other terms (like "d")
+TABLE OF CONTENTS:
 
-SECTION 2 - Fundamental Objects (Game, items, creatures, the player)
-Game
-items
-creature stats and creatures
-status conditions
-the player
+SECTION 1 - Reading This Code Project
+	Styleguide
+	Overview of Files
+	Definitions
 
-SECTION 3 - room objects and world implementation/design
-room
-passages and room exits (passages should not be contained in other objects, passage connections must not conflict with room exits)
-world network design
-object search methodology (and the object tree)
+SECTION 2 - Fundamental Objects
+	GameObject
+	Game
+	Room
+	Item
+	Status Conditions
 
-SECTION 4 - saving and loading and menu
-menu functions
-intro animation
-background data parsing functions
-world file, and saving methodology
-world file, and parsing methodology
-discuss attributes and writeAttributes
+SECTION 3 - Creatures & the Player
+	Creature
+	Player
+	Carrying and Riding
+	Equipping
 
-SECTION 5 - parsing and interpreting
-input processing, parsing, interpreting, executing methodology
-go function methodology
-attack function methodology
-equip function methodology (equipping doesnt remove it from your inventory), but carrying allows something to be equipped while not in your inv?
-effects methodology
-spell methodology
+SECTION 4 - The World & Portals
+	The World
+	objQuery() & the object tree
+	Portals and Links
+	Containers
 
-SECTION 6 - weapons, armor, equipment, and combat
+SECTION 5 - Saving & Loading the Game
+	Menu
+	JSON Representation, convertToJSON
+	buildWorld() and assignRefs()
 
-SECTION 7 - spells and effects
+SECTION 6 - Parsing & Intepreting Input
+	Tokenizer and Parser
+	Interpreter
+	Action functions
+	parseGo
 
-SECTION 8 - food, crafting, and cooking
+SECTION 7 - Weapons, Armor & Combat
 
-SECTION 9 - creature behavior and NPCs
+SECTION 8 - Effects & Additonal Items
+
+SECTION 9 - Crafting, Brewing & Cooking
+
+SECTION 10 - Creature Behavior & NPCs
+
+SECTION 11 - Dialogue
+	Dialogue Trees
+	Dialogue Nodes
+	Reactions
+
+SECTION 12 - Printing & Output
+	Print()
+	TeeLogger & transcript.log
+	SidePanel
+
+
+
+==================== SECTION 1 - READING THIS CODE PROJECT ====================
+
+	STYLEGUIDE
+
+- source files are named with capital letters to distinguish them from python modules
+
+- tabs	are	used	for	indentation,	not	spaces
+
+- the standard maximum line-width is 92 characters for this code, with few exceptions
+
+- functions typically use camelCase for naming, see 3 exceptions below
+
+- Action functions are named with single capitalized words. Action functions are functions 
+in Parser.py that are called as a result of Player commands, or methods which are called by
+a corresponding Parser.py action function. For instance, the Look() function, which may 
+call an examine() method on an item. This is to distinguish these functions from certain
+python keywords and built-ins
+
+- Creature stats are named as lowercase abbreviatons, while the functions that return those 
+stats are all capitalized such as STR(), MXHP(), and ATCK()
+
+- Classes are named with capitalized first-letters
+
+- typically, instances of objects are either denoted with capital letters, or with words.
+For example, an instance of the Item() class may either be I, item, or some other word 
+depending on the use case.
+
+-strings are denoted with "", unless it is necessary to use a string that contains " in it,
+in which case, the entire function of relevance uses '' to denote strings
+
+
+
+	OVERVIEW OF FILES
+
+- src/Data.py contains tuples, sets, and dictionaries that are globally useful in this
+project or that would take up unnecessary space in the other files
+
+- src/Core.py is the most important source file for this project. It contains all the 
+fundamental objects in the game, such as Game, GameObject, Item, Creature, and Player,
+and a number of fundamental functions
+
+- src/Items.py and Creatures.py contain additional objects in the game that require their
+own logic.
+
+- src/Effects.py contains functions which interact with the world and inputs that can be 
+accessed as spells or for specific object functionality parametrically. For instance, the
+Controller object takes an 'effect' as a parameter. Instead of storing all possible effects 
+in the Controller class, they can be accessed from Effects.py
+
+- src/Menu.py contains the functions to manage the main menu and to serve as the endpoint
+for saving and loading the game with JSON.
+
+- src/Interpreter.py is the main interface of the game. It handles processing user input, 
+identifying the objects being interacted with by the user, and evoking their functionality.
+
+- src/PoPy.py is the game endpoint. It runs the main game loop.
+
+- test/Test.py is the module used for testing the game. It reads the .txt files in the 
+test folder as though they are user input and attempts to run a game.
+
+- gamedata/transcript.log stores a transcript of the most recent playthrough. 
+This can be useful for debugging.
+
+- gamedata/World.json is the base world of the game. It stores the object tree
+of each Room in the world. It was intentionally made JSON to be human-readable
+and human-editable.
+
+- gamedata/Dialogue.json is all of the game's dialogue trees stored as JSON
+
+- saves/ is where the saved game data is stored. Each save folder should have 
+a world.json, a player.json, and a game.txt
+
+
+
+==================== SECTION 2 - FUNDAMENTAL OBJECTS ==========================
+==================== SECTION 3 - CREATURES & THE PLAYER =======================
+==================== SECTION 4 - THE WORLD & PORTALS ==========================
+==================== SECTION 5 - SAVING & LOADING THE GAME ====================
+==================== SECTION 6 - PARSING & INTERPRETING INPUT =================
+==================== SECTION 7 - WEAPONS, ARMOR, & COMBAT =====================
+==================== SECTION 8 - EFFECTS & ADDITIONAL ITEMS ===================
+==================== SECTION 9 - CRAFTING, BREWING & COOKING ==================
+==================== SECTION 10 - CREATURE BEHAVIOR & NPCS ====================
+==================== SECTION 11 - DIALOGUE ====================================
+==================== SECTION 12 - PRINTING & OUTPUT ===========================
 
 
 
 
 
-
-NOTES ON THE CONVENTIONS AND FORMATTING USED IN THIS CODE PROJECT
--source files are named with capital letters to distinguish them from python modules
-
--tabs	are	used	for	indentation,	not	spaces
-
--the standard maximum line-width is 80 characters for this code, with few exceptions
-
--functions should not exceed 40 lines in length, including line breaks
-
--functions typically use camelCase for naming, see 3 exceptions below
-
--Action functions are named with single capitalized words. Action functions are functions in Parser.py that are called as a result of player commands, or methods which are called by a corresponding Parser.py action function. For instance, the Look() function, which may call a Look() method on an item. This is to distinguish these functions from certain python keywords and built-ins
-
--functions with names that are multiple abbreviated words are purely lowercase
-
--the Creature methods which return the ability score for a creature are denoted purely in capital letters, such as MXHP(), and ATCK()
-
--classes are named with capitalized first-letters
-
--typically, instances of objects are either denoted with capital letters, or with words. For example, an instance of the Item() class may either be I, item, or some other word depending on the use case.
-
--the global objects P, W, and G refer to the Player, World, and Game objects
-
--typically, capital S refers to a "source" item. That is, an item which contains another item, usually called I.
-
--strings are denoted with "", unless it is necessary to use a string that contains " in it, in which case, the entire function of relevance uses '' to denote strings
-
--strings which are concatenated with variables are formatted using f-string formatting, however the + operator is used when there are only two terms to concatenate. For example;
-	f"There is no '{obj.name}' here"
-	f"There is {listObjects()} in this room"
-	"You take the " + item.name
 
 
 
@@ -602,18 +660,6 @@ TYPES OF ACTION FUNCTIONS:
 -object search function: search room and player inv for creature or item
 
 
-CHEAT CODES:
-
-huzzah
-excelsior
-godmode
-oogabooga
-opensesame
-faex
-deusvult
-pepe
-madmax
-
 IDEAS FOR CREATURES/NPCS:
 
 generally, three categories of creatures,
@@ -721,1276 +767,3 @@ if the room is simply on fire for 10 more time units, and will ignite any creatu
 
 
 
-
-
-curses;
-
-weakness - lowers STR
-slowness - lowers SPD, slows display text
-clumsiness - lowers SKL
-weariness - lowers STM, sleep longer
-illness - lowers CON
-
-timidity - lowers CHA
-stupidity - lowers INT, can't access glossary, doesn't know numbers
-insanity - lowers WIS, randomizes display colors, sometimes adds voices?
-apathy - lowers FTH, cant gain xp, smell and taste is gone
-calamity - lower LCK, ricochet hits you, getting bad fortunes?
-
-blessings;
-
-brawniness - raises STR
-swiftness - raises SPD
-prowess - raises SKL
-liveliness - raises STM
-toughness - raises CON
-
-felicity - raises CHA
-sagacity - raises INT
-lucidity - raises WIS
-fidelity - raises FTH
-prosperity - raises LCK
-
-
-CONDITION IDEAS:
-
-some condition summaries:
-- frozen (can't move and also taking damage over time, removed (cancels) with burning)
-- paralyzed (just can't move)
-- poisoned (little damage, lasts a long time)
-- bleeding (medium damage, lasts medium amount)
-- burning (lost of damage, last short amount usually, negates frozen, ignite anything you touch)
-- wet (doubles lightning damage, negates burning)
-- cool (bonus to RP)
-- smelly (penalty to love?)
-- enchanted (huge bonus to love)
-- haunted (huge bonus to fear)
-- blind (can't see, not sure how to implement this??, just some descriptions go silent I guess)
-- asleep (can't do anything, will wake up if takes damage or becomes wet)
-- restrained (cant willingly move or do many actions?)
-- prone (penalty to EVSN and MVMT? bonus to SLTH)
-- crouched (like prone but less significant?)
-- invisible (huge bonus to SLTH, affects dialogue somehow)
-- petrified (immune to damage, but can't move, maybe just kills you and turns you to a statue)
-- lignified (perhaps same as petrified. would become more vulnerable to fire damage)
-- hindered (penalty to speed)
-- sanguine (overflow damage heals)
-- eagle-eyed (something that gives you great ranged aim)
-- throwmaster (gives you bonus to throwing speed?)
-
-ironrot, causes rust over time? reduces sharpness?
-'cool' with glasses or something so it says "you are cool"
-raising a base stat
-raising a derived stat
-lowering a base stat
-lowering a derived stat
-resistance to a damage type
-invulnerability to a damage type
-vulnerability to a damage type
-raising fondness of creature - raises fondness by some int for a creature name
-raising fear of creature - raises fondness by some int for a creature name
-insanity - creature might act randomly instead of based on input criteria
-rage (aggression for all targets)
-ire (aggression for a target)
-bloodied - could change creature behavior, also useful for certain effects
-lignified - creature cannot move and is flammable
-petrified - creature cannot move and is not flammable and is much heavier
-frozen - creature cannot move and is immune to cold damage
-paralyzed - creature cannot move or act
-restrained - creature cannot attack, cast, or use items
-burning - creature takes damage every turn
-poisoned - creature takes damage every turn
-sleep - creature will not act and will wake up if they are damaged
-blinded - creature cannot see, it influences their perception inputs
-deafened - creature cannot hear, it influences their perception inputs
-prone - creature moves more slowly??? idk here
-hindered - creature is slowed
-spellbound - cant cast
-disguised - creature appears to be something/someone else (idk how to do this)
-polymorphed - creature has entirely different stats and abilities (maybe store all previous stats in a JSON string)
-invisible - creature is perfectly hidden
-flying - creature can move freely in any direction
-waterbreathing (amphibious?) - cannot drown
-feather fall - cannot take fall damage
-gaseous form - can fly and is intangible
-truesight - can see invisible things
-darkvision - can get full descriptions in darkness
-opulence - double money recieved
-chefskiss - better at cooking
-greenthumb - good at planting or something
-in a sphere/bubble (enbubbled) - immune to physical damage, can't attack, drop, take
-hunters mark - idk??? ....
-thornshield - (thornskin maybe), when taking physical melee damage, deal damage to damager
-
-
-
-EQUIPMENT PROPERTIES:
-
-	WEAPON;
-	nimble - bonus to attack speed
-	keen - weapon doesn't lose sharpness
-	striker - increased chance to hit/crit
-	flaming - sets enemy on fire
-	venom - poisons enemy
-	frost - freezes enemy
-	brilliant
-	bright
-	ironweave
-	brave
-	breaker
-	magic
-	razor
-	searing
-
-	mithril
-	gold
-	silver
-	steel
-	iron
-	bronze
-	tin
-	wood
-	glass
-
-	ARMOR;
-	sanguine - overflow defense heals
-	fortitude - invulnerability to a dmg type
-	patient
-	valorous
-	robust
-	phoenix - fire damage
-	spooky - causes frightening
-
-	mithril
-	gold
-	silver
-	steel
-	iron
-	bronze
-	leather
-	cloth
-
-
-
-ITEM IDEAS:
-
-main types of magic items:
-rings - passive buffs
-wands - effect like "__ spells cast with this have bonus"
-staves - effect like "__ spells cast with this have bonus"
-scroll - allows you to learn a spell
-tome - allows you to learn multiple spells
-gear - wearable, can have passive effects or active effects
-
-Norman items;
-Norman's sword
-Norman's shield
-Norman's etc.
-
-WEAPONS:
-Estoc
-Palstave
-Seaxe
-The Master Boomerang - (always comes back no matter what u do with it)
-other boomerangs
-blade of healing (useless mostly)
-Raygun (that deals E damage)
-Paragon Blade
-Durendal (never loses sharpness, has a high sharpness)
-Caliburn
-Tyrfing (Cursed)
-Shamshir (Poisonous)
-Carnwennan (Shadow Dagger)
-Sword with the same name as a princess (sounds like Eilonwy maybe)
-Swords Gram and Mimung (from Wayland)
-Courtain - shortsword owned by Ogier or Karaheut
-Clarent - sword in the stone
-Solfaine (sword of light/fire)
-Lunafrith (moon shield)
-Joyeuse - sparkling rainbow sword, owned by Baligant
-Frostbite - ice greatsword
-
-
-GEAR:
-Cloak of Bees
-Nebula Shroud/Cloak
-Aegis (shield)
-
-Hauberk, Hauburgeon, Cuirass 
-Jerkin, Tabard, Surcoat, Gambeson
-Brigandine, Splintmail, Chaimail,
-Vambrace, Greaves, Sabatons,
-Burnoose
-Tam-o-shanter
-Kirtle
-Liripipe
-Panoply (a full set of plate?)
-Arasaid (scottish dress)
-
-
-MAGIC ITEMS:
-Pomander
-Camphor Staff (or sm othr tree idk) Gingko Staff? etc,
-willow staff, banyan, aspen, birch, baobab, elm, sycamore, oak, pine, cyprus
-nimbus rod, cumulus rod, stratus rod
-the magic map
-(Magic?) Umbrella
-magic 8 ball
-Magic Teapot (or just a normal teapot idk)
-Astra - from hindu myth, divine projectiles
-Olifant - magic horn
-glyph totem (or rune totem?)
-Diadem
-Evil cauldron that creates silent undead from corpses (quest item?)
-something that functions like a metal detector?
-	- detects metal in room or inside an object (or under the floor, must dig?)
-
-
-MISC EQUIPMENT:
-shovel, trowel, spade
-Evil eye - wards off spirits
-Pantalon
-Step Reckoner
-Abacus
-Amphora
-Shrunken heads
-dunce hat
-hourglass item (actually does something useful?)
-map item (maybe at any given room, tells u direction toward a destination)
-deck of card with suits: swords, stars, flowers, something else?
-witchblade (perhaps unlike the comic witchblade)
-fishweir (basically a structure fish trap)
-
-
-Sci-fi set
-
-(Newton/Gravity Something)
-Raygun (Lazer Mauser)
-Gauss Rifle (Coilgun)
-Lorentz Rifle (Railgun)
-Maxwell Cannon (Plasma Cannon)
-Faraday Shield (Lightning Shied)
-
-
-An item set named after all the greek letters (super powerful)
-each one has a magical effect associated with each of the 24 derived stats
-
-Alpha sword		CRIT
-Beta axe		ATCK
-Delta cloak		SLTH
-Gamma bow		ACCU
-Epsilon ring	CSSP
-Zeta wand		CAST
-
-Eta flask		MXHP
-Theta gauntlet	TNKR
-Iota key		KNWL
-Kappa horn		DCPT
-Lambda lyre		PRSD
-Mu stone		MXMP
-
-Nu dagger		ATSP
-Xi amulet		RITL
-Omicron tome	SPLS
-Pi compass		LOOT
-Rho pack		BRDN
-Sigma tunic		EVSN
-
-Tau hammer		ATHL
-Upsilon glaive	ENDR
-Phi helm		RSTN
-Chi torch		INVS
-Psi boots		MVMT
-Omega shield	DFNS
-
-
-
-FOOD AND CONSUMABLE ITEMS:
-
-consumable items can heal hp, regenerate mp, and add or remove status effects.
-cooked/constructed meals have effects that are greater than the sum of their parts. different food groups tend to provide different benefits
-
-proteins/meats - vastly increase hp, synergize well in meals
-grains/starches - moderately increase hp, cheapest/most common
-fruits - minimally increase hp, each fruit adds a different status effect
-veggies - minimally increase hp and mp, can remove bad status effects
-mushrooms - have one significant benefit and one debuff
-dairy - minimally increase hp and mp, can remove bad status effects
-alcohol - same effects as fruit, but adds drunkeness
-water - raises hp and mp by 2
-
-Potions are bottled items that have different effects. Types of potions are:
-Red, Pink (deadly), Burgundy, Scarlet
-Orange, Rusty, Tawny, Amber,
-Yellow, Blond, Ochre, Citrine,
-Green, Viridian, Mossy, Chartreuse
-Blue, Azure, Teal, Cyan
-Purple, Lavender, Indigo, Violet
-Clear (dissolves?), Brown (burns?), Black (explodes), Grey, White
-Bronze (defense), Silver (speed), Gold (atk/dmg/crit)
-
-potions - described by color.
-elixirs - highly magical, described by effect
-philter - love potion
-anti-philter - fear potion
-tonic - medicinal, nonmagical, described by contents, energizing/antidote effects or similar
-brew - unknown brewed things
-tincture - dyes
-elixir of truth - (mark dlog nodes as lies), dlog becomes green, red if its a lie
-soma
-
-
-Fruits:
-
-Apple - reduces disease conditions (special apple for special diseases?)
-Banana
-Blueberry
-Blackberry
-Breadfruit
-
-Cherry
-Coconut
-Cowberry
-Cranberry
-Currant (Black) - physical resistance
-
-Currant (Red) - elemental resistance
-Currant (White) - magical resistance
-Dragonfruit - firebreath? fly? fire resistance?
-Durian - bonus to endurance or wpn durability?
-Elderberry
-
-Fig
-Ghostberry - ghost effects? gaseous form? cold resistance (as snowberry)?
-Gojiberry - something awesome, remove all bad conditions?
-Goldenberry - double money gained?
-Gooseberry - bonus to luck?
-
-Grape
-Grapefruit - temporarily raises MXMP
-Guava
-Huckleberry
-Jujube
-
-Juniperberry
-Kiwi
-Kumquat - something with mp
-Lemon - improved spells
-Lime - improved spells some other way
-
-Loquat
-Lychee
-Mango
-Mulberry - immune to bleed?
-Muskmelon - immune to poison
-
-Olive
-Passionfruit - bonus to social interaction (love stat)
-Peach
-Pear
-Persimmon
-
-Pitanga
-Plum
-Pricklepear - thornshield
-Pineapple
-Pomegranate
-
-Quince
-Raspberry
-Seaberry - water breathing
-Starfruit
-Strawberry
-
-Tangerine - double regen of MP
-Watermelon - water walking?
-
-
-OTHER PLANTS:
-hops (to make beer)
-herb of immortality (makes potion, can be smoked? made into quintessence?)
-mushrooms - glowing ones too
-poisonwood
-witchwood
-juniper - gin, oil, wood
-myrtle - oil/scent
-cork trees - to make cork
-boxwood
-hawthorn
-blackthorn
-gorse
-firethorn
-buckthorn - yields jujube
-wormwood
-cotton
-hemp - rope, paper, cannabis?
-rosemary - smells good
-scrollreed - for papyrus
-lavender
-mugwort - flavoring beer, oil, dreams and divination
-yarrow
-mandrake - toxic, screaming
-wolfsbane - super toxic
-sage - clarity, sagacity, smells good
-rue - "herb of grace"
-mayweed - "chamomile", calming, used in tea
-meadowsweet - pain reliever, used in mead
-king solomon's seal - protects against evil?
-nightshade - super poisonous, sedative
-fairyglove - toxic?
-dandelion - liver, diuretic, grants wishes?
-henbane - hallucinogenic, used for flight by witches
-carnation
-poppy - opiate
-rose - beautiful and smells good, thorny
-orchid - beautiful
-daisy - nothing special
-sunflower - seeds?
-moonflower - might be used in making rubber?
-lotus - aquatic, longevity, used in food and tea
-goldenrod - dye, honey, rubber?
-lily - aquatic, beautiful
-vervaine - protection and love
-hyssop - biblical mint, purification
-spearmint - flavor
-peppermint
-peppercorns
-thyme - embalming, gives courage?
-clover - lucky, makes honey?
-holygrass - used for ceremonies
-lovage - psychic powers?
-woodruff - used for dye, perfume/smell
-muskroot - smell, oil
-bruisewort - "knitbone" heals bones?
-woundwort - heals wounds?
-ragweed - allergies
-tomeleaf
-keyflower - reveals treasure or key to fairy realm?
-fleabane - kills insects?
-starflower - causes courage?
-hoarhune - expells parasites, helps coughs
-heartwort
-mallow - found in marsh, sweet
-sweetroot - "licorice"
-fennel - spice, strength
-nettle - ouch!
-bloodroot - red dye, acidic
-anix - yummy absinthe
-pansy
-tansy - insect repellent, delays spoilage, wards of disease
-coriander - used in food, soap?
-bishopwort - mint family, considered highly protective, holy water, ointment?
-valerian - catnip, causes sleep?
-goatweed - aphrodisiac?
-flax
-fireweed
-burdock - pairs well with dandelion in mead, wards off evil? velcro
-butterbur - sticky
-cocklebur - spiny
-tea plant
-foxfire (glowing mushrooms)
-bergamot?
-woad - dye
-weld - dye
-madder - dye
-potherb
-rhubarb
-bulrush
-
-
-MINERALS/CHEMICALs:
-peat, lignite, coal, charcoal, glass/frit,
-flint, granite, chert, sandstone, shale, slate, feldspar, soapstone, greywacke, pitrock,
-blackstone, bluestone, whitestone, whinstone, cinder, fieldstone, lodestone
-marble, basalt, quartz, serpentine, jade, 
-orpiment, realgar, verdigris, amber, azurite, corundum,
-bone ash, grey ash -> potash -> pearl ash, salt ash or natron -> soda ash
-soda ash + quicklyme -> lye
-[also saleratus? pure form of some kind of ash]
-glitterash (ash from witchwood?)
-whitestone or chalk -> quicklyme (burns) -> mortar or plaster
-saltpeter, brimstone, coal coke
-gravel, sand, silt, clay, loam, soot
-calrete (kind of limestone)
-firestone (pyrite, source of iron and brimstone)
-leadglance (galena)
-alabaster, jet, bloodstone, onyx, pitchblende -> yellowcake
-copper, tin (found amongst granite), silver, gold, titanium, cobalt
-borax, calamine
-
-
-sticklac (from lacbug) -> seedlac -> shellac
-shellac -> candy glaze
-shellac -> lacquer
-certain sap -> lacquer
-benzoin, mastic, pine resin, hashish, bdellion, turpentine, myrhh, balsam
-gesso
-
-burning seaweed or saltwort -> soda ash, also known as natron
-coal coke, grey ash, bone ash are used for iron and steel
-
-
-MISC ITEM IDEAS:
-cadeuceus
-uroboros
-adder stone (glassy stone with a hole in it), perhaps can see invisibility through it?
-toadstone (cure to poison?)
-holy water
-something called "ersatz ___"
-something called "tentacular __"
-congerie
-molasses
-sheaf of wheat
-cassone
-brine (can get salt/salmiac from it?)
-albumen (egg whites)
-wainscot
-elixir of immortality (also requires venom)
-strange milk - makes you high, made from cows fed certain mushrooms
-Catgut
-ambergris
-coprolite
-chaff - inedible plant matter
-volcano snail teeth (strongest biological substance)
-urim and thummim
-alembic
-something called "vim"
-lodestone
-wooden spoon
-crocs - made from crocodile
-papyrus (made from plant stems or tomeleaf)
-paper (cotton, linen, hemp, wood)
-parchment (white, vellum, purple)
-inks (black, blue, red, silver, golden)
-lacbug -> carmine
-credenza
-star jelly
-grass jelly
-royal jelly
-skep (beekeping)
-beeswax, honeycomb, honey
-spider silk
-golden orb weaver silk
-linen, silk, cotton, wool
-yarn, loom, bolt of fabric, torn rag
-burlap, canvas, denim, tweed, flannel, fustian, russet
-bitumen (ore), pitch (liquid), naphtha,
-peat, lignite, resin, briquette
-horn, ivory, tortoiseshell (from carapace)
-hallucinogenic fish
-wicker man (burned as sacrifice)
-bagasse (cane pulp)
-cornstover (byproduct of corn)
-Monocaine - drug (potion) from exotic flower makes you invisible and also makes you aggressive/insane
-	"Even the moon is frightened of me! Frightened to death!"
-
-
-CRAFTING/RECIPE IDEAS:
-
-boiling bones/hoofs/horns/talons -> glue
-scrollreed: harvest -> reed stems
-reed stems: glue -> papyrus
-hide/pelt: wash in solution -> untanned leather
-untanned leather: stretch/dye/cut -> parchment
-rag/torn cloth/cotton/linen/hemp/wood: bath in solution -> [x] pulp
-[x] pulp: strain -> [x] paper
-soot + treegum/glue -> black ink
-woodgall: crush/leach -> gallwater (tannic acid)
-gallwater + green vitriol -> blue ink (iron gall ink)
-gallwater also used to tan leather
-also red ink (blood or carmine?), silver ink, and gold ink
-treegum: -> shoe polish
-
-
-	CLOTHES:
-
-thread types:
-hemp (midweight, strong, rough)
-linen (midweight, tempered, mid)
-cotton (light, weak, soft)
-wool (heavy, tempered, soft)
-silk (light, strong, soft)
-^^^ each of these threads can be spun on a spinning wheel from the raw fibers
-
-hemp thread: ply -> twine (nets)
-linen thread: ply -> linen string (bows fishing)
-cotton thread: ply -> cotton string (wicks, yoyos, cotton swab?)
-silk threads: ply -> silk string (bows, fishing)
-
-yarn: knit -> hodden
-twine: ply -> hemp rope
-silk string: ply -> silk rope
-
-plain weave:
-hemp + hemp -> sackcloth
-linen + linen -> coarse linen (cheap light clothes, cloths/towels)
-cotton + cotton -> sailcloth (sails, tent, canvases)
-wool + wool -> hodden (cheap warm clothes)
-hemp + any -> sackloth
-linen + cotton -> buckram (hats, books, bandages)
-linen + wool -> broadcloath (upholstery)
-cotton + wool -> russet (cheap mid clothes)
-
-twill weave:
-linen + linen -> linen (standard light cloth)
-cotton + cotton -> denim (durable)
-wool + wool -> tweed
-linen + cotton -> fustian (well rounded)
-linen + wool -> serge (protective)
-cotton + wool -> flannel (warm)
-
-satin weave:
-linen + linen -> fine linen (light)
-cotton + cotton -> sateen (shiny, soft but weaker than satin)
-wool + wool -> cassimere (very warm and soft)
-silk + silk -> satin (most prized)
-linen + cotton -> cambric (small fine items)
-linen + wool -> gabardine (officer uniforms, grey formal)
-cotton + wool -> poplin (wedding dress, light formal)
-silk + linen -> linsilk (wizard clothes)
-silk + cotton -> velvet (soft and delicate)
-silk + wool -> bombasine (dark formal)
-
-^^^ any cloth can be torn into its equivalent "rags"
-rags, or some wood and plant fibers can be dissolved and beaten into their fiber pulp in 
-a certain solution. rags of silk and cotton turn into least amount o pulp. pulp can also be 
-pressed into paper in a paper press. perhaps pulp needs to be treated to change its quality:
-(brown paper, white paper)
-
-non woven fabrics:
-pigskin, goatskin, fleece, cowhide, horsehide, ermine, squirrel skin
-^^^ these can be cut and sewn directly into hide clothes, or turned to leather
-any hide: lime bath -> rawhide
-rawhide: tannen bath -> leather
-^^^ can be cut and sewn into leather armor
-rawhide: stretching+cutting -> parchment/vellum
-
-
-cotton fabric + blue dye (woad) -> denim -> blue jeans
-
-
-	BREWS:
-
-tea plant: pluck -> tea leaf
-tea leaf: boil -> white tea, cook -> roasted tea leaf, ground -> ground tea leaf
-roasted tea leaf: boil -> yellow tea, cook -> ash, ground -> green tea powder
-green tea powder: boil -> green tea, cook -> ash
-ground tea leaf: boil -> brown tea, cook -> black tea powder
-black tea powder: boil -> black tea, cook -> ash
-
-green tea powder + jasmine blossoms: jasmine tea
-green tea powder + mint leaf: mint tea
-green tea powder + lotus flower: lotus tea
-black tea powder + bergamot oil: earl grey powder
-black tea powder + cinnamon + cardamom: chai powder
-black tea powder + rose: rose tea
-
-coffee tree: pluck -> coffee cherry
-coffee cherry: dry -> coffee raisin
-coffe raisin: hull -> coffee bean
-coffee bean: roast -> roasted coffee bean
-roasted coffee bean: grind -> coffee powder
-coffee powder: boil -> coffee
-
-kola plant: harvest -> kola nut
-kola nut: grind -> ground kola
-ground kola: brew/boil -> kola tonic (maybe also require a leaf or burdock and dandelion?)
-
-crimson + clover: brew -> philter, maybe a crimson flower instead of lacbug?
-
-elderflower tonic (cordial)
-
-	POTTERY:
-
-red/yellow clay: heat 1000c -> earthenware
-red/yellow clay: heat 1500c+ -> shatters
-
-grey/black clay: heat 1000c -> bisqueware (can be glazed and refired @ low temp)
-grey/black clay: heat 1500c -> stoneware
-grey/black clay: heat 2000c+ -> shatters
-
-white clay: heat 1000c -> white bisqueware (can be glazed and refired @ low temp)
-white clay: heat 1500c -> white stoneware
-white clay: heat 2000c -> porcelain
-
-^^^ these can be mixed with grog (crushed shards), sand, or frit (glass)
-any mixed with frit becomes fritware
-if mixed with silt or loam, it will shatter
-different kilns reach different heats, "dragon kiln" will get it to 2000
-fire pit, bonfire, kiln, sagger kiln, bloomery, furnace
-red clay: filter -> yellow clay + silt
-black clay: filter -> grey clay + silt
-leaching ash in water makes a basic glaze foundation
-mixing basic glaze with minerals creates colored glazed
-glazes: celadon (green glaze), faience, bucchero, lusterware, majolica
-can mix with sienna, umber, red ochre, gold ochre
-delftware is made with faience
-
-	PIGMENTS:
-
-woad leaf: grind -> woad leaf powder: soak -> woad pulp: dry -> indigo (powder): brew -> blue dye
-madder root: grind -> madder powder: boil -> alizarin (powder): brew -> red dye
-weld flower: boil -> yellow dye
-^^^ can get green from mixing blue and yellow, or from another plant
-red + yellow/blue makes brown dye; purple and orange are from their own sources
-
-vermilion fromm cinnabar
-carmine from cochineal
-ultramarine from skystone (lapis lazuli)
-
-plant-based pigments require mixing with alum to make into useful dye
-indigo is an exception, it requires urine
-mineral pigments make good paint but not dye
-
-	ALCHEMY:
-
-leaching dung (calcium nitrate) with potash -> saltpeter + chalk (calcium carbonate)
-roasting alumen (found amongst shale) -> alum
-roasting/leaching yellow clay + potash -> alum
-roasting/leaching white clay + brimstone -> alum
-
-roasting grey, black, red, yellow clay -> sienna, umber, red ochre, gold ochre
-
-green vitriol - made from leaching firestone or brimstone + iron with water and air
-oil of vitriol (sulfuric acid)
-ether (made from alcoohl and oil of vitriol)
-aqua fortis - green vitriol + nitre
-aqua regia (strongest acid) salmiac + aqua fortis
-
-	METALLURGY:
-
-tin + ??? -> pewter
-tin + copper -> bronze
-iron + carbon -> steel
-swaging (adding a swage?)
-
-	COOKING:
-
-drying fish -> stockfish
-
-
-WORLD DESIGN IDEAS:
-
-several different "dungeons" exist in the the world
-however, I dont want them to be super "temple-y" like Legend of Zelda. that feels too restrictive, i want the world to feel less linear/sequential and a bit more open-ended
-
-so these dungeons are generally just clusters of room nodes in the world graph that match a certain theme or aesthetic, and they have different general difficulty levels
-
-- regular forest (starting location)
-- the gallery
-- hinterlands
-- slime dungeon?
-- mobile massive wizard school (with portal entrances around the world)
-- a buried giant (inside of which is a dungeon? rooms like "giant foot")
-	- 'giants tomb', 'giants grave'?
-- haunted manor, abandoned manor on a hill thats v spooky
-- ancient mystical forest, full of illusions thats difficult to navigate
-- the catacombs, simple basic religious dungeon under a giant old cathedral
-- atlantis, underwater castle thats coral reef themed and fun, entered by getting to an island somewhere
-- caverns, early dungeon that is large underground caverns
-- necropolis, a massive sandy persian themed graveyard
-- "the tower", tower of ___, hundreds of floors, considered scary and forbidden by nearby townsfolk, probably one of the most dangerous dungeons
-- skyland, a beanstalk leads to a giants house? or smth on a floating cloud?
-- labyrinth, underground labyrinth (maybe library themed), that has magical connections to all kinds of places all over the world
-- mineshaft, underground mines maybe
-- spaceship, extra idea maybe with aliens lol
-	- in the alien spaceship have a recording or text log of a dead captain/space explorer
-- snowy peaks, maybe ice castle? something cold themed
-- hunt the wumpus map, with a WUMPUS!!! and traps and whatnot
-- at the bottom of the pit, a temple to the imprisoned god uramut.
-	Uramut manages to possess someone in the world and they gouge their eyes out and have one yellow eye on their head, Uramut wants to be released.
-- hell: tartatus, hades, sheol, gehinnom, abaddon, kur, kigal, ersetu, cocytus, duzakh (house of lies)
-	- palace Ganzir,
-
-several settlements exist in the world (aim for like at least 9)
-- Folkston/Folksvale
-- Ratcatcher Mill/Ratstead/Ratcatchers Pass
-- Goosetower
-- Bellfort
-- Dandelot
-- Dalmerry
-
-HISTORICAL CITY IDEAS:
-phillopolos (feldiv/pilov) - still exists
-jericho (ariha) - still exists, has an ancient tree 
-catalhoyuk (kadala) - razed by first empire
-jerusalem (shalem) - disappeared into a crater (became a floating city)
-knossos (nessos) - sank
-uruk (orca) - nuked (engulfed by dragon, maybe orcs are from here in irradiated place)
-nineveh (ninava) - desertified by demons
-babylon (babilim) - still exists as a village, dismantled in civil war brick by brick
-luoyang - unknown
-xian - unknown
-cahokia - unknown
-norte chico - unknown
-chichen itza - unknown
-
-ADDITIONAL PLACE IDEAS:
-- xanadu
-- shangri-la
-- gundahar
-- the burgage (rented complex)
-- brigadoon (disappearing village)
-- apple forest (early quest setting)
-- seawall
-- colonnade
-- amphitheatre
-- pavilion
-- panopticon
-- atelier (workshop)
-- athenaeum
-- lyceum (lot of lychee around)
-- the garden path "to mislead someone"
-- a very smelly tree (why did I write this?)
-- black lotus
-- a talking cave
-- The quivering quill (a spell store)
-- The stove, a tavern or speakeasy or hideout
-- A casino or various luck based gambling games in the world
-- a circus?
-- small peoples like the minish and maybe theyre quirky in some way
-- a zoo (royal menagerie?) in the big city
-- ophidiarium - snake aquarium
-- town called "fleet-something"
-- town called "___-burn"
-- brothel, when you go in it gives a magenta ellipsis and then you leave.
-- saltern
-- ashery
-- calefactory (in a monastery, has a 'cocklestove'?)
-- lion's head tavern - where you learn about monocaine
-- "___ grotto" (blue grotto, gold grotto, red grotto, white grotto)
-- store called "goodly goods"
-- "wasteland" (maybe orcs are from here)
-- copse
-
-
-INSTITUTIONS/FACTIONS:
-- royal messengers (mages that maintain teleportation)
-- royal guard (spellswords)
-- clothier's guild
-- alchemist's guild
-- builder's guild
-- smiths are unguilded (independent)
-- ranger's guild (robinhood types? not a real guild?)
-- raveneers (Neutral mercenaries/adventurers/assassins)
-- frith guild
-- beghards and beguines (austere group, shaves heads and wears brown robes)
-- a group that all wears masks and dark cloaks (all look the same, don't speak)
-- group of 7 legendary heroes/antiheroes/fighters
-
-
-MISC WORLD IDEAS:
-- "he's not the guy... I am!"
-- witengamot
-- "omens aghast" as a greeting
-- grimoire, book of spells
-- tome, book of lore
-- therimoire, book of recipes/rituals? or good spells?
-- the world underwent a 'cataclysm' and then a 'salvation'
-- giant eternal clock
-- a story legend of a hero who masters magic in an underground empire, called "ZORK"
-- monolith/obelisk
-- cairn
-- stele
-- serpentine column
-- wicker man (burned as sacrifice)
-- magic nail (like golden railroad nail?)
-- fighting ur nega/anti self
-- sign that says "no philandering!"
-- gnomes
-- chantry, alms, heriot
-- midden (old garbage heap?)
-- magic art museum?
-- wicklewort trees
-- fizzbuzz (secret code of some kind)
-- "alu" runic charm word
-- something called "The Wizard's Fee"
-- Animated snowman "Does it smell like carrots to you?" as a secret code?
-- Eternal Stew
-- bonefire
-- a deal with a demon (with consequences)
-- label that reads "FOR SCIENTIFIC USE ONLY"
-- RICKROLL
-- "the old covenant" deal between kings/kingdoms. Perhaps the mountain king and the high king, it is defied and now a conflict begins
-- the four horsemen of awesomeness (or happiness)
-- suspicious black cube (maybe something like pandoras box, unleashes evil?)
-- pandora box "banishment box" which unleashes all creatures the player has ever banished with the banish spell
-- limericks/poems/poem book?
-- the mist
-- "the otherworld" like welsh otherworld, enter through mist or by given maiden a silver apple
-- quicksand
-- a gag/parody/twist of the sword in the stone
-- a jar that is REALLY hard to open
-- bottomless pit
-- An orb (palantir?) "ponder the orb?" maybe like seven 7 orbs in the world
-	- fortune telling orbs which might alter your future?
-- the four humors
-- "sphinx of black quartz, judge my vow"
-- "if you see a fox in the forest, don't follow it"
-- "Abandon all hope, ye who enter here"
-- "If you listen I can tell you more about this world" - someone who only lies
-- seven wonders: lighthouse, colossus, gardens, citadel/castle, mountain sanctuary, 
-	mausoleum, giant tree, huge obelisk, giant cavern/stone temple, island palace,
-	giant library (Athenaeum), cathedral, tower of some kind, colosseum/arena, 
-	catacombs/necropolis, pavilion, stonehenge type (the __ stones)
-- obelisks at different leylines, maybe they're called leystones or monoliths
-- Jeremiad (book talking about the ancient cataclysm?)
-- hillforts
-- the king is portrayed as a gardener. gardening important for royalty "rooting out snakes"
-- wend
-- futhark/runes
-- codex
-
-
-QUEST IDEAS:
-- whodunit mystery (one or two of these)
-- becoming an esteemed knight
-- jack and the beanstalk quest with hen and harp
-- a rabid tiger is terrorizing a town. should kill it
-- golden bug quest (collect 50 hidden bugs throughout the world) [reward??]
-- one quest for each god's temple, and the player gets rewarded with a QP for it and a word from the god.
-- bone faeries which will give you money for bones
-- fighting bones malone and the spooky boys
-- impersonating someone to gain entry to a place
-- "A christmas carol" type plotline?
-- greatest knight in the world retiring to be a baker. Need to persuade him to return
-- nine witches to be defeated
-- "a fools errand"
-- rescuing a maiden, have to put her on a horse?
-
-
-CHARACTER NAME IDEAS:
-	The zodiac signs
-	The Lady of the Lake
-	Fisher King (old fisherman named Anfortas, looking for Grail, limping/wounded leg)
-	Enchantress of Number(Numeral)
-	All-knowing demon that follows you (Laplace's Demon)
-	villain king of people
-	villain king of monsters
-	villain king of beasts
-	giant swamp crocodile
-	Lilith - demon lady? (Secretly a demon lady???)
-	Mammon - demon representing greed?
-	Glycon the false Serpent God (secretly a puppet?)
-	Balthazar the Wizard
-	A mage named Greengage
-	Demons named null and void
-	Master of Ravens
-	Sir Tom Knight (Sir Tom the Hero!)
-	Mr.Oliphant
-	Sir Bors
-	Gremlaw the Goblin
-	The Oracle
-	Yernagate the wise 
-	Boyg - from Peer Gynt, gigantic troll serpent
-	Leviathan
-	Swan Maiden
-	Gog and Magog - maybe evil?
-	one bbeg is the world serpent called Aeormungand (Leviathan?), also called Demiurge
-	The Green Goddess
-	Galigantus the giant
-	Grendel
-	Sylvain - hero
-	Pergynt - from myth, maybe an ex-hero guy
-	Archons (regional rulers? maybe names for the giants)
-	Ashaver - Wandering eternal old man, was a cobbler
-	Saint guinefort - holy dog
-	Gelert, another good dog
-	Dovregubben (the mountain king) from Peer Gynt. Rescuing three dairy maids?
-	Polemarch (archon of war)
-	Hazelnut farmer with children named, fil, bert, hazel, and pet nut
-		quest to retrieve a comb? (maybe get a diamond?) from Hazelnut Child tale
-	The Benevolent Frog King (looking for his son the frog prince?) - Vodyantsar?
-	The Frog Prince (vodyanoy)
-	Frog Wizard - Zazmoze
-	"Emperor Ophidian"
-	Falak - serpent
-	another bbg (Behemoth)
-	also an evil wizard ofc
-	a cultist of Uramut who becomes possessed and tries to unleash him
-	a fighter/warrior warlord
-	a mob boss criminal type
-	King Nidhad,
-	Blind King
-	Wayland the Smith/Volund the Smith
-	Egil the Archer (from myth)
-	Dietrich Von ___ hero, along with Regin Smith, Heimir, Wittich
-	time traveler who sublty appears to be from our earth
-	Thomas Swinsword (playwright)
-	River Jack
-	Grand Vizier
-	Talking raven that speaks poetic scary omens
-	Falstaff (from shakespeare)
-	bird named Kwock
-	merchant named Pryce
-	goblin wizard named Pukwudgie
-	pair of honest guys "Frank and Ernest"
-	snake cultists Moin and Goin
-
-	Somnus, Orion, Pax, Tyro, Cogg, Garl, Ike, Uther, Kess, Roach, Mito, Lugh, Muriel
-	Eadmer, Godfrey, Einhard, Vixen, Aloy, Eilonwy, Beowin, Alahad, Galatea, Grin
-	Spiridon, Khartoum, Heironymus, Gundahar, Wace, Leofwyn, Drythelm, Hengran, Harbeck
-	Hancourt, Aecury, Aelfwyne, Arwald, Merwin, Ichabod, Alcuin, Dwint, Egfrith, Gildaz,
-	Wulfstan, Salome, Ewart, Ephraim, Bragwen, Bran, Ulysses, Ambrose, Conomor, Hengist,
-	Cherdic, Osca, Chester, Ned, Rhiannon, Tethra, Lir, Donne, Phane, Blinda, Rozbeth,
-	Saladin, Flynwirt, Lalona, Wendell, Jane, Quildin, Pipin, Graley, Helen, Halfdan,
-	Clyde, Boffin, Wren, Eloise, Nora, Hawken, Questley, Hal, Gwyssa, Zinmere, Hette,
-	Reinhart, Sarge, Leor, Merrick, Everett, Thena, Anju, Zelda, Leif, Cato, Jezebel,
-	Sapna, Arden, Fiona, Euphemia, Asta, Zagler, Olaf, Sybith, Matilda, Rusebrook, Sporus,
-	Olfred, Sayid, Mohammed, Ahad, Kess, Ashara, Pella, Mina, Jasmine, Mohs, Sophia,
-	Frome, Herman, Coronis,
-
-	polemarch,commodore,margrave,
-	thane,earl,baron,duke,count,burgess,
-	reeve,magistrate,warden,alderman,franklin,manciple,chamberlain,seneschal
-	dame,lady,"hostess",courtesan,
-	bailiff,steward,sheriff,guard,watchman,usher
-	knight,archer,cavalier,squire,page,knave,
-	boatman,sailor,pilot,ferryman,shipman,
-	messenger,courier,envoy,herald,cryer
-	priest,nun,parson,rector,prior,chaplain,vicar,monk,abbott,bishop,friar,deacon
-	librarian,scribe/scrivener,historian,clerk,cartographer,
-	playwright,painter,poet,sculptor
-	bard,trumpeteer,fiddler,flautist,lyrist,puppeteer,jester,dancer
-	wizard,witch,warlock,druid,shaman
-	apothecary,alchemist,herbalist,dyer,potion seller
-	doctor,midwife,surgeon,barber
-	undertaker,groundskeeper
-	baker,butcher,miller,brewer,vintner,cheesemonger,spiceman,milkmaid,chef
-	merchant,trader,peddler,huckster,salesmen,jeweler
-	blacksmith,brownsmith,whitesmith,goldsmith,silversmith,locksmith,gunsmith,puddler
-	carpenter,mason,glassmaker,wainwright,sawyer
-	cooper,potter,chandler,fletcher,bowyer,luthier
-	fuller,tanner,tailor,weaver,seamstress,cobbler,hatter,parchminer
-	fisherman,huntsman,woodsman
-	beekeeper,aviarist,falconist,ratcatcher,
-	rancher,stablekeeper,cowboy,shepherd,ostler
-	farmer,gardener,sweeper,yeoman
-	innkeeper,tavernkeeper,wench
-	traveler,pilgrim,wanderer,nomad
-	ragpicker/junkman,confectioner,collier
-
-
-
-CREATURE IDEAS:
-SNAKES
-yellow python -- red python -- brown python -- white python -- black python -- giant python -- aeormungand
-nagas
-basilisks
-hypnalis
-
-ANIMALS
-sirens
-stoats
-lemmings
-
-MERS
-Vodyanoys and Vodyantsar (where the 'kappa horn' item would be) ("The Hasterman")
-mermaid (captive?)
-
-GOBLINS
-goblins - intelligent small green bipedal creatures
-redcap - goblin warriors with red hats
-hobgoblin - mischevious kind goblins
-
-OTHER
-stork babies
-messenger demons
-biblically accurate angels
-Troll?
-the questing beast - Glatisant (giraffe)
-argentavis (big bird)
-fey - a class of intelligent creatures
-orcs - disturbing creatures that resemble large mutant humans
-dragons - large majestic serpentine winged creatrues
-slime skeletons
-slime armor monster
-snark
-wumpus
-albatross
-muskrat
-bellbird
-horses: palfrey, destrier, "bony nag", bay horse, palomino, garron, 
-	pony, colt, foal, courser, rouncey, stallion, mustang, charger
-dormouse (known for sleep)
-
-
-
-THIRTEEN GODS WITH TEMPLES:
-
-Arunius - God of intelligence, moon, brotherhood, magic, writing, truth, and law
-The King of the Gods, gave writing to humans, appears as a bearded older man. Gives the blessing of sagacity.
-
-Brym - God of strength, storms, war, fighting, victory
-Fought and defeated Ixis the Dragoness, represented by lightning. Appears as a severe bald man in armor. Gives the blessing of brawniness.
-
-Istur - God of skill, rain, rivers, crafting, art, discipline, memories
-Appears as a long-haired man in robes with tools or a brush. Gives the blessing of prowess.
-
-Saqemir - God of luck, the sea, money, alcohol, humor
-Aphpears as a hairy man with a long beard. Gives the blessing of prosperity. Has a pet goose.
-
-Haeron - God of speed, the sky, wind, messages, flight, loyalty
-Is the loyal servant of Arunius. Appears as a man with wings or a cape and curly hair. Gives the blessing of swiftness.
-
-Rook - God of death, winter, plagues
-The ruler of the underworld. Oftentimes appears as a man with no eyes and skeletal hands. Represented by a murder of crows.
-
-Veia - Goddess of charisma, sun, love, magic, music
-The Queen of the Gods, gave music to humans. Appears as a golden older women with a bright crown. Gives the blessing of felicity.
-
-Cassifern - Goddess of stamina, beasts, summer, freedom
-A woman with antlers and a tail. She plays the flute. Sometimes appears as a huntress. Gives the blessing of liveliness. Symbolized by a squirrel.
-
-Astrathe - Goddess of wisdom, stars, prophecy, fate, time
-An older woman in long starry robes and a tall hat and a third eye. Gives the blessing of lucidity.
-
-Zet - Goddess of faith, harvest, peace, protection, fertility, earth
-Symbolized by a blue rose. Usually appears as a woman in a white robe with a blue halo. Sometimes shown pregnant or with babies. Gives the blessing of fidelity.
-
-Galeanna - Goddess of constitution, plants, healing, patience, mercy
-A woman with a flower garland and very long light hair. Sometimes shown covered in vines. Gives the blessing of toughness.
-
-Ixis - Goddess of fire, rebirth, dragons, chaos
-Rebelled and lost to Brym. Often appears as a large red Dragoness. Gives a random buff from {flying, fireproof, blazing, total heal}
-
-Uramut - Deity of the unknown, secrets, darkness, sleep, dreams
-Symbolized by a yellow eye. Shown as a shadowy creature or a tentacle beast.
-
-https://www.ancient.eu/article/885/egyptian-gods---the-complete-list/
-https://en.vikidia.org/wiki/List_of_Norse_gods_and_goddesses
-
-
-
-each of the gods appear in the world in a unique form, such as:
-a cat
-a giant wolf
-a giant serpent/python
-a poor old man
-a (devilish?) queen
-a talking weapon
-a whirlwind
-the same as the beholder (the player)
-a giant/cyclops
-a hooded wanderer
-a swarm of birds (or something else?)
-a dragon?
-a rock/mountain?
-a tree?
-a shadow (maybe tentacles?)
-a wisp/fairy?
-a goose?
-a flower?
-
-
-
-GOLDEN BUG QUEST:
-50 golden bugs that can be found around the world
-Spider (golden orb weaver?), Termite, Cocoon, Scorpion, Butterfly,
-Roach, Horsefly, Hornet, Ant, Mantis,
-Cricket, Dragonfly, Stinkbug, Earwig, Flea,
-Stickbug, Mosquito, Silkworm, Firefly, Silverfish,
-Locust, Cicada, Mayfly, Moth, Bumblebee,
-Aphid, Louse, Weevil, Lady Beetle, Tiger Beetle,
-Pillbug, Bedbug, Mealybug, Scarab Beetle, Tick,
-Snail, Earthworm, Slug, Seaslug, Glowworm,
-Centipede, Millipede, Leafhopper, Lovebug, Lacbug,
-Goblinmite, Brainworm, Orc Beetle, Mimicbug, Waterbear
-
-
-
-SPELL NAME IDEAS:
-Abjure, Aliment, Amphibify, Anathema, Armistice, Aspersion, Asterism, Ataxia, Avulsion
-Bamboozle, Bang, Banish, Banquet, Beacon, Bellow, Bolster, Boogaloo, Boom, Busk
-Cacophony, Catharsis, Celeritas, Chutzpah, Clemency, Cloudburst, Collapse, Conjure
-Delirium, Deluge, Dessicate, Discord
-Effervesce, Eidolon, Enchant, Ennervation, Enthrall, Expectorate, Expell
-Facade, Facsimile, Feast, Festoon, Fib, Fireball, Fizz, Flare, Frostbite
-Galvanize, Gambit, Glower, Goad, Gorgonize, Gravitas
-Halo, Harmony, Haste, Haunt, Hayfever Hex, Hypnosis
-Immolate, Invigorate, Invisibility, Iridescence
-Jackpot, Jamboree, Jargon, Jeopardy, Judgement
-Lampoon, Lash, Lethargy, Levitate, Lignify, Limerence, Lure
-Maelstrom, Malaise, Manumit, Melancholy, Micturate, Miracle (random effect), Mirage, Moonshot
-Nyctophobia,
-Osculation
-Parley, Paroxysm, Parry, Penumbra, Petrify, Phantasm, Pilfer, Ponder, Prescience, Psychosis, Putrefaction
-Refection, Rend, Repast, Resurrect, Revelry, Riposte, Ruin
-Sanctuary, Sequester, Scintillate, Scry, Serein, Shivaree, Simper, Simulacrum, Smite, Smithereens, Spangle, Squib, Sunder, Sunshower, Synapse
-Telekinesis, Tempest, Tether, Torrent
-Usurp
-Vamoose, Vendetta, Veritas, Volley
-Wallop, Weal, Wode, Woe
-Zeitgeist, Zephyr
-
-
-okay rooms to include in new world for testing:
-- a goblin with some weapons/items on it
-- a key/locked chest
-- chest within a chest
-- wall that can be climbed or flown past
-- amulet that spawns something
-- amulet that adds condition
-- several potions of varying colors
-- sign to read
-- item with capital letter naming
-- bell to ring
-
-- a room with magic items/wand?
-- what about the pit?
-- magic thing that reacts when you look on/through it
-- fish in the pond
-- fountain to take water from
-- seed to plant and water
-- mound to dig up
-- something to light
-- dog to pet?
-- statue to pray at
-- something to tie/untie
-- something to write with?
-
-- NPCs to talk to
-- something to mount/ride
-- something to craft/cook
-
-
-DIALOGUE IDEAS:
-
-- make people surprised when you are naked
-- make people mention if you have the same name
-- people run from you if their fear is maxed out
-- some people will want you to put away your weapon(s)
-
-- some people will give you stuff
-- some people will ask you to do something for them
-- some people will say tales and tidbits
-- some will ask you to give them stuff
-
-- TALK TO ANIMALS:
-	- there will be a spell to talk to animal (maybe called wildspeak)
-	- octopi will speak to you in an undecipherable text (maybe jumbled letters or other symbols)
-	- horses will be bold cowboy-like talk
-	- goats will be rude
-	- sheep may be all similar
-	- cows will be apathetic
-	- pigs will be italian or mafiosos? they are smart
-	- chickens will crack chicken jokes and dad jokes
-	- dogs and cats will be helpful. Dogs will say positive things. cats will give you human gossip
-	- there will be a zoo with some animals
-	- not sure about deer, squirrels, rats
-	- wolves, lions, and bears will be austere but intelligent. they will want to trade
-	- birds will only speak in performative language; songs, poems (maybe lore/hints), jokes. maybe eagles will say haikus
-	- reptiles will use cryptic speech with old grammar and simple ideas
-	- fish will say glub glub or say simple words
-	- bugs will just make weird sounds
-
-
-
-Bodies of Water:
-- trickle
-- rill
-- rivulet
-- stream
-- brook
-- creek
-- river

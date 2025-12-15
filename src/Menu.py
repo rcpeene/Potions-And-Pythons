@@ -327,7 +327,7 @@ def loadGame(filename=None):
 	# try:
 	Core.player = readJSON("player.json",object_hook=objDecoder)
 	Core.world = readJSON("world.json",object_hook=worldDecoder)
-	dlogForest = readDialogue("../../Dialogue.json")
+	dlogForest = readDialogue("../../gamedata/Dialogue.json")
 	Core.game = readGame("game.txt",Core.world,dlogForest)
 	# hopefully load doesn't fail, that would suck
 	# except:
@@ -426,13 +426,13 @@ def createCharacter():
 # starts a new game and returns player, world, and game objects
 def newGame():
 	# initializes the game at the "cave" room
-	dlogForest = readDialogue("Dialogue.json")
+	dlogForest = readDialogue("./gamedata/Dialogue.json")
 	Core.game = Core.Game(0,Core.defaultRoom,Core.defaultRoom,0,set(),dlogForest,
 	Creatures.factory,Items.factory)
 	# initializes from the character creation screen
 	Core.player = createCharacter()
 	# tries to load a clean new world from initial world file, must be defined after player
-	Core.world = readJSON("World.json",object_hook=worldDecoder)
+	Core.world = readJSON("./gamedata/World.json",object_hook=worldDecoder)
 
 	Core.game.currentroom = Core.world["cave"]
 	Core.game.prevroom = Core.world["cave"]

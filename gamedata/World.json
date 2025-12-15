@@ -281,8 +281,7 @@
 						"composition": "bread",
 						"heal": 1
 					}
-				],
-				"descname": "shelf with things on it"
+				]
 			},
 			{
 				"__class__": "Table",
