@@ -28,24 +28,23 @@ class Axe(Core.Weapon):
 class Bed(Core.Item):
 	def traverse(self,traverser,dir=None,verb=None):
 		if verb == "jump":
-			if self.occupy(traverser):
-				if traverser is Core.player:
-					Core.Print(f"You jump onto {-self}.")
-				else:
-					Core.Print(f"{+traverser} jumps onto {-self}.")
-				traverser.changePosture("crouch")
-			return True
+			Core.Print(traverser+f"jumps onto {-self}.")
+			traverser.changePosture("crouch")
+			self.occupy(traverser)
+		if verb == None:
+			verb = "lay"
+
 		if traverser.platform is not self and self.occupy(traverser):
+			displayVerb = "gets in" if verb == "lay" else f"{verb}s on"
+			Core.Print(traverser+f"{displayVerb} {-self}.")
 			if traverser is Core.player:
-				Core.Print(f"You get in {-self}.")
 				Core.game.setPronouns(self)
-			else:
-				Core.Print(f"{+traverser} lies down on {-self}.")
 		if traverser.platform is self:
-			traverser.changePosture("lay")
-			traverser.addStatus("cozy",-4)
-			return True
-		return False
+			if verb in ("stand","crouch","sit","lay"):
+				traverser.changePosture(verb)
+			if traverser.posture() == "laying" and not traverser.hasStatus("cozy",-4):
+				traverser.addStatus("cozy",-4)
+		return True
 
 
 
@@ -368,18 +367,67 @@ class Mouth(Core.Item):
 
 
 
-class Pool(Core.Fixture):
-	def __init__(self,name,desc,weight,composition,finite=False,occupyprep="in",**kwargs):
+class Plash(Core.Container):
+	def __init__(self,name,desc,weight,composition,items,finite=False,occupyprep="in",
+	**kwargs):
 		assert composition in Data.liquids
-		super().__init__(name,desc,weight,composition,**kwargs)
+		super().__init__(name,desc,weight,-1,composition,items,fixed=True,**kwargs)
+		self.depth = self.capacity
 		self.occupyprep = occupyprep
 		self.finite = finite
+		self.ceiling = None
+		self.walls = None
+		self.floor = None
+
+
+	def assignRefs(self,parent):
+		super().assignRefs(parent)
+		self.floor = self.parent.floor
+
+
+	# try to enter the Container, applying any relevant status effects
+	def enter(self,traverser):
+		if traverser in self:
+			return False
+		if super().enter(traverser):
+			traverser.addStatus("wet",-4,stackable=True)
+			traverser.checkSubmersion()
+			return True
+		return False
+
+
+	# try to exit the Container, removing any relevant status effects
+	def exit(self,traverser):
+		if traverser not in self:
+			return False
+		traverser.removeStatus("submerged",-4)
+		traverser.replaceStatus(("wet",-4),("wet",21))
+		return super().exit(traverser)
+
 
 
 	def canAdd(self,I):
-		if self.occupantsSize() + I.Size() > self.Size():
+		selfDensity = Data.densities.get(self.composition,1)
+		itemDensity = Data.densities.get(I.composition,1)
+		if itemDensity < selfDensity:
+			return False
+		# TODO: check if boat or buoyant?
+		# if isinstance(I,Boat):
+		# 	return False
+		# case where Plash has infinite capacity. Imagine an endless puddle
+		if self.capacity == -1:
+			return True
+		# case where Plash has nothing in it and not too small. Imagine a shallow puddle
+		if len(self.items) == 0 and self.Size() > I.Size() // 5:
+			return True
+		# case where Plash is full
+		if self.itemsSize() + I.Size() > self.capacity:
 			return False
 		return True
+
+
+	def canSubmerse(self,creature):
+		return creature.Size() < self.Size() // 5
 
 
 	def disoccupy(self,occupant):
@@ -390,49 +438,49 @@ class Pool(Core.Fixture):
 		occupant.removeStatus("wet",-4)
 
 
+	def occupy(self,occupant):
+		if self.canAdd(occupant):
+			return self.add(occupant)
+		assert False
+		# if super().occupy(occupant):
+		# 	occupant.addStatus("wet",-4)
+		# 	return True
+
+
 	def traverse(self,traverser,dir=None,verb=None):
 		if dir in Data.directions: dir = Data.directions[dir]
-		# if self in traverser.objTree():
-		#	traverser.Print(f"You can't enter {-self}. It's within your Inventory.")
-		# 	return False
 		if traverser in self.occupants:
 			Core.Print(f"You can't, you are {traverser.position()}.")
 			return False
 
-		if dir in ("out","outside"):
-			if self is traverser.parent:
-				if self.closed:
-					self.open(traverser)
+		if dir == "out":
+			if self is traverser.parent or traverser in self.occupants:
 				traverser.Print(f"You get out of {-self}.")
 				if self.parent is not Core.game.currentroom:
 					traverser.waitInput()
 				self.disoccupy(traverser)
+				if traverser in self:
+					traverser.changeLocation(self.parent)				
 				return True
 			else:
-				traverser.Print(f"You're not in {-self}.",color="k")
+				traverser.Print(f"You're not {self.occupyprep} {-self}.",color="k")
 				return False
-		# if traverser.parent is self:
-		# 	Core.Print(f"You're already in {-self}.")
-		# 	return False
-		if dir not in ("in","into","inside",None):
+		if traverser.parent is self or traverser in self.occupants:
+			Core.Print(f"You're already {self.occupyprep} {-self}.")
+			return False
+		if dir not in ("in","out","on",None):
 			Core.Print(f"{+self} does not go {dir}.",color="k")
 			return False
-
-		if dir is None:
-			dir = "into"
-		if verb is None:
-			verb = "get"
-
 		if not self.canAdd(traverser):
-			if traverser is Core.player:
-				traverser.Print(f"You can't enter {-self}. There's not enough room.")
+			traverser.Print(f"{+traverser} can't fit {self.occupyprep} {-self}.")
 			return False
 
+		if dir is None: dir = "in"
+		if verb is None: verb = "get"
 		traverser.Print(f"You {verb} {dir} {-self}.")
+		traverser.changeLocation(self)
 		if traverser is Core.player:
 			Core.game.setPronouns(self)
-		self.occupy(traverser)
-		traverser.addStatus("wet",-4)
 		return True
 
 
@@ -498,7 +546,7 @@ class Sign(Core.Item):
 
 	# prints the text on the sign in quotes
 	def examine(self,looker):
-		looker.Print(f'\n"{self.text}"\n',color='y')
+		looker.Print(f'\n"{self.text}"',color='y')
 
 
 
@@ -551,6 +599,7 @@ class Wall(Core.Passage):
 
 
 	def traverse(self,traverser,dir=None,verb=None):
+		print("TRAVERSING WALL",self,dir,verb)
 		if dir in Data.directions: dir = Data.directions[dir]
 		if dir == None:
 			if len(set(self.links.values())) == 1:
@@ -574,7 +623,7 @@ class Wall(Core.Passage):
 
 		if traverser.riding:
 			return self.traverse(traverser.riding,dir=dir)
-		if traverser.carrying and verb in ("climb","crawl"):
+		elif traverser.carrying and verb in ("climb","crawl"):
 			traverser.Print(f"You can't climb, you are carrying {~traverser.carrying}.")
 			return False
 		if not self.canPass(traverser):
@@ -585,7 +634,7 @@ class Wall(Core.Passage):
 
 		if verb != "jump" or dir not in ("down","off") or traverser.hasAnyStatus("flying"):
 			contest = Core.roll(traverser.ATHL()) - self.difficulty
-			if contest > 0 or traverser.hasAnyStatus("clingfast","flying"):
+			if contest > 0 or traverser.hasAnyStatus("clingfast","flying","submerged"):
 				traverser.changeLocation(self.getNewLocation(dir))
 				return True
 
@@ -608,15 +657,16 @@ class Wall(Core.Passage):
 		if self.links[dir] == self.links.get("up",None):
 			return item.fall()
 
-		# Print(f"{+item} goes {self.passprep} {-self}.")	
+		# Print(f"{+item} goes {self.passprep} {-self}.")
 		item.changeLocation(self.getNewLocation(dir))
 
 
 # Windows are passages that can only be opened by breaking them
 # they have a view that looks at the destination when examined
 class Window(Core.Passage):
-	def __init__(self,name,desc,weight,composition,links,closed=True,broken=False,
-	view=None,passprep="through",**kwargs):
+	def __init__(self,name,desc,weight,composition,linkKeys,linkPort,closed=True,
+	broken=False,view=None,passprep="through",**kwargs):
+		links = {linkKey: linkPort for linkKey in linkKeys}
 		super().__init__(name,desc,weight,composition,links,passprep=passprep,**kwargs)
 		self.view = view
 		if self.view is not None:
@@ -641,13 +691,19 @@ class Window(Core.Passage):
 	def breaks(self):
 		if self.id not in Core.game.itemRegistry:
 			return False
-		Core.Print(f"{+self} breaks.")
+		if self.broken:
+			return False
 		self.broken = True
 		self.closed = False
 		self.durability = -1
 		self.passprep = "through"
+
+		for portal in self.links.values():
+			portal.breaks()
+
+		self.printNearby(f"{+self} breaks.")
 		if self.weight > 2 and self.composition == "glass":
-			self.Print("Shards of glass scatter everywhere.",color="o")
+			self.printNearby("Shards of glass scatter everywhere.",color="o")
 		while self.weight > 2 and self.composition == "glass":
 			shardWeight = randint(1,3)
 			self.weight -= shardWeight

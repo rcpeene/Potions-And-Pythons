@@ -391,7 +391,7 @@ def findFirst(text,substrs):
 
 # uses first word of verbString (assumes its a verb) and conjugates it based on noun
 def conjugate(noun,verbString):
-	irregulars = (('has','have'),('is','are'),('was','were'))
+	irregulars = (('has','have'),('is','are'),("isn't","aren't"),('was','were'))
 	sibilants = ("s","sh","ch","x","z","o")
 
 	# get the first word (assumed to be a verb) that begins verbString
@@ -675,7 +675,7 @@ def misspell(text):
 			# ie -> ei
 			case ("i","e",z): repl = cat("ei",z)
 			# ea -> ee
-			case ("e","a",z) if z != "d": repl = cat("ee",z)
+			case ("e","a",z) if z not in ("d"," ",None): repl = cat("ee",z)
 			# ais -> aze
 			case ("a","i","s"): repl = "aze"
 			# air,ain,aid -> are,ane,ade
@@ -891,9 +891,11 @@ def assignRefsRecur(parent):
 def buildWorld():
 	# assign all room links to existing rooms
 	# ensure all room names are stored as lowercase
-	for roomName in world.copy():
+	for roomName in list(world.keys()):
 		room = world[roomName]
 		del world[roomName]
+		assert room.name.lower() == roomName, f"Room name {room.name.lower()} does not " \
+		f"match its key in world dict {roomName}"
 		assert room.name.lower() not in world, f"Room name {room.name.lower()} " \
 		"already exists in world"
 		world[room.name.lower()] = room
@@ -1755,10 +1757,6 @@ class GameObject():
 		# remove conditions with 0 duration left
 		self.removeStatus(reqDuration=0)
 
-		for obj in self:
-			if not isinstance(obj,Celestial):
-				obj.passTime(t)
-
 
 	### Getters ###
 
@@ -2094,10 +2092,11 @@ class Game():
 		self.time += t
 		self.silent = player.hasAnyStatus("asleep","dead")
 
-		for room in self.renderedRooms():
-			# self.silent = room is not self.currentroom or \
-			# player.hasAnyStatus("asleep","dead")
-			room.passTime(t)
+		# objs can change location during passTime;
+		# flatten all object trees so we don't call passtime twice on any object
+		roomObjTrees = (room.objTree(includeSelf=True) for room in self.renderedRooms())
+		for obj in {o for objTree in roomObjTrees for o in objTree}:
+			obj.passTime(t)
 
 		# probably not necessary, celestials don't have status conditions
 		# for celestial in celestials:
@@ -2297,6 +2296,8 @@ class Game():
 
 	# look up at the sky or ceiling and describe what is seen
 	def LookUp(self,target):
+		if target.startswith("the "):
+			target = target[4:]
 		if self.currentroom.ceiling is not None:
 			if target not in (None,"ceiling","roof"):
 				Print("You can't see the sky from here.")
@@ -2357,8 +2358,8 @@ class Game():
 # directed graph, facilitated by the world dict, where the links dict specifies
 # the edges from a given node to its neighboring nodes.
 class Room(GameObject):
-	def __init__(self,name,domain,desc,links,fixtures,items,creatures,size=1000,
-	passprep=None,ceiling=None,walls=None,floor=None,status=None):
+	def __init__(self,name,domain,desc,links,fixtures,items,creatures,capacity=1000,
+	passprep=None,composition=None,ceiling=None,walls=None,floor=None,status=None):
 		# name serves as the Room's unique id
 		self.name = name
 		# domains are regions within the world, used for determining creatures to spawn
@@ -2382,7 +2383,7 @@ class Room(GameObject):
 			f"Non-creature {c} in Room {self.name} creatures list"
 
 		# determines how much mass the Room can hold, objects too large cannot enter
-		self.size = size
+		self.capacity = capacity
 
 		self.status = status if status else []
 		for cond,dur in self.status:
@@ -2393,19 +2394,23 @@ class Room(GameObject):
 		self.pronoun = "it"
 		self.determiner = None
 
+		self.composition = composition
 		# these are the default room surfaces, 
 		# given from the world json as strings of the surface's composition
 		self.ceiling = None
 		self.walls = None
 		self.floor = None
 		if ceiling:
-			self.ceiling = Surface("ceiling",f"A ceiling of {ceiling}.",size//3,ceiling,
-			aliases=["roof"])
+			self.ceiling = Surface("ceiling",f"A ceiling of {ceiling}.",capacity//3,
+			ceiling,aliases=["roof"])
 		if walls:
-			self.walls = Surface("wall",f"Walls of {walls}.",size//3,walls,
+			self.walls = Surface("wall",f"Walls of {walls}.",capacity//3,walls,
 			aliases=["walls"])
-		if floor:
-			self.floor = Surface("ground",f"A floor of {floor}.",size//3,floor,
+		if floor in Data.liquids:
+			self.floor = Surface("surface",f"A surface of {floor}.",capacity//3,floor,
+			aliases=[floor],determiner="the")
+		elif floor:
+			self.floor = Surface("ground",f"A floor of {floor}.",capacity//3,floor,
 			aliases=["floor"],determiner="the")
 		self.surfaces = (self.ceiling,self.walls,self.floor)
 
@@ -2505,6 +2510,8 @@ class Room(GameObject):
 	def addStatus(self,name,dur,stackable=True):
 		if self.hasStatus(name) and not stackable:
 			return False
+		if self.hasStatus(name,dur):
+			return False
 		insort(self.status,[name,dur])
 		if name.startswith(("AREA","ITEM","CREATURE")):
 			self.addAreaCondition(name)
@@ -2528,6 +2535,9 @@ class Room(GameObject):
 				if key(obj):
 					obj.addStatus(name,dur)
 
+		obj.checkSubmersion()
+		return True
+
 
 	# remove any room effects from the obj exiting
 	def exit(self,obj):
@@ -2536,6 +2546,7 @@ class Room(GameObject):
 		for cond,dur in condsToRemove:
 			obj.removeStatus(cond,-1)
 		self.remove(obj)
+		return True
 
 
 	# pass time for the Room, chance to spawn creatures, sort creatures by MVMT speed
@@ -2703,12 +2714,12 @@ class Room(GameObject):
 
 	# for rooms, size is their capacity
 	def Size(self):
-		return self.size
+		return self.capacity
 
 
 	# get vacant space in the Room
 	def vacancy(self):
-		return self.size - self.itemsSize()
+		return self.capacity - self.itemsSize()
 
 
 	### User Output ###
@@ -2888,6 +2899,8 @@ class Item(GameObject):
 	def addStatus(self,name,dur,stackable=True):
 		if self.hasStatus(name) and not stackable:
 			return False
+		if self.hasStatus(name,dur):
+			return False
 		insort(self.status,[name,dur])
 		return True
 
@@ -2943,6 +2956,32 @@ class Item(GameObject):
 				self.Print(f"{+self} creaks under the weight...")
 
 
+	# check if Item is submersible in liquid based on size and floor composition
+	# not that this does not *remove* submersion, only adds it if needed
+	def checkSubmersion(self):
+		submerseComp = self.submersedIn()
+		if submerseComp in Data.liquids:
+			self.addStatus("wet",-5)
+		else:
+			self.replaceStatus(("wet",-5),("wet",21))
+
+		if submerseComp in Data.liquids or \
+		hasMethod(self.parent,"canSubmerse") and self.parent.canSubmerse(self):
+			liquidDensity = Data.densities.get(submerseComp,1)
+			if getattr(self.parent,"composition",None) in Data.liquids:
+				self.addStatus("submerged",-4)
+				return True
+			if not self.canSwim(liquidDensity) and not self.hasStatus("submerged"):
+				self.Print("You are too heavy to stay afloat!",color="o")
+				self.addStatus("submerged",-4)
+				return True
+
+		elif submerseComp not in Data.liquids:
+			self.removeStatus("submerged")
+			self.removeStatus("swimming")
+		return False
+
+
 	# if there's not enough space to occupy an Item, objects fall off, biggest first
 	def checkVacancy(self,obj=None):
 		if obj is not None:
@@ -2957,7 +2996,7 @@ class Item(GameObject):
 			notVacant = self.Size() < occupant.Size()//5 and len(self.occupants) <= 1
 			notVacant = self.Size() < self.Size() - self.occupantsSize(occupant)
 			if notVacant:
-				self.Print(f"{+self} is too small to support {-occupant}.",color="o")
+				self.Print(f"{+self} is too small for {-occupant}.",color="o")
 				self.disoccupy(occupant)
 				occupant.fall(self.Size()//5)
 				anyFell = True
@@ -3026,9 +3065,15 @@ class Item(GameObject):
 		self.checkVacancy()
 		self.checkOccupantsWeight(silent=True)
 
-		if not isinstance(self.parent,Creature) and self.anchor() is None:
-			if not self.fixed and not self.hasStatus("flying"):
-				self.fall()
+		if not isinstance(self.parent,Creature):
+			if not self.fixed and not self.hasAnyStatus("flying"):
+				if self.anchor() is None:
+					self.fall()			
+				if self.anchor().composition in Data.liquids and \
+				self.hasStatus("submerged"):
+					self.fall()
+
+		self.checkSubmersion()
 
 
 	# removes all condition of the same name
@@ -3038,6 +3083,22 @@ class Item(GameObject):
 			if name == reqName or reqName is None:
 				if duration == reqDuration or reqDuration is None:
 					self.status.remove([name,duration])
+
+
+	# replace one status with another
+	# if they have the same name, make sure to add new before removing old
+	def replaceStatus(self,tup1,tup2):
+		c1, d1 = tup1
+		c2, d2 = tup2
+		if not self.hasStatus(c1,d1):
+			return False
+		if c1 == c2:
+			self.addStatus(c2,d2)
+			self.removeStatus(c1,d1)
+		else:
+			self.removeStatus(c1,d1)
+			self.addStatus(c2,d2)
+
 
 
 	# when one Item is replaced by another, ensure references to it get substituted
@@ -3106,6 +3167,8 @@ class Item(GameObject):
 
 	# remove occupants and cover and change location
 	def teleport(self,newParent):
+		if newParent is self.parent:
+			return False
 		self.clearCovering()
 		self.clearOccupants()
 		if newParent.canAdd(self):
@@ -3186,28 +3249,31 @@ class Item(GameObject):
 	def fall(self,height=0,room=None):
 		if isinstance(self.parent,Creature):
 			return False
-		# contents could be removed out if item breaks, so save this first
+		verb = "sink" if self.hasStatus("submerged") else "fall"
+
+		# contents could be removed if item breaks, so save this first
 		contents = self.contents().copy()
 		if room is None:
 			room = self.room()
-		self.printNearby(f"{+self} falls down.")
+		self.printNearby(f"{+self} {verb}s down.")
 		for occupant in self.occupants.copy():
 			occupant.fall(height,room)
 		self.clearOccupants()
 
-		while room.floor is None and "down" in room.links:
-			height += room.size
+		while (room.floor is None or room.floor.composition in Data.liquids) and \
+		"down" in room.links:
+			height += room.capacity // 5 # approximate vertical height of room
 			room = room.links["down"]
 		if room != self.room():
 			self.changeLocation(room)
-			self.printNearby(f"{~self} falls from above!".capitalize())
+			self.printNearby(f"{~self} {verb}s from above!".capitalize())
 
 		if self.anchor() is not self.parent.floor:
 			# self.parent.floor.occupy(self)
 			self.platform = self.parent.floor
 
 		# TODO: add some collision checking for composition of the floor?
-		if room.floor is not None:
+		if room.floor is not None and not self.hasStatus("submerged"):
 			force = min(height,20*self.weight)
 			self.takeDamage(force,"b")
 			for item in contents:
@@ -3353,6 +3419,16 @@ class Item(GameObject):
 			not self.fixed
 
 
+	# checks if Creature can swim based on gear, weight ATHL, and MVMT
+	def canSwim(self,liquidDensity=None):
+		if liquidDensity is None:
+			submerseComp = self.submersedIn()
+			liquidDensity = Data.densities.get(submerseComp,1)
+
+		density = Data.densities.get(self.composition,1)
+		return density < liquidDensity
+
+
 	# count objects with same name in parent
 	# useful for knowing when to use 'a' or 'the' to describe an object
 	def count(self,parent=None,key=None):
@@ -3401,6 +3477,18 @@ class Item(GameObject):
 		# account for density based on composition
 		density = Data.densities.get(self.composition,1)
 		return min1(self.weight // density)
+
+
+	# gets the composition of the liquid the Item may be submersed in, if any
+	def submersedIn(self):
+		parentComp = getattr(self.parent,"composition",None)
+		platformComp = getattr(self.platform,"composition",None)
+		if parentComp in Data.liquids:
+			return parentComp
+		elif platformComp in Data.liquids:
+			return platformComp
+		else:
+			return None
 
 
 	# gets the first ancestor that isn't open, or the final ancestor (room)
@@ -3482,25 +3570,29 @@ class Item(GameObject):
 		return strname
 
 
-	# print message only if in the same surroundings as player
-	def Print(self,*args,end="\n",sep="",delay=None,color=None,allowSilent=True,outfile=None):
+	# print message to self
+	def Print(self,*args,end="\n",sep=None,delay=None,color=None,allowSilent=True,
+	outfile=None):
 		# in godmode we can see all prints
 		if game.mode == 2:
 			args.insert(0,f"[{self.id} {self.name}]:")
 			color="k"
-		elif self.surroundings() is not player.surroundings():
+			return Print(*args,end=end,sep=sep,delay=delay,color=color,
+			allowSilent=allowSilent,outfile=outfile)
+		else:
 			return False
-		return Print(*args,end=end,sep=sep,delay=delay,color=color,allowSilent=allowSilent,outfile=outfile)
 
 
 	# for Items this is similar to self.Print, but distinct for Creatures
-	def printNearby(self,*args,end="\n",sep="",delay=None,color=None,allowSilent=True,outfile=None):
+	def printNearby(self,*args,end="\n",sep=None,delay=None,color=None,allowSilent=True,
+	outfile=None):
 		# in godmode we can see all prints
 		if game.mode == 2:
 			args.insert(0,f"[{self.id} {self.name}]:")
 			color="k"
-		if player in self.surroundings() or game.mode == 2:
-			return Print(*args,end=end,sep=sep,delay=delay,color=color,allowSilent=allowSilent,outfile=outfile)
+		if (player in self.surroundings() or game.mode == 2) and self is not player:
+			return Print(*args,end=end,sep=sep,delay=delay,color=color,
+			allowSilent=allowSilent,outfile=outfile)
 		return
 
 
@@ -3518,9 +3610,8 @@ class Item(GameObject):
 		if game.mode == 2:
 			text = f"[{self.id} {self.name}]:" + text if text else ""
 			color="k"
-		elif self.surroundings() is not player.surroundings():
-			return False
-		return waitInput(text=text,end=end,delay=delay,color=color)
+			return waitInput(text=text,end=end,delay=delay,color=color)
+		return False
 
 
 
@@ -3533,7 +3624,7 @@ class Creature(Item):
 	def __init__(self,name,desc,weight,traits,hp=None,mp=0,money=0,inv=None,gear=None,
 	love=0,fear=0,carrying=None,carrier=None,riding=None,platform=None,
 	cover=None,composition="flesh",memories=None,appraisal=None,lastAte=0,lastSlept=0,
-	regenTimer=0,alert=False,lastSawPlayer=None,**kwargs):
+	lastBreathed=0,regenTimer=0,alert=False,lastSawPlayer=None,**kwargs):
 		# Creatures have infinite durability, may not be fixed, and despawn after 1000
 		super().__init__(name,desc,weight,-1,composition,fixed=False,longevity=1000,
 		**kwargs)
@@ -3598,6 +3689,7 @@ class Creature(Item):
 		# eventually creatures get hungry and sleepy
 		self.lastAte = lastAte
 		self.lastSlept = lastSlept
+		self.lastBreathed = lastBreathed
 		# these attributes remain unused in the Player subclass
 		self.alert = alert
 		self.lastSawPlayer = lastSawPlayer
@@ -3738,6 +3830,8 @@ class Creature(Item):
 	def addStatus(self,name,dur,stackable=True,silent=False):
 		if self.hasStatus(name) and not stackable:
 			return False
+		if self.hasStatus(name,dur):
+			return False
 		if self is not player and name in Data.privateStatus:
 			silent = True
 		if not self.hasStatus(name) and not silent:
@@ -3831,6 +3925,22 @@ class Creature(Item):
 		return self.posture() == posture
 
 
+	def checkBreathing(self):
+		# hunger takes longer with more endurance
+		sinceLastBreathed = game.time - self.lastBreathed
+		if sinceLastBreathed > self.ENDR() // 2 and self.hasStatus("breathless"):
+			# add drowning before removing breathless because removeStatus will recur here
+			self.addStatus("drowning",-2)
+			self.removeStatus("breathless",silent=True)
+		elif sinceLastBreathed > self.ENDR() // 3 and \
+		not self.hasAnyStatus("breathless","drowning"):
+			self.Print("You can't hold your breath much longer...")
+			self.addStatus("breathless",-2,silent=True)
+		elif sinceLastBreathed <= self.ENDR() // 3:
+			self.removeStatus("breathless",silent=True)
+			self.removeStatus("drowning")
+
+
 	# add/remove hidden status based on cover
 	def checkHidden(self):
 		transparent = ("glass","ice","water")
@@ -3861,12 +3971,19 @@ class Creature(Item):
 		return False
 
 
+	# TODO: if creature changes size, we need to check platform vacancy and parent capacity
+	def checkSize(self):
+		pass
+
+
 	# check all status conditions that may need updating
 	def checkStatus(self):
-		self.checkHidden()
-		self.checkHindered()
+		# self.checkBreathing()
 		self.checkHungry()
 		self.checkTired()
+		self.checkHindered()
+		self.checkHidden()
+		self.checkSubmersion()
 
 
 	# unused for Creatures, but used in Player subclass
@@ -3953,14 +4070,17 @@ class Creature(Item):
 	def passTime(self,t):
 		super().passTime(t)
 
-		# take damage from damaging status conditions
-		for condition, _ in self.status.copy():
-			if condition in Data.conditionDmg:
-				factor, type = Data.conditionDmg[condition]
-				dmg = min1(randint(1,factor) - self.LCK())
-				self.takeDamage(dmg,type)
-
+		if not self.hasStatus("submerged"):
+			self.lastBreathed = game.time
+		self.checkBreathing()
 		self.checkStatus()
+
+		# take damage from damaging status conditions
+		for condition in {c for (c,d) in self.status}:
+			if condition in Data.conditionDmg:
+				factor, dmgType = Data.conditionDmg[condition]
+				dmg = halfRoll(factor) - halfRoll(self.LCK())
+				self.takeDamage(dmg,dmgType)
 
 		# natural healing is faster with a higher endurance
 		if self.hasAnyStatus("hungry","starving") and not self.hasStatus("mending"):
@@ -4004,7 +4124,8 @@ class Creature(Item):
 			self.inv.remove(I)
 		if hasMethod(I,"Drop"):
 			I.Drop(self)
-		self.checkStatus()
+		if not silent:
+			self.checkStatus()
 
 
 	# remove any status condition with reqName and reqDuration
@@ -4035,6 +4156,7 @@ class Creature(Item):
 						verb = conjugate(+self,"is")
 						Print(f"{+self} {verb} no longer {name}.")
 
+		# this recurs into removeStatus, so guard to prevent infinite loop
 		if anyRemoved:
 			self.checkStatus()
 		if wasSleeping and not self.hasStatus("asleep"):
@@ -4183,8 +4305,8 @@ class Creature(Item):
 		if(f"{type} resistance" in self.status): dmg //= 2
 		if(f"{type} immunity" in self.status): dmg = 0
 		# bludgeoning damage can't kill you in one hit
-		if type == "b" and self.hp > 1:
-			self.hp = min1(self.hp-dmg)			
+		if type in ("b","d") and self.hp > 1:
+			self.hp = min1(self.hp-dmg)
 		# hp lowered to a minimum of 0
 		else:
 			self.hp = min0(self.hp-dmg)
@@ -4196,8 +4318,9 @@ class Creature(Item):
 			delay(0.5)
 			color = "r"
 		typeDisplay = "" if type == "e" else Data.dmgtypes[type] + " "
-		Print(f"{+self} took {total_dmg} {typeDisplay}damage{p}",color=color,
-		allowSilent=self is not player)
+		msg = f"{+self} took {total_dmg} {typeDisplay}damage{p}"
+		self.Print(msg,color=color)
+		self.printNearby(msg,color=color)
 		if self is player:
 			self.display()
 			delay(0.5)
@@ -4399,32 +4522,41 @@ class Creature(Item):
 		if self.riding or self.carrier:
 			return self.anchor().fall(height,room)
 
-		if player in self.occupants or player is self.carrying:
-			waitInput(f"{+self} falls!",color="o")
+		verb = "fall"
+		if self.hasStatus("submerged"):
+			if self.canSwim():
+				return False
+			verb = "sink"
+
+		if player in self.occupants or player is self.carrying or player is self:
+			waitInput(self+f"{verb}s!",color="o")
 		else:
-			self.printNearby(f"{+self} falls.",color="o")
+			self.printNearby(self+f"{verb}s.",color="o")
 
 		if self.hasStatus("flying"):
-			self.printNearby(f"But {self.pronoun} is flying.")
+			self.printNearby("But"+(self*"is flying."))
 			return False
 
 		if room is None:
 			room = self.room()
-		while room.floor is None and "down" in room.links:
-			height += room.size
+		while (room.floor is None or room.floor.composition in Data.liquids) and \
+		"down" in room.links:
+			height += room.capacity // 5 # approximate height of room
 			room = room.links["down"]
 		if room != self.room():
 			if self.carrying:
 				self.carrying.fall(height,room)
+			if self is player:
+				ellipsis()
 			self.changeLocation(room)
-			self.printNearby(f"{~self} falls from above!".capitalize())
+			self.printNearby(f"{~self} {verb}s from above!".capitalize())
 
-		if self.anchor() is not self.parent.floor:
-			# self.parent.floor.occupy(self)
-			self.platform = self.parent.floor
+		# if self.anchor() is not self.parent.floor:
+		# 	# self.parent.floor.occupy(self)
+		# 	self.platform = self.parent.floor
 
 		force = min(height,20*self.weight)
-		if not self.hasStatus("fleetfooted") and force > 0 and room.floor is not None:
+		if not self.hasAnyStatus("fleetfooted","submerged") and room.floor is not None:
 			if force > 0:
 				self.takeDamage(force,"b")
 				for rider in self.occupants:
@@ -4507,6 +4639,7 @@ class Creature(Item):
 	# attempt to ride this Creature
 	def ride(self,rider,silent=False):
 		if self.checkTetherLoop(rider,self,"ride"):
+			print("TETHER LOOPS")
 			return False
 		if rider > self.BRDN()//2:
 			rider.Print(f"You are too heavy to ride {-self}.")
@@ -4523,13 +4656,18 @@ class Creature(Item):
 			pushOff = max(self.occupants, key=lambda x: x.Size())
 			self.Print(f"{+pushOff} is already riding {self}.")
 			if roll(rider.ATHL()) > roll(pushOff.ATHL()):
-				pushOff.Print()(f"You push {-rider} off of {-self}.")
+				rider.Print(f"You push {-pushOff} off of {-self}.")
+				pushOff.Print(f"{+rider} pushes you off of {-self}.",color="r")
 				pushOff.removeRiding()
+				pushOff.fall(self.Size()//5)
 			else:
-				pushOff.Print(f"{+pushOff} holds onto {-self}.")
+				pushOff.Print(f"{+pushOff} hold onto {-self}.")
+				rider.Print(f"You don't manage to occupy {-self}",color="r")
+				rider.fall(self.Size()//5)
 				return False
 		if rider.Size() + self.occupantsSize() > self.Size():
-			rider.Print(f"{+self} is too small to ride.")
+			rider.Print(f"{+self} doesn't have enough space to ride.")
+			rider.fall(self.Size()//5)
 			return False
 
 		contest = not self.isFriendly() and self.canMove()
@@ -4558,6 +4696,9 @@ class Creature(Item):
 
 	# sever tethers and change location to new Container or Room
 	def teleport(self,newParent):
+		if newParent is self.parent:
+			self.Print("You are already there.",color="w")
+			return
 		if self.carrier:
 			self.carrier.removeCarry(silent=True)
 		self.removePlatform()
@@ -4632,6 +4773,18 @@ class Creature(Item):
 		food.consume()
 
 
+	def Emerge(self):
+		if not self.hasStatus("submerged"):
+			self.Print("You are not submerged.")
+			return False
+		if not self.canSwim():
+			self.Print("You can't surface because you can't swim!")
+			return False
+		self.removeStatus("submerged")
+		self.lastBreathed = game.time
+		self.checkBreathing()
+
+
 	# hide behind an Item if it provides cover
 	def Hide(self,I,posture):
 		if self.carrier:
@@ -4686,8 +4839,7 @@ class Creature(Item):
 		if hasMethod(anchor,"traverse") and not getattr(anchor,"closed",False):
 			if not getattr(anchor,"closed",True):
 				self.Print(f"{+anchor} is open.")
-			anchor.traverse(self)
-			return False
+			return anchor.traverse(self,verb=posture)
 		if anchor is self.platform or anchor is self.riding:
 			pass
 		elif self.checkTetherLoop(self,anchor,"get on"):
@@ -4730,6 +4882,15 @@ class Creature(Item):
 			self.checkStatus()
 			return True
 		return False
+
+
+	def Submerge(self):
+		if getattr(self.platform,"composition",None) not in Data.liquids:
+			self.Print("You can't submerge here.")
+			return False
+		if not self.canSwim():
+			return False
+		self.addStatus("submerged",-4)
 
 
 	# throw a projectile at a target
@@ -4850,7 +5011,7 @@ class Creature(Item):
 	def LOOT(self): return 2*self.LCK() + self.FTH()
 
 	def MVMT(self): return min0(self.SPD() + self.STM() + 10 - \
-	self.invToll() - self.gearToll())
+	self.invToll() - self.gearToll()) // (2 if self.hasStatus("hindered") else 1)
 
 	def MXHP(self): return self.level()*self.CON() + (self.level()//10+1) * self.STM() + 1
 
@@ -4931,6 +5092,18 @@ class Creature(Item):
 					game.setPronouns(I)
 			return False
 		return True
+
+
+	# checks if Creature can swim based on gear, weight ATHL, and MVMT
+	def canSwim(self,liquidDensity=None):
+		if liquidDensity is None:
+			submerseComp = self.submersedIn()
+			liquidDensity = Data.densities.get(submerseComp,1)
+
+		if not self.canMove():
+			return False
+		buoyancy = 5*liquidDensity
+		return self.Weight()+self.gearWeight() <= self.ATHL()+self.MVMT()+buoyancy
 
 
 	# since creatures can carry creatures while also being carried themselves,
@@ -5090,7 +5263,7 @@ class Creature(Item):
 
 
 	# use posture and tethers to determine position description
-	def position(self,ignoreStanding=True):
+	def position(self,ignoreStanding=False):
 		pos = ""
 		# if self.carrier:
 		# 	pos += f"being carried by {~self.carrier}"
@@ -5235,7 +5408,7 @@ class Creature(Item):
 
 	# this is used as a shortcut to show output only to the user
 	# It should do nothing for any other creature
-	def Print(self,*args,end="\n",sep="",delay=None,color=None,allowSilent=True,
+	def Print(self,*args,end="\n",sep=None,delay=None,color=None,allowSilent=True,
 		   outfile=None):
 		# in godmode we can see all prints
 		if game.mode == 2:
@@ -5253,12 +5426,6 @@ class Creature(Item):
 			return Data.reflexives[self.pronoun]
 		else:
 			return "itself"
-
-
-	# This is used as a shortcut to show output only to the user
-	# It should do nothing for any other creature
-	def waitInput(self,text=None,delay=None,color=None):
-		return
 
 
 
@@ -5504,39 +5671,6 @@ class Player(Creature):
 			return False
 
 
-	def fall(self,height=3,room=None):
-		if self.riding or self.carrier:
-			return self.anchor().fall(height,room)
-		
-		self.waitInput(f"You fall!",color="o")
-
-		if self.hasStatus("flying"):
-			Print(f"But you're flying.",color="g")
-			return False
-
-		if not isinstance(room, Room):
-			room = self.room()
-		while room.floor is None and "down" in room.links:
-			height += room.size
-			room = room.links["down"]
-		if room != self.room():
-			ellipsis()
-			self.changeLocation(room)
-
-		if self.anchor() is not self.parent.floor:
-			# self.parent.floor.occupy(self)
-			self.platform = self.parent.floor
-
-		force = min(height,20*self.weight)
-		if not self.hasStatus("fleetfooted") and force > 0 and room.floor is not None:
-			if force > 0:
-				self.takeDamage(force,"b")
-				for rider in self.occupants:
-					rider.takeDamage(force//3,"b")
-			self.changePosture("laying")
-		return True
-
-
 	def bombard(self,missile):
 		assert isinstance(missile,Projectile)
 		dodge = self.EVSN()
@@ -5663,7 +5797,7 @@ class Player(Creature):
 
 
 	# This method does nothing for non-player creatures
-	def Print(self,*args,end="\n",sep="",delay=None,color=None,allowSilent=True,
+	def Print(self,*args,end="\n",sep=None,delay=None,color=None,allowSilent=True,
 		outfile=None):
 		return Print(*args,end=end,sep=sep,delay=delay,color=color,
 		allowSilent=allowSilent,outfile=outfile)
@@ -5690,7 +5824,7 @@ class Player(Creature):
 
 
 	# print each player gear slot and the items equipped in them
-	def printGear(self, *args, outfile=None):
+	def printGear(self,*args,outfile=None):
 		Print(outfile=outfile)
 		for slot in self.gear:
 			val = self[slot].displayName()
@@ -5700,7 +5834,7 @@ class Player(Creature):
 	def printHP(self,*args): Print(f"HP: {self.hp}/{self.MXHP()}",color="r")
 
 	# prints player inventory
-	def printInv(self, *args, outfile=None):
+	def printInv(self,*args,outfile=None):
 		cols = 8 if outfile is None else 4
 		W = self.invWeight() + self.carryWeight()
 		color = "o" if W / self.BRDN() > 0.80 else "w"
@@ -5786,7 +5920,7 @@ class Player(Creature):
 		# populate conditions with unique condition names affecting the player
 		# populate durations with the highest duration for that condition
 		# negative (special) durations take precedence over positive durations
-		for cond, dur in sorted(self.status, key=lambda x: x[1]):
+		for cond, dur in sorted(self.status, key=lambda x: x[0]):
 			if cond in conditions:
 				idx = conditions.index(cond)
 				olddur = durations[idx]
@@ -6343,7 +6477,10 @@ class Fixture(Item):
 class Surface(Fixture):
 	def __init__(self,name,desc,weight,composition,**kwargs):
 		super().__init__(name,desc,weight,composition,**kwargs)
-
+		if any("water" in alias for alias in self.aliases):
+			self.aliases.append("water")
+		if any(name in Data.liquids for name in self.aliases+[self.name]):
+			self.aliases.append("liquid")
 
 	# Surfaces can't take damage
 	def takeDamage(self,dmg,type):
@@ -6702,11 +6839,12 @@ class Container(Portal):
 			for item in self.items:
 				if isinstance(item,Serpens):
 					item.merge(I)
-					return
+					return item
 
 		insort(self.items,I)
 		I.parent = self
 		I.nullDespawn()
+		return I
 
 
 	# apply an area condition to all objs in the Container

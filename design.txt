@@ -119,8 +119,8 @@ identifying the objects being interacted with by the user, and evoking their fun
 - test/Test.py is the module used for testing the game. It reads the .txt files in the 
 test folder as though they are user input and attempts to run a game.
 
-- gamedata/transcript.log stores a transcript of the most recent playthrough. 
-This can be useful for debugging.
+- gamedata/transcript.log stores a transcript of the most recent playthrough. This can be
+useful for debugging.
 
 - gamedata/World.json is the base world of the game. It stores the object tree
 of each Room in the world. It was intentionally made JSON to be human-readable
@@ -131,6 +131,17 @@ and human-editable.
 - saves/ is where the saved game data is stored. Each save folder should have 
 a world.json, a player.json, and a game.txt
 
+
+
+
+DEFINITIONS
+
+- The User is the person playing the game. This is distinguished from the Player, which is
+the object in the game representing the user.
+
+- A Command is the textual input recieved from the user in each game loop. The Verb is the
+first word of a Command when it is used for calling an Action. An action is the functio
+called by interpret() which actually performs the user's desired activity.
 
 
 ==================== SECTION 2 - FUNDAMENTAL OBJECTS ==========================
