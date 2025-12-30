@@ -12,6 +12,33 @@
 		"creatures": [],
 		"status": []
 	},
+	"babbling brook": {
+		"__class__": "Room",
+		"name": "Babbling Brook",
+		"domain": "Woodlands",
+		"desc": "A softly babbling brook flows here. Only a few feet wide, it rolls past moist rocks and a muddy bank. In the north there is a large tree. The brook flows to the east. To the south is a clearing with a grassy hill. To the west, a man-made structure can be seen through the trees.",
+		"links": {
+			"north": "big oak",
+			"east": "pond",
+			"south": "glen",
+			"west": "cliffside"
+		},
+		"fixtures": [
+			{
+				"__class__": "Plash",
+				"name": "brook",
+				"desc": "A gently flowing brook. The water is cool and clear. It carves a muddy bank as it pushes eastward.",
+				"weight": 100,
+				"composition": "freshwater",
+				"items": [],
+				"aliases": ["stream","creek"]
+			}
+		],
+		"items": [],
+		"creatures": [],
+		"status": [],
+		"floor": "mud"
+	},
 	"big stump": {
 		"__class__": "Room",
 		"name": "Big Stump",
@@ -83,31 +110,20 @@
 		"status": [],
 		"floor": "soil"
 	},
-	"babbling brook": {
+	"burning shore": {
 		"__class__": "Room",
-		"name": "Babbling Brook",
-		"domain": "Woodlands",
-		"desc": "A softly babbling brook flows here. Only a few feet wide, it rolls past moist rocks and a muddy bank. In the north there is a large tree. The brook flows to the east. To the south is a clearing with a grassy hill. To the west, a man-made structure can be seen through the trees.",
+		"name": "Burning Shore",
+		"domain": "Inferno",
+		"desc": "A searing blood red sandy island within a blazing sea of fire. The smell is putrid. The distance is covered by a yellow fog, and the only light from above is a single point showing in the pitch black ceiling. There is no way out.",
 		"links": {
-			"north": "big oak",
-			"east": "pond",
-			"south": "glen",
-			"west": "cliffside"
+			"up": "large pit"
 		},
-		"fixtures": [
-			{
-				"__class__": "Pool",
-				"name": "brook",
-				"desc": "A gently flowing brook. The water is cool and clear. It carves a muddy bank as it pushes eastward.",
-				"weight": 100,
-				"composition": "freshwater",
-				"aliases": ["stream","creek"]
-			}
-		],
+		"fixtures": [],
 		"items": [],
 		"creatures": [],
-		"status": [],
-		"floor": "mud"
+		"status": [["AREA burning -2",10]],
+		"ceiling": "smoke",
+		"floor": "sand"
 	},
 	"cabin basement": {
 		"__class__": "Room",
@@ -245,11 +261,8 @@
 				"view": "out",
 				"composition": "glass",
 				"aliases": ["northern window","window"],
-				"links": {
-					"out": "port:cabin window",
-					"through": "port:cabin window",
-					"in": "port:cabin window"
-				},
+				"linkKeys": ["out","through","in"],
+				"linkPort": "port:cabin window",
 				"descname": "dusty window"
 			}
 		],
@@ -520,23 +533,23 @@
 				"composition": "glass",
 				"view": "in",
 				"aliases": ["north window","window"],
-				"links": {
-					"in": "port:cabin window",
-					"through": "port:cabin window"
-				}
+				"linkKeys": ["in","through"],
+				"linkPort": "port:cabin window"
 			},
 			{
-				"__class__": "Pool",
+				"__class__": "Plash",
 				"name": "stream",
 				"desc": "A small stream flowing out from a crack at the base of the cliff. The water seems to coax you eastward.",
 				"weight": 100,
 				"composition": "freshwater",
+				"items": [],
 				"aliases": ["brook","creek"]
 			}
 		],
 		"items": [],
 		"creatures": [],
 		"status": [],
+		"composition": "freshwater",
 		"walls": "wood",
 		"floor": "soil"
 	},
@@ -613,6 +626,7 @@
 		"domain": "Plains",
 		"desc": "A vast open field spans around you. To the south is a treeline.",
 		"links": {
+			"north": "white beach",
 			"south": "treeline"
 		},
 		"fixtures": [],
@@ -682,7 +696,6 @@
 		"links": {
 			"north": "babbling brook",
 			"east": "large pit",
-			"rocky ridge": "large pit",
 			"ridge": "large pit",
 			"south": "tunnel",
 			"west": "big stump",
@@ -715,50 +728,7 @@
 		"status": [],
 		"floor": "grass"
 	},
-	"burning shore": {
-		"__class__": "Room",
-		"name": "Burning Shore",
-		"domain": "Inferno",
-		"desc": "A searing blood red sandy island within a blazing sea of fire. The smell is putrid. The distance is covered by a yellow fog, and the only light from above is a single point showing in the pitch black ceiling. There is no way out.",
-		"links": {
-			"up": "large pit"
-		},
-		"fixtures": [],
-		"items": [],
-		"creatures": [],
-		"status": [["AREA burning -2",10]],
-		"ceiling": "smoke",
-		"floor": "sand"
-	},
-	"mound": {
-		"__class__": "Room",
-		"name": "Mound",
-		"domain": "Woodlands",
-		"desc": "Here there is a soft grass-covered mound a few metres on each side. To the north, a clearing can be seen in the distance. There is a large tree to the east. There is a wooden cabin through the trees in the south.",
-		"links": {
-			"north": "treeline",
-			"east": "big oak",
-			"south": "cliffside"
-		},
-		"fixtures": [
-			{
-				"__class__": "Controller",
-				"name": "runic statue",
-				"desc": "A maiden statue with spiraling runes carved into its surface",
-				"weight": 1000,
-				"durability": -1,
-				"composition": "stone",
-				"fixed": true,
-				"aliases": ["statue", "maiden", "maiden statue"],
-				"triggers": ["Pray"],
-				"effect": "Core.Print('You feel enlightened.'); Core.player.gainQP(10)"
-			}
-		],
-		"items": [],
-		"creatures": [],
-		"floor": "soil"
-	},
-	"pit": {
+	"large pit": {
 		"__class__": "Room",
 		"name": "Large Pit",
 		"domain": "Woodlands",
@@ -787,6 +757,48 @@
 		"creatures": [],
 		"floor": "earth"
 	},
+	"mound": {
+		"__class__": "Room",
+		"name": "Mound",
+		"domain": "Woodlands",
+		"desc": "Here there is a soft grass-covered mound a few metres on each side. To the north, a clearing can be seen in the distance. There is a large tree to the east. There is a wooden cabin through the trees in the south.",
+		"links": {
+			"north": "treeline",
+			"east": "big oak",
+			"south": "cliffside"
+		},
+		"fixtures": [
+			{
+				"__class__": "Controller",
+				"name": "runic statue",
+				"desc": "A maiden statue with spiraling runes carved into its surface.",
+				"weight": 1000,
+				"durability": -1,
+				"composition": "stone",
+				"fixed": true,
+				"aliases": ["statue", "maiden", "maiden statue"],
+				"triggers": ["Pray"],
+				"effect": "Core.Print('You feel enlightened.'); Core.player.gainQP(10)"
+			}
+		],
+		"items": [],
+		"creatures": [],
+		"floor": "soil"
+	},
+	"open sea": {
+		"__class__": "Room",
+		"name": "Open Sea",
+		"domain": "Ocean",
+		"desc": "You are in the middle of a vast open sea. The water is a dark blue, descending below you into the depths. The sky above is clear with a few scattered clouds. There is nothing but water in all directions.",
+		"links": {
+			"east": "seacoast",
+			"down": "seafloor"
+		},
+		"floor": "saltwater",
+		"fixtures": [],
+		"items": [],
+		"creatures": []
+	},
 	"pond": {
 		"__class__": "Room",
 		"name": "Pond",
@@ -799,17 +811,48 @@
 		},
 		"fixtures": [
 			{
-				"__class__": "Pool",
+				"__class__": "Plash",
 				"name": "pond",
 				"desc": "A murky medium-sized pond with some algae-covered water",
-				"weight": 20,
+				"weight": 60,
 				"composition": "mudwater",
+				"items": [],
 				"finite": true
 			}
 		],
 		"items": [],
 		"creatures": [],
 		"floor": "mud"
+	},
+	"seacoast": {
+		"__class__": "Room",
+		"name": "Seacoast",
+		"domain": "Ocean",
+		"desc": "You are in the ocean. The water is deep blue and calm, stretching out to the horizon in the east. There is a coastline to the west. The sky above is clear with a few scattered clouds.",
+		"links": {
+			"south": "white beach",
+			"shore": "white beach",
+			"down": "seafloor"
+		},
+		"fixtures": [],
+		"items": [],
+		"creatures": [],
+		"floor": "saltwater"
+	},
+	"seafloor": {
+		"__class__": "Room",
+		"name": "Seafloor",
+		"domain": "Ocean",
+		"desc": "You are on the ocean floor. The water above is a deep blue, with light filtering down from the surface. The sandy seabed is dotted with coral formations and seaweed. To the north, a rocky underwater cliff can be seen.",
+		"links": {
+			"up": "seacoast",
+			"east": "underwater tomb"
+		},
+		"fixtures": [],
+		"items": [],
+		"creatures": [],
+		"composition": "saltwater", 
+		"floor": "sand"
 	},
 	"treeline": {
 		"__class__": "Room",
@@ -953,5 +996,33 @@
 		"ceiling": "earth",
 		"walls": "earth",
 		"floor": "earth"
+	},
+	"underwater tomb": {
+		"__class__": "Room",
+		"name": "Underwater Tomb",
+		"domain": "Ocean",
+		"desc": "An ancient stone tomb lies here, submerged underwater. The walls are covered in algae and coral. Faint light filters down from above, illuminating the eerie surroundings.",
+		"links": {
+			"west": "seafloor"
+		},
+		"composition": "saltwater",
+		"floor": "sand",
+		"fixtures": [],
+		"items": [],
+		"creatures": []
+	},
+	"white beach": {
+		"__class__": "Room",
+		"name": "White Beach",
+		"domain": "Serpentine Coast",
+		"desc": "A pristine white sand beach stretches out before you. The gentle waves of a cerulean sea to the north lap at the shore. To the south, a field extends away from the sea.",
+		"links": {
+			"north": "seacoast",
+			"south": "field"
+		},
+		"fixtures": [],
+		"items": [],
+		"creatures": [],
+		"floor": "sand"
 	}
 }

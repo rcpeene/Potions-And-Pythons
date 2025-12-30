@@ -85,14 +85,64 @@ if __name__ == "__main__":
 	main()
 
 
+
 ################################################################################
 
 # CURRENT TASKS
+
+# WATER AND LIQUIDS
+	# add "swim", adding drowning and holding breath
+		# handle goVertical when swimming
+		# if swimming, prevent jump (maybe automatically prevented because no anchor?)
+		# if swiming, alter climbing? always redirect climb? no; make climbing easy
+		# if you're swimming, you can't jump or stand, only swim or exit
+
+	# we may need to test entering and submersion for bodies of water that also serve as passages
+		# think like a large watery hole that goes straight down
+	# but! if they have water walking, they should be able to occupy plash?
+		# test if they're water walking and then this goes away while occupying plash
+
+# test "get in stream", "go in stream", "leave stream", "get out of stream"
+# test "lay in stream", "sit on stream", "sit in stream"
+# test "jump in stream" "jump out of stream" (also "out of chest"?)
+
+# What will you do?
+# > jump out
+# What will you jump out?
+# > the pond
+# You're already on the pond
+
+# when checking if canAdd, allow for checking for intended posture, not current posture?
+# limit changePosture if theres not enough space?
+
+
+# pour multiple bottles of stuff into one pot
+	# will need to use a method 'merge'
+# think about a broken water container or leaking/draining
+# add puddles, what about pouring liquid into plash? or adding plash to liquid room?
+# try to lick/taste/smell a liquid room
+
+# think about hiding, occupying pools. Items and Creatures.
+# test drinking an object when inv is full, see if bottle goes on ground
+# hide/get in a body of water?
+# try "jump in the pond"
+# "drink from the pond"
+# add fishing
+# add magic beans or food to pour stuff on
+
 
 
 ################################################################################
 
 # BUG BACKLOG
+
+# What will you do?
+# > sit in pond
+# You can't get on the pond, it is too high.
+
+# > doff helm
+# You doff your broken helm.
+# You unequip your broken helm.
 
 # > attack table with sword
 # You attack the table with your broken sword.
@@ -104,30 +154,23 @@ if __name__ == "__main__":
 
 ################################################################################
 
+# HOUSEKEEPING
+# go through TODOs
+# add tests and run them
+# revise design doc
+
+################################################################################
+
+
 # FUTURE IMPROVEMENTS
 
-# WATER AND LIQUIDS
-# think about hiding, occupying pools. Items and Creatures.
-# prevent standing on water, should be "in" water
-# consider making Pool a container
-# handle "get in stream", "go in stream", "leave stream", "get out of stream"
-# test drinking an object when inv is full, see if bottle goes on ground
-# hide/get in a body of water?
-# try "jump in the pond"
-# "drink from the pond"
-# add "swim", adding drowning and holding breath
-# if swimming, prevent jump (maybe automatically prevented because no anchor?)
-# handle bodies of water; what about fall damage, or being weighed down
-# add fishing
-# add magic beans or food to pour stuff on
-# pour multiple bottles of stuff into one pot
-	# will need to use a method 'merge'
-# think about a broken water container or leaking/draining
-
 # DROPPING, PUTTING, STEALING
+# test "put on hat" and "put hat on"
 # redo put to account for occupancy versus containment
 	# consider "put maiden on horse" versus "put sword on table"
 	# consider "put maiden in chest" versus "put sword in chest"
+# BUG: putting snake in brook keeps it in room and adds it to brook
+	# same for chest
 # instead of always checking for hasattr("open"), use Container.canPass()
 # consider if 'put item on ground' should actually redirect to drop or no
 # refactor drop into a creature method?
@@ -214,6 +257,7 @@ if __name__ == "__main__":
 # protect rare items from certain kinds of damage/effects
 
 # DIALOGUE
+# allow for conditional replies. If both cases and replies are defined, only show replies whose cases are met
 # fix/add Creature.isNaked or Player.isNaked
 # add total traversal limit on dlog nodes?
 # add link nodes and effect nodes to dialogue after all

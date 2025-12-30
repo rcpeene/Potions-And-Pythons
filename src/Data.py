@@ -27,10 +27,6 @@ numsymbols = "-0123456789"
 
 vowels = "aeiouAEIOU"
 
-physicaldmg = "bps"
-elementaldmg = "acfltx"
-magicaldmg = "inrv"
-
 
 
 #################
@@ -73,8 +69,9 @@ directions = {"n":"north","ne":"northeast","e":"east","se":"southeast","s":"sout
 cardinals = ("north","east","south","west","northeast","southeast","southwest","northwest")
 
 
-dmgtypes = {"a":"acid","b":"bludgeoning","c":"cold","e":"essential","f":"fire","h":"hunger","i":"psychic","l":"lightning","n":"necrotic","p":"piercing","r":"radiant","s":"slashing","t":"thunder","v":"force","x":"poison"}
-dmgclasses = {"a":"elem","b":"phys","c":"elem","e":"dev","f":"elem","h":"phys","i":"mag","l":"elem","n":"mag","p":"phys","r":"mag","s":"phys","t":"elem","v":"mag","x":"elem"}
+dmgtypes = {"a":"acid","b":"bludgeoning","c":"cold","d":"drowning","e":"essential","f":"fire","h":"hunger","i":"psychic","l":"lightning","n":"necrotic","p":"piercing","r":"radiant","s":"slashing","t":"thunder","v":"force","x":"poison"}
+dmgclasses = {"a":"elem","b":"phys","c":"elem","d":"phys","e":"dev","f":"elem","h":"phys","i":"mag","l":"elem","n":"mag","p":"phys","r":"mag","s":"phys","t":"elem","v":"mag","x":"elem"}
+
 
 # gear dict used to initialize the player object
 initgear = {"head":None, "torso":None, "left":None, "right":None, "legs":None}
@@ -85,7 +82,7 @@ curses = {"weakness","slowness","clumsiness","tiredness","illness","timidity","s
 
 buffs = {"anointed","fleetfooted","flying","invigorated","mending","wildspeaking"}
 
-debuffs = {"dead","hindered","hungry","starving","tired","fatigued"}
+debuffs = {"dead","hindered","hungry","starving","tired","fatigued","drowning"}
 
 privateStatus = {"dead","invisible","hidden","hindered"}
 
@@ -99,7 +96,7 @@ colorCodes = {
 
 conditionDmg = {
 	"burning":(50,"f"),
-	"drowning":(50,"e"),
+	"drowning":(25,"d"),
 	"bleeding":(25,"e"),
 	"frozen":(15,"c"),
 	"poisoned":(5,"x"),

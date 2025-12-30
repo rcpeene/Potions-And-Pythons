@@ -99,7 +99,7 @@ def chooseObject(name,objects,verb=None):
 # roomD and playerD are the 'degree' of the query.
 # Look at Core.py objQuery for details on query degree
 def findObject(term,verb=None,queryType="both",filter=None,roomD=0,playerD=2,
-reqSource=None,silent=False):
+reqSource=None,silent=False,allowRooms=False):
 	if term is None and not silent and verb is not None:
 		term = getNoun(f"What will you {verb}?")
 	if term in Data.cancels or term is None or term == "nothing":
@@ -116,6 +116,8 @@ reqSource=None,silent=False):
 		matches |= Core.player.nameQuery(term,d=playerD)
 	if queryType == "room" or queryType == "both":
 		matches |= Core.player.surroundings().nameQuery(term,d=roomD)
+	if not allowRooms:
+		matches = {match for match in matches if not isinstance(match,Core.Room)}
 	if queryType == "player" and Core.nameMatch(term,Core.player.carrying):
 		matches.add(Core.player.carrying)
 	if term in ("me","myself","player","self"):
@@ -376,26 +378,28 @@ def dispatchShortCommand(command,verb):
 	# 'cast' may be a stat command or a regular action
 	if verb != "cast" or len(command) == 1:
 		if len(command) != 1:
-			return promptHelp(f"The '{verb}' command can only be one word.")
-		if verb == "here":
-			return Core.player.parent.describe()
-		if verb == "room":
-			return Core.game.currentroom.describe()
-		if verb in ("clear","cls"):
-			return Core.clearScreen()
-		if verb in Data.hellos:
-			return Hello()
-		if verb in Data.goodbyes:
-			return Goodbye()
-		if verb in Data.laughs:
-			return Laugh()
-		if verb in Data.abilities:
-			return Core.player.printAbility(verb.upper())
-		if verb in Data.traits:
-			return Core.player.printTraits(verb)
-		if verb in Data.colors:
-			return Core.Print(verb.title()+".", color=Data.colors[verb])
-		return statcommands[verb](Core.player)
+			promptHelp(f"The '{verb}' command can only be one word.")
+		elif verb == "here":
+			Core.player.parent.describe()
+		elif verb == "room":
+			Core.game.currentroom.describe()
+		elif verb in ("clear","cls"):
+			Core.clearScreen()
+		elif verb in Data.hellos:
+			Hello()
+		elif verb in Data.goodbyes:
+			Goodbye()
+		elif verb in Data.laughs:
+			Laugh()
+		elif verb in Data.abilities:
+			Core.player.printAbility(verb.upper())
+		elif verb in Data.traits:
+			Core.player.printTraits(verb)
+		elif verb in Data.colors:
+			Core.Print(verb.title()+".", color=Data.colors[verb])
+		else:
+			statcommands[verb](Core.player)
+		return interpret()
 
 
 # the primary endpoint of the interpreter module
@@ -486,7 +490,9 @@ def Evaluate(command):
 	code = " ".join(command[1:])
 	try:
 		fo = findObject # for convenience when executing quick code
-		Core.Print(eval(code))
+		player, world, game = Core.player, Core.world, Core.game
+		room = game.currentroom
+		Core.Print(eval(code),color="k")
 	except Exception as e:
 		Core.Print("Error: Code was unable to be executed.",color="k")
 		Core.Print(traceback.format_exc(),color="k",delay=0)
@@ -499,6 +505,8 @@ def Execute(command):
 	code = " ".join(command[1:])
 	try:
 		fo = findObject # for convenience when executing quick code
+		player, world, game = Core.player, Core.world, Core.game
+		room = game.currentroom
 		exec(code)
 	except Exception as e:
 		Core.Print("Error: Code was unable to be executed.",color="k")
@@ -1151,7 +1159,6 @@ def Climb(dobj,iobj,prep):
 		Core.Print(f"{+M} is too small to climb {prep}.")
 		return False
 	# TODO: handle 'climb out of here' in a normal room
-
 	elif isinstance(M,Core.Portal):
 		return M.traverse(Core.player,dir=prep,verb="climb")
 	elif prep in ("down","out","out of"):
@@ -1483,12 +1490,12 @@ def Escape(dobj,iobj,prep):
 
 def Exit(dobj,iobj,prep):
 	# TODO: make 'get out' and 'get off' work more generally based on passprep or smth?
-	if isinstance(Core.player.anchor(), (Items.Bed,Items.Pool)):
-		if Core.nameMatch(dobj, Core.player.anchor()) or dobj is None:
-			return Dismount(dobj,iobj,prep)
+	# if not isinstance(Core.player.platform, (Core.Surface,type(None))):
 	if dobj in ("here",None) and "out" in Core.player.parent.allDirs():
 		return Go("out",iobj,prep)
 	if Core.player.anchor() not in (None,Core.player.parent.floor):
+		if Core.nameMatch(dobj, Core.player.platform) or dobj is None:
+			return Dismount(dobj,iobj,prep)
 		return Go(dobj,iobj,"out")
 	if len(Core.player.parent.allLinks()) == 0:
 		dir,portal = Core.player.parent.allLinks().keys()[0]
@@ -1565,12 +1572,16 @@ def GoVertical(dir,passage=None,dobj=None):
 	# print(dir,passage,dobj)
 	assert (dir,passage) in Core.game.currentroom.allLinks()
 	newroom = None
-	if Core.player.hasStatus("flying") and not Core.player.riding:
+	goer = Core.player.riding if Core.player.riding else Core.player
+	if goer.hasStatus("flying"):
 		newroom = Core.game.currentroom.allLinks()[dir,passage]
-		Core.waitInput(f"You fly {dir}!")
-	if Core.player.riding and Core.player.riding.hasStatus("flying"):
+		Core.waitInput(goer+f"flies {dir}!")
+	elif goer.hasStatus("submerged") and passage is None:
+		if not goer.canSwim():
+			Core.Print(f"{+goer} can't go {dir},",(goer-"isn't able to swim!"))
+			return False
 		newroom = Core.game.currentroom.allLinks()[dir,passage]
-		Core.waitInput(f"{+Core.player.riding} flies {dir}!")
+		Core.waitInput(goer+f"swims {dir}.")
 	if newroom is not None:
 		if passage is not None:
 			return Core.player.changeLocation(passage.getNewLocation(dir=dir))
@@ -1578,18 +1589,11 @@ def GoVertical(dir,passage=None,dobj=None):
 
 	hasUpPassage = any(d == "up" for (d,p) in Core.game.currentroom.allLinks() if p)
 	if passage is None and dir == "up" and dir in Core.game.currentroom.links:
-		if Core.player.riding is None and not Core.player.hasStatus("flying"):
-			goer = Core.player
-		if Core.player.riding and not Core.player.riding.hasStatus("flying"):
-			goer = Core.player.riding
 		if hasUpPassage:
 			dobj = getNoun("What will you go up?")
 			passage = findObject(dobj,"go up","room")
 			if passage is None:
 				return False
-		else:
-			Core.Print(f"{+goer} can't go up,", (goer+"isn't flying.").lower())
-			return False
 
 	if passage is None and dir in Core.game.currentroom.links:
 		return Core.player.changeLocation(Core.game.currentroom.links[dir])
@@ -1664,16 +1668,14 @@ def parseGo(dobj,iobj,prep):
 	return dir,dest,passage,cancelledAction
 
 
-# parses user input to determine the intended direction, destination, and/or
-# passage. Then calls either traverse or changelocation accordingly
-def Go(dobj,iobj,prep):
+def limitGo():
 	if Core.player.anchor() not in (Core.player.parent.floor, Core.player.riding):
 		Core.Print(f"You can't go anywhere, you are {Core.player.position()}.")
-		return False
+		return True
 	for cond in Data.immobileStatus:
 		if Core.player.hasStatus(cond) and Core.player.riding is None:
 			Core.Print(f"You can't go anywhere, you are {cond}.")
-			return False
+			return True
 		if Core.player.riding is not None and Core.player.riding.hasStatus(cond):
 			spurRec = ""
 			if cond in ("laying","sitting"):
@@ -1681,18 +1683,22 @@ def Go(dobj,iobj,prep):
 			Core.Print(f"You can't go anywhere, you are riding {-Core.player.riding}" \
 			f" which is {cond}.{spurRec}")
 			Core.game.setPronouns(Core.player.riding)
-			return False
+			return True
+	return False
 
+# parses user input to determine the intended direction, destination, and/or
+# passage. Then calls either traverse or changelocation accordingly
+def Go(dobj,iobj,prep):
 	tip = "Type 'where' for a list of destinations."
 	preps = ("across","away","away from","down","through","to","toward","up","in",
 	"inside","into","on","onto","out","over",None)
-	if prep in ("to", "toward", "away", "away from"):
+	if prep in ("to","toward","away","away from"):
 		prep = None
 	if (dobj,iobj,prep) == (None,None,None):
 		dobj,iobj,prep = parse(tokenize(read("Where will you go?")))
 	if dobj in Data.cancels: return False
-	if dobj in ("back", "backward", "backwards"): dobj = Core.game.prevroom.name.lower()
-	if dobj in ("ahead", "forward", "forwards"): dobj = getNoun("In which direction?")
+	if dobj in ("back","backward","backwards"): dobj = Core.game.prevroom.name.lower()
+	if dobj in ("ahead","forward","forwards"): dobj = getNoun("In which direction?")
 	if prep == "behind":
 		return Hide(dobj,iobj,prep)
 	if dobj is None and iobj is not None: dobj,iobj = iobj,dobj
@@ -1716,6 +1722,9 @@ def Go(dobj,iobj,prep):
 			return promptHelp(f"There is no way '{prep}' here.{locRemind}",tip=tip)
 		else:
 			return promptHelp(f"There is no '{dobj}' here.{locRemind}",tip=tip)
+	# we want to do the 'there is no __' message before the limitGo message
+	if limitGo():
+		return False
 	if dir is None and dest is not None:
 		dir,passage = Core.player.parent.getDirPortalPair(dest.name.lower())
 	# print(dir,dest,passage)
@@ -1968,10 +1977,12 @@ def Lick(dobj,iobj,prep):
 	if I is None: return False
 	Core.game.setPronouns(I)
 	if enforceVerbScope("lick",I,permitSelf=True,permitParent=True): return False
+	if isinstance(I,Core.Room):
+		Core.Print("You can't lick the air.")
+		return False
 
 	if Core.hasMethod(I,"lick"):
 		return I.lick(Core.player)
-
 	return I.taste(Core.player)
 	
 
@@ -2074,7 +2085,7 @@ def Mount(dobj,iobj,prep,M=None,posture=None):
 	if prep in ("in","into","inside"):
 		if not Core.hasMethod(M,"traverse"):
 			return Core.Print(f"{+M} cannot be traversed.")
-		return M.traverse(Core.player)
+		return M.traverse(Core.player,verb=posture)
 
 	if posture is None:
 		posture = "stand"
@@ -2482,7 +2493,50 @@ def Struggle(dobj,iobj,prep):
 
 
 def Swim(dobj,iobj,prep):
-	Core.Print("swiming")
+	if prep in ("above","behind","below","beneath","by","into","near","out","out of","to",
+	"toward","under") or dobj is None and prep in ("u","up","d","down"):
+		if not Core.player.submersedIn():
+			Core.Print("You are not swimming in anything.")
+			return False
+		if not Core.player.canSwim():
+			Core.Print("You are too heavy to swim!")
+			return False
+		if dobj is not None or Core.player.parent.composition in Data.liquids:
+			return Go(dobj,iobj,prep)
+		if getattr(Core.player.platform,"composition",None) in Data.liquids:
+			if prep in ("above","out","out of","u","up") and \
+			Core.player.hasStatus("submerged"):
+				return Core.player.Emerge()
+			elif prep in ("below","beneath","d","down","under") and \
+			not Core.player.hasStatus("submerged"):
+				return Core.player.Submerge()
+		return Go(dobj,iobj,prep)
+
+	if prep not in ("across","d","down","in","inside","on","onto","over",
+	"through","u","up","upon",None):
+		return promptHelp("Command not understood.")
+	verbprep = "in" if prep is None else prep
+
+	if dobj is None: dobj = iobj
+	if dobj == "here":
+		dobj = getNoun(f"What will you swim {verbprep} here?")
+	S = findObject(dobj,f"swim {verbprep}","room")
+	if S is None: return False
+	Core.game.setPronouns(S)
+	if enforceVerbScope(f"swim {verbprep}",S,permitParent=True): return False
+
+	if Core.player.riding:
+		Core.Print(f"You can't swim, you are riding {-Core.player.riding}.")
+	Core.player.Dismount(silent=True)
+	# TODO: handle 'swim out of here' in a normal room
+	if S.composition in Data.liquids or prep in ("in","inside","through"):
+		if Core.player in S:
+			Core.Print(f"You are already swimming in {-S}.")
+			return False
+		return S.traverse(Core.player,dir=prep,verb="swim")
+	else:
+		Core.Print(f"You can't swim in {-S}.")
+		return False
 
 
 # if an item is a container, take each of its contents before taking it
@@ -3077,7 +3131,7 @@ actions = {
 # sniff
 # grunt/moan/groan/roar/rawr/argh/snarl
 # squirm -> struggle
-# dive/jump/leap
+# dive/jump/leap (dive deeper?)
 # untie
 # whip (attack)
 # activate/turn [on]
