@@ -360,6 +360,15 @@
 				"capacity": 100,
 				"status": [["AREA wet -2",-2]],
 				"items": []
+			},
+			{
+				"__class__": "Plash",
+				"name": "yellow puddle",
+				"desc": "A small puddle of yellow liquid on the floor. It smells foul.",
+				"weight": 5,
+				"composition": "urine",
+				"aliases": ["puddle"],
+				"items": []
 			}
 		],
 		"items": [
@@ -394,12 +403,7 @@
 				"locked": true
 			}
 		],
-		"creatures": [
-			{
-				"__class__": "factoryCreature",
-				"name": "goblin"
-			}
-		],
+		"creatures": [],
 		"status": [],
 		"ceiling": "wood",
 		"walls": "wood",

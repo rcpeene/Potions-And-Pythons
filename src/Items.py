@@ -368,7 +368,7 @@ class Mouth(Core.Item):
 
 
 class Plash(Core.Container):
-	def __init__(self,name,desc,weight,composition,items,finite=False,occupyprep="in",
+	def __init__(self,name,desc,weight,composition,items,finite=False,occupyprep="on",
 	**kwargs):
 		assert composition in Data.liquids
 		super().__init__(name,desc,weight,-1,composition,items,fixed=True,**kwargs)
@@ -383,6 +383,7 @@ class Plash(Core.Container):
 	def assignRefs(self,parent):
 		super().assignRefs(parent)
 		self.floor = self.parent.floor
+		self.surfaces = (self.ceiling,self.walls,self.floor)
 
 
 	# try to enter the Container, applying any relevant status effects
@@ -400,29 +401,35 @@ class Plash(Core.Container):
 	def exit(self,traverser):
 		if traverser not in self:
 			return False
-		traverser.removeStatus("submerged",-4)
-		traverser.replaceStatus(("wet",-4),("wet",21))
 		return super().exit(traverser)
 
 
-
 	def canAdd(self,I):
+		print("CAN ADD?", I, self)
+		if I.hasStatus("waterwalking"):
+			return False
 		selfDensity = Data.densities.get(self.composition,1)
 		itemDensity = Data.densities.get(I.composition,1)
+		print(itemDensity, selfDensity, self.capacity, self.Size(), I.Size())
 		if itemDensity < selfDensity:
+			print("no density")
 			return False
 		# TODO: check if boat or buoyant?
 		# if isinstance(I,Boat):
 		# 	return False
 		# case where Plash has infinite capacity. Imagine an endless puddle
 		if self.capacity == -1:
+			print("yes infinite")
 			return True
 		# case where Plash has nothing in it and not too small. Imagine a shallow puddle
-		if len(self.items) == 0 and self.Size() > I.Size() // 5:
+		if len(self.items) == 0 and self.Size() > I.Size() // 5 and self.capacity > 10:
+			print("yes puddle")
 			return True
 		# case where Plash is full
 		if self.itemsSize() + I.Size() > self.capacity:
+			print("no size",self.itemsSize(), I.Size(), self.capacity)
 			return False
+		print("yes all")
 		return True
 
 
@@ -434,17 +441,17 @@ class Plash(Core.Container):
 		if occupant not in self.occupants:
 			return False
 		super().disoccupy(occupant)
-		occupant.addStatus("wet",21)
-		occupant.removeStatus("wet",-4)
+		self.replaceStatus(("wet",-4),("wet",21))
 
 
 	def occupy(self,occupant):
+		if occupant.hasStatus("waterwalking"):
+			return super().occupy(occupant)
 		if self.canAdd(occupant):
 			return self.add(occupant)
-		assert False
-		# if super().occupy(occupant):
-		# 	occupant.addStatus("wet",-4)
-		# 	return True
+		if super().occupy(occupant):
+			occupant.addStatus("wet",-4)
+			return True
 
 
 	def traverse(self,traverser,dir=None,verb=None):
@@ -455,7 +462,10 @@ class Plash(Core.Container):
 
 		if dir == "out":
 			if self is traverser.parent or traverser in self.occupants:
-				traverser.Print(f"You get out of {-self}.")
+				if traverser in self.occupants:
+					traverser.Print(f"You get off {-self}.")
+				else:
+					traverser.Print(f"You get out of {-self}.")
 				if self.parent is not Core.game.currentroom:
 					traverser.waitInput()
 				self.disoccupy(traverser)
@@ -463,22 +473,31 @@ class Plash(Core.Container):
 					traverser.changeLocation(self.parent)				
 				return True
 			else:
-				traverser.Print(f"You're not {self.occupyprep} {-self}.",color="k")
+				traverser.Print(f"You're not in {-self}.",color="k")
 				return False
 		if traverser.parent is self or traverser in self.occupants:
-			Core.Print(f"You're already {self.occupyprep} {-self}.")
-			return False
-		if dir not in ("in","out","on",None):
-			Core.Print(f"{+self} does not go {dir}.",color="k")
-			return False
-		if not self.canAdd(traverser):
-			traverser.Print(f"{+traverser} can't fit {self.occupyprep} {-self}.")
+			Core.Print(f"You're already in {-self}.")
 			return False
 
-		if dir is None: dir = "in"
+		if dir not in ("in","on","through"):
+			Core.Print(f"{+self} does not go {dir}.",color="k")
+			return False
+		dir = "in"
 		if verb is None: verb = "get"
+		if traverser.hasStatus("waterwalking"):
+			traverser.Print(f"You have waterwalking.")
+			dir = "on"
+
+		if verb in ("lay","sit","crouch","stand"):
+			traverser.changePosture(verb,silent=True)
 		traverser.Print(f"You {verb} {dir} {-self}.")
-		traverser.changeLocation(self)
+		if dir == "on" or not self.canAdd(traverser):
+			self.occupy(traverser)
+		elif not self.canAdd(traverser):
+			traverser.Print(f"{+traverser} can't fit in {-self}.")
+			return False
+		else:
+			traverser.changeLocation(self)		
 		if traverser is Core.player:
 			Core.game.setPronouns(self)
 		return True
@@ -599,7 +618,6 @@ class Wall(Core.Passage):
 
 
 	def traverse(self,traverser,dir=None,verb=None):
-		print("TRAVERSING WALL",self,dir,verb)
 		if dir in Data.directions: dir = Data.directions[dir]
 		if dir == None:
 			if len(set(self.links.values())) == 1:

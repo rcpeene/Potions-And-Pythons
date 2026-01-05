@@ -4,7 +4,7 @@ echo This just compiles the project into an executable for Linux/Mac and deletes
 rm ./popy.exe
 cd ./src
 pip install pyinstaller
-pyinstaller popy.py --onefile --icon=..\potion.ico
+pyinstaller popy.py --onefile --icon=../gamedata/potion.ico
 mv dist/popy ../popy.exe
 rm popy.spec
 rm -rf ./build

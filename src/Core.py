@@ -41,7 +41,9 @@ def nameMatch(term,obj):
 	term = term.lower()
 	# print(term, obj.name, obj.nounPhrase(), obj.nounPhrase('the'))
 	if isinstance(obj, Room):
-		return term == obj.name.lower() or term in ["room"]
+		return term == obj.name.lower() or term == "room"
+	if obj is player.parent and term in ("here","this place"):
+		return True
 	return term == obj.name.lower() or \
 		term == obj.nounPhrase().lower() or \
 		term == obj.nounPhrase('the').lower() or \
@@ -140,6 +142,16 @@ def Print(*args,end="\n",sep=None,delay=None,color=None,allowSilent=True,outfile
 	if (game.silent or player.hasStatus("asleep")) and allowSilent:
 		return 0
 
+	# preprocessing to handle conditions that affect text content
+	args = [str(arg) for arg in args]
+	if not player.canNavigate():
+		args = [ambiguateDirections(arg) for arg in args]
+	if player.hasStatus("stupidity") and color not in ("k","y"):
+		args = [ambiguateNumbers(arg,grammatical=True) for arg in args]
+		# don't misspell in stats sidepanel
+		if outfile in (None,sys.stdout):
+			args = [misspell(arg) for arg in args]
+
 	# set outfile, color, delay, sep
 	if outfile is None:
 		outfile = sys.stdout
@@ -152,16 +164,6 @@ def Print(*args,end="\n",sep=None,delay=None,color=None,allowSilent=True,outfile
 		else: delay = 0.001
 	if sep is None:
 		sep=" " if len(args) > 1 else ""
-
-	# preprocessing to handle conditions that affect text content
-	args = [str(arg) for arg in args]
-	if not player.canNavigate():
-		args = [ambiguateDirections(arg) for arg in args]
-	if player.hasStatus("stupidity") and color not in ('k','y'):
-		args = [ambiguateNumbers(arg,grammatical=True) for arg in args]
-		# don't misspell in stats sidepanel
-		if outfile is sys.stdout:
-			args = [misspell(arg) for arg in args]
 
 	# save printLength for return, add color formatting
 	printLength = sum(displayLength(s) for s in args) + \
@@ -697,7 +699,8 @@ def misspell(text):
 			# ue[End] -> ew[End]
 			case ("u","e",z) if z in (" ",None): repl = cat("ew",z)
 			# u[Vowel] -> w[Vowel] (except not gua or nue)
-			case (x,"u",z) if x not in ("n","g") and z in Data.vowels: repl = cat(x,"w",z)
+			case (x,"u",z) if x not in ("t","n","g") and z in Data.vowels: 
+				repl = cat(x,"w",z)
 			# ou -> ow
 			case ("o","u",z) if z not in ("g"," ",None): repl = cat("ow",z)
 			# oi -> oy
@@ -2149,13 +2152,6 @@ class Game():
 		return R
 
 
-	# gets set of all rendered rooms except the current room
-	def nearbyRooms(self):
-		R = self.renderedRooms()
-		R.remove(self.currentroom)
-		return R
-
-
 	# returns a list of objects in rendered rooms which fit a certain condition
 	def queryRooms(self,key=lambda x:True,d=3):
 		matchingObjects = []
@@ -2296,7 +2292,7 @@ class Game():
 
 	# look up at the sky or ceiling and describe what is seen
 	def LookUp(self,target):
-		if target.startswith("the "):
+		if target is not None and target.startswith("the "):
 			target = target[4:]
 		if self.currentroom.ceiling is not None:
 			if target not in (None,"ceiling","roof"):
@@ -2777,9 +2773,9 @@ class Room(GameObject):
 # All items come with a name, description, weight, durability, and composition
 class Item(GameObject):
 	def __init__(self,name,desc,weight,durability,composition,aliases=None,rarity=1,
-	status=None,plural=None,descname=None,determiner=None,pronoun="it",fixed=False,
-	mention=True,longevity=None,despawnTimer=None,scent=None,flavor=None,texture=None,
-	platform=None,occupants=None,covering=None,id=None):
+	status=None,plural=None,descname=None,determiner=None,pronoun="it",occupyprep="on",
+	fixed=False,mention=True,longevity=None,despawnTimer=None,scent=None,flavor=None,
+	texture=None,platform=None,occupants=None,covering=None,id=None):
 
 		### Basic Properties
 	
@@ -2816,6 +2812,7 @@ class Item(GameObject):
 			self.plural = self.name + 's'
 		self.determiner = determiner
 		self.pronoun = pronoun
+		self.occupyprep = occupyprep
 		# used for identifying object from player input
 		self.aliases = list(set(aliases)) if aliases else []
 
@@ -2961,14 +2958,17 @@ class Item(GameObject):
 	def checkSubmersion(self):
 		submerseComp = self.submersedIn()
 		if submerseComp in Data.liquids:
-			self.addStatus("wet",-5)
+			if not self.hasStatus("wet"):
+				self.Print("Splash!",color="o")
+			self.addStatus("wet",-4)
 		else:
-			self.replaceStatus(("wet",-5),("wet",21))
+			self.replaceStatus(("wet",-4),("wet",21))
 
 		if submerseComp in Data.liquids or \
 		hasMethod(self.parent,"canSubmerse") and self.parent.canSubmerse(self):
 			liquidDensity = Data.densities.get(submerseComp,1)
-			if getattr(self.parent,"composition",None) in Data.liquids:
+			if isinstance(self.parent,Room) and \
+			getattr(self.parent,"composition",None) in Data.liquids:
 				self.addStatus("submerged",-4)
 				return True
 			if not self.canSwim(liquidDensity) and not self.hasStatus("submerged"):
@@ -3065,12 +3065,30 @@ class Item(GameObject):
 		self.checkVacancy()
 		self.checkOccupantsWeight(silent=True)
 
-		if not isinstance(self.parent,Creature):
-			if not self.fixed and not self.hasAnyStatus("flying"):
+		if not isinstance(self.parent,Creature) and not self.fixed and \
+		not self.hasAnyStatus("flying"):
 				if self.anchor() is None:
-					self.fall()			
-				if self.anchor().composition in Data.liquids and \
-				self.hasStatus("submerged"):
+					self.fall()
+
+				# # check to make sure item is both submersed and anchored to liquid
+				elif not self.hasStatus("waterwalking") and \
+				getattr(self.anchor(),"composition",None) in Data.liquids and \
+				self.submersedIn() in Data.liquids:
+					# self.Print(self,self.anchor(),self.anchor().composition)
+					a = self.anchor()
+					a.disoccupy(self)
+					# self.Print("self size?",self.Size())
+					if a.canAdd(self):
+						self.Print("You fall in!")
+						self.changeLocation(a)
+					else:
+						self.Print("You fall off!")
+
+				# changeLocation could change anchor, so this is not nested in block above
+				# it happens independently. Note item could fall twice
+				if not self.canSwim() and not self.hasStatus("waterwalking") and \
+				getattr(self.anchor(),"composition",None) in Data.liquids and \
+				self.submersedIn() in Data.liquids and self.hasStatus("submerged"):
 					self.fall()
 
 		self.checkSubmersion()
@@ -3145,6 +3163,7 @@ class Item(GameObject):
 
 	# degrade Item durability if damage is high enough, break if durability goes to 0
 	def takeDamage(self,dmg,type,silent=True):
+		assert dmg >= 0, "Damage must be non-negative"
 		# TODO: add damage type vulnerabilities based on composition
 		# i.e. wood is extra weak to fire and slashing
 		if self.composition in Data.liquids:
@@ -3266,6 +3285,8 @@ class Item(GameObject):
 			room = room.links["down"]
 		if room != self.room():
 			self.changeLocation(room)
+			# could enter a room which submergees
+			verb = "sink" if self.hasStatus("submerged") else "fall"
 			self.printNearby(f"{~self} {verb}s from above!".capitalize())
 
 		if self.anchor() is not self.parent.floor:
@@ -3283,13 +3304,13 @@ class Item(GameObject):
 
 	# Try to add occupant to self.occupants
 	def occupy(self,occupant,silent=False):
-		assert not isinstance(self.parent,Creature) and occupant in self.parent
+		assert not isinstance(self.parent,Creature)
 		if occupant in self.occupants:
 			Print(occupant+f"is already on {-self}.")
 			return False
 		### TODO: instead of just checking ancestors, should check tether loops
 		if occupant in self.ancestors():
-			Print(f"{+self} is already carrying {-occupant}.")
+			Print(f"{+self} is already occupied by {-occupant}.")
 			return False
 		if isinstance(occupant,Creature) and occupant.riding is not None:
 			occupant.removeRiding()
@@ -3300,6 +3321,7 @@ class Item(GameObject):
 		self.occupants.append(occupant)
 		occupant.platform = self
 		self.checkOccupantsWeight(silent=silent)
+
 		return occupant in self.occupants
 
 
@@ -3410,6 +3432,11 @@ class Item(GameObject):
 		sum(c.Size() for c in self.covering if c is not obj)
 
 
+	# normal Items can't contain other objects
+	def canAdd(self,obj):
+		return False
+
+
 	# Items can despawn when the despawnTimer hits 0 and theyre in a room and not fixed
 	def canDespawn(self):
 		return self.despawnTimer is not None and \
@@ -3481,8 +3508,12 @@ class Item(GameObject):
 
 	# gets the composition of the liquid the Item may be submersed in, if any
 	def submersedIn(self):
+		if self.hasStatus("waterwalking"):
+			return None
 		parentComp = getattr(self.parent,"composition",None)
-		platformComp = getattr(self.platform,"composition",None)
+		platformComp = None
+		if self.platform and self.platform.Size() > self.Size()//3:
+			platformComp = getattr(self.platform,"composition",None)
 		if parentComp in Data.liquids:
 			return parentComp
 		elif platformComp in Data.liquids:
@@ -3874,6 +3905,7 @@ class Creature(Item):
 			return False
 		if self.riding and self.riding.parent is not newparent:
 			return self.riding.changeLocation(newparent)
+
 		self.removeCover()
 		self.clearCovering()
 
@@ -3883,7 +3915,8 @@ class Creature(Item):
 		if self is player and isinstance(newparent,Room):
 			game.changeRoom(newparent)
 		# when not riding or being carried, platform becomes new room's floor
-		if self.riding is None and self.carrier is None:
+		if self.riding is None and self.carrier is None and self.platform is None:
+			# TODO: should probably call occupy here?
 			self.platform = newparent.floor
 		if self.hasStatus("flying"):
 			self.platform = None
@@ -3978,12 +4011,13 @@ class Creature(Item):
 
 	# check all status conditions that may need updating
 	def checkStatus(self):
-		# self.checkBreathing()
 		self.checkHungry()
 		self.checkTired()
 		self.checkHindered()
 		self.checkHidden()
-		self.checkSubmersion()
+		# these should probably be not be checked like the others
+		# self.checkBreathing()
+		# self.checkSubmersion()
 
 
 	# unused for Creatures, but used in Player subclass
@@ -3996,7 +4030,7 @@ class Creature(Item):
 		self.timeDespawn()
 		self.addStatus("dead",-2)
 		self.changePosture("laying",silent=True)
-		Print(f"{+self} died.",color="o")
+		self.printNearby(f"{+self} died.",color="o")
 
 		if self.hasStatus("anointed"):
 			return self.reanimate()
@@ -4009,7 +4043,7 @@ class Creature(Item):
 
 		n = diceRoll(3,player.LOOT(),-2)
 		self.parent.add(Serpens(n))
-		Print(f"Dropped §{n}.",color="g")
+		self.printNearby(f"Dropped §{n}.",color="g")
 
 		if game.whoseTurn is player:
 			r = self.rating()
@@ -4079,7 +4113,7 @@ class Creature(Item):
 		for condition in {c for (c,d) in self.status}:
 			if condition in Data.conditionDmg:
 				factor, dmgType = Data.conditionDmg[condition]
-				dmg = halfRoll(factor) - halfRoll(self.LCK())
+				dmg = min1(halfRoll(factor) - halfRoll(self.LCK()))
 				self.takeDamage(dmg,dmgType)
 
 		# natural healing is faster with a higher endurance
@@ -4099,6 +4133,8 @@ class Creature(Item):
 	def reanimate(self):
 		if not self.hasStatus("dead"):
 			return False
+		if self.hasStatus("anointed"):
+			self.removeStatus("anointed",silent=True)
 		self.hp = 1
 		self.nullDespawn()
 		if self is player:
@@ -4246,6 +4282,12 @@ class Creature(Item):
 	# if newObj is creature, replaced equipped gear with carried
 	def replaceItem(self,oldObj,newObj):
 		assert oldObj in self and not isinstance(oldObj,Creature)
+		oldObjSlot = None
+		for slot,obj in self.gear.items():
+			if oldObj is obj:
+				oldObjSlot = slot
+				break
+
 		if isinstance(newObj,Creature):
 			# if Item is in gear, note which slot
 			carriedSlot = "left" if self["left"] is oldObj else "right"
@@ -4265,9 +4307,8 @@ class Creature(Item):
 				return False
 			self.ObtainItem(newObj,silent=True)
 
-		for slot,obj in self.gear.items():
-			if oldObj is obj:
-				self[slot] = newObj
+			if oldObjSlot:
+				self.gear[oldObjSlot] = newObj
 
 		self.checkStatus()
 		return True
@@ -4298,6 +4339,7 @@ class Creature(Item):
 
 	# takes incoming damage, accounts for damage vulnerability or resistance
 	def takeDamage(self,dmg,type):
+		assert dmg >= 0, "Damage taken must be non-negative"
 		if self.hasStatus("dead"):
 			return False
 		prevhp = self.hp
@@ -4315,7 +4357,6 @@ class Creature(Item):
 		p = "!" if self.hasStatus("asleep") or total_dmg > self.MXHP()//4 else "."
 		color = "w"
 		if self is player and total_dmg > 0:
-			delay(0.5)
 			color = "r"
 		typeDisplay = "" if type == "e" else Data.dmgtypes[type] + " "
 		msg = f"{+self} took {total_dmg} {typeDisplay}damage{p}"
@@ -4443,7 +4484,7 @@ class Creature(Item):
 
 
 	# try to carry this Creature in carrier's gear
-	def carry(self,carrier,silent=False):
+	def carry(self,carrier,slot="left",silent=False):
 		assert isinstance(carrier,Creature)
 		if self.checkTetherLoop(carrier,self,"carry"):
 			return False
@@ -4467,7 +4508,7 @@ class Creature(Item):
 		self.removePlatform()
 
 		self.Dismount(posture="stand")
-		carrier.addCarry(self)
+		carrier.addCarry(self,slot=slot)
 
 		if carrier.cover is not self.cover:
 			self.addCover(carrier.cover)
@@ -4522,11 +4563,8 @@ class Creature(Item):
 		if self.riding or self.carrier:
 			return self.anchor().fall(height,room)
 
-		verb = "fall"
-		if self.hasStatus("submerged"):
-			if self.canSwim():
-				return False
-			verb = "sink"
+		verb = "sink" if self.hasStatus("submerged") else "fall"
+		if self.hasStatus("submerged") and self.canSwim(): return False
 
 		if player in self.occupants or player is self.carrying or player is self:
 			waitInput(self+f"{verb}s!",color="o")
@@ -4549,11 +4587,13 @@ class Creature(Item):
 			if self is player:
 				ellipsis()
 			self.changeLocation(room)
+			verb = "sink" if self.hasStatus("submerged") else "fall"
 			self.printNearby(f"{~self} {verb}s from above!".capitalize())
+			if self.hasStatus("submerged") and self.canSwim(): return False
 
-		# if self.anchor() is not self.parent.floor:
-		# 	# self.parent.floor.occupy(self)
-		# 	self.platform = self.parent.floor
+		if self.anchor() is not self.parent.floor:
+			self.parent.floor.occupy(self)
+			self.platform = self.parent.floor
 
 		force = min(height,20*self.weight)
 		if not self.hasAnyStatus("fleetfooted","submerged") and room.floor is not None:
@@ -4839,7 +4879,7 @@ class Creature(Item):
 		if hasMethod(anchor,"traverse") and not getattr(anchor,"closed",False):
 			if not getattr(anchor,"closed",True):
 				self.Print(f"{+anchor} is open.")
-			return anchor.traverse(self,verb=posture)
+			return anchor.traverse(self,verb=posture,dir="on")
 		if anchor is self.platform or anchor is self.riding:
 			pass
 		elif self.checkTetherLoop(self,anchor,"get on"):
@@ -4885,7 +4925,7 @@ class Creature(Item):
 
 
 	def Submerge(self):
-		if getattr(self.platform,"composition",None) not in Data.liquids:
+		if self.submersedIn() not in Data.liquids:
 			self.Print("You can't submerge here.")
 			return False
 		if not self.canSwim():
@@ -5263,7 +5303,7 @@ class Creature(Item):
 
 
 	# use posture and tethers to determine position description
-	def position(self,ignoreStanding=False):
+	def position(self,ignoreStanding=False,includeParent=False):
 		pos = ""
 		# if self.carrier:
 		# 	pos += f"being carried by {~self.carrier}"
@@ -5280,6 +5320,8 @@ class Creature(Item):
 			pos += f" behind {-self.cover}"
 		if ignoreStanding and pos == "standing":
 			pos = ""
+		if includeParent and not isinstance(self.parent,Room):
+			pos += f" in {-self.parent}"
 		return pos
 
 
@@ -5289,7 +5331,9 @@ class Creature(Item):
 			if self.hasStatus(pos):
 				return pos
 		else:
-			if self.anchor() is None:
+			if self.anchor() is None or \
+			getattr(self.anchor(),"composition",None) in Data.liquids and \
+			self.submersedIn() in Data.liquids:
 				return "floating"
 			return "standing"
 
@@ -5301,11 +5345,10 @@ class Creature(Item):
 
 	# size is normally equal to weight, but halved if not standing
 	def Size(self,posture=None):
-		posture = self.posture() if posture is None else posture
 		# under normal conditions, size is equal to weight
 		# I realize this doesn't count for density... whatever
 		size = self.weight
-		if posture not in ("stand","standing"):
+		if self.hasAnyStatus("crouching","sitting","laying"):
 			size //= 2
 		return size
 
@@ -5590,13 +5633,13 @@ class Player(Creature):
 		self.changePosture("laying",silent=True)
 		ellipsis(color="r")
 
+		self.addStatus("dead",-2)
 		if self.hasStatus("anointed"):
 			return self.reanimate()
 
 		self.removeRiding(silent=True)
 		self.removeCarry(silent=True)
 
-		self.addStatus("dead",-2)
 		waitInput()
 		return True
 
@@ -5852,6 +5895,8 @@ class Player(Creature):
 				displayInv = [n for n in displayInv if n not in self.gear.values()]
 			baggedObjects = bagObjects(displayInv, equivKey=lambda x: x.displayName())
 			invDisplayNames = [I.displayName(c) for I,c in baggedObjects]
+			if self.hasStatus("stupidity"):
+				invDisplayNames = [ambiguateNumbers(name) for name in invDisplayNames]
 			columnPrint(invDisplayNames,cols,12,outfile=outfile)
 
 	# takes args because interpreter passes them
@@ -5864,7 +5909,7 @@ class Player(Creature):
 	def printMP(self,*args): Print(f"MP: {self.mp}/{self.MXMP()}",color="b")
 
 	# takes args because interpreter passes them
-	def printPosition(self,*args): Print(f"You are {self.position()}.")
+	def printPosition(self,*args): Print(f"You are {self.position(includeParent=True)}.")
 
 	# takes args because interpreter passes them
 	def printRiding(self,silent=False,*args):
@@ -5888,6 +5933,7 @@ class Player(Creature):
 	# prints player level, money, hp, mp, rp, and status effects
 	def printStats(self, *args, outfile=None):
 		colWidth = None
+		nCols = 3
 		name = self.name
 		if len(name) > 45:
 			name = name[:42] + "..."
@@ -5900,12 +5946,11 @@ class Player(Creature):
 		if self.hasStatus("apathy"):
 			colors = ["w"]*len(colors)
 		if self.hasStatus("stupidity"):
-			stats = [ambiguateNumbers(stat,grammatical=False) for stat in stats]
-		if max(len(term) for term in stats) > 16:
-			colWidth = 16
+			stats = [ambiguateNumbers(stat) for stat in stats]
+		if max(len(term) for term in stats) > 14:
+			nCols = 2
 		stats = [tinge(colors[i],stats[i])[0] for i in range(len(stats))]
-
-		columnPrint(stats,3,w=colWidth,outfile=outfile)
+		columnPrint(stats,nCols,w=colWidth,outfile=outfile)
 
 
 	# prints all status conditions and their durations in a formatted table
@@ -6055,7 +6100,7 @@ class Humanoid(Creature):
 	def Act(self):
 		if not self.isAlive():
 			return
-		self.printNearby(f"\n{self.name}'s turn!")
+		self.printNearby(f"\n{self.name}'s turn!",self.id,color="k")
 		if self.canMove():
 			self.Attack()
 
@@ -6335,7 +6380,7 @@ class Animal(Speaker):
 	def Act(self):
 		if not self.isAlive():
 			return
-		self.printNearby(f"\n{self.name}'s turn!")
+		self.printNearby(f"\n{self.name}'s turn!",self.id,color="k")
 		self.Attack()
 
 
@@ -6481,6 +6526,7 @@ class Surface(Fixture):
 			self.aliases.append("water")
 		if any(name in Data.liquids for name in self.aliases+[self.name]):
 			self.aliases.append("liquid")
+
 
 	# Surfaces can't take damage
 	def takeDamage(self,dmg,type):

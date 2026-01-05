@@ -456,15 +456,14 @@ def newGame():
 # automatically starts a new game with a premade character for easy testing
 def testGame():
 	inv = [Items.factory["compass"]()]
-	status = [["fireproof",-1], ["cursed",-2], ["immortal",-1],
-	["sharpshooter",50], ["invisible",15], ["flying",5]]
-	Core.player = Core.Player("Norman","a hero",10,[4]*10,1000,50,inv=inv,love=100,
+	status = []
+	Core.player = Core.Player("Norman","a hero",29,[4]*10,1000,50,inv=inv,love=100,
 	fear=100,spells=[],status=status)
 
 	# world must be defined after player
-	Core.world = readJSON("World.json",object_hook=worldDecoder)
+	Core.world = readJSON("gamedata/World.json",object_hook=worldDecoder)
 
-	dlogForest = readDialogue("Dialogue.json")
+	dlogForest = readDialogue("gamedata/Dialogue.json")
 	Core.game = Core.Game(0,Core.world["cave"],Core.world["tunnel"],0,set(),dlogForest,
 	Creatures.factory,Items.factory)
 

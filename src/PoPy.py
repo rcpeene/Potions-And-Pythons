@@ -44,25 +44,23 @@ def main(testing=False):
 				return False
 			continue
 
-		# take user input until player successfully performs an action
-		if not Core.player.hasStatus("asleep"):
-			while not Interpreter.interpret(): continue
-		if Core.game.quit: return Menu.quit()
-
-		# creatures in current room's turn
-		for creature in Core.game.currentroom.allCreatures():
-			if not Core.player.isAlive(): continue
+		# loop over all creatures and initiate their actions
+		renderedCreatures = (room.allCreatures() for room in Core.game.renderedRooms())
+		creaturesToAct = [c for creatures in renderedCreatures for c in creatures]
+		while creaturesToAct:
+			if not Core.player.isAlive(): break
+			# MVMT and SPD determine who acts next
+			creature = max(creaturesToAct, key=lambda c: (c.MVMT(), c.SPD(), c.id))
+			creaturesToAct.remove(creature)
 			Core.game.whoseTurn = creature
-			creature.Act()
-
-		# creatures in nearby rooms' turn
-		Core.game.silent = True
-		for room in Core.game.nearbyRooms():
-			for creature in room.allCreatures():
-				if not Core.player.isAlive(): continue
-				Core.game.whoseTurn = creature
-				creature.Act()
-
+			if not creature.hasAnyStatus("asleep","dead"):
+				if creature is Core.player:
+					# take user input until player successfully performs an action
+					while not Interpreter.interpret(): continue
+					if Core.game.quit: return Menu.quit()
+				else:
+					creature.Act()
+	
 		if not Core.player.isAlive(): continue
 		# cleanup before looping
 		Core.game.whoseTurn = None
@@ -91,30 +89,19 @@ if __name__ == "__main__":
 # CURRENT TASKS
 
 # WATER AND LIQUIDS
-	# add "swim", adding drowning and holding breath
-		# handle goVertical when swimming
-		# if swimming, prevent jump (maybe automatically prevented because no anchor?)
-		# if swiming, alter climbing? always redirect climb? no; make climbing easy
-		# if you're swimming, you can't jump or stand, only swim or exit
 
-	# we may need to test entering and submersion for bodies of water that also serve as passages
-		# think like a large watery hole that goes straight down
-	# but! if they have water walking, they should be able to occupy plash?
-		# test if they're water walking and then this goes away while occupying plash
-
-# test "get in stream", "go in stream", "leave stream", "get out of stream"
-# test "lay in stream", "sit on stream", "sit in stream"
-# test "jump in stream" "jump out of stream" (also "out of chest"?)
+# revisit problem: when exiting room while occupying something... it doesn't disoccupy
+	# we can't automatically disoccupy because what if the anchor is moving rooms?
 
 # What will you do?
-# > jump out
-# What will you jump out?
-# > the pond
-# You're already on the pond
+# > get off puddle
+# What will you stand on?
+# > the floor
+# You're not on anything.
 
-# when checking if canAdd, allow for checking for intended posture, not current posture?
-# limit changePosture if theres not enough space?
-
+# > get in puddle
+# You get in the yellow puddle.
+# handle falling into plashes in passTime when standing on a puddle
 
 # pour multiple bottles of stuff into one pot
 	# will need to use a method 'merge'
@@ -125,20 +112,16 @@ if __name__ == "__main__":
 # think about hiding, occupying pools. Items and Creatures.
 # test drinking an object when inv is full, see if bottle goes on ground
 # hide/get in a body of water?
-# try "jump in the pond"
 # "drink from the pond"
 # add fishing
 # add magic beans or food to pour stuff on
 
-
+# when checking if canAdd, allow for checking for intended posture, not current posture?
+# limit changePosture if theres not enough space?
 
 ################################################################################
 
 # BUG BACKLOG
-
-# What will you do?
-# > sit in pond
-# You can't get on the pond, it is too high.
 
 # > doff helm
 # You doff your broken helm.

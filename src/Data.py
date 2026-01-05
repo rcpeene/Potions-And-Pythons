@@ -35,7 +35,7 @@ vowels = "aeiouAEIOU"
 
 superfluous = {"a","again","an","hers","his","i","ill","i'll","its","of","some","that","the","then","their","this","will"}
 
-shortactions = {"cast","here","room","clear","cls"}
+shortactions = {"cast","here","room","clear","cls","quit"}
 
 cancels = {"cancel","done","end","nevermind","no","nvm","undo"}
 
@@ -64,7 +64,7 @@ compounds = {"downstairs":["down","stairs"], "upstairs":["up","stairs"]}
 # used in nounify() in Parser.py to combine multiple words that might have a single meaning as a whole term
 miscexpressions = {"it all"}
 
-directions = {"n":"north","ne":"northeast","e":"east","se":"southeast","s":"south","sw":"southwest","w":"west","nw":"northwest","u":"up","d":"down","inside":"in","into":"in","o":"out","b":"beyond","upward":"up","downward":"down","onto":"on","upon":"on","off":"down","off of":"down","outside":"out","out of":"out","over":None,"to":None}
+directions = {"n":"north","ne":"northeast","e":"east","se":"southeast","s":"south","sw":"southwest","w":"west","nw":"northwest","u":"up","d":"down","inside":"in","into":"in","o":"out","b":"back","upward":"up","downward":"down","onto":"on","upon":"on","off":"down","off of":"down","outside":"out","out of":"out","over":None,"to":None}
 
 cardinals = ("north","east","south","west","northeast","southeast","southwest","northwest")
 
@@ -86,7 +86,7 @@ debuffs = {"dead","hindered","hungry","starving","tired","fatigued","drowning"}
 
 privateStatus = {"dead","invisible","hidden","hindered"}
 
-immobileStatus = ("laying","sitting","asleep","frozen","paralyzed","unconscious","stunned","dead","restrained")
+immobileStatus = ("asleep","frozen","paralyzed","unconscious","stunned","dead","restrained")
 
 # ANSI color codes for terminal output
 colorCodes = {
@@ -139,7 +139,7 @@ dayhours = hours[:9]
 nighthours = hours[9:]
 
 
-liquids = {"acid","freshwater","lava","mudwater","oil","saltwater","slime","water"}
+liquids = {"acid","freshwater","lava","mudwater","oil","saltwater","slime","urine","water"}
 
 densities = {
 	"brick": 2,
@@ -180,6 +180,7 @@ tastes = {
 	"soil": "It has a deep and full fresh earthy taste.",
 	"steel": "It has a sharp metallic taste.",
 	"stone": "It has a dull taste of chalk and lime.",
+	"urine": "It tastes acrid and bitter.",
 	"water": "It doesn't taste like much.",
 	"wood": "It doesn't taste like much.",
 }
