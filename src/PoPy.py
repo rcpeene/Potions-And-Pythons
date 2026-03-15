@@ -60,7 +60,7 @@ def main(testing=False):
 					if Core.game.quit: return Menu.quit()
 				else:
 					creature.Act()
-	
+
 		if not Core.player.isAlive(): continue
 		# cleanup before looping
 		Core.game.whoseTurn = None
@@ -90,18 +90,35 @@ if __name__ == "__main__":
 
 # WATER AND LIQUIDS
 
-# revisit problem: when exiting room while occupying something... it doesn't disoccupy
-	# we can't automatically disoccupy because what if the anchor is moving rooms?
+# handle falling into sea when in seacoast
 
-# What will you do?
-# > get off puddle
-# What will you stand on?
-# > the floor
-# You're not on anything.
+# test sinking, and swimming in: A) floor is liquid, B) composition is liquid in room...
+# C) plash with depth, like brook, D) plash with no depth, like yellow puddle
 
 # > get in puddle
 # You get in the yellow puddle.
-# handle falling into plashes in passTime when standing on a puddle
+# handle falling into plashes when it has infinite depth?
+
+# if submerged and unanchored, then prevent moving? (right now you can leave the seacoast)
+
+# What will you do?
+# > sit
+# You are already sitting.
+# What will you do?
+# > sit in the brook
+# You sit in the brook.
+# What will you do?
+# > swim under
+# You are submerged.
+# ^^^ make swimming automatically change posture?? I guess it depends on the depth
+# oh, it does change posture! but not when you say 'sit in brook', of course it keeps sitting
+# then handle trying to change posture while swimming
+
+# What will you do?
+# > swim under
+# What will you hide under?
+# > the brook
+# You can't, you are in the brook.
 
 # pour multiple bottles of stuff into one pot
 	# will need to use a method 'merge'
@@ -122,6 +139,16 @@ if __name__ == "__main__":
 ################################################################################
 
 # BUG BACKLOG
+
+# What will you do?
+# > take all from chest
+# You open the wooden chest.
+# Inside there is a rusty key and some Gold.
+# You can't take the rusty key, it's in the wooden chest.
+# You can't take the Gold, it's in the wooden chest.
+
+# when indoors:
+# The solar eclipse is over.
 
 # > doff helm
 # You doff your broken helm.
@@ -148,6 +175,7 @@ if __name__ == "__main__":
 # FUTURE IMPROVEMENTS
 
 # DROPPING, PUTTING, STEALING
+# add 'hold' verb, make it take or equip?
 # test "put on hat" and "put hat on"
 # redo put to account for occupancy versus containment
 	# consider "put maiden on horse" versus "put sword on table"
@@ -203,6 +231,7 @@ if __name__ == "__main__":
 # don't print contents of a container unless its open, and only open them when given "look in" rather than "look at"
 # add room property which is description of directions ("look up", "look east", "look out", etc.)
 # try "boom" effect. It will only effect current room/container (unless container breaks or is open?)
+	# make sound events ("splash!" should be one)
 # restrict Read to readable objects?
 # determine when to print addStatus messages and removeStatus messages for creatures/items
 # if describing something in own inventory, also print the lore tip in grey (or other color)
@@ -218,6 +247,7 @@ if __name__ == "__main__":
 # make sinceLastAte, sinceLast actual meters like hungriness and sleepiness, that rise or decay
 	# for instance, so wrp doesn't randomly cause you to be hungry after eating
 # make separate timer for mana regeneration
+# make sound events wake you up
 # add turn order, so you aren't the first to move when you enter a room, makes MVMT more useful
 	# allow moving multiple times if you have enough speed? (maybe max 5 for vs 1 for slowest creature)
 # refactor sleep into a method. right now, '\mbu sleep' has strange behavior

@@ -405,36 +405,31 @@ class Plash(Core.Container):
 
 
 	def canAdd(self,I):
-		print("CAN ADD?", I, self)
 		if I.hasStatus("waterwalking"):
 			return False
 		selfDensity = Data.densities.get(self.composition,1)
 		itemDensity = Data.densities.get(I.composition,1)
-		print(itemDensity, selfDensity, self.capacity, self.Size(), I.Size())
 		if itemDensity < selfDensity:
-			print("no density")
 			return False
 		# TODO: check if boat or buoyant?
 		# if isinstance(I,Boat):
 		# 	return False
 		# case where Plash has infinite capacity. Imagine an endless puddle
 		if self.capacity == -1:
-			print("yes infinite")
 			return True
 		# case where Plash has nothing in it and not too small. Imagine a shallow puddle
-		if len(self.items) == 0 and self.Size() > I.Size() // 5 and self.capacity > 10:
-			print("yes puddle")
+		if len(self.items) == 0 and self.Size() >= I.Size() // 5 and self.capacity > 1:
 			return True
 		# case where Plash is full
 		if self.itemsSize() + I.Size() > self.capacity:
-			print("no size",self.itemsSize(), I.Size(), self.capacity)
 			return False
-		print("yes all")
 		return True
 
 
 	def canSubmerse(self,creature):
-		return creature.Size() < self.Size() // 5
+		if creature.Size() < self.depth // 2:
+			return self.composition
+		return None
 
 
 	def disoccupy(self,occupant):
@@ -447,11 +442,12 @@ class Plash(Core.Container):
 	def occupy(self,occupant):
 		if occupant.hasStatus("waterwalking"):
 			return super().occupy(occupant)
-		if self.canAdd(occupant):
-			return self.add(occupant)
-		if super().occupy(occupant):
-			occupant.addStatus("wet",-4)
-			return True
+		# if self.canAdd(occupant):
+		# 	return self.add(occupant)
+		return False
+		# if super().occupy(occupant):
+		# 	occupant.addStatus("wet",-4)
+		# 	return True
 
 
 	def traverse(self,traverser,dir=None,verb=None):
@@ -485,14 +481,16 @@ class Plash(Core.Container):
 		dir = "in"
 		if verb is None: verb = "get"
 		if traverser.hasStatus("waterwalking"):
-			traverser.Print(f"You have waterwalking.")
+			traverser.Print(f"You are waterwalking.")
 			dir = "on"
 
 		if verb in ("lay","sit","crouch","stand"):
 			traverser.changePosture(verb,silent=True)
 		traverser.Print(f"You {verb} {dir} {-self}.")
-		if dir == "on" or not self.canAdd(traverser):
-			self.occupy(traverser)
+		# if dir == "on" or not self.canAdd(traverser):
+		# 	self.occupy(traverser)
+		if dir == "on" and self.occupy(traverser):
+			return True
 		elif not self.canAdd(traverser):
 			traverser.Print(f"{+traverser} can't fit in {-self}.")
 			return False

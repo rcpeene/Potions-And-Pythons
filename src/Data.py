@@ -162,7 +162,7 @@ scents = {
 
 
 tastes = {
-	"acid": "It tastes painful...",
+	"acid": "It tastes painful... Ouch!",
 	"bread": "It tastes like fluffy dreams and joy.",
 	"brick": "It tastes like dry gritty clay.",
 	"bronze": "It has a light metallic taste.",

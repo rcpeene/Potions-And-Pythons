@@ -1736,7 +1736,7 @@ def Go(dobj,iobj,prep):
 	if dobj in ("ahead","forward","forwards"): dobj = getNoun("In which direction?")
 	if prep in ("behind","below","beneath","under"):
 		return Hide(dobj,iobj,prep)
-	if prep in ("above","on","onto","upon"):
+	if prep in ("on","onto","upon"):
 		return Mount(dobj,iobj,prep)
 	if prep in ("by","near","at"):
 		return Stand(dobj,iobj,prep)
@@ -2104,6 +2104,7 @@ def Mount(dobj,iobj,prep,M=None,posture=None):
 	if dobj is None: dobj = iobj
 	if M is None: M = findObject(dobj,"get on","room")
 	if M is None: return False
+	if M is Core.player.parent: M = Core.player.parent.floor
 	Core.game.setPronouns(M)
 	# done before enforceVerbScope because it would prevent interaction with floor
 	if isinstance(M,Core.Room) or M is Core.player.parent.floor:
@@ -2125,7 +2126,7 @@ def Mount(dobj,iobj,prep,M=None,posture=None):
 	if posture in ("stand","crouch"):
 		stepOn = isinstance(M,Core.Creature) and M.posture() == "laying"
 		stepOn = M.Weight() < Core.player.Weight() // 5 or stepOn
-		if stepOn:
+		if stepOn and M.composition not in Data.liquids:
 			Core.player.changePosture(posture)
 			return Attack(dobj,"foot","with",target=M)
 
@@ -2550,7 +2551,7 @@ def Swim(dobj,iobj,prep):
 	if prep in goPreps or (dobj is None and prep in ("u","up","d","down")) or \
 	((dobj in Data.directions.values() or dobj in Core.player.parent.allDirs()) and \
 	prep not in swimPreps):
-		if not Core.player.submersedIn():
+		if not Core.player.bathedIn():
 			Core.Print("You are not swimming in anything.")
 			return False
 		if not Core.player.canSwim():
@@ -3027,7 +3028,7 @@ actions = {
 "get into":Enter,
 "get inside":Enter,
 "get down":Dismount,
-"get off":Dismount,
+"get off":Exit,
 "get on":Mount,
 "get out":Exit,
 "get up":Dismount,
