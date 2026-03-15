@@ -407,12 +407,14 @@ QP - quality points
 amount of experience player has with different attributes called qualities.
 determined by level and race
 the lowest any stat can begin at is 1
-from levelup, you get 99 by level 100, for a score total of 109. You can get 41 others through quests in the game.
-Ideally, if you have a score of 150, you have completed everything in the game.
+They also start with a bonus of +5, allocated to various stats based on character sex,age,gender
+Therefore, the total quality points should be approximately 14 + LV,
+i.e., the player has 1 in all ten qualities at level 1, and gains 1 QP every time they level up
+Since they can level up, 99 times, this would result in 114 score total
+There are 16 QP that can be attained through means other than leveling up
+This means the maximum possible score is 130.
+Each of 13 divine quests yield 1 QP, as well as beating the final boss, marrying a love interest, and completing the golden bug quest
 
-Total quality points should be 9 + LV,
-i.e., the player has 1 in all ten qualities at level 1, and gains 3 points total with each level up
-upon leveling up the player allocates the 3 new points to the categories of their choice, in any amount they would like
 
 BASE STATS: also called qualities, a players base stats determine all other stats, they can increase with level, and can be temporarily increased or decreased by magical effects. Each base stat affects a set of derived stats
 STR - ATCK, BRDN, ATHL

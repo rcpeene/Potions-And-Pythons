@@ -932,6 +932,11 @@ def buildWorld():
 		for creature in objQuery(room, d=3, key=lambda x: isinstance(x,Speaker)):
 			creature.buildDialogue()
 
+	# ensure all containers with liquid floors have a 'down' direction
+	for item in game.itemRegistry.values():
+		if getattr(getattr(item,"floor",None),"composition",None) in Data.liquids:
+			assert "down" in item.dirs, f"Item {item} has a liquid floor " \
+			"but no down direction"
 
 
 #############
@@ -2667,6 +2672,16 @@ class Room(GameObject):
 		return True
 
 
+	def canSubmerse(self,creature):
+		if creature not in self:
+			return None
+		if self.composition in Data.liquids:
+			return self.composition
+		if self.floor and self.floor.composition in Data.liquids:
+			return self.floor.composition
+		return None
+
+
 	# room contents is the fixtures, items, creatures, surfaces, and celestials
 	def contents(self):
 		cts = self.fixtures + self.items + self.creatures
@@ -2896,8 +2911,6 @@ class Item(GameObject):
 	def addStatus(self,name,dur,stackable=True):
 		if self.hasStatus(name) and not stackable:
 			return False
-		if self.hasStatus(name,dur):
-			return False
 		insort(self.status,[name,dur])
 		return True
 
@@ -2953,10 +2966,25 @@ class Item(GameObject):
 				self.Print(f"{+self} creaks under the weight...")
 
 
+	def checkBathedIn(self):
+		if not self.hasAnyStatus("waterwalking","flying","submerged") and \
+		getattr(self.anchor(),"composition",None) in Data.liquids:
+			# self.Print(self,self.anchor(),self.anchor().composition)
+			a = self.anchor()
+			a.disoccupy(self)
+			# self.Print("self size?",self.Size())
+			if a.canAdd(self):
+				self.Print("You fall in!")
+				self.changeLocation(a)
+				if not self.hasStatus("wet"):
+					self.Print("Splash!",color="o")
+				self.addStatus("wet",-4)
+
+
 	# check if Item is submersible in liquid based on size and floor composition
 	# not that this does not *remove* submersion, only adds it if needed
 	def checkSubmersion(self):
-		submerseComp = self.submersedIn()
+		submerseComp = self.bathedIn()
 		if submerseComp in Data.liquids:
 			if not self.hasStatus("wet"):
 				self.Print("Splash!",color="o")
@@ -2964,8 +2992,7 @@ class Item(GameObject):
 		else:
 			self.replaceStatus(("wet",-4),("wet",21))
 
-		if submerseComp in Data.liquids or \
-		hasMethod(self.parent,"canSubmerse") and self.parent.canSubmerse(self):
+		if submerseComp in Data.liquids and self.parent.canSubmerse(self):
 			liquidDensity = Data.densities.get(submerseComp,1)
 			if isinstance(self.parent,Room) and \
 			getattr(self.parent,"composition",None) in Data.liquids:
@@ -2978,7 +3005,6 @@ class Item(GameObject):
 
 		elif submerseComp not in Data.liquids:
 			self.removeStatus("submerged")
-			self.removeStatus("swimming")
 		return False
 
 
@@ -3070,25 +3096,11 @@ class Item(GameObject):
 				if self.anchor() is None:
 					self.fall()
 
-				# # check to make sure item is both submersed and anchored to liquid
-				elif not self.hasStatus("waterwalking") and \
-				getattr(self.anchor(),"composition",None) in Data.liquids and \
-				self.submersedIn() in Data.liquids:
-					# self.Print(self,self.anchor(),self.anchor().composition)
-					a = self.anchor()
-					a.disoccupy(self)
-					# self.Print("self size?",self.Size())
-					if a.canAdd(self):
-						self.Print("You fall in!")
-						self.changeLocation(a)
-					else:
-						self.Print("You fall off!")
-
-				# changeLocation could change anchor, so this is not nested in block above
-				# it happens independently. Note item could fall twice
+				# when you can't swim and have nothing but liquid under you, you can sink!
+				# it happens independently from the fall above. Note item could fall twice
 				if not self.canSwim() and not self.hasStatus("waterwalking") and \
 				getattr(self.anchor(),"composition",None) in Data.liquids and \
-				self.submersedIn() in Data.liquids and self.hasStatus("submerged"):
+				self.bathedIn() in Data.liquids and self.hasStatus("submerged"):
 					self.fall()
 
 		self.checkSubmersion()
@@ -3111,8 +3123,8 @@ class Item(GameObject):
 		if not self.hasStatus(c1,d1):
 			return False
 		if c1 == c2:
-			self.addStatus(c2,d2)
-			self.removeStatus(c1,d1)
+			if self.addStatus(c2,d2):
+				self.removeStatus(c1,d1)
 		else:
 			self.removeStatus(c1,d1)
 			self.addStatus(c2,d2)
@@ -3234,6 +3246,10 @@ class Item(GameObject):
 			return missile.collide(self)
 		return False
 
+	# return composition if self consists of a liquid that can submerge the item 
+	def canSubmerse(self,item):
+		return None
+
 
 	# Called when Item can no longer serve as cover for others in room
 	def clearCovering(self):
@@ -3279,8 +3295,8 @@ class Item(GameObject):
 			occupant.fall(height,room)
 		self.clearOccupants()
 
-		while (room.floor is None or room.floor.composition in Data.liquids) and \
-		"down" in room.links:
+		while "down" in room.links and (room.floor is None or \
+		(room.floor.composition in Data.liquids and verb == "sink")):
 			height += room.capacity // 5 # approximate vertical height of room
 			room = room.links["down"]
 		if room != self.room():
@@ -3449,7 +3465,7 @@ class Item(GameObject):
 	# checks if Creature can swim based on gear, weight ATHL, and MVMT
 	def canSwim(self,liquidDensity=None):
 		if liquidDensity is None:
-			submerseComp = self.submersedIn()
+			submerseComp = self.bathedIn()
 			liquidDensity = Data.densities.get(submerseComp,1)
 
 		density = Data.densities.get(self.composition,1)
@@ -3507,19 +3523,16 @@ class Item(GameObject):
 
 
 	# gets the composition of the liquid the Item may be submersed in, if any
-	def submersedIn(self):
+	def bathedIn(self):
 		if self.hasStatus("waterwalking"):
 			return None
-		parentComp = getattr(self.parent,"composition",None)
-		platformComp = None
-		if self.platform and self.platform.Size() > self.Size()//3:
-			platformComp = getattr(self.platform,"composition",None)
-		if parentComp in Data.liquids:
-			return parentComp
-		elif platformComp in Data.liquids:
-			return platformComp
-		else:
-			return None
+		# if self.platform and self.platform.canSubmerse(self):
+		# 	return self.platform.composition
+		elif self.parent:
+			if self.hasStatus("flying") and self.parent.composition not in Data.liquids:
+				return None
+			return self.parent.canSubmerse(self)
+		return None
 
 
 	# gets the first ancestor that isn't open, or the final ancestor (room)
@@ -3861,12 +3874,9 @@ class Creature(Item):
 	def addStatus(self,name,dur,stackable=True,silent=False):
 		if self.hasStatus(name) and not stackable:
 			return False
-		if self.hasStatus(name,dur):
-			return False
-		if self is not player and name in Data.privateStatus:
+		if self.hasStatus(name) or (self is not player and name in Data.privateStatus):
 			silent = True
-		if not self.hasStatus(name) and not silent:
-			allowSilent = self is not player
+		if not silent:
 			color = "w"
 			if name in Data.buffs | Data.blessings: color = "g"
 			if name in Data.debuffs | Data.curses: color = "r"
@@ -3874,11 +3884,14 @@ class Creature(Item):
 			if name in Data.curses: displayName = "the curse of " + name
 			if name in Data.blessings: displayName = "the blessing of " + name
 			elif name in Data.curses | Data.blessings:
-				self.Print(self+f"have {displayName}.",color=color,allowSilent=allowSilent)
+				self.Print(self+f"have {displayName}.",color=color,allowSilent=silent)
 			elif name == "asleep":
-				self.Print(self+f"falls {name}.",allowSilent=allowSilent)
+				self.Print(self+f"falls {name}.",allowSilent=silent)
 			else:
-				self.Print(self+f"are {name}.",color=color,allowSilent=allowSilent)
+				self.Print(self+f"are {name}.",color=color,allowSilent=silent)
+
+		if name == "wet" and self.hasStatus("asleep"):
+			self.removeStatus("asleep")
 
 		# lift off ground if added flying
 		if name == "flying" and self.platform is self.parent.floor:
@@ -3914,12 +3927,13 @@ class Creature(Item):
 			prevparent.exit(self)
 		if self is player and isinstance(newparent,Room):
 			game.changeRoom(newparent)
-		# when not riding or being carried, platform becomes new room's floor
-		if self.riding is None and self.carrier is None and self.platform is None:
-			# TODO: should probably call occupy here?
-			self.platform = newparent.floor
+		# when not riding or being carried, new room's floor becomes platform
+		# TODO: should probably call occupy here?
 		if self.hasStatus("flying"):
 			self.platform = None
+		# TODO: right now if changing rooms on a platform, you are moved onto floor
+		elif self.riding is None and self.carrier is None:
+			self.platform = newparent.floor
 
 		newparent.enter(self)
 
@@ -3930,6 +3944,7 @@ class Creature(Item):
 			if occupant.parent is not self.parent:
 				occupant.changeLocation(newparent)
 		assert self.carrying is None or self.carrying.parent is self.parent
+
 		return True
 
 
@@ -4169,13 +4184,13 @@ class Creature(Item):
 	def removeStatus(self,reqName=None,reqDuration=None,silent=False):
 		wasSleeping = self.hasStatus("asleep")
 		wellRested = False
-		anyRemoved = False
+		condsRemoved = []
 
 		# copy to prevent removing-while-iterating errors
 		for name,duration in self.status.copy():
 			if reqName in (name,None) and reqDuration in (duration,None):
 				self.status.remove([name,duration])
-				anyRemoved = True
+				condsRemoved.append(name)
 				# TODO: this is hacky, it should check the total duration of time slept
 				# needs a counter sleepTime in the class
 				if name == "asleep" and duration < 30:
@@ -4193,13 +4208,15 @@ class Creature(Item):
 						Print(f"{+self} {verb} no longer {name}.")
 
 		# this recurs into removeStatus, so guard to prevent infinite loop
-		if anyRemoved:
+		if condsRemoved:
 			self.checkStatus()
+			if any(status in ("flying","waterwalking") for status in condsRemoved):
+				self.checkBathedIn()
 		if wasSleeping and not self.hasStatus("asleep"):
 			self.awaken(wellRested=wellRested)
 		if self is player:
 			self.display()
-		return anyRemoved
+		return bool(condsRemoved)
 
 
 	# replace this object with newObj in parent and all tethers
@@ -4368,7 +4385,7 @@ class Creature(Item):
 		if self.hp == 0:
 			return self.death()
 		if total_dmg > 0 and self.hasStatus("asleep"):
-			self.removeStatus("asleep")
+			self.awaken()
 
 
 	# ensure fear is within bounds
@@ -4577,8 +4594,8 @@ class Creature(Item):
 
 		if room is None:
 			room = self.room()
-		while (room.floor is None or room.floor.composition in Data.liquids) and \
-		"down" in room.links:
+		while "down" in room.links and (room.floor is None or \
+		(room.floor.composition in Data.liquids and verb == "sink")):
 			height += room.capacity // 5 # approximate height of room
 			room = room.links["down"]
 		if room != self.room():
@@ -4596,7 +4613,8 @@ class Creature(Item):
 			self.platform = self.parent.floor
 
 		force = min(height,20*self.weight)
-		if not self.hasAnyStatus("fleetfooted","submerged") and room.floor is not None:
+		if not self.hasAnyStatus("fleetfooted","submerged") and \
+		room.floor is not None and not self.bathedIn():
 			if force > 0:
 				self.takeDamage(force,"b")
 				for rider in self.occupants:
@@ -4925,7 +4943,8 @@ class Creature(Item):
 
 
 	def Submerge(self):
-		if self.submersedIn() not in Data.liquids:
+		# if self.bathedIn() not in Data.liquids:
+		if not self.parent or not self.parent.canSubmerse(self):
 			self.Print("You can't submerge here.")
 			return False
 		if not self.canSwim():
@@ -5137,7 +5156,7 @@ class Creature(Item):
 	# checks if Creature can swim based on gear, weight ATHL, and MVMT
 	def canSwim(self,liquidDensity=None):
 		if liquidDensity is None:
-			submerseComp = self.submersedIn()
+			submerseComp = self.bathedIn()
 			liquidDensity = Data.densities.get(submerseComp,1)
 
 		if not self.canMove():
@@ -5333,7 +5352,7 @@ class Creature(Item):
 		else:
 			if self.anchor() is None or \
 			getattr(self.anchor(),"composition",None) in Data.liquids and \
-			self.submersedIn() in Data.liquids:
+			self.bathedIn() in Data.liquids:
 				return "floating"
 			return "standing"
 
@@ -7079,6 +7098,10 @@ class Container(Portal):
 		if self.capacity == -1:
 			return True
 		return I.Size() <= self.vacancy() and self not in I.objTree()
+
+
+	def canSubmerse(self,creature):
+		return Room.canSubmerse(self,creature)
 
 
 	# return self.items plus surfaces that are not None or self
