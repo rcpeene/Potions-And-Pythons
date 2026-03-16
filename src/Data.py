@@ -10,6 +10,9 @@
 
 
 
+TERMINAL_HEIGHT = 32
+TERMINAL_WIDTH = 128
+
 
 ####################
 ## USEFUL STRINGS ##
@@ -17,9 +20,9 @@
 
 menuinstructions = "\nType 'info' for information on how to play.\nType 'new' to start a new game.\nType 'load' to load a save file.\nType 'delete' to delete a save file.\nType 'quit' to quit the game.\n"
 
-gameinfo = "="*70 + "\n\n\tPotions & Pythons\n\tv.Alpha\n\tBy Carter Peene, 2022\n\n" + "-"*70 + "\n\n\tTo play, type a command of the form:\n\t[verb] [*noun] [*preposition] [*noun]\n\tOR\n\t[verb] [*preposition] [*noun]\n\t* denotes a term that can be omitted when unnecessary.\n\tArticles, determiners, and most symbols are ignored.\n\n" + "-"*70 + "\n\n\tDuring the game, you may type...\n\tSee these instructions:\t\t'info' or 'help'\n\tGet a list of valid commands:\t'commands'\n\tGet a list of command examples:\t'examples'\n\tSee your player statistics:\t'stats' and 'abilities'\n\tSee your items:\t\t\t'inv' and 'gear'\n\tLearn about your location:\t'here' and 'where'\n\tLearn about most game terms:\t'define [term]'\n\tSave the game:\t\t\t'save' and 'quicksave'\n\tQuit:\t\t\t\t'quit'\n\n" + "="*70
+gameinfo = "="*TERMINAL_WIDTH + "\n\n\tPotions & Pythons\n\tv.Alpha\n\tBy Carter Peene, 2022\n\n" + "-"*TERMINAL_WIDTH + "\n\n\tTo play, type a command of the form:\n\t[verb] [*noun] [*preposition] [*noun]\n\tOR\n\t[verb] [*preposition] [*noun]\n\t* denotes a term that can be omitted when unnecessary.\n\tArticles, determiners, and most symbols are ignored.\n\n" + "-"*TERMINAL_WIDTH + "\n\n\tDuring the game, you may type...\n\tSee these instructions:\t\t'info' or 'help'\n\tGet a list of valid commands:\t'commands'\n\tGet a list of command examples:\t'examples'\n\tSee your player statistics:\t'stats' and 'abilities'\n\tSee your items:\t\t\t'inv' and 'gear'\n\tLearn about your location:\t'here' and 'where'\n\tLearn about most game terms:\t'define [term]'\n\tSave the game:\t\t\t'save' and 'quicksave'\n\tQuit:\t\t\t\t'quit'\n\n" + "="*TERMINAL_WIDTH
 
-examples = "\nValid input examples include:\n- go\n- go north\n- go nw\n- go up the stairs\n- go back\n- go to tunnel\n- look around\n- look at python\n- i will fight the python!\n- hit the python with my sword\n- attack python sword\n- fight it\n- equip a sword\n- unequip sword\n- take red potion\n- take the potion from the chest\n- take all\n- put red potion in the chest\n- put potion chest\n- drop the red potion\n- pour it out\n- close chest\nGet a precise list of commands by typing 'commands'."
+examples = "\nValid input examples include:\n- go\n- go north\n- go nw\n- go up the stairs\n- go back\n- go to tunnel\n- look around\n- look at python\n- i will fight the python!\n- hit the python with my sword\n- attack python sword\n- fight it\n- equip a sword\n- unequip sword\n- take red potion\n- take the potion from the chest\n- take all\ntake all from chest\n- put red potion in the chest\n- put potion chest\n- drop the red potion\n- pour it out\n- close chest\nGet a precise list of commands by typing 'commands'."
 
 symbols = ".,!?~`\"[]{}<>+=/*&^%$#@\t"
 

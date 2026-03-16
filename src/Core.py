@@ -28,7 +28,6 @@ import Data
 
 
 
-
 ####################
 ## CORE FUNCTIONS ##
 ####################
@@ -1753,6 +1752,12 @@ class GameObject():
 
 	### Operation ###
 
+	# if possible merge another item into this one
+	# return merged object if successful, False if not mergeable 
+	def merge(self,other):
+		return False
+
+
 	# decrements the duration for each status condition applied to the object by t
 	# removes status conditions whose duration is lowered past 0
 	def passTime(self,t):
@@ -1764,6 +1769,10 @@ class GameObject():
 
 		# remove conditions with 0 duration left
 		self.removeStatus(reqDuration=0)
+
+
+	def setParent(self,newParent):
+		self.parent = newParent
 
 
 	### Getters ###
@@ -1831,6 +1840,19 @@ class GameObject():
 	# compared with Container capacity and for checking cover/hiding
 	def Size(self):
 		return self.weight
+
+
+	# gets the first ancestor that isn't open, or the final ancestor (room)
+	# used to determine the 'root' of a Creature's available surroundings
+	def surroundings(self,includeSelf=False):
+		# print(self,self.ancestors())
+		ancs = self.ancestors()
+		if includeSelf:
+			ancs = [self] + ancs
+		for anc in ancs:
+			if getattr(anc,"closed",False):
+				return anc
+		return self.room()
 
 
 	# used to compare objects mass
@@ -2063,13 +2085,14 @@ class Game():
 
 	# has player exit the previous room and enter the new room
 	def changeRoom(self,newroom):
+		couldSeeSky = player.canSeeSky(self.currentroom)
 		if newroom is self.currentroom:
 			return
 		# if newroom != self.currentroom:
 		self.clearPronouns()
 		clearScreen()
 		self.prevroom = self.currentroom
-		self.currentroom = newroom
+		self.currentroom = newroom.room()
 
 		# these need to happen before describeRoom; they may affect player.canNavigate()
 		player.parent = newroom
@@ -2078,9 +2101,9 @@ class Game():
 
 		self.describeRoom()
 		# then can print any celestial messages after describing the Room
-		if self.prevroom.ceiling and not self.currentroom.ceiling:
-			self.checkDaytime()
-			self.checkAstrology()
+		if not couldSeeSky and player.canSeeSky(self.currentroom):
+			self.checkDaytime(newroom=True)
+			self.checkAstrology(newroom=True)
 		return True
 
 
@@ -2181,7 +2204,7 @@ class Game():
 	### Celestials ###
 
 	# change the phase of the moon based on time, print message if not silent
-	def checkMoon(self,silent=False):
+	def checkMoon(self,silent=False,newroom=False):
 		if getattr(getattr(player,"parent",None),"ceiling",None) is not None:
 			silent=True
 		self.events.discard("new moon")
@@ -2199,51 +2222,53 @@ class Game():
 
 
 	# change the state of astrological objects, print message if not silent
-	def checkAstrology(self,silent=False):
-		if getattr(getattr(player,"parent",None),"ceiling",None) is not None:
+	def checkAstrology(self,silent=False,newroom=False):
+		if not silent and not player.canSeeSky():
 			silent=True
-
 		darkhours = ("hearth","cat","mouse","owl","serpent","wolf")
 		aurora_cycle = self.time % 2000
 		if aurora_cycle >= 0 and aurora_cycle < 100 and self.hour() in darkhours:
-			if "aurora" not in self.events and not silent:
+			if ("aurora" not in self.events or newroom) and not silent:
 				Print("There is an aurora in the sky!",color="b")			
 				self.setPronouns(aurora)
 			self.events.add("aurora")
 			self.celestials.add(aurora)
-		elif "aurora" in self.events and not silent:
+		elif "aurora" in self.events:
 			self.events.remove("aurora")
 			self.celestials.remove(aurora)
-			Print("The aurora is over.")
+			if not silent:
+				Print("The aurora is over.")
 
 		meteor_cycle = self.time % 3500
 		if meteor_cycle >= 0 and meteor_cycle < 300 and self.hour() in darkhours:
-			if "meteor shower" not in self.events and not silent:
+			if ("meteor shower" not in self.events or newroom) and not silent:
 				Print("There is a meteor shower in the sky!",color="b")
 				self.setPronouns(meteorshower)
 			self.events.add("meteor shower")
 			self.celestials.add(meteorshower)
-		elif "meteor shower" in self.events and not silent:
+		elif "meteor shower" in self.events:
 			self.events.remove("meteor shower")
 			self.celestials.remove(meteorshower)
-			Print("The meteor shower is over.")
+			if not silent:
+				Print("The meteor shower is over.")
 
 		lighthours = ("rooster","juniper","bell","sword","willow","lily")
 		eclipse_cycle = self.time % (self.monthlength*3+100)
 		if eclipse_cycle > 0 and eclipse_cycle < 30 and self.hour() in lighthours:
-			if "eclipse" not in self.events and not silent:
+			if ("eclipse" not in self.events or newroom) and not silent:
 				Print("There is a solar eclipse in the sky!",color="b")
 				self.setPronouns(eclipse)
 			self.events.add("eclipse")
 			self.celestials.add(eclipse)
-		elif "eclipse" in self.events and not silent:
+		elif "eclipse" in self.events:
 			self.events.remove("eclipse")
 			self.celestials.remove(eclipse)
-			Print("The solar eclipse is over.")
+			if not silent:
+				Print("The solar eclipse is over.")
 
 
 	# change time of day, print message if not silent, check moon phase
-	def checkDaytime(self,silent=False):
+	def checkDaytime(self,silent=False,newroom=False):
 		if getattr(getattr(player,"parent",None),"ceiling",None) is not None:
 			silent=True
 		self.celestials.add(sky)
@@ -2264,12 +2289,12 @@ class Game():
 			self.celestials.add(moon)
 			self.celestials.add(stars)
 
-		if not silent:
+		if not silent or newroom:
 			for daytime in ("morning","day","evening","night"):
 				if daytime in self.events and not silent:
 					Print(f"It is {daytime}.")
 					break
-		self.checkMoon(silent=(silent or "night" not in self.events))
+		self.checkMoon(silent=(silent or "night" not in self.events), newroom=newroom)
 
 
 	### User Output ###		
@@ -2487,12 +2512,12 @@ class Room(GameObject):
 			O.parent = self
 			return O
 		elif isinstance(O,Item):
-			# ensure only one bunch of Gold exists here
-			if isinstance(O,Serpens):
-				for item in self.items:
-					if isinstance(item,Serpens):
-						item.merge(O)
-						return item
+			# merge object if mergeable with existing item here
+			for item in self.items:
+				merged = O.merge(item)
+				if merged:
+					return self.merged
+
 			insort(self.items,O)
 			O.parent = self
 			O.timeDespawn()
@@ -2690,6 +2715,10 @@ class Room(GameObject):
 		return cts
 
 
+	def getNewLocation(self,dir=None):
+		return self.links[dir]
+
+
 	# given a direction (like 'north' or 'down)
 	# return the Portal with that direction in this room
 	def getPortalsFromDir(self,dir):
@@ -2721,6 +2750,12 @@ class Room(GameObject):
 		condition = lambda x: x.mention and x.platform in (None,self.floor)
 		objects = list(filter(condition,self.items+self.fixtures))
 		return objects
+
+
+	# useful for determining what room ultimately contains an object
+	# exists in this class for compatibility with other objects
+	def room(self):
+		return self
 
 
 	# for rooms, size is their capacity
@@ -2951,7 +2986,11 @@ class Item(GameObject):
 			occupant.changeLocation(newparent)
 
 		newparent.enter(self)
-		self.platform = newparent.floor
+		# if the container causes you to float, then don't automatic touch floor
+		if not newparent.canSubmerse(self):
+			self.platform = newparent.floor
+		else:
+			self.platform = None
 		return True
 
 
@@ -2999,7 +3038,7 @@ class Item(GameObject):
 				self.addStatus("submerged",-4)
 				return True
 			if not self.canSwim(liquidDensity) and not self.hasStatus("submerged"):
-				self.Print("You are too heavy to stay afloat!",color="o")
+				self.Print("You are too heavy to keep yourself afloat!",color="o")
 				self.addStatus("submerged",-4)
 				return True
 
@@ -3093,15 +3132,13 @@ class Item(GameObject):
 
 		if not isinstance(self.parent,Creature) and not self.fixed and \
 		not self.hasAnyStatus("flying"):
-				if self.anchor() is None:
+				if self.anchor() is None and not self.bathedIn():
+					self.fall()
+				# when you can't swim and have nothing but liquid under you, you can sink!
+				elif self.bathedIn() in Data.liquids and self.hasStatus("submerged") and \
+				not self.canSwim() and not self.hasAnyStatus("waterwalking"):
 					self.fall()
 
-				# when you can't swim and have nothing but liquid under you, you can sink!
-				# it happens independently from the fall above. Note item could fall twice
-				if not self.canSwim() and not self.hasStatus("waterwalking") and \
-				getattr(self.anchor(),"composition",None) in Data.liquids and \
-				self.bathedIn() in Data.liquids and self.hasStatus("submerged"):
-					self.fall()
 
 		self.checkSubmersion()
 
@@ -3322,11 +3359,13 @@ class Item(GameObject):
 	def occupy(self,occupant,silent=False):
 		assert not isinstance(self.parent,Creature)
 		if occupant in self.occupants:
-			Print(occupant+f"is already on {-self}.")
+			if not silent:
+				Print(occupant+f"is already on {-self}.")
 			return False
 		### TODO: instead of just checking ancestors, should check tether loops
 		if occupant in self.ancestors():
-			Print(f"{+self} is already occupied by {-occupant}.")
+			if not silent:
+				Print(f"{+self} is already occupied by {-occupant}.")
 			return False
 		if isinstance(occupant,Creature) and occupant.riding is not None:
 			occupant.removeRiding()
@@ -3511,7 +3550,9 @@ class Item(GameObject):
 
 	# get the Room that ultimately contains this Item at the root of its object tree
 	def room(self):
-		return self.ancestors()[-1]
+		room = self.ancestors()[-1]
+		assert isinstance(room,Room), f"{self}'s first ancestor {room} is not a Room"
+		return room
 
 
 	# get object size from weight, accounting for density based on composition
@@ -3533,16 +3574,6 @@ class Item(GameObject):
 				return None
 			return self.parent.canSubmerse(self)
 		return None
-
-
-	# gets the first ancestor that isn't open, or the final ancestor (room)
-	# used to determine the 'root' of a Creature's available surroundings
-	def surroundings(self):
-		# print(self,self.ancestors())
-		for anc in self.ancestors():
-			if getattr(anc,"closed",False):
-				return anc
-		return self.room()
 
 
 	# get total size of Item and everything upon it
@@ -3925,7 +3956,8 @@ class Creature(Item):
 		prevparent = self.parent
 		if prevparent:
 			prevparent.exit(self)
-		if self is player and isinstance(newparent,Room):
+		if self is player and newparent.room() != prevparent.room() and \
+		newparent.surroundings() is newparent.room():
 			game.changeRoom(newparent)
 		# when not riding or being carried, new room's floor becomes platform
 		# TODO: should probably call occupy here?
@@ -3933,7 +3965,11 @@ class Creature(Item):
 			self.platform = None
 		# TODO: right now if changing rooms on a platform, you are moved onto floor
 		elif self.riding is None and self.carrier is None:
-			self.platform = newparent.floor
+			# if new parent causes you to float, don't automatically touch floor
+			if not newparent.canSubmerse(self):
+				self.platform = newparent.floor
+			else:
+				self.platform = None
 
 		newparent.enter(self)
 
@@ -4609,7 +4645,7 @@ class Creature(Item):
 			if self.hasStatus("submerged") and self.canSwim(): return False
 
 		if self.anchor() is not self.parent.floor:
-			self.parent.floor.occupy(self)
+			self.parent.floor.occupy(self,silent=True)
 			self.platform = self.parent.floor
 
 		force = min(height,20*self.weight)
@@ -4839,6 +4875,10 @@ class Creature(Item):
 			self.Print("You can't surface because you can't swim!")
 			return False
 		self.removeStatus("submerged")
+		# when swimming up to surface, remove anchor and begin to float if deep enough
+		if self.parent.canSubmerse(self) and getattr(self.parent,"depth",0) > self.Size():
+			if self.anchor():
+				self.anchor().disoccupy(self)
 		self.lastBreathed = game.time
 		self.checkBreathing()
 
@@ -5750,12 +5790,22 @@ class Player(Creature):
 
 	# Player can't navigate if they are blind/stupid or
 	# if the sun is not visible and they have no compass
-	def canNavigate(self,location=None):
+	def canNavigate(self):
+		location = self.parent
+		if location is None or self.hasAnyStatus("blindness","stupidity"):
+			return False
+		return self.countCompasses() > 0 or (self.canSeeSky() and "sun" in location)
+
+
+	def canSeeSky(self,location=None):
 		if location is None:
 			location = self.parent
-		if location is None or self.hasAnyStatus("blind","stupidity"):
+		if self.hasStatus("blind"):
 			return False
-		return self.countCompasses() > 0 or sun in location
+		# may look from a given location rather than a real location
+		if location.surroundings(includeSelf=True).ceiling:
+			return False
+		return True
 
 
 	# count number of compasses in Inventory
@@ -5916,7 +5966,9 @@ class Player(Creature):
 			invDisplayNames = [I.displayName(c) for I,c in baggedObjects]
 			if self.hasStatus("stupidity"):
 				invDisplayNames = [ambiguateNumbers(name) for name in invDisplayNames]
-			columnPrint(invDisplayNames,cols,12,outfile=outfile)
+			invDisplay = "   ".join(invDisplayNames)
+			Print(invDisplay, outfile=outfile, delay=0)
+
 
 	# takes args because interpreter passes them
 	def printLV(self,*args): Print(f"LV: {self.level()}",color="o")
@@ -6240,10 +6292,10 @@ class Speaker(Creature):
 	### Interaction ###
 
 	# talk to this speaker
-	def converse(self):
+	def converse(self,partner):
 		if "met" not in self.memories:
-			self.firstImpression(player)
-		self.appraise()
+			self.firstImpression(partner)
+		self.appraise(partner)
 		if not self.dlogTree.visit(self):
 			Print(f"{self.name} says nothing...")
 
@@ -6415,13 +6467,13 @@ class Animal(Speaker):
 
 	# talk to this Animal
 	def converse(self,partner):
-		if not player.hasStatus("wildspeaking"):
+		if not partner.hasStatus("wildspeaking"):
 			sounds = game.dlogForest["sounds"][self.species]
 			sound = sample(sounds,1)[0]
 			waitInput(f'"{sound}"',color="y")
 			return True
 		if "met" not in self.memories:
-			self.firstImpression(player)
+			self.firstImpression(partner)
 		self.appraise(partner)
 		if not self.dlogTree.visit(self):
 			Print(f"{self.name} says nothing...")
@@ -6602,6 +6654,12 @@ class Portal(Item):
 
 	### File I/O ###
 
+	def prepareCompressedLinks(self):
+		# must copy links for saving to JSON so real links remain
+		if not hasattr(self, "compressedLinks"):
+			self.compressedLinks = self.links.copy()
+
+
 	# In JSON, Portals' links eachother are represented by a unique link ID
 	# search in the World for the Portal that has a link with the same link ID
 	# and link that portal to self
@@ -6653,8 +6711,7 @@ class Portal(Item):
 	# replace link to paired Portal with given linkId for storing to json
 	# sometimes called from self, sometimes from the paired Portal
 	def assignLinkIDs(self,pairPortal,linkId):
-		if not hasattr(self, "compressedLinks"):
-			self.compressedLinks = self.links.copy()
+		self.prepareCompressedLinks()
 
 		assert pairPortal in self.compressedLinks.values()
 		for dir, dest in self.compressedLinks.items():
@@ -6664,10 +6721,7 @@ class Portal(Item):
 
 	# replace object references in Portal Links with json-serializable values
 	def convertToJSON(self):
-		# must copy links for saving to JSON so real links remain
-		if not hasattr(self, "compressedLinks"):
-			self.compressedLinks = self.links.copy()
-
+		self.prepareCompressedLinks()
 		# convert Portal links to int IDs
 		for portal in {v for v in self.compressedLinks.values() if isinstance(v,Portal)}:
 			# get next available linkId
@@ -6695,29 +6749,6 @@ class Portal(Item):
 
 	### Operation ###
 
-	# when going through a portal without a concerted direction, pick a default one
-	# if there's 1 destination, pick that. if there's "down", pick that. otherwise random
-	def getDefaultDir(self):
-		if len(set(self.links.values())) == 1:
-			return list(self.links.keys())[0]
-		elif "down" in self.links:
-			return "down"
-		return choice(list(self.links.keys()))
-
-
-	# given a direction, get the new location that the Portal leads to
-	# if self links to another Portal, the new location is other Portal's parent
-	def getNewLocation(self,dir=None):
-		if dir is None:
-			dir = self.getDefaultDir()
-		newloc = self.links[dir]
-		if isinstance(newloc,Portal):
-			newloc = newloc.parent
-			if isinstance(newloc,Creature):
-				newloc = newloc.parent
-		return newloc
-
-
 	# for Creatures intentionally travelling through the portal
 	# takes a verb because some subclasses may take verbs to traverse
 	def traverse(self,traverser,dir=None,verb=None):
@@ -6736,8 +6767,8 @@ class Portal(Item):
 			else:
 				msg = f"Which direction on the {self.name}?"
 				dir = InputLoop(msg)
-				if dir is None:
-					return False
+		if dir is None:
+			return False
 		if dir not in self.links:
 			Print(f"The {self.name} does not go '{dir}'.")
 			return False
@@ -6811,9 +6842,33 @@ class Portal(Item):
 		return links
 
 
+	# when going through a portal without a concerted direction, pick a default one
+	# if there's 1 destination, pick that. if there's "down", pick that. otherwise random
+	def getDefaultDir(self):
+		if len(set(self.links.values())) == 1:
+			return list(self.links.keys())[0]
+		elif "down" in self.links:
+			return "down"
+		return choice(list(self.links.keys()))
+
+
 	# get the links dict to use in the parent's allLinks method
 	def getLinksForParent(self):
 		return self.links
+
+
+	# given a direction, get the new location that the Portal leads to
+	# if self links to another Portal, the new location is other Portal's parent
+	def getNewLocation(self,dir=None):
+		if dir is None:
+			dir = self.getDefaultDir()
+		newloc = self.links[dir]
+		if isinstance(newloc,(Room,Container)):
+			return newloc
+		else:
+			newloc = newloc.parent
+			if isinstance(newloc,Creature):
+				newloc = newloc.parent
 
 
 	# given a direction (like 'north' or 'down)...
@@ -6851,17 +6906,78 @@ class Portal(Item):
 
 
 
+# A dict subclass that dynamically provides a Container's enter/exit links
+# while still allowing persistent modifications via normal dict operations
+class ContainerLinks(dict):
+	def __init__(self,container,static=None):
+		super().__init__(static or {})
+		self._container = container
+
+	def _dynamic(self):
+		d = {}
+		c = self._container
+		if hasattr(c,'passprep'):
+			d[c.passprep] = c
+		if hasattr(c,'exitprep') and hasattr(c,'parent'):
+			d[c.exitprep] = c.parent
+		return d
+
+	def _merged(self):
+		m = self._dynamic()
+		m.update(super().items())
+		return m
+
+	def __getitem__(self,key):
+		try:
+			return super().__getitem__(key)
+		except KeyError:
+			return self._dynamic()[key]
+
+	def __contains__(self,key):
+		return super().__contains__(key) or key in self._dynamic()
+
+	def __iter__(self):
+		return iter(self._merged())
+
+	def __len__(self):
+		return len(self._merged())
+
+	def items(self):
+		return self._merged().items()
+
+	def values(self):
+		return self._merged().values()
+
+	def keys(self):
+		return self._merged().keys()
+
+	def get(self,key,default=None):
+		try:
+			return self[key]
+		except KeyError:
+			return default
+
+	def copy(self):
+		return dict(self._merged())
+
+	def static(self):
+		return dict(super().items())
+
+	def __repr__(self):
+		return repr(self._merged())
+
+
 # In addition to Rooms and Creatures, Containers can also contain Items and be a 'parent'
 # Containers special Portals. they have traverse and transfer methods
 # but they link to themselves, adding traversers into their items list
-# see Container.links()
 class Container(Portal):
 	def __init__(self,name,desc,weight,durability,composition,items,capacity=None,
-	passprep=None,exitprep="out",**kwargs):
+	passprep=None,exitprep="out",links=None,**kwargs):
 		Item.__init__(self,name,desc,weight,durability,composition,**kwargs)
 		self.capacity = capacity if capacity else self.Size()
 		self.passprep = passprep if passprep else "in"
 		self.exitprep = exitprep if exitprep else "out"
+		self.links = ContainerLinks(self,links)
 		self.items = items
 		# for containers, the surfaces surrounding it are itself
 		self.ceiling = self
@@ -6872,9 +6988,16 @@ class Container(Portal):
 
 	### File I/O ###
 
+	def prepareCompressedLinks(self):
+		# must copy links for saving to JSON so real links remain
+		# containers should remove their self-reference links
+		if not hasattr(self, "compressedLinks"):
+			self.compressedLinks = self.links.static()
+
+
 	# delete unneeded attributes for storing to json
 	def convertToJSON(self):
-		jsonDict = Item.convertToJSON(self)
+		jsonDict = Portal.convertToJSON(self)
 		del jsonDict["ceiling"]
 		del jsonDict["walls"]
 		del jsonDict["floor"]
@@ -7079,7 +7202,6 @@ class Container(Portal):
 
 	### Getters ###
 
-
 	# returns dict of links, where keys are directions and values are Rooms/Portals
 	def allLinks(self,d=3):
 		links = super().allLinks(d=d)
@@ -7129,13 +7251,6 @@ class Container(Portal):
 	# get total weight of all items in Container
 	def itemsWeight(self):
 		return sum(i.weight for i in self.items)
-
-
-	# for Containers, the links are dynamic, but are used as property for compatibility
-	# entering always links to self and exiting always links to parent
-	@property
-	def links(self):
-		return {self.passprep:self, self.exitprep:self.parent}
 
 
 	# get available capacity in Container

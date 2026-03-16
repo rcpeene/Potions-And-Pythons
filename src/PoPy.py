@@ -6,6 +6,7 @@ import os
 import sys
 import traceback
 
+import Data
 import Core
 import Menu
 import Interpreter
@@ -16,7 +17,7 @@ import Interpreter
 def main(testing=False):
 	# sleep(3)
 	# formatting the prompt window
-	# os.system("mode con: lines=32")
+	# os.system(f"mode con: lines={str(Data.TERMINAL_HEIGHT)} cols={str(Data.TERMINAL_WIDTH)}")
 	os.system("title Potions ^& Pythons")
 	os.system("color 0F")
 	if "src" in os.getcwd(): os.chdir("..")
@@ -90,35 +91,23 @@ if __name__ == "__main__":
 
 # WATER AND LIQUIDS
 
-# handle falling into sea when in seacoast
 
-# test sinking, and swimming in: A) floor is liquid, B) composition is liquid in room...
-# C) plash with depth, like brook, D) plash with no depth, like yellow puddle
+# there is basic single-ingredient crafting (put one item into machine get some output)
+# there is mixture crafting (put multiple items, get some output)
+# the most basic should be 'merge', when two items occupy the same space
+	# not all items are mergeable
+# ways of specifying/constraining input(s):
+	# by name
+	# by composition
+	# by weight
+	# outputs can take values from these input properties?
+		# particularly, output weight can depend on input weight
+	# can blacklist certain ingredients?
+# for multi-ingredient crafting, ingredients need a priority order,
+	# when not all ingredients are accounted for in crafting ingredients can specify defaults
+		# crafting will look for the highest priority ingredient that has a default and choose that recipe
 
-# > get in puddle
-# You get in the yellow puddle.
-# handle falling into plashes when it has infinite depth?
 
-# if submerged and unanchored, then prevent moving? (right now you can leave the seacoast)
-
-# What will you do?
-# > sit
-# You are already sitting.
-# What will you do?
-# > sit in the brook
-# You sit in the brook.
-# What will you do?
-# > swim under
-# You are submerged.
-# ^^^ make swimming automatically change posture?? I guess it depends on the depth
-# oh, it does change posture! but not when you say 'sit in brook', of course it keeps sitting
-# then handle trying to change posture while swimming
-
-# What will you do?
-# > swim under
-# What will you hide under?
-# > the brook
-# You can't, you are in the brook.
 
 # pour multiple bottles of stuff into one pot
 	# will need to use a method 'merge'
@@ -140,27 +129,6 @@ if __name__ == "__main__":
 
 # BUG BACKLOG
 
-# What will you do?
-# > take all from chest
-# You open the wooden chest.
-# Inside there is a rusty key and some Gold.
-# You can't take the rusty key, it's in the wooden chest.
-# You can't take the Gold, it's in the wooden chest.
-
-# when indoors:
-# The solar eclipse is over.
-
-# > doff helm
-# You doff your broken helm.
-# You unequip your broken helm.
-
-# > attack table with sword
-# You attack the table with your broken sword.
-# The table took 4 bludgeoning damage.
-# What will you do?
-# > attack table with hatchet
-# You attack the table with your broken sword.
-# The table took 5 bludgeoning damage.
 
 ################################################################################
 

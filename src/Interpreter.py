@@ -30,8 +30,7 @@ commandQueue = []
 ###########################
 
 
-# this is used to disambiguate user input...
-# when the object name given is not specific enough
+# this is used to disambiguate user input when object name given is not specific enough
 # takes the object name and list of matching objects
 # prints the list of objects with labels to help the user distinguish them
 # will return when user cancels or when they select an object by name or number
@@ -676,9 +675,9 @@ def Lob(command):
 
 	if path in Data.directions:
 		path = Data.directions[path]
-	for dir, room in Core.game.currentroom.links.items():
-		if path in (dir, room.name.lower()):
-			target = room
+	for dir, dest in Core.player.parent.links.items():
+		if path in (dir,dest.name.lower()):
+			target = dest
 			prep = "to"
 			break
 	else:
@@ -1031,7 +1030,7 @@ def Attack(dobj,iobj,prep,target=None,weapon=None,weapon2=None):
 	if not isinstance(weapon,Core.Weapon):
 		weapon = weapon.asWeapon()
 
-	Core.Print(f"You attack {-target} with your {Core.player.weapon}.",color="o")
+	Core.Print(f"You attack {-target} with your {weapon}.",color="o")
 	if isinstance(target,Core.Creature): Core.player.attackCreature(target)
 	elif isinstance(target,Core.Item): Core.player.attackItem(target)
 	if stowed: Core.player.weapon,Core.player.weapon2 = stowedweapons
@@ -1305,6 +1304,13 @@ def Dismount(dobj,iobj,prep,posture=None):
 	return True
 
 
+def Dive(dobj,iobj,prep):
+	if Core.player.bathedIn():
+		return Swim(dobj,iobj,"down")
+	else:
+		return Jump(dobj,iobj,"into")
+
+
 def Do(dobj,iobj,prep):
 	Core.Print("doing")
 
@@ -1327,7 +1333,7 @@ def Doff(dobj,iobj,prep):
 	Core.game.setPronouns(I)
 
 	Core.Print(f"You doff your {I.name}.")
-	Core.player.unequip(slot)
+	Core.player.unequip(slot,silent=True)
 	return True
 
 
@@ -1579,17 +1585,17 @@ def Give(dobj,iobj,prep):
 # called when the user wants to go "up" or "down"
 def GoVertical(dir,passage=None,dobj=None):
 	# print(dir,passage,dobj)
-	assert (dir,passage) in Core.game.currentroom.allLinks()
+	# assert (dir,passage) in Core.player.parent.allLinks()
 	newroom = None
 	goer = Core.player.riding if Core.player.riding else Core.player
 	if goer.hasStatus("flying"):
-		newroom = Core.game.currentroom.allLinks()[dir,passage]
+		newroom = Core.player.parent.allLinks()[dir,passage]
 		Core.waitInput(goer+f"flies {dir}!")
 	elif goer.hasStatus("submerged") and passage is None:
 		if not goer.canSwim():
 			Core.Print(f"{+goer} can't go {dir},",(goer-"isn't able to swim!"))
 			return False
-		newroom = Core.game.currentroom.allLinks()[dir,passage]
+		newroom = Core.player.parent.allLinks()[dir,passage]
 		Core.waitInput(goer+f"swims {dir}.")
 	if newroom is not None:
 		goPosture()
@@ -1597,17 +1603,17 @@ def GoVertical(dir,passage=None,dobj=None):
 			return Core.player.changeLocation(passage.getNewLocation(dir=dir))
 		return Core.player.changeLocation(newroom)
 
-	hasUpPassage = any(d == "up" for (d,p) in Core.game.currentroom.allLinks() if p)
-	if passage is None and dir == "up" and dir in Core.game.currentroom.links:
+	hasUpPassage = any(d == "up" for (d,p) in Core.player.parent.allLinks() if p)
+	if passage is None and dir == "up" and dir in Core.player.parent.links:
 		if hasUpPassage:
 			dobj = getNoun("What will you go up?")
 			passage = findObject(dobj,"go up","room")
 			if passage is None:
 				return False
 
-	if passage is None and dir in Core.game.currentroom.links:
+	if passage is None and dir in Core.player.parent.links:
 		goPosture()
-		return Core.player.changeLocation(Core.game.currentroom.links[dir])
+		return Core.player.changeLocation(Core.player.parent.getNewLocation(dir))
 	elif passage is None and dobj is not None:
 		Core.Print(f"There is no '{dobj}' to go {dir} here.",color="k")
 		return False
@@ -1718,6 +1724,14 @@ def limitGo():
 			f" which is {cond}.{spurRec}")
 			Core.game.setPronouns(Core.player.riding)
 			return True
+
+	bathedIn = Core.player.bathedIn()
+	if bathedIn and not Core.player.canSwim() and \
+	getattr(Core.player.anchor(),"composition",None) in Data.liquids and \
+	not Core.player.hasAnyStatus("flying","waterwalking"):
+		Core.Print(f"You can't swim, so you flail in the {bathedIn}!")
+		return True
+
 	return False
 
 
@@ -1834,14 +1848,19 @@ def Hide(dobj,iobj,prep,I=None,posture=None):
 	Core.game.setPronouns(I)
 	if enforceVerbScope(f"hide {prep}",I,permitParent=True): return False
 
+	if (prep == "under" and I.canSubmerse(Core.player)):
+		prep = "in"
 	if prep in ("in","inside"):
 		if not isinstance(I,Core.Container):
 			Core.Print(f"You can't get {prep} {-I}.")
 			return False
-		res = I.traverse(Core.player)
-		if not getattr(I,"closed",True):
-			I.close(Core.player)
-		return res
+		if I.traverse(Core.player,dir=prep,verb="hide"):
+			if not getattr(I,"closed",True):
+				I.close(Core.player)
+			if I is Core.player.parent and I.canSubmerse(Core.player):
+				Core.player.Submerge()
+			return True
+		return False
 
 	return Core.player.Hide(I,posture=posture)
 
@@ -2555,7 +2574,7 @@ def Swim(dobj,iobj,prep):
 			Core.Print("You are not swimming in anything.")
 			return False
 		if not Core.player.canSwim():
-			Core.Print("You are too heavy to swim!")
+			Core.Print("You can't swim!")
 			return False
 		if dobj is not None:
 			return Go(dobj,iobj,prep)
@@ -2606,7 +2625,8 @@ def TakeAllRecur(objToTake):
 		for content in contents:
 			takenAny = TakeAllRecur(content) or takenAny
 
-	if enforceVerbScope("take",objToTake,permitParent=False,permitAnchor=False):
+	if enforceVerbScope("take",objToTake,permitParent=False,permitAnchor=False,
+	permitOutside=True):
 		return False
 	return Core.player.ObtainItem(objToTake) or takenAny
 
@@ -2731,8 +2751,8 @@ def Throw(dobj,iobj,prep,maxspeed=None):
 	elif iobj == "up":
 		T = Core.player.parent.ceiling
 		dir = "up"
-	elif iobj.lower() in Core.game.currentroom.links.keys():
-		T = Core.game.currentroom.links[iobj]
+	elif iobj.lower() in Core.player.parent.links.keys():
+		T = Core.player.parent.getNewLocation(iobj)
 		dir = iobj
 	elif iobj == "down":
 		T = Core.player.parent.floor
@@ -2995,6 +3015,7 @@ actions = {
 "define":Define,
 "describe":Describe,
 "dismount":Dismount,
+"dive":Dive,
 "do":Do,
 "dodge":Dodge,
 "doff":Doff,
@@ -3137,6 +3158,7 @@ actions = {
 "strike":Attack,
 "stroke":Caress,
 "struggle":Struggle,
+"submerge": Dive,
 "swim":Swim,
 "take":Take,
 "take a bite":Bite,

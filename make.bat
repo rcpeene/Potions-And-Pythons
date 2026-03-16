@@ -3,11 +3,10 @@ Rem This just compiles the project into an executable for Windows and deletes so
 
 del "popy.exe"
 chdir .\src
-pip install pyinstaller
-pyinstaller popy.py --onefile --icon=..\gamedata\potion.ico
+py -m pip install --upgrade pip setuptools pyinstaller
+py -m PyInstaller popy.py --onefile --icon=..\gamedata\potion.ico
 move dist\popy.exe ..\
 del popy.spec
 rd /s /q .\build\
 rd /s /q .\dist\
 chdir ..\
-cls

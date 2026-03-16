@@ -378,30 +378,15 @@ class Plash(Core.Container):
 		self.ceiling = None
 		self.walls = None
 		self.floor = None
+		self.aliases.append(self.composition)
+		if any(comp for comp in ("freshwater","mudwater","saltwater")):
+			self.aliases.append("water")
 
 
 	def assignRefs(self,parent):
 		super().assignRefs(parent)
 		self.floor = self.parent.floor
 		self.surfaces = (self.ceiling,self.walls,self.floor)
-
-
-	# try to enter the Container, applying any relevant status effects
-	def enter(self,traverser):
-		if traverser in self:
-			return False
-		if super().enter(traverser):
-			traverser.addStatus("wet",-4,stackable=True)
-			traverser.checkSubmersion()
-			return True
-		return False
-
-
-	# try to exit the Container, removing any relevant status effects
-	def exit(self,traverser):
-		if traverser not in self:
-			return False
-		return super().exit(traverser)
 
 
 	def canAdd(self,I):
@@ -427,9 +412,15 @@ class Plash(Core.Container):
 
 
 	def canSubmerse(self,creature):
-		if creature.Size() < self.depth // 2:
+		if creature.Size() < self.depth // 2 or self.depth == -1:
 			return self.composition
+		if self.parent.canSubmerse(creature):
+			return self.parent.canSubmerse(creature)
 		return None
+
+
+	def consume(self,eater):
+		return self.imbibe(eater)
 
 
 	def disoccupy(self,occupant):
@@ -437,6 +428,67 @@ class Plash(Core.Container):
 			return False
 		super().disoccupy(occupant)
 		self.replaceStatus(("wet",-4),("wet",21))
+
+
+	# try to enter the Container, applying any relevant status effects
+	def enter(self,traverser):
+		if traverser in self:
+			return False
+		if self.depth == -1 or self.depth > self.Size():
+				traverser.waitInput("It's deeper than it looks!")
+		if super().enter(traverser):
+			traverser.addStatus("wet",-4,stackable=True)
+			traverser.checkSubmersion()
+			return True
+		return False
+
+
+	# try to exit the Container, removing any relevant status effects
+	def exit(self,traverser):
+		if traverser not in self:
+			return False
+		return super().exit(traverser)
+
+
+	def imbibe(self,drinker):
+		Core.Print(f"You drink from {-self}.")
+		self.taste(drinker)
+
+		if self.finite:
+			self.weight -= 3	
+		if self.weight <= 0:
+			self.Print(f"{+self} becomes empty.")
+			return self.destroy()
+
+
+	def merge(self,other):
+		if other.composition != self.composition:
+			return False
+		if other.weight > self.weight:
+			return self.replace(other.merge(self))
+
+		self.finite = other.finite
+		if other.capacity == -1:
+			self.capacity = -1
+		elif self.capacity != -1:
+			self.capacity += other.capacity
+		self.depth = self.capacity
+		self.weight += other.weight
+
+		if not self.floor and other.floor:
+			self.floor = other.floor
+		if not self.walls and other.walls:
+			self.walls = other.walls
+		if not self.ceiling and other.ceiling:
+			self.ceiling = other.ceiling
+		self.surfaces = (self.ceiling,self.walls,self.floor)
+		self.aliases = list(set(self.aliases + other.aliases))
+
+		for item in other.items.copy():
+			other.remove(item)
+			self.add(item)
+		return self
+
 
 
 	def occupy(self,occupant):
@@ -451,12 +503,37 @@ class Plash(Core.Container):
 
 
 	def traverse(self,traverser,dir=None,verb=None):
+		if verb is None: 
+			verb = "swim"
+			if not traverser.canSwim() and traverser.anchor() and \
+			traverser.anchor().composition not in Data.liquids:
+				verb = "wade"
+
 		if dir in Data.directions: dir = Data.directions[dir]
 		if traverser in self.occupants:
 			Core.Print(f"You can't, you are {traverser.position()}.")
 			return False
+		if dir == None:
+			if len(set(self.links.values())) == 1:
+				dir = list(self.links.keys())[0]
+			else:
+				msg = f"Which direction on the {self.name}?"
+				dir = Core.Input(msg).lower()
 
-		if dir == "out":
+		if dir == "down" and traverser in self:
+			if traverser.hasStatus("submerged"):
+				if "down" not in self.links:
+					traverser.Print(f"You are already submerged in {-self}.")
+					return False
+				traverser.waitInput(f"You {verb} down.")
+				return traverser.changeLocation(self.getNewLocation("down"))
+			return traverser.Submerge()
+		if dir == "up" and traverser in self:
+			if not traverser.hasStatus("submerged"):
+				traverser.Print(f"You are in {-self}, but not submerged.")
+				return False
+			return traverser.Emerge()
+		if dir in ("out",self.exitprep):
 			if self is traverser.parent or traverser in self.occupants:
 				if traverser in self.occupants:
 					traverser.Print(f"You get off {-self}.")
@@ -471,12 +548,23 @@ class Plash(Core.Container):
 			else:
 				traverser.Print(f"You're not in {-self}.",color="k")
 				return False
-		if traverser.parent is self or traverser in self.occupants:
-			Core.Print(f"You're already in {-self}.")
-			return False
 
-		if dir not in ("in","on","through"):
-			Core.Print(f"{+self} does not go {dir}.",color="k")
+		if traverser.parent is self or traverser in self.occupants:
+			if dir in ("in","on",self.passprep):
+				traverser.Print(f"You're already in {-self}.")
+				return False
+			if dir not in self.links:
+				traverser.Print(f"{+self} does not go '{dir}'.")
+				return False
+			if not traverser.canSwim() and traverser.posture == "floating":
+				traverser.Print(f"You can't go {dir}, you aren't able to swim!")
+			
+			newLoc = self.getNewLocation(dir)
+			traverser.waitInput(f"You {verb} {dir}.")
+			return traverser.changeLocation(newLoc)
+
+		if dir not in ("in","on","through",self.passprep):
+			traverser.Print(f"{+self} does not go {dir}.",color="k")
 			return False
 		dir = "in"
 		if verb is None: verb = "get"
@@ -499,22 +587,6 @@ class Plash(Core.Container):
 		if traverser is Core.player:
 			Core.game.setPronouns(self)
 		return True
-
-
-	def consume(self,eater):
-		return self.imbibe(eater)
-
-
-	def imbibe(self,drinker):
-		Core.Print(f"You drink from {-self}.")
-		self.taste(drinker)
-
-		if self.finite:
-			self.weight -= 3	
-		if self.weight <= 0:
-			self.Print(f"{+self} becomes empty.")
-			return self.destroy()
-
 
 
 
@@ -823,9 +895,10 @@ factory = {
 	"blue potion": lambda: Potion("blue potion", "A bubbling blue liquid in a glass bottle.",10,3,"glass",["bottle","glass","potion"],2),
 	"bottle": lambda: Bottle("bottle","An empty glass bottle",6,3,"glass",["glass","glass bottle"]),
 	"coffee": lambda: Potion("bottle of coffee","A bottle of frothy dark brown liquid.",10,3,"glass",["coffee","espresso","bottle"],1),
-	"compass": lambda: Core.Compass("compass","A plain steel compass with a red arrow.",2,10,"steel",rarity=2,plural="compasses"),
+	"compass": lambda: Core.Compass("compass","A plain steel compass with a red needle.",2,10,"steel",rarity=2,plural="compasses"),
 	"green potion": lambda: Potion("green potion", "A bubbling green liquid in a glass bottle.",10,3,"glass",["bottle","glass","potion"],2),
 	"iron ingot": lambda: Core.Item("iron ingot","A solid bar of iron.",20,200,"iron",["ingot","bar","iron"]),
+	"puddle": lambda: Plash("puddle","A small puddle of murky water.",randint(2,10),"water",[],finite=True),
 	"red potion": lambda: Potion("red potion", "A bubbling red liquid in a glass bottle.",10,3,"glass",["bottle","glass","potion"],2),
 	"shard": lambda: Shard("glass shard","A small glass shard.",2,1,"glass",["shard"])
 }
