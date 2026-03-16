@@ -31,7 +31,12 @@
 				"weight": 100,
 				"composition": "freshwater",
 				"items": [],
-				"aliases": ["stream","creek"]
+				"aliases": ["stream","creek"],
+				"links": {
+					"east": "port:brook_to_pond",
+					"west": "port:stream_to_brook",
+					"down": "port:wooden_chest"
+				}
 			}
 		],
 		"items": [],
@@ -366,6 +371,7 @@
 				"name": "yellow puddle",
 				"desc": "A small puddle of yellow liquid on the floor. It smells foul.",
 				"weight": 5,
+				"capacity": -1,
 				"composition": "urine",
 				"aliases": ["puddle"],
 				"items": []
@@ -466,7 +472,8 @@
 						"__class__": "Serpens",
 						"value": 12
 					}
-				]
+				],
+				"links": {"beyond": "port:wooden_chest"}
 			}
 		],
 		"creatures": [],
@@ -547,7 +554,10 @@
 				"weight": 100,
 				"composition": "freshwater",
 				"items": [],
-				"aliases": ["brook","creek"]
+				"aliases": ["brook","creek"],
+				"links": {
+					"east": "port:stream_to_brook"
+				}
 			}
 		],
 		"items": [],
@@ -821,7 +831,10 @@
 				"weight": 60,
 				"composition": "mudwater",
 				"items": [],
-				"finite": true
+				"finite": true,
+				"links": {
+					"west": "port:brook_to_pond"
+				}
 			}
 		],
 		"items": [],
