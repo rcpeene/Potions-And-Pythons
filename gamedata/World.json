@@ -560,8 +560,14 @@
 				}
 			}
 		],
-		"items": [],
-		"creatures": [],
+		"items": [
+		],
+		"creatures": [
+			{
+				"__class__": "factoryCreature",
+				"name": "goblin"
+			}
+		],
 		"status": [],
 		"composition": "freshwater",
 		"walls": "wood",
@@ -831,7 +837,6 @@
 				"weight": 60,
 				"composition": "mudwater",
 				"items": [],
-				"finite": true,
 				"links": {
 					"west": "port:brook_to_pond"
 				}

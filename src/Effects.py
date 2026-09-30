@@ -31,7 +31,7 @@ def spawnObject(obj,parent=None,silent=False):
 		return False
 	parent.add(obj)
 	if not Core.game.silent and not silent:
-		Core.Print(f"{obj.nounPhrase('a',cap=1)} appeared!")
+		obj.printNearby(f"{obj.nounPhrase('a',cap=1)} appeared!")
 		Core.game.setPronouns(obj)
 	return obj
 
