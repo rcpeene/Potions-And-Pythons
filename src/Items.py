@@ -4,7 +4,7 @@
 
 
 from bisect import insort
-from random import randint, choice
+from random import randint, choice,choices
 
 import Effects
 import Core
@@ -82,9 +82,9 @@ class Box(Core.Container):
 			if not silent:
 				Core.Print(f"{+self} is closed.")
 			return False
-		if self.capacity == -1:
+		if self.Capacity() == -1:
 			return True
-		return obj.totalSize() <= self.capacity
+		return obj.totalSize() <= self.Capacity()
 
 
 	def enter(self,traverser):
@@ -368,16 +368,39 @@ class Mouth(Core.Item):
 
 
 class Plash(Core.Container):
-	def __init__(self,name,desc,weight,composition,items,finite=False,occupyprep="on",
+
+	WATER_SIZES = {
+		"droplet":       2,
+		"driblet":       4,
+		"small puddle":  10,
+		"puddle":        20,
+		"large puddle":  30,
+		"pool":          50,
+	}
+
+	@classmethod
+	def Spill(cls,weight=None,name=None,composition="freshwater"):
+		assert name is not None or weight is not None, \
+		"Provide either name or weight"
+
+		names = list(cls.WATER_SIZES.keys())
+		limits = list(cls.WATER_SIZES.values())
+		if name is not None:
+			i = names.index(name)
+			lo = limits[i-1] + 1 if i > 0 else 1
+			weight = randint(lo,limits[i])
+		else:
+			name = next(n for n,hi in cls.WATER_SIZES.items() if weight <= hi)
+		desc = f"a {name} of {composition}"
+		return cls(name,desc,weight,composition,[])
+
+
+	def __init__(self,name,desc,weight,composition,items,infinite=False,occupyprep="on",
 	**kwargs):
 		assert composition in Data.liquids
 		super().__init__(name,desc,weight,-1,composition,items,fixed=True,**kwargs)
-		self.depth = self.capacity
 		self.occupyprep = occupyprep
-		self.finite = finite
-		self.ceiling = None
-		self.walls = None
-		self.floor = None
+		self.infinite = infinite
 		self.aliases.append(self.composition)
 		if any(comp for comp in ("freshwater","mudwater","saltwater")):
 			self.aliases.append("water")
@@ -389,34 +412,61 @@ class Plash(Core.Container):
 		self.surfaces = (self.ceiling,self.walls,self.floor)
 
 
-	def canAdd(self,I):
-		if I.hasStatus("waterwalking"):
+	@Core.Container.parent.setter
+	def parent(self,value):
+		Core.Container.parent.fset(self,value)
+		if hasattr(value,'floor'):
+			self.floor = value.floor
+		else:
+			self.floor = None
+		if not hasattr(self,"ceiling"):
+			self.ceiling = None
+		if not hasattr(self,"walls"):
+			self.walls = None
+		self.surfaces = (self.ceiling,self.walls,self.floor)
+
+
+	def canAdd(self,I,force=False):
+		if I in (self,self.parent,None) or I in self.objTree():
+			Core.Print("CANT ADD TO PLASH, OBJTREE")
+			return False
+		if I.hasStatus("waterwalking") and not force:
+			Core.Print("CANT ADD TO PLASH, WATERWALKING")
 			return False
 		selfDensity = Data.densities.get(self.composition,1)
 		itemDensity = Data.densities.get(I.composition,1)
-		if itemDensity < selfDensity:
+		if itemDensity < selfDensity and not force:
+			Core.Print("CANT ADD TO PLASH, DENSITY")
 			return False
 		# TODO: check if boat or buoyant?
 		# if isinstance(I,Boat):
 		# 	return False
 		# case where Plash has infinite capacity. Imagine an endless puddle
-		if self.capacity == -1:
+		if self.Capacity() == -1:
 			return True
 		# case where Plash has nothing in it and not too small. Imagine a shallow puddle
-		if len(self.items) == 0 and self.Size() >= I.Size() // 5 and self.capacity > 1:
+		if len(self.items) == 0 and self.Size() >= I.Size() // 5 and self.Capacity() > 1:
 			return True
 		# case where Plash is full
-		if self.itemsSize() + I.Size() > self.capacity:
+		if self.itemsSize() + I.Size() > self.Capacity():
+			Core.Print("CANT ADD TO PLASH, CAPACITY")
 			return False
 		return True
 
 
 	def canSubmerse(self,creature):
-		if creature.Size() < self.depth // 2 or self.depth == -1:
+		if creature.Size() < self.Capacity() // 2 or self.Capacity() == -1:
 			return self.composition
 		if self.parent.canSubmerse(creature):
 			return self.parent.canSubmerse(creature)
 		return None
+
+
+	# return self.items. Don't include surfaces, because a plash's surface belong to 
+	# its parent. having an obj's parent in its objTree would cause recursion problems
+	def contents(self):
+		cts = self.items
+		return cts
 
 
 	def consume(self,eater):
@@ -430,12 +480,35 @@ class Plash(Core.Container):
 		self.replaceStatus(("wet",-4),("wet",21))
 
 
+	def drain(self,quantity):
+		assert quantity >= 0
+		self.weight -= quantity
+		# if Plash has a point at which it is infinite, then only lower to that 
+		if self.infinite:
+			self.weight = Core.minm(self.weight,self.infinite)
+		else:
+			self.weight = Core.min0(self.weight)
+
+		if self.weight <= 0:
+			for item in self.items:
+				self.remove(item)
+				if self.parent.canAdd(item):
+					self.parent.add(item)
+				else:
+					item.displace()
+			return self.destroy()
+
+		for item in self.items:
+			item.checkSubmersion()
+		self.checkCapacity()
+
+
 	# try to enter the Container, applying any relevant status effects
 	def enter(self,traverser):
 		if traverser in self:
 			return False
-		if self.depth == -1 or self.depth > self.Size():
-				traverser.waitInput("It's deeper than it looks!")
+		if self.Capacity() == -1 or self.Capacity() > self.Size():
+			traverser.waitInput("It's deeper than it looks!")
 		if super().enter(traverser):
 			traverser.addStatus("wet",-4,stackable=True)
 			traverser.checkSubmersion()
@@ -445,16 +518,68 @@ class Plash(Core.Container):
 
 	# try to exit the Container, removing any relevant status effects
 	def exit(self,traverser):
+		Core.Print(f"REMOVING {traverser} FROM {self}")
 		if traverser not in self:
 			return False
+		Core.Print("CALLING PLASH SUPER")
 		return super().exit(traverser)
+
+
+	def fill(self,quantity):
+		assert quantity >= 0
+		overflow = 0
+
+		# store first because this will change after adding weight or overflowing
+		parentVacancy = self.parent.vacancy() if self.parent else -1
+		if quantity > parentVacancy and parentVacancy != -1:
+			overflow = quantity - parentVacancy
+			quantity = parentVacancy
+
+		self.weight += quantity
+		if overflow:
+			Core.Print(f"{self.parent} overflows!")
+			self.parent.add(self.Spill(weight=overflow))
+
+		# astute readers will notice that the above code may cause self.parent to become
+		# full beyond capacity when you consider all of self's sibling objects;
+		# so as self grows, randomly engulf siblings, the smaller the more likely to engulf
+		# the more vacant space in self.parent, the less likely to engulf anything
+		# note that when there is no vacancy left, we will definitely engulf something
+		spaceToEngulf = quantity
+		while spaceToEngulf > 0:
+			vacancy = self.parent.vacancy() if self.parent else -1
+			vacancy = self.Size() if vacancy == -1 else max(vacancy,0)
+
+			# list must be recomputed every loop; engulfing one item may affect others
+			parentItems = [None] + [i for i in self.parent.items if i is not self]
+			if len(parentItems) <= 1:
+				break
+			engulfLikelihood = [vacancy] + [self.Size()//i.Size() for i in parentItems[1:]]
+			engulfed = choices(parentItems,engulfLikelihood)[0]
+
+			canAddAny = any(self.canAdd(i) for i in parentItems[1:])
+			Core.Print("ENGULFING?", canAddAny, spaceToEngulf, engulfed, engulfed.Size() if engulfed else None)
+			spaceToEngulf -= engulfed.Size() if engulfed else vacancy
+			if engulfed and self.canAdd(engulfed):
+				self.parent.remove(engulfed)
+				self.add(engulfed)
+				engulfed.checkSubmersion()
+			# if we can't engulf any (for some reason), we must eject or destroy them
+			elif engulfed and not canAddAny and getattr(self.parent,"closed",True):
+				engulfed.destroy()
+			elif engulfed and not canAddAny:
+				engulfed.displace(self.parent)
+
+		assert self.parent.vacancy == -1 or self.parent.vacancy() >= 0, \
+		f"{+self.parent} has negative vacancy after filling {+self} with {quantity}."
+
 
 
 	def imbibe(self,drinker):
 		Core.Print(f"You drink from {-self}.")
 		self.taste(drinker)
 
-		if self.finite:
+		if not self.infinite:
 			self.weight -= 3	
 		if self.weight <= 0:
 			self.Print(f"{+self} becomes empty.")
@@ -467,12 +592,11 @@ class Plash(Core.Container):
 		if other.weight > self.weight:
 			return self.replace(other.merge(self))
 
-		self.finite = other.finite
-		if other.capacity == -1:
+		# self.infinite = other.infinite
+		if other.Capacity() == -1:
 			self.capacity = -1
-		elif self.capacity != -1:
-			self.capacity += other.capacity
-		self.depth = self.capacity
+		elif self.Capacity() != -1:
+			self.capacity = self.Capacity() + other.Capacity()
 		self.weight += other.weight
 
 		if not self.floor and other.floor:
@@ -490,7 +614,6 @@ class Plash(Core.Container):
 		return self
 
 
-
 	def occupy(self,occupant):
 		if occupant.hasStatus("waterwalking"):
 			return super().occupy(occupant)
@@ -503,11 +626,17 @@ class Plash(Core.Container):
 
 
 	def traverse(self,traverser,dir=None,verb=None):
-		if verb is None: 
+		traverser.Print("TRAVERSING",self,dir,verb)
+		if not self.canSubmerse(traverser):
+			verb = "get"
+		elif not traverser.canSwim() and traverser.anchor() and \
+		traverser.anchor().composition not in Data.liquids:
+			verb = "wade"
+		else:
 			verb = "swim"
-			if not traverser.canSwim() and traverser.anchor() and \
-			traverser.anchor().composition not in Data.liquids:
-				verb = "wade"
+		if verb == "swim" and not self.canSubmerse(traverser):
+			traverser.Print(f"You can't swim in {-self}, it's too shallow.")
+			return False
 
 		if dir in Data.directions: dir = Data.directions[dir]
 		if traverser in self.occupants:
@@ -567,23 +696,24 @@ class Plash(Core.Container):
 			traverser.Print(f"{+self} does not go {dir}.",color="k")
 			return False
 		dir = "in"
-		if verb is None: verb = "get"
 		if traverser.hasStatus("waterwalking"):
 			traverser.Print(f"You are waterwalking.")
 			dir = "on"
 
+		if dir == "on" and verb != "swim" and self.occupy(traverser):
+			if verb in ("lay","sit","crouch","stand"):
+				traverser.changePosture(verb,silent=True)
+			traverser.Print(f"You {verb} {dir} {-self}.")
+			return True
+
+		if not self.canAdd(traverser):
+			traverser.Print(f"{+self} is too small to {-traverser} to {verb} {dir}.")
+			return False
+
 		if verb in ("lay","sit","crouch","stand"):
 			traverser.changePosture(verb,silent=True)
 		traverser.Print(f"You {verb} {dir} {-self}.")
-		# if dir == "on" or not self.canAdd(traverser):
-		# 	self.occupy(traverser)
-		if dir == "on" and self.occupy(traverser):
-			return True
-		elif not self.canAdd(traverser):
-			traverser.Print(f"{+traverser} can't fit in {-self}.")
-			return False
-		else:
-			traverser.changeLocation(self)		
+		traverser.changeLocation(self)
 		if traverser is Core.player:
 			Core.game.setPronouns(self)
 		return True
@@ -770,9 +900,9 @@ class Window(Core.Passage):
 			if not silent:
 				Core.Print(f"{+self} is closed.")
 			return False
-		if self.capacity == -1:
+		if self.Capacity() == -1:
 			return True
-		return obj.totalSize() <= self.capacity
+		return obj.totalSize() <= self.Capacity()
 
 
 	# breaks the window, removes it from player inventory, and generates some shards
@@ -898,7 +1028,7 @@ factory = {
 	"compass": lambda: Core.Compass("compass","A plain steel compass with a red needle.",2,10,"steel",rarity=2,plural="compasses"),
 	"green potion": lambda: Potion("green potion", "A bubbling green liquid in a glass bottle.",10,3,"glass",["bottle","glass","potion"],2),
 	"iron ingot": lambda: Core.Item("iron ingot","A solid bar of iron.",20,200,"iron",["ingot","bar","iron"]),
-	"puddle": lambda: Plash("puddle","A small puddle of murky water.",randint(2,10),"water",[],finite=True),
+	"puddle": lambda: Plash("puddle","A small puddle of murky water.",randint(2,10),"water",[]),
 	"red potion": lambda: Potion("red potion", "A bubbling red liquid in a glass bottle.",10,3,"glass",["bottle","glass","potion"],2),
 	"shard": lambda: Shard("glass shard","A small glass shard.",2,1,"glass",["shard"])
 }

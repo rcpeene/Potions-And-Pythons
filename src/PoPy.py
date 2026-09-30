@@ -91,6 +91,47 @@ if __name__ == "__main__":
 
 # WATER AND LIQUIDS
 
+# POURING, LEAKING, FILLING, DRAINING
+
+# when in puddle in chest
+# > get out of puddle
+# causes error after displacement
+
+# What will you do?
+# > get in chest
+# You can't enter the wooden chest. There's not enough room.
+# this is because the puddle is filling the chest
+# What will you do?
+# > hit the chest
+# chest fist None
+# chest fist None None hand None
+# You can't attack the wooden chest, you're in the puddle.
+# What will you do?
+# > close the chest
+# You can't close the wooden chest, you're in the puddle.
+
+
+
+# "a puddle appeared!" even when chest is closed, make this sensitive to surroundings
+
+# make sure plashes in a barrel engulf/displace items in parent as they change size
+
+# pour multiple bottles of stuff into one pot
+	# will need to use a method 'merge'
+	# in a room, only merge if the items' combined sizes are 5% of room size or bigger?
+		# this could theoreticlaly be extended to containers also
+			# imagine a barrel of capacity 100, with two puddles of size 4?
+
+		# what about adding plashes to rooms already made of liquid?
+			# i guess this is the same as pouring a liquid out while in a plash
+
+# think about a broken water container or leaking/draining
+# if a plash is big enough in the room, have it leak out to another room?
+# replace plash 'finite' with an integer representing its infite weight
+	# if a plash is larger than this it will leak/shrink down to that weight
+
+
+# MIXING LIQUIDS
 
 # there is basic single-ingredient crafting (put one item into machine get some output)
 # there is mixture crafting (put multiple items, get some output)
@@ -108,10 +149,6 @@ if __name__ == "__main__":
 		# crafting will look for the highest priority ingredient that has a default and choose that recipe
 
 
-
-# pour multiple bottles of stuff into one pot
-	# will need to use a method 'merge'
-# think about a broken water container or leaking/draining
 # add puddles, what about pouring liquid into plash? or adding plash to liquid room?
 # try to lick/taste/smell a liquid room
 
@@ -229,6 +266,7 @@ if __name__ == "__main__":
 # restructure map and revise tests
 # add a coin purse? which holds your money? required to collect money?
 # make a list of all possible uses and inputs for each action and systematically test them. Revise the world to accomodate them
+# upgrade the text crawl in the title to resemble a snake
 
 # CRAFTING
 # add in crafting recipes. Probably store this as a JSON?

@@ -39,7 +39,6 @@ def writeGame(filename,Game,World):
 visitedobjects = set()
 class worldEncoder(json.JSONEncoder):
 	def default(self,objToWrite):
-		# print(objToWrite)
 		# for k,v in getattr(objToWrite,"__dict__",{}).items():
 		# 	print(f"  {k}: {v}")
 		if objToWrite in visitedobjects:
@@ -112,18 +111,18 @@ def find_problematic_subobject(obj):
 
 
 def writeWorld(filename,World):
-	try:
-		with open(filename, "w") as fd:
-			json.dump(World, fd, cls=worldEncoder, indent="\t")
-	except Exception as e:
-		print("Error while serializing object to JSON:")
-		print(f"Error: {e}")
+	# try:
+	with open(filename, "w") as fd:
+		json.dump(World, fd, cls=worldEncoder, indent="\t")
+	# except Exception as e:
+	# 	print("Error while serializing object to JSON:")
+	# 	print(f"Error: {e}")
 
-		# Now we try to isolate the problematic sub-object in World
-		print("Attempting to find the problematic sub-object...")
-		find_problematic_subobject(World)
+	# 	# Now we try to isolate the problematic sub-object in World
+	# 	print("Attempting to find the problematic sub-object...")
+	# 	find_problematic_subobject(World)
 
-		raise  # Re-raise the exception for further handling
+	# 	raise  # Re-raise the exception for further handling
 
 
 def writePlayer(filename,Player):
@@ -735,6 +734,7 @@ def gameIntro():
 		return
 
 	# print PoPy text crawling up
+	# TODO: make the text crawl up in a 'dragging' snakelike fashion
 	sleep(0.5)
 	l = len(Data.logoFrame)
 	for i in range(l-1,3,-1):	# stops at the fourth line from the top

@@ -854,15 +854,18 @@ def percentChance(p):
 def objQuery(root,key=None,d=0):
 	if key is None: key = lambda obj:True
 	matches = set()
+	traversed = set()
 	if key(root):
 		matches.add(root)
-	matches = objQueryRecur(root,matches,key,d)
+	matches = objQueryRecur(root,matches,key,d,traversed)
 	return matches
 
 # recurs through all objects within node, adds them to matches if supplied key is True
 # d is the degree of the query, see objQuery() comments above for details
-def objQueryRecur(node,matches,key,d):
+def objQueryRecur(node,matches,key,d,traversed):
 	for obj in node:
+		if obj in traversed: continue
+		traversed.add(obj)
 		# check if obj is a match
 		if key(obj): matches.add(obj)
 		# depending on the degree, dont query into closed, Creature or locked objects
@@ -870,7 +873,7 @@ def objQueryRecur(node,matches,key,d):
 		elif (d <= 1) and isinstance(obj,Creature): continue
 		elif d <= 2 and hasattr(obj,"locked") and obj.locked: continue
 		# recur the query on each object's subtree
-		matches = objQueryRecur(obj,matches,key,d)
+		matches = objQueryRecur(obj,matches,key,d,traversed)
 	return matches
 
 
@@ -1771,10 +1774,6 @@ class GameObject():
 		self.removeStatus(reqDuration=0)
 
 
-	def setParent(self,newParent):
-		self.parent = newParent
-
-
 	### Getters ###
 
 	# integral to objQuery() (see comments)
@@ -2458,7 +2457,7 @@ class Room(GameObject):
 			f" non-Room '{dest}'"
 			self.links[dir] = world[dest]
 
-		assert self.vacancy() >= 0, (f"Room {self.name} has negative space available"
+		assert self.vacancy() >= -1, (f"Room {self.name} has negative space available"
 		f"size is {self.size}, but occupied space is {self.itemsSize()}")
 
 
@@ -2571,7 +2570,10 @@ class Room(GameObject):
 		condsToRemove = [pair for pair in obj.status if pair[1] == -2]
 		for cond,dur in condsToRemove:
 			obj.removeStatus(cond,-1)
+		Print("LEAVING ROOM",obj,self)
 		self.remove(obj)
+		assert obj not in self, f"Object {obj} still in Room {self.name} after exiting"
+		assert obj.parent is None, f"Object {obj} still has parent after exiting Room {self.name}"
 		return True
 
 
@@ -2690,7 +2692,7 @@ class Room(GameObject):
 	def canAdd(self,I):
 		if self.ceiling and I in celestials:
 			return False
-		if I.totalSize() > self.vacancy():
+		if I.totalSize() > self.vacancy() and self.vacancy() != -1:
 			return False
 		if I in self:
 			return False
@@ -2763,9 +2765,13 @@ class Room(GameObject):
 		return self.capacity
 
 
+	def Capacity(self):
+		return self.capacity if self.capacity is not None else self.Size()
+
+
 	# get vacant space in the Room
 	def vacancy(self):
-		return self.capacity - self.itemsSize()
+		return -1 if self.Capacity() == -1 else self.Capacity() - self.itemsSize()
 
 
 	### User Output ###
@@ -3094,7 +3100,7 @@ class Item(GameObject):
 	# until theres space for it. if it cannot fit in the final parent (Room), destroy it
 	# this prevents strange physical scenarios and should not normally be called
 	def displace(self,newparent):
-		# print("DISPLACING",self,"TO",newparent)
+		Print(f"DISPLACING {self} from {self.parent} to {newparent}")
 		if self.parent:
 			self.parent.remove(self)
 		nextparent = getattr(newparent,"parent",None)
@@ -3132,13 +3138,15 @@ class Item(GameObject):
 
 		if not isinstance(self.parent,Creature) and not self.fixed and \
 		not self.hasAnyStatus("flying"):
+				# Print(f"passing time for creature {self}!!!!")
 				if self.anchor() is None and not self.bathedIn():
+					# Print(f"passing time 2 for creature {self}!!!!")
 					self.fall()
 				# when you can't swim and have nothing but liquid under you, you can sink!
-				elif self.bathedIn() in Data.liquids and self.hasStatus("submerged") and \
+				elif self.anchor() is None and self.bathedIn() in Data.liquids and \
 				not self.canSwim() and not self.hasAnyStatus("waterwalking"):
+					# Print(f"passing time 3 for creature {self}!!!!")
 					self.fall()
-
 
 		self.checkSubmersion()
 
@@ -3172,6 +3180,9 @@ class Item(GameObject):
 	# removes old Item's refs from parent,covered,occupants,platform
 	# attempts to add corresponding refs with newObj, and destroys the old object
 	def replace(self,newObj):
+		if newObj is self:
+			return self
+
 		if isinstance(newObj,str) or newObj.id is None:
 			newObj = game.spawn(newObj)
 
@@ -3334,7 +3345,7 @@ class Item(GameObject):
 
 		while "down" in room.links and (room.floor is None or \
 		(room.floor.composition in Data.liquids and verb == "sink")):
-			height += room.capacity // 5 # approximate vertical height of room
+			height += room.Capacity() // 5 # approximate vertical height of room
 			room = room.links["down"]
 		if room != self.room():
 			self.changeLocation(room)
@@ -3658,7 +3669,7 @@ class Item(GameObject):
 			return False
 
 
-	# for Items this is similar to self.Print, but distinct for Creatures
+	# print message to player only if player is in its surroundings
 	def printNearby(self,*args,end="\n",sep=None,delay=None,color=None,allowSilent=True,
 	outfile=None):
 		# in godmode we can see all prints
@@ -3884,13 +3895,12 @@ class Creature(Item):
 
 		# check if can obtain item
 		if not self.canObtain(I,silent=True):
-			if newlySpawned:
-				I.displace()
+			I.displace()
 			return False
 
 		# Serpens can't get added to inventory
 		if isinstance(I,Serpens):
-			return True
+			return I
 
 		alphabetical = lambda x: (x.name.lower(), x.name)
 		insort(self.inv,I,key=alphabetical)
@@ -3898,7 +3908,7 @@ class Creature(Item):
 		I.nullDespawn()
 		if self is player:
 			self.display()
-		return True
+		return I
 
 
 	# add a status condition, print message unless silent
@@ -3956,9 +3966,11 @@ class Creature(Item):
 		prevparent = self.parent
 		if prevparent:
 			prevparent.exit(self)
-		if self is player and newparent.room() != prevparent.room() and \
-		newparent.surroundings() is newparent.room():
-			game.changeRoom(newparent)
+		if self is player:
+			if not prevparent or \
+			(newparent.room() != prevparent.room()) and \
+			newparent.surroundings() is newparent.room():
+				game.changeRoom(newparent)
 		# when not riding or being carried, new room's floor becomes platform
 		# TODO: should probably call occupy here?
 		if self.hasStatus("flying"):
@@ -4258,6 +4270,9 @@ class Creature(Item):
 	# replace this object with newObj in parent and all tethers
 	# newObj may be an object ID string, in which case it is spawned first
 	def replace(self,newObj):
+		if newObj is self:
+			return self
+
 		parent = self.parent
 		if isinstance(newObj,str) or newObj.id is None:
 			newObj = game.spawn(newObj)
@@ -4613,6 +4628,7 @@ class Creature(Item):
 	# Creature falls through rooms accumulating fall height until hitting floor, 
 	# then take damage and set platform to room's floor
 	def fall(self,height=0,room=None):
+		Print(self,"falling but has anchor",self.anchor())
 		if self.riding or self.carrier:
 			return self.anchor().fall(height,room)
 
@@ -4632,7 +4648,7 @@ class Creature(Item):
 			room = self.room()
 		while "down" in room.links and (room.floor is None or \
 		(room.floor.composition in Data.liquids and verb == "sink")):
-			height += room.capacity // 5 # approximate height of room
+			height += room.Capacity() // 5 # approximate height of room
 			room = room.links["down"]
 		if room != self.room():
 			if self.carrying:
@@ -5862,7 +5878,7 @@ class Player(Creature):
 			self.printStatus(outfile=sidepanel)
 
 		tethersDisplay  = ""
-		if self.platform is not None and self.platform != self.parent.floor:
+		if self.parent and self.platform is not None and self.platform != self.parent.floor:
 			occuprep = getattr(self.platform,"occupyprep","on")
 			tethersDisplay += f"\n{occuprep.capitalize()} {self.platform.name}"
 		if self.carrying is not None:
@@ -6648,7 +6664,7 @@ class Portal(Item):
 	passprep="into",**kwargs):
 		super().__init__(name,desc,weight,durability,composition,**kwargs)
 		self.links = links
-		self.capacity = capacity if capacity else self.Size()
+		self.capacity = capacity
 		self.passprep = passprep
 
 
@@ -6900,71 +6916,14 @@ class Portal(Item):
 
 
 	def canPass(self,obj):
-		if self.capacity == -1:
+		if self.Capacity() == -1:
 			return True
-		return obj.totalSize() <= self.capacity
+		return obj.totalSize() <= self.Capacity()
 
 
+	def Capacity(self):
+		return self.capacity if self.capacity is not None else self.Size()
 
-# A dict subclass that dynamically provides a Container's enter/exit links
-# while still allowing persistent modifications via normal dict operations
-class ContainerLinks(dict):
-	def __init__(self,container,static=None):
-		super().__init__(static or {})
-		self._container = container
-
-	def _dynamic(self):
-		d = {}
-		c = self._container
-		if hasattr(c,'passprep'):
-			d[c.passprep] = c
-		if hasattr(c,'exitprep') and hasattr(c,'parent'):
-			d[c.exitprep] = c.parent
-		return d
-
-	def _merged(self):
-		m = self._dynamic()
-		m.update(super().items())
-		return m
-
-	def __getitem__(self,key):
-		try:
-			return super().__getitem__(key)
-		except KeyError:
-			return self._dynamic()[key]
-
-	def __contains__(self,key):
-		return super().__contains__(key) or key in self._dynamic()
-
-	def __iter__(self):
-		return iter(self._merged())
-
-	def __len__(self):
-		return len(self._merged())
-
-	def items(self):
-		return self._merged().items()
-
-	def values(self):
-		return self._merged().values()
-
-	def keys(self):
-		return self._merged().keys()
-
-	def get(self,key,default=None):
-		try:
-			return self[key]
-		except KeyError:
-			return default
-
-	def copy(self):
-		return dict(self._merged())
-
-	def static(self):
-		return dict(super().items())
-
-	def __repr__(self):
-		return repr(self._merged())
 
 
 # In addition to Rooms and Creatures, Containers can also contain Items and be a 'parent'
@@ -6974,10 +6933,10 @@ class Container(Portal):
 	def __init__(self,name,desc,weight,durability,composition,items,capacity=None,
 	passprep=None,exitprep="out",links=None,**kwargs):
 		Item.__init__(self,name,desc,weight,durability,composition,**kwargs)
-		self.capacity = capacity if capacity else self.Size()
+		self.capacity = capacity
 		self.passprep = passprep if passprep else "in"
 		self.exitprep = exitprep if exitprep else "out"
-		self.links = ContainerLinks(self,links)
+		self.links = links if links else {}
 		self.items = items
 		# for containers, the surfaces surrounding it are itself
 		self.ceiling = self
@@ -6992,7 +6951,8 @@ class Container(Portal):
 		# must copy links for saving to JSON so real links remain
 		# containers should remove their self-reference links
 		if not hasattr(self, "compressedLinks"):
-			self.compressedLinks = self.links.static()
+			self.compressedLinks = {k:v for k,v in self.links.items() \
+			if k not in (self.passprep,self.exitprep)}
 
 
 	# delete unneeded attributes for storing to json
@@ -7002,6 +6962,7 @@ class Container(Portal):
 		del jsonDict["walls"]
 		del jsonDict["floor"]
 		del jsonDict["surfaces"]
+		del jsonDict["_parent"]
 		return jsonDict
 
 
@@ -7009,18 +6970,28 @@ class Container(Portal):
 	def assignRefs(self,parent):
 		super().assignRefs(parent)
 
-		assert self.itemsSize() <= self.capacity or self.capacity == -1, (f"Container" \
-		f" {self.name} has negative vacancy available. Capacity is {self.capacity}," \
+		assert self.itemsSize() <= self.Capacity() or self.Capacity() == -1, (f"Container" \
+		f" {self.name} has negative vacancy available. Capacity is {self.Capacity()}," \
 		f" but occupied space is {self.itemsSize()}.")
+
+		self.links |= {self.passprep: self, self.exitprep: self.parent}
 
 
 	### Operation ###
 
 	# add Item to Container's items list
 	def add(self,I):
+		Print("TRY TO ADD",I,"TO",self)
 		# spawn object if given as string or has no ID
 		if isinstance(I,str) or I.id is None:
 			I = game.spawn(I)
+
+		# check if object can be added to room, displace it if not
+		# displacing it out of a room will probably destroy it
+		if not self.canAdd(I):
+			Print(f"CAN'T ADD {I} SO DISPLACING TO PARENT {self.parent}")
+			I.displace(self.parent)
+			return False
 
 		# ensure only one bunch of Gold exists here
 		if isinstance(I,Serpens):
@@ -7029,6 +7000,7 @@ class Container(Portal):
 					item.merge(I)
 					return item
 
+		Print(f"ADDING {I} TO {self}")
 		insort(self.items,I)
 		I.parent = self
 		I.nullDespawn()
@@ -7064,7 +7036,7 @@ class Container(Portal):
 
 	# check that capacity is not exceeded, displacing largest items if so
 	def checkCapacity(self):
-		while self.capacity != -1 and self.itemsSize() > self.capacity:
+		while self.Capacity() != -1 and self.itemsSize() > self.Capacity():
 			item = max(self.items, key=lambda x: x.Size())
 			self.Print(f"{+item} falls out of {-self}.")
 			item.displace(self.parent)
@@ -7072,7 +7044,9 @@ class Container(Portal):
 
 	# remove Item
 	def remove(self,I):
+		Print(f"REMOVING {I} FROM {self}")
 		self.items.remove(I)
+		I.parent = None
 
 
 	# try to remove an area condition from all affected objs in the Container
@@ -7136,6 +7110,7 @@ class Container(Portal):
 	def exit(self,traverser):
 		if traverser not in self:
 			return False
+		Print("REMOVING HIDDEN STATUS")
 		traverser.removeStatus("hidden",-4)
 		return Room.exit(self,traverser)
 
@@ -7217,9 +7192,11 @@ class Container(Portal):
 
 	# check if item fits within Container's capacity
 	def canAdd(self,I):
-		if self.capacity == -1:
+		if self.Capacity() == -1:
 			return True
-		return I.Size() <= self.vacancy() and self not in I.objTree()
+		if self in I.objTree():
+			return False
+		return I.Size() <= self.vacancy()
 
 
 	def canSubmerse(self,creature):
@@ -7240,7 +7217,7 @@ class Container(Portal):
 	# get the links dict to use in the parent's allLinks method
 	# we don't want to include the exit link, that is not accessible from the parent
 	def getLinksForParent(self):
-		return {self.passprep:self}
+		return {dir:dest for dir,dest in self.links.items() if dest is not self}
 
 
 	# get total size of all items in Container
@@ -7255,12 +7232,27 @@ class Container(Portal):
 
 	# get available capacity in Container
 	def vacancy(self):
-		return self.capacity - self.itemsSize()
+		return -1 if self.Capacity() == -1 else self.Capacity() - self.itemsSize()
 
 
 	# get total weight of Container plus its Items
 	def Weight(self):
 		return self.weight + self.itemsWeight()
+
+
+	### Special Overrides ###
+
+	@property
+	def parent(self):
+		return self._parent
+
+
+	@parent.setter
+	def parent(self,value):
+		self._parent = value
+		if hasattr(self,'links') and hasattr(self,'exitprep'):
+			self.links[self.exitprep] = value
+			self.links[self.passprep] = self
 
 
 

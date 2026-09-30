@@ -1746,8 +1746,10 @@ def Go(dobj,iobj,prep):
 	if (dobj,iobj,prep) == (None,None,None):
 		dobj,iobj,prep = parse(tokenize(read("Where will you go?")))
 	if dobj in Data.cancels: return False
-	if dobj in ("back","backward","backwards"): dobj = Core.game.prevroom.name.lower()
-	if dobj in ("ahead","forward","forwards"): dobj = getNoun("In which direction?")
+	if dobj in ("back","backward","backwards"):
+		dobj = Core.game.prevroom.name.lower()
+	if dobj in ("ahead","forth","forward","forwards"):
+		dobj = getNoun("In which direction?")
 	if prep in ("behind","below","beneath","under"):
 		return Hide(dobj,iobj,prep)
 	if prep in ("on","onto","upon"):
@@ -2632,6 +2634,7 @@ def TakeAllRecur(objToTake):
 
 
 def TakeAll(takeFrom):
+	if takeFrom is None: return False
 	occupants = getattr(takeFrom,"occupants",[])
 	items = getattr(takeFrom,"items",[])
 	if len(occupants) == 0 and len(items) == 0:
@@ -3192,6 +3195,7 @@ actions = {
 "untie":Untie,
 "use":Use,
 "view":Look,
+"wade":Go,
 "wait":Wait,
 "walk":Go,
 "wave":Wave,
