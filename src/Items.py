@@ -406,6 +406,13 @@ class Plash(Core.Container):
 			self.aliases.append("water")
 
 
+	def convertToJSON(self):
+		jsonDict = Core.Container.convertToJSON(self)
+		del jsonDict["fixed"]
+		del jsonDict["durability"]
+		return jsonDict
+
+
 	def assignRefs(self,parent):
 		super().assignRefs(parent)
 		self.floor = self.parent.floor
@@ -540,7 +547,7 @@ class Plash(Core.Container):
 			Core.Print(f"{self.parent} overflows!")
 			self.parent.add(self.Spill(weight=overflow))
 
-		# astute readers will notice that the above code may cause self.parent to become
+		# astute readers will notice that the lines above would cause self.parent to become
 		# full beyond capacity when you consider all of self's sibling objects;
 		# so as self grows, randomly engulf siblings, the smaller the more likely to engulf
 		# the more vacant space in self.parent, the less likely to engulf anything
@@ -572,7 +579,6 @@ class Plash(Core.Container):
 
 		assert self.parent.vacancy == -1 or self.parent.vacancy() >= 0, \
 		f"{+self.parent} has negative vacancy after filling {+self} with {quantity}."
-
 
 
 	def imbibe(self,drinker):
@@ -893,6 +899,14 @@ class Window(Core.Passage):
 		if self.closed:
 			self.passprep = "at"
 		self.broken = broken
+
+
+	def convertToJSON(self):
+		jsonDict = Core.Passage.convertToJSON(self)
+		jsonDict["linkKeys"] = list(jsonDict["links"].keys())
+		jsonDict["linkPort"] = list(jsonDict["links"].values())[0]
+		del jsonDict["links"]
+		return jsonDict
 
 
 	def canPass(self,obj,silent=False):

@@ -93,14 +93,17 @@ if __name__ == "__main__":
 
 # POURING, LEAKING, FILLING, DRAINING
 
-# when in puddle in chest
-# > get out of puddle
-# causes error after displacement
-
+### we need to allow for displacing the liquid instead of it blocking entrance?
 # What will you do?
 # > get in chest
 # You can't enter the wooden chest. There's not enough room.
 # this is because the puddle is filling the chest
+
+# when in puddle in chest
+# > get out of puddle
+# causes error after displacement
+
+### we need a way to handle interactions with puddles within containers
 # What will you do?
 # > hit the chest
 # chest fist None
@@ -109,8 +112,6 @@ if __name__ == "__main__":
 # What will you do?
 # > close the chest
 # You can't close the wooden chest, you're in the puddle.
-
-
 
 # "a puddle appeared!" even when chest is closed, make this sensitive to surroundings
 
@@ -130,6 +131,11 @@ if __name__ == "__main__":
 # replace plash 'finite' with an integer representing its infite weight
 	# if a plash is larger than this it will leak/shrink down to that weight
 
+
+# ctrl+e (or whatever clubs is) in cabin quarters yields
+# LEAVING ROOM gold wooden chest
+# REMOVING gold FROM wooden chest
+# TypeError: Cannot merge non-Serpens with Serpens
 
 # MIXING LIQUIDS
 

@@ -3254,6 +3254,7 @@ actions = {
 # pick -> a lock or a berry
 # step on
 # kiss/smooch
+# giggle
 # shake? (shake hands?)
 # browse/peruse -> look
 # roll (in the mud?)
