@@ -2769,7 +2769,7 @@ class Room(GameObject):
 		return self.capacity if self.capacity is not None else self.Size()
 
 
-	# get vacant space in the Room
+	# get amount of empty space in the Room
 	def vacancy(self):
 		return -1 if self.Capacity() == -1 else self.Capacity() - self.itemsSize()
 
@@ -3054,7 +3054,7 @@ class Item(GameObject):
 
 
 	# if there's not enough space to occupy an Item, objects fall off, biggest first
-	def checkVacancy(self,obj=None):
+	def checkOccupancy(self,obj=None):
 		if obj is not None:
 			occupants = [obj]
 		else:
@@ -3064,9 +3064,9 @@ class Item(GameObject):
 		for occupant in occupants:
 			# An occupant can occupy something 5x smaller than itself
 			# But if theres more than one occupant total size must be less than item size
-			notVacant = self.Size() < occupant.Size()//5 and len(self.occupants) <= 1
-			notVacant = self.Size() < self.Size() - self.occupantsSize(occupant)
-			if notVacant:
+			fullyOccupied = self.Size() < occupant.Size()//5 and len(self.occupants) <= 1
+			fullyOccupied = self.Size() < self.Size() - self.occupantsSize(occupant)
+			if fullyOccupied:
 				self.Print(f"{+self} is too small for {-occupant}.",color="o")
 				self.disoccupy(occupant)
 				occupant.fall(self.Size()//5)
@@ -3133,7 +3133,7 @@ class Item(GameObject):
 			if self.canDespawn():
 				return self.destroy()
 
-		self.checkVacancy()
+		self.checkOccupancy()
 		self.checkOccupantsWeight(silent=True)
 
 		if not isinstance(self.parent,Creature) and not self.fixed and \
@@ -3382,7 +3382,7 @@ class Item(GameObject):
 			occupant.removeRiding()
 		occupant.removePlatform()
 
-		if not self.checkVacancy(occupant):
+		if not self.checkOccupancy(occupant):
 			return False
 		self.occupants.append(occupant)
 		occupant.platform = self
@@ -4067,7 +4067,7 @@ class Creature(Item):
 		return False
 
 
-	# TODO: if creature changes size, we need to check platform vacancy and parent capacity
+	# TODO: if creature changes size, we need to check platform occupancy and parent capacity
 	def checkSize(self):
 		pass
 
@@ -6927,7 +6927,7 @@ class Portal(Item):
 
 
 # In addition to Rooms and Creatures, Containers can also contain Items and be a 'parent'
-# Containers special Portals. they have traverse and transfer methods
+# Containers are a special case of Portals. they have traverse and transfer methods
 # but they link to themselves, adding traversers into their items list
 class Container(Portal):
 	def __init__(self,name,desc,weight,durability,composition,items,capacity=None,
@@ -6981,7 +6981,7 @@ class Container(Portal):
 
 	# add Item to Container's items list
 	def add(self,I):
-		Print("TRY TO ADD",I,"TO",self)
+		Print("$$$ TRY TO ADD",I,"TO",self)
 		# spawn object if given as string or has no ID
 		if isinstance(I,str) or I.id is None:
 			I = game.spawn(I)
@@ -6989,7 +6989,7 @@ class Container(Portal):
 		# check if object can be added to room, displace it if not
 		# displacing it out of a room will probably destroy it
 		if not self.canAdd(I):
-			Print(f"CAN'T ADD {I} SO DISPLACING TO PARENT {self.parent}")
+			Print(f"$$$ CAN'T ADD {I} SO DISPLACING TO PARENT {self.parent}")
 			I.displace(self.parent)
 			return False
 
@@ -7000,7 +7000,7 @@ class Container(Portal):
 					item.merge(I)
 					return item
 
-		Print(f"ADDING {I} TO {self}")
+		Print(f"$$$ ADDING {I} TO {self}")
 		insort(self.items,I)
 		I.parent = self
 		I.nullDespawn()
@@ -7192,10 +7192,10 @@ class Container(Portal):
 
 	# check if item fits within Container's capacity
 	def canAdd(self,I):
-		if self.Capacity() == -1:
-			return True
 		if self in I.objTree():
 			return False
+		if self.Capacity() == -1:
+			return True
 		return I.Size() <= self.vacancy()
 
 
@@ -7262,6 +7262,7 @@ class Passage(Portal):
 	durability=-1,fixed=True,**kwargs):
 		super().__init__(name,desc,weight,durability,composition,links,passprep=passprep,
 		mention=mention,fixed=True,**kwargs)
+
 
 
 
