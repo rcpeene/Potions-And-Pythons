@@ -766,11 +766,11 @@ def listObjects(prepend,objects,append=""):
 	l = len(objBag)
 	for i, (obj, count) in enumerate(objBag):
 		if i == l-1:
-			liststring += obj.nounPhrase(det="a",n=count)
+			liststring += obj.nounPhrase(n=count)
 		elif i == l-2:
-			liststring += obj.nounPhrase(det="a",n=count) + " and "
+			liststring += obj.nounPhrase(n=count) + " and "
 		else:
-			liststring += obj.nounPhrase(det="a",n=count) + ", "
+			liststring += obj.nounPhrase(n=count) + ", "
 	liststring = prepend + liststring
 	liststring += append
 
@@ -1682,11 +1682,11 @@ class GameObject():
 
 
 	def __neg__(self):
-		return self.nounPhrase('the')
+		return self.nounPhrase(self.definiteDeterminer())
 
 
 	def __pos__(self):
-		return self.nounPhrase('the',cap=1)
+		return self.nounPhrase(self.definiteDeterminer(),cap=1)
 
 
 	def __invert__(self):
@@ -1794,6 +1794,13 @@ class GameObject():
 
 	### Getters ###
 
+	def definiteDeterminer(self):
+		if self.determiner is not None:
+			return self.determiner
+		if hasattr(self,"ancestors") and player in self.ancestors():
+			return "your"
+		return "the"
+
 	# integral to objQuery() (see comments)
 	# should be empty for objects that aren't Containers, Creatures, or Rooms
 	def contents(self):
@@ -1879,6 +1886,10 @@ class GameObject():
 
 	### User Output ###
 
+	# overridden by Player to refresh the side panel
+	def display(self,*args):
+		return
+
 	# gets an object's name in various grammatical contexts
 	# such as 'an elephant', 'the elephants', 'The elephant', '3 elephants', etc.
 	# det should be given as 'a' or 'the'
@@ -1897,7 +1908,7 @@ class GameObject():
 		if self.determiner is not None:
 			det = self.determiner
 		if det == "" and n == 1:
-			det = "a"
+			det = "your" if self.definiteDeterminer() == "your" else "a"
 
 		if det:
 			if det == "a":
@@ -3821,7 +3832,7 @@ class Item(GameObject):
 		if self.determiner is not None:
 			det = self.determiner
 		if det == "" and n == 1:
-			det = "a"
+			det = "your" if self.definiteDeterminer() == "your" else "a"
 
 		if det:
 			if det == "a":
@@ -4163,8 +4174,7 @@ class Creature(Item):
 		insort(self.inv,I,key=alphabetical)
 		I.parent = self
 		I.nullDespawn()
-		if self is player:
-			self.display()
+		self.display()
 		return I
 
 
@@ -4198,8 +4208,7 @@ class Creature(Item):
 
 		if name in Data.blessings | Data.curses:
 			self.checkStatus()
-		if self is player:
-			self.display()
+		self.display()
 		return True
 
 
@@ -4439,7 +4448,7 @@ class Creature(Item):
 				available = [slot for slot in self.gripSlots \
 					if self[slot] is EmptyGear()]
 				if len(occupied) + len(available) < gripsNeeded:
-					self.Print(f"Your {item} is too heavy! You unequip it.")
+					self.Print(f"{+item} is too heavy! You unequip it.")
 					self.unequip(occupied[0],silent=True)
 					continue
 				for slot in available[:gripsNeeded-len(occupied)]:
@@ -4578,8 +4587,7 @@ class Creature(Item):
 		if heal <= 0 or not self.isAlive():
 			return 0
 		self.hp += heal
-		if self is player:
-			self.display()
+		self.display()
 		self.Print(f"You healed {heal} HP.",color="g")
 		return heal
 
@@ -4690,8 +4698,7 @@ class Creature(Item):
 				self.checkBathedIn()
 		if wasSleeping and not self.hasStatus("asleep"):
 			self.awaken(wellRested=wellRested)
-		if self is player:
-			self.display()
+		self.display()
 		return bool(condsRemoved)
 
 
@@ -4875,8 +4882,7 @@ class Creature(Item):
 		if mana <= 0:
 			return 0
 		self.mp += mana
-		if self is player:
-			self.display()
+		self.display()
 		self.Print(f"You regained {mana} MP.",color="b")
 		return mana
 
@@ -4906,8 +4912,8 @@ class Creature(Item):
 		msg = f"{+self} took {total_dmg} {typeDisplay}damage{p}"
 		self.Print(msg,color=color)
 		self.printNearby(msg,color=color)
+		self.display()
 		if self is player:
-			self.display()
 			delay(0.5)
 		if self.hp == 0:
 			return self.death()
@@ -4933,8 +4939,7 @@ class Creature(Item):
 			self.Print(f"You have §{self.money}.")
 		else:
 			self.Print(f"You have §{self.money}!",color=color)
-		if self is player:
-			self.display()
+		self.display()
 
 
 	### Interaction ###
@@ -4957,6 +4962,7 @@ class Creature(Item):
 		creature.carrier = self
 		for slot in useSlots:
 			self[slot] = creature
+		self.display()
 
 
 	# clear both ends of a carrying relationship
@@ -4966,6 +4972,7 @@ class Creature(Item):
 				self[slot] = EmptyGear()
 		if creature.carrier is self:
 			creature.carrier = None
+		self.display()
 
 
 	# prepare carry slots, then attempt to carry and assign a Creature to them
@@ -5002,6 +5009,8 @@ class Creature(Item):
 				if plan is None:
 					return False
 
+		if not silent:
+			self.Print(f"You try to pick up {-cargo}.",color="o")
 		if not cargo.carry(self,silent=silent):
 			return False
 		assert all(self[slot] is EmptyGear() for slot in plan["slots"])
@@ -5423,8 +5432,9 @@ class Creature(Item):
 				self[equipSlot] = EmptyGear()
 			self.assignWeaponAndShield()
 			if not silent:
-				self.Print(f"You unequip your {I}.")
+				self.Print(f"You unequip {-I}.")
 			if hasMethod(I,"unequip"): I.unequip()
+			self.display()
 
 
 	### Behavior ###
@@ -6123,7 +6133,7 @@ class Creature(Item):
 		if self.determiner is not None:
 			det = self.determiner
 		if det == "" and n == 1:
-			det = "a"
+			det = "your" if self.definiteDeterminer() == "your" else "a"
 
 		if det:
 			if det == "a":
@@ -7029,7 +7039,7 @@ class Person(Speaker,Humanoid):
 		if self.determiner is not None and det == "":
 			det = self.determiner
 		if det == "" and n == 1:
-			det = "a"
+			det = "your" if self.definiteDeterminer() == "your" else "a"
 
 		if det:
 			if det == "a":
