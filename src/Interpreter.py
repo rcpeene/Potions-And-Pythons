@@ -1013,11 +1013,11 @@ def Attack(dobj,iobj,prep,target=None,weapon=None,weapon2=None):
 		weapon, weapon2 = weapon2, None
 	if iobj in ("fist","hand"):
 		Core.player.unequip("right")
-		weapon = Items.Hand("hand","",4,-1,None)
+		weapon = Items.Hand("hand","",4,-1,None,determiner="your")
 	elif iobj in ("foot","leg"):
-		weapon = Items.Foot("foot","",6,-1,None)
+		weapon = Items.Foot("foot","",6,-1,None,determiner="your")
 	elif iobj in ("mouth","teeth"):
-		weapon = Items.Mouth("mouth","",4,-1,None)
+		weapon = Items.Mouth("mouth","",4,-1,None,determiner="your")
 	elif iobj is not None:
 		if weapon is None:
 			_, weapon = Core.player.inGear(iobj)
@@ -1049,10 +1049,11 @@ def Attack(dobj,iobj,prep,target=None,weapon=None,weapon2=None):
 		stowedweapons = (Core.player.weapon, Core.player.weapon2)
 	if not isinstance(weapon,(Items.Hand,Items.Foot,Items.Mouth)):
 		Core.player.equipInHand(weapon)
+	weaponPhrase = -weapon
 	if not isinstance(weapon,Core.Weapon):
 		weapon = weapon.asWeapon()
 
-	Core.Print(f"You attack {-target} with your {weapon}.",color="o")
+	Core.Print(f"You attack {-target} with {weaponPhrase}.",color="o")
 	if isinstance(target,Core.Creature): Core.player.attackCreature(target)
 	elif isinstance(target,Core.Item): Core.player.attackItem(target)
 	if stowed: Core.player.weapon,Core.player.weapon2 = stowedweapons
@@ -1146,7 +1147,6 @@ def CarryCreature(creature):
 		if not Core.yesno(question):
 			return False
 
-	Core.Print(f"You try to pick up {-creature}.",color="o")
 	if not Core.player.Heft(creature,forceUnequip=True):
 		return False
 	Core.Print(f"You are carrying {-creature}.")
@@ -1368,7 +1368,7 @@ def Doff(dobj,iobj,prep):
 		return False
 	Core.game.setPronouns(I)
 
-	Core.Print(f"You doff your {I.name}.")
+	Core.Print(f"You doff {-I}.")
 	Core.player.unequip(slot,silent=True)
 	return True
 
@@ -1383,7 +1383,7 @@ def Don(dobj,iobj,prep):
 	if I is None: return False
 	Core.game.setPronouns(I)
 
-	displayName = f"{-I}" if I in Core.player.carrying() else f"your {I}"
+	displayName = -I
 	if not isinstance(I,Core.Armor):
 		Core.Print(f"You cannot wear {displayName}.")
 		return False
@@ -1524,14 +1524,14 @@ def Equip(dobj,iobj,prep):
 	Core.game.setPronouns(I)
 
 	if I in Core.player.gear.values():
-		Core.Print(f"Your {I} is already equipped.")
+		Core.Print(f"{+I} is already equipped.")
 		return False
 	# if item is armor, equip it as armor, otherwise, equip it in hand
 	if isinstance(I,Core.Armor):
 		Core.player.equipArmor(I)
 	else:
 		Core.player.equipInHand(I)
-	Core.Print(f"You equip your {I}.")
+	Core.Print(f"You equip {-I}.")
 	return True
 
 
@@ -2289,16 +2289,18 @@ def Put(dobj,iobj,prep):
 	I = findObject(dobj,"put","player")
 	if I is None: return False
 	Core.game.setPronouns(I)
+	itemPhrase = -I
 
 	# if input was 'put item down'
 	if prep == "down" and iobj is None:
 		return Drop(dobj,None,prep,I=I)
 
 	if iobj is None:
-		iobj = getNoun(f"What will you put your {dobj} {prep}?")
+		iobj = getNoun(f"What will you put {itemPhrase} {prep}?")
 		if iobj in Data.cancels: return False
 	R = findObject(iobj,f"put {prep}")
 	if R is None: return False
+	recipientPhrase = -R
 	if enforceVerbScope(f"put {prep}",R): return False
 	if R is Core.player.parent or R is Core.player.parent.floor:
 		return Drop(dobj,None,None,I=I)
@@ -2321,11 +2323,9 @@ def Put(dobj,iobj,prep):
 			Core.player.remove(I)
 			R.add(I)
 			I.platform = getattr(R,"floor",None)
-			idet = "your" if Core.player in I.ancestors() else 'the'
-			rdet = "your" if Core.player in R.ancestors() else 'the'
 			# outprep = "on" if isinstance(R,Items.Table) else "in"
-			if iobj == "here": Core.Print(f"You put your {I.name} here.")
-			else: Core.Print(f"You put {idet} {I} in {R.nounPhrase(det=rdet)}.")
+			if iobj == "here": Core.Print(f"You put {itemPhrase} here.")
+			else: Core.Print(f"You put {itemPhrase} in {recipientPhrase}.")
 			return True
 
 	if isinstance(R,Core.Portal) and "down" in R.links:
@@ -2352,8 +2352,6 @@ def Put(dobj,iobj,prep):
 		Core.Print(f"You can't put {-I} {prep} {-R}. There's not enough room.")
 		return False
 
-	idet = "your" if Core.player in I.ancestors() else 'the'
-	rdet = "your" if Core.player in R.ancestors() else 'the'
 	if isinstance(I,Core.Creature) and isinstance(R,Core.Creature):
 		riders = R.riders()
 		if riders and I.Size() > R.ridingSpace(I):
@@ -2368,8 +2366,8 @@ def Put(dobj,iobj,prep):
 		return False
 	if not R.occupy(I,actor=Core.player):
 		return False
-	if iobj == "here": Core.Print(f"You put your {I.name} here.")
-	else: Core.Print(f"You put {idet} {I} on {R.nounPhrase(det=rdet)}.")
+	if iobj == "here": Core.Print(f"You put {itemPhrase} here.")
+	else: Core.Print(f"You put {itemPhrase} on {recipientPhrase}.")
 	return True
 
 

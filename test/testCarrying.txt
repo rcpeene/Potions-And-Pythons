@@ -26,8 +26,15 @@ drop green python
 
 
 \\ Declining preparation preserves equipped gear and existing cargo
+\chk str(-fo("broken sword",queryType="room")) == "the broken sword"
 take broken sword
+\chk str(-fo("broken sword",queryType="player")) == "your broken sword"
 equip broken sword
+\chk str(+fo("broken sword",queryType="player")) == "Your broken sword"
+\spn Core.Item("Blade of Light","",1,-1,"steel",determiner="the")
+take blade of light
+\chk str(-fo("blade of light",queryType="player")) == "the Blade of Light"
+drop blade of light
 \spn red python
 \mbu red python tamed -1
 take red python
@@ -51,7 +58,23 @@ yes
 carrying
 gear
 
+\\ Accepted preparation updates gear even when hostile cargo resists afterward
+drop goblin
+\spn Core.Compass("trial compass","A compass reserved for failed carrying preparation.",2,10,"steel")
+\spn Core.Creature("stubborn goblin","A goblin strong enough to resist after both hands are cleared.",8,[20]*10,minGripsNeeded=2)
+take trial compass
+equip trial compass
+take green python
+take stubborn goblin
+yes
+\chk fo("trial compass",queryType="player") not in player.gear.values()
+\chk fo("green python",queryType="room").carrier is None
+\chk fo("stubborn goblin",queryType="room").carrier is None
+\chk all(player[slot] is Core.EmptyGear() for slot in player.carrySlots)
+gear
+
 \\ Full carry slots reject another creature; dropping clears slots for reuse
+take goblin
 take red python
 no
 \chk len(player.carrying()) == 1 and player.carrying()[0].name == "goblin"
