@@ -1,0 +1,17 @@
+test
+\TPT treeline
+
+\\ A first conversation records the meeting and advances basic rapport
+\spn Core.Armor("conversation trousers","Trousers worn to keep the conversation on topic.",2,10,"cloth",1,slots=["legs"])
+take conversation trousers
+don conversation trousers
+\chk not player.isNaked()
+\exe game.daleRapport=fo("dale",queryType="room").rapport
+talk dale
+\chk "met" in fo("dale",queryType="room").memories
+\chk fo("dale",queryType="room").rapport == game.daleRapport + 1
+\chk fo("dale",queryType="room").lastParley is not None
+\chk bool(fo("dale",queryType="room").dlogTree.visitCounts)
+
+quit
+yes

@@ -21,7 +21,7 @@ except:
 
 from time import sleep
 from random import choice,choices,randint,sample,shuffle
-from math import floor, sqrt
+from math import ceil, floor, sqrt
 from bisect import insort
 
 import Data
@@ -394,6 +394,8 @@ def findFirst(text,substrs):
 def conjugate(noun,verbString):
 	irregulars = (('has','have'),('is','are'),("isn't","aren't"),('was','were'))
 	sibilants = ("s","sh","ch","x","z","o")
+	modals = {"can","can't","cannot","could","couldn't","may","might","must",
+		"shall","shan't","should","shouldn't","will","won't","would","wouldn't"}
 
 	# get the first word (assumed to be a verb) that begins verbString
 	if verbString.startswith(" "):
@@ -402,6 +404,8 @@ def conjugate(noun,verbString):
 	verb = verbString[:firstWordEnd]
 	remainder = verbString[firstWordEnd:]
 	assert len(verb) > 1
+	if verb.lower() in modals:
+		return verb + remainder
 
 	# conjugate to infinitive form
 	if noun.lower() in ("you","they"):
@@ -879,6 +883,11 @@ def objQueryRecur(node,matches,key,d,traversed):
 
 # recurs through objects within the parent and assigns it as their parent
 def assignRefsRecur(parent):
+	# assign all direct parents before resolving sibling object references
+	for obj in parent:
+		if obj not in celestials:
+			obj.parent = parent
+
 	for obj in parent:
 		if obj in celestials:
 			continue
@@ -933,6 +942,9 @@ def buildWorld():
 		# assign the dialogue trees for all Creatures and validate them
 		for creature in objQuery(room, d=3, key=lambda x: isinstance(x,Speaker)):
 			creature.buildDialogue()
+
+	# TODO: After the staged world-building refactor, recursively checkTethers()
+	# here once every object has been instantiated and every reference resolved.
 
 	# ensure all containers with liquid floors have a 'down' direction
 	for item in game.itemRegistry.values():
@@ -1690,11 +1702,17 @@ class GameObject():
 
 
 	def __mul__(self,other):
-		return self.pronoun.capitalize() + " " + conjugate(self.pronoun,other)
+		pronoun = self.subjective()
+		return pronoun.capitalize() + " " + conjugate(pronoun,other)
 
 
 	def __truediv__(self,other):
-		return self.pronoun.lower() + " " + conjugate(self.pronoun,other)
+		pronoun = self.subjective()
+		return pronoun + " " + conjugate(pronoun,other)
+
+
+	def __rtruediv__(self,other):
+		return str(other) + " " + self.pronoun
 
 
 	def __hash__(self):
@@ -2062,8 +2080,8 @@ class Game():
 		borrower.id = lender.id
 
 
-	# spawn a new item (may instantiate it from a string) and register it
-	def spawn(self,obj):
+	# spawn a new item, register it, and optionally enter it into a parent
+	def spawn(self,obj,parent=None):
 		if isinstance(obj,str):
 			if obj in self.creatureFactory:
 				obj = self.creatureFactory[obj]()
@@ -2077,6 +2095,11 @@ class Game():
 		assert obj.id is None or obj.id not in self.itemRegistry
 		obj.id = self.getNextID()
 		self.registerItem(obj)
+		if parent is not None:
+			assert hasMethod(parent,"enter")
+			if not parent.enter(obj):
+				obj.destroy()
+				return False
 		return obj
 
 
@@ -2146,9 +2169,9 @@ class Game():
 		if isinstance(obj,Creature):
 			self.they = obj
 		pronoun = getattr(obj,"pronoun",None)
-		if pronoun == "he":
+		if pronoun == "him":
 			self.he = obj
-		elif pronoun == "she":
+		elif pronoun == "her":
 			self.she = obj
 
 
@@ -2315,8 +2338,8 @@ class Game():
 		self.currentroom.describe()
 		if not isinstance(player.parent,Room):
 			Print(f"You are in {-player.parent}.")
-		# if player.carrying:
-		# 	Print(f"You are carrying {~player.carrying}.")
+		# if player.carrying():
+		# 	Print(f"You are carrying {~player.carrying()}.")
 
 
 	# look up at the sky or ceiling and describe what is seen
@@ -2551,7 +2574,11 @@ class Room(GameObject):
 
 	# apply any room effects to the obj entering
 	def enter(self,obj):
+		if not self.canAdd(obj):
+			return False
 		obj = self.add(obj)
+		if not obj:
+			return False
 		# add status conditions from this room
 		for cond,dur in self.status:
 			# if room's condition is an area condition, apply to obj when applicable
@@ -2570,7 +2597,6 @@ class Room(GameObject):
 		condsToRemove = [pair for pair in obj.status if pair[1] == -2]
 		for cond,dur in condsToRemove:
 			obj.removeStatus(cond,-1)
-		Print("LEAVING ROOM",obj,self)
 		self.remove(obj)
 		assert obj not in self, f"Object {obj} still in Room {self.name} after exiting"
 		assert obj.parent is None, f"Object {obj} still has parent after exiting Room {self.name}"
@@ -2589,7 +2615,7 @@ class Room(GameObject):
 			# TODO: refactor this to have an event chance for creatures in spawnpools?
 			# right now it is biased to earlier in the list
 			if percentChance(prob):
-				self.enter(name)
+				game.spawn(name,self)
 
 		# sort all Creatures occupying the Room by their MVMT() value, descending
 		self.creatures.sort(key=lambda x: x.MVMT(), reverse=True)
@@ -2638,9 +2664,14 @@ class Room(GameObject):
 		return True
 
 
-	# removes all conditions with the given name and duration
+	# removes all conditions with the given name and duration(s)
 	# when nothing given, remove all status conditions
 	def removeStatus(self,reqName=None,reqDuration=None):
+		# for each duration given, removing matching statuses
+		if isinstance(reqDuration,(list,tuple)):
+			for duration in reqDuration:
+				self.removeStatus(reqName,duration)
+			return
 		# copy to prevent removing-while-iterating errors
 		for name,duration in self.status.copy():
 			if name == reqName or reqName is None:
@@ -2692,7 +2723,7 @@ class Room(GameObject):
 	def canAdd(self,I):
 		if self.ceiling and I in celestials:
 			return False
-		if I.totalSize() > self.vacancy() and self.vacancy() != -1:
+		if I.Size() > self.vacancy() and self.vacancy() != -1:
 			return False
 		if I in self:
 			return False
@@ -2796,7 +2827,7 @@ class Room(GameObject):
 		# don't directly describe creatures which are anchored to player
 		# or creatures riding another creature
 		select = lambda creature: creature not in \
-		(player, player.carrying, player.riding) and \
+		(player, *player.carrying(), player.riding) and \
 		creature.anchor() in (creature.parent.floor,None)
 
 		listCreatures = [creature for creature in self.creatures if select(creature)]
@@ -2805,9 +2836,9 @@ class Room(GameObject):
 
 		# now describe if one creature carrying another
 		carriers = [creature for creature in self.creatures if select(creature) and \
-		creature.carrying is not None]
-		carrierPhrases = [f"{-creature} is carrying {~creature.carrying}" \
-		for creature in carriers]
+		creature.carrying()]
+		carrierPhrases = [listObjects(f"{-creature} is carrying ",
+		creature.carrying()) for creature in carriers]
 
 		if len(carrierPhrases) > 1:
 			carrierDescriptions = (", ".join(carrierPhrases[:-1]) + \
@@ -2831,7 +2862,7 @@ class Item(GameObject):
 	def __init__(self,name,desc,weight,durability,composition,aliases=None,rarity=1,
 	status=None,plural=None,descname=None,determiner=None,pronoun="it",occupyprep="on",
 	fixed=False,mention=True,longevity=None,despawnTimer=None,scent=None,flavor=None,
-	texture=None,platform=None,occupants=None,covering=None,id=None):
+	texture=None,platform=None,occupants=None,covering=None,minGripsNeeded=1,id=None):
 
 		### Basic Properties
 	
@@ -2860,6 +2891,8 @@ class Item(GameObject):
 		self.scent = scent
 		self.flavor = flavor
 		self.texture = texture
+		self.minGripsNeeded = minGripsNeeded
+		assert self.minGripsNeeded >= 1
 
 		### Grammatical Properties
 
@@ -2867,7 +2900,7 @@ class Item(GameObject):
 		if self.plural is None:
 			self.plural = self.name + 's'
 		self.determiner = determiner
-		self.pronoun = pronoun
+		self.pronoun = Data.objectives.get(pronoun,pronoun)
 		self.occupyprep = occupyprep
 		# used for identifying object from player input
 		self.aliases = list(set(aliases)) if aliases else []
@@ -2891,8 +2924,10 @@ class Item(GameObject):
 
 		# these describe physical position relative to other objects
 		self.platform = platform
-		self.occupants = occupants if occupants else []
-		self.covering = covering if covering else []
+		# input-only shorthand for nesting occupants in World.json and old saves
+		self._inputOccupants = occupants if occupants else []
+		# input-only shorthand for nesting covered Creatures in World.json
+		self._inputCovering = covering if covering else []
 
 
 	### Dunder Methods ###
@@ -2909,27 +2944,10 @@ class Item(GameObject):
 	def assignRefs(self,parent):
 		self.parent = parent
 		isID = lambda x: isinstance(x,int) or x is None
-
-		# this allows us to define objects occupants as an occupant in the World.json,
-		# rather than and defining it in parent's contents then using an ID in .occupants
-		occupants = []
-		for o in self.occupants:
-			if isID(o):
-				o = game.itemRegistry[o]
-				assert self is o.platform or self.id is o.platform
-				continue
-			if self.parent.add(o):
-				# add() might have displaced o and assigned another parent
-				o.assignRefs(o.parent)
-				assignRefsRecur(o)
-				o.platform = self
-				occupants.append(o)
-		self.occupants = occupants
-
-		self.covering = [game.itemRegistry[o] if isID(o) else o for o in self.covering]
-		self.occupants = [game.itemRegistry[o] if isID(o) else o for o in self.occupants]
 		if isID(self.platform):
 			self.platform = game.itemRegistry[self.platform]
+
+		self.assignInputTethers()
 
 		# assign the item's anchor unless it is flying
 		if self.anchor() is None and not self.hasStatus("flying"):
@@ -2941,10 +2959,56 @@ class Item(GameObject):
 	# convert these references back into integer IDs
 	def convertToJSON(self):
 		jsonDict = self.__dict__.copy()
-		jsonDict["occupants"] = [o.id for o in self.occupants] if self.occupants else None
-		jsonDict["covering"] = [c.id for c in self.covering] if self.covering else None
 		jsonDict["platform"] = self.platform.id if self.platform else None
+		if "_inputOccupants" in jsonDict:
+			del jsonDict["_inputOccupants"]
+		if "_inputCovering" in jsonDict:
+			del jsonDict["_inputCovering"]
 		return jsonDict
+
+
+	# materialize input-only tether shorthands from World.json
+	def assignInputTethers(self):
+		self.assignInputOccupants()
+		self.assignInputCovering()
+
+
+	# materialize nested occupants and normalize occupant references from old saves
+	def assignInputOccupants(self):
+		isID = lambda x: isinstance(x,int)
+		for occupant in self._inputOccupants:
+			fromID = isID(occupant)
+			occupant = game.itemRegistry[occupant] if fromID else occupant
+			if occupant.parent is not self.parent:
+				assert self.parent.add(occupant)
+				occupant.assignRefs(occupant.parent)
+				assignRefsRecur(occupant)
+			if isinstance(self,Creature):
+				assert isinstance(occupant,Creature)
+				assert not fromID or occupant.riding in (self,self.id)
+				if not fromID:
+					occupant.removePlatform()
+				occupant.riding = self
+			else:
+				assert not fromID or occupant.platform in (self,self.id)
+				if not fromID:
+					occupant.removePlatform()
+				occupant.platform = self
+		del self._inputOccupants
+
+
+	# materialize nested covering entries as siblings whose cover is self
+	def assignInputCovering(self):
+		isID = lambda x: isinstance(x,int)
+		for covered in self._inputCovering:
+			covered = game.itemRegistry[covered] if isID(covered) else covered
+			assert isinstance(covered,Creature)
+			assert self.parent.add(covered)
+			covered.assignRefs(covered.parent)
+			assignRefsRecur(covered)
+			assert covered.cover is None
+			assert covered.addCover(self)
+		del self._inputCovering
 
 
 	### Operation ###
@@ -2972,26 +3036,32 @@ class Item(GameObject):
 
 	# change location to a new Room/Container
 	def changeLocation(self,newparent):
+		if newparent.vacancy() != -1 and self.Size() > newparent.vacancy():
+			self.Print(f"There's not enough space for {-self}.")
+			return False
 		if not newparent.canAdd(self):
-			self.Print(f"Something prevents entering {-newparent}.")
+			self.Print(f"Entering {-newparent} fails.")
 			return False
 
 		# Item cant be covered by another object when changing rooms
 		self.clearCovering()
+		occupants = self.occupants()
 		prevparent = self.parent
 		if prevparent:
 			prevparent.exit(self)
 		if self is player.parent:
 			Print(f"{+self} rumbles...")
 
-		# Item no longer covers other objects when changing rooms
-		for covered in self.covering:
-			covered.removeCover()
-		# everything on top of this item moves with it
-		for occupant in self.occupants.copy():
-			occupant.changeLocation(newparent)
-
 		newparent.enter(self)
+
+		# everything on top of this item is thrown with it, landing separately
+		for occupant in occupants:
+			if not occupant.changeLocation(newparent):
+				if occupant.platform is self:
+					occupant.removePlatform(drop=True)
+				continue
+			occupant.fall(self.Size()//5)
+
 		# if the container causes you to float, then don't automatic touch floor
 		if not newparent.canSubmerse(self):
 			self.platform = newparent.floor
@@ -3023,7 +3093,7 @@ class Item(GameObject):
 				self.changeLocation(a)
 				if not self.hasStatus("wet"):
 					self.Print("Splash!",color="o")
-				self.addStatus("wet",-4)
+				self.addStatus("wet",Data.WET_LIQUID)
 
 
 	# check if Item is submersible in liquid based on size and floor composition
@@ -3033,19 +3103,19 @@ class Item(GameObject):
 		if submerseComp in Data.liquids:
 			if not self.hasStatus("wet"):
 				self.Print("Splash!",color="o")
-			self.addStatus("wet",-4)
+			self.addStatus("wet",Data.WET_LIQUID)
 		else:
-			self.replaceStatus(("wet",-4),("wet",21))
+			self.replaceStatus(("wet",Data.WET_LIQUID),("wet",21))
 
 		if submerseComp in Data.liquids and self.parent.canSubmerse(self):
 			liquidDensity = Data.densities.get(submerseComp,1)
 			if isinstance(self.parent,Room) and \
 			getattr(self.parent,"composition",None) in Data.liquids:
-				self.addStatus("submerged",-4)
+				self.addStatus("submerged",Data.SUBMERGED_LIQUID)
 				return True
 			if not self.canSwim(liquidDensity) and not self.hasStatus("submerged"):
 				self.Print("You are too heavy to keep yourself afloat!",color="o")
-				self.addStatus("submerged",-4)
+				self.addStatus("submerged",Data.SUBMERGED_LIQUID)
 				return True
 
 		elif submerseComp not in Data.liquids:
@@ -3054,20 +3124,25 @@ class Item(GameObject):
 
 
 	# if there's not enough space to occupy an Item, objects fall off, biggest first
-	def checkOccupancy(self,obj=None):
+	def checkOccupancy(self,obj=None,actor=None,silent=True):
 		if obj is not None:
 			occupants = [obj]
 		else:
-			occupants = sorted(self.occupants, key=lambda x: x.Size(), reverse=True)
+			occupants = sorted(self.occupants(), key=lambda x: x.Size(), reverse=True)
 
 		anyFell = False
 		for occupant in occupants:
 			# An occupant can occupy something 5x smaller than itself
 			# But if theres more than one occupant total size must be less than item size
-			fullyOccupied = self.Size() < occupant.Size()//5 and len(self.occupants) <= 1
-			fullyOccupied = self.Size() < self.Size() - self.occupantsSize(occupant)
+			otherSize = self.occupantsSize(exclude=occupant)
+			tooSmall = self.Size() < occupant.Size()//5 and otherSize == 0
+			tooCrowded = otherSize > 0 and \
+				self.Size() < occupant.Size() + otherSize
+			fullyOccupied = tooSmall or tooCrowded
 			if fullyOccupied:
-				self.Print(f"{+self} is too small for {-occupant}.",color="o")
+				if not silent:
+					assert isinstance(actor,Creature)
+					actor.Print(self+f"is too small for {-occupant}.",color="o")
 				self.disoccupy(occupant)
 				occupant.fall(self.Size()//5)
 				anyFell = True
@@ -3079,16 +3154,20 @@ class Item(GameObject):
 		if not silent:
 			self.Print(f"{+self} disappears.")
 
+		parent = self.parent
 		self.clearCovering()
-		occupants = self.occupants.copy()
+		occupants = self.occupants()
 		self.clearOccupants()
 		for occupant in occupants:
 			occupant.fall(self.Size()//5)
 		self.removePlatform()
+		for item in getattr(self,"items",[]).copy():
+			item.changeLocation(parent)
 
 		# may have already been removed from parent
 		if self.parent and self in self.parent:
 			self.parent.remove(self)
+		self.parent = None
 
 		# TODO: first drop all items from contents? or just some important ones?
 		assert game.itemRegistry[self.id] is self, \
@@ -3099,8 +3178,8 @@ class Item(GameObject):
 	# if an Item is too small for its parent, repeatedly move it to parent's parent
 	# until theres space for it. if it cannot fit in the final parent (Room), destroy it
 	# this prevents strange physical scenarios and should not normally be called
-	def displace(self,newparent):
-		Print(f"DISPLACING {self} from {self.parent} to {newparent}")
+	def displace(self,newparent=None):
+		self.clearOccupants()
 		if self.parent:
 			self.parent.remove(self)
 		nextparent = getattr(newparent,"parent",None)
@@ -3151,9 +3230,14 @@ class Item(GameObject):
 		self.checkSubmersion()
 
 
-	# removes all condition of the same name
-	# if reqDuration is given, only removes conditions with that duration
+	# removes all conditions of the same name
+	# if reqDuration is given, only removes conditions with that duration or durations
 	def removeStatus(self,reqName=None,reqDuration=None):
+		# for each duration given, remove matching statuses
+		if isinstance(reqDuration,(list,tuple)):
+			for duration in reqDuration:
+				self.removeStatus(reqName,duration)
+			return
 		for name,duration in self.status.copy():
 			if name == reqName or reqName is None:
 				if duration == reqDuration or reqDuration is None:
@@ -3163,6 +3247,8 @@ class Item(GameObject):
 	# replace one status with another
 	# if they have the same name, make sure to add new before removing old
 	def replaceStatus(self,tup1,tup2):
+		if tup1 == tup2:
+			return False
 		c1, d1 = tup1
 		c2, d2 = tup2
 		if not self.hasStatus(c1,d1):
@@ -3183,19 +3269,31 @@ class Item(GameObject):
 		if newObj is self:
 			return self
 
+		parent = self.parent
+		coveredCreatures = self.covering().copy()
+		occupants = self.occupants()
 		if isinstance(newObj,str) or newObj.id is None:
 			newObj = game.spawn(newObj)
 
+		def checkReplacementTethers():
+			for covered in coveredCreatures:
+				covered.removeCover(silent=True)
+				covered.checkCover()
+			if isinstance(newObj,Creature):
+				newObj.checkTethers()
+
 		# if it fails to place the new object in parent, displace it
-		if not self.parent.replaceObj(self,newObj):
+		if not parent.replaceObj(self,newObj):
 			self.destroy()
 			game.replaceID(self,newObj)
-			return newObj.displace(self.parent)
-		for covered in self.covering.copy():
+			result = newObj.displace(parent)
+			checkReplacementTethers()
+			return result
+		for covered in coveredCreatures:
 			covered.removeCover(silent=True)
 			covered.addCover(newObj)
 
-		for occupant in self.occupants.copy():
+		for occupant in occupants:
 			self.disoccupy(occupant)
 			if isinstance(newObj,Creature) or newObj.parent is None:
 				occupant.fall(self.Size()//5)
@@ -3203,7 +3301,9 @@ class Item(GameObject):
 				newObj.occupy(occupant,silent=True)
 			# if newObj was destroyed when adding occupants, end here
 			if newObj.parent is None:
-				return self.destroy()
+				result = self.destroy()
+				checkReplacementTethers()
+				return result
 
 		if self.platform not in (None,self.parent) and newObj.parent:
 			p = self.platform
@@ -3214,10 +3314,13 @@ class Item(GameObject):
 				p.occupy(newObj)
 		# if newObj was destroyed when replacing platform, end here
 		if newObj.parent is None:
-			return self.destroy()
+			result = self.destroy()
+			checkReplacementTethers()
+			return result
 
 		self.destroy()
 		game.replaceID(self,newObj)
+		checkReplacementTethers()
 		return newObj
 
 
@@ -3260,29 +3363,30 @@ class Item(GameObject):
 	# Try to cover an Item, ensure theres enough space to cover it
 	def addCovering(self,covered):
 		assert isinstance(covered,Creature)
-		if covered in self.covering:
+		assert covered.parent is self.parent
+		covering = self.covering()
+		if covered in covering:
 			Print(f"{+self} is already covering {-covered}.")
 			return False
-		if self.availableCover(covered) < 0:
-			nCovered = len(self.covering)
+		if self.availableCover(covered) <= 0:
+			nCovered = len(covering)
 			msg = f"{+self} has no space to cover {-covered}. "
 			if nCovered == 0:
 				addendum = self*"is too small."
 			elif nCovered == 1:
-				addendum = self*f"is already covering {~self.covering[0]}."
+				addendum = self*f"is already covering {~covering[0]}."
 			elif nCovered == 2:
-				addendum = self*f"is already covering {~self.covering[0]} " \
-				f"and {~self.covering[1]}."
+				addendum = self*f"is already covering {~covering[0]} " \
+				f"and {~covering[1]}."
 			else:
 				addendum = self*f"is covering {nCovered} others."
 			Print(msg+addendum)
 			return False
 
-		self.covering.append(covered)
 		covered.cover = self
 		# try to cover any carried creatures too
-		if covered.carrying:
-			covered.carrying.addCovering(covered)
+		for carried in covered.carrying():
+			carried.addCover(self)
 		return True
 
 
@@ -3301,30 +3405,28 @@ class Item(GameObject):
 
 	# Called when Item can no longer serve as cover for others in room
 	def clearCovering(self):
-		for covered in self.covering:
+		for covered in self.covering():
 			self.removeCovering(covered)
-		self.covering.clear()
 		return True
 
 
 	# Called generally when occupying Items drop off of self
 	def clearOccupants(self):
-		for occupant in self.occupants:
-			occupant.platform = None
+		for occupant in self.occupants():
+			self.disoccupy(occupant)
 			if not isinstance(self.parent,Creature):
-				if getattr(occupant,"riding",False):
-					occupant.removeRiding()
 				occupant.platform = self.parent.floor
-		self.occupants.clear()
 
 
 	# Called by specific occupant when changing its anchor
 	def disoccupy(self,occupant):
-		if occupant in self.occupants:
-			self.occupants.remove(occupant)
+		if getattr(occupant,"platform",None) is self:
 			occupant.platform = None
-			return True
-		return False
+		elif getattr(occupant,"riding",None) is self:
+			occupant.riding = None
+		else:
+			return False
+		return True
 
 
 	# Item falls through rooms accumulating fall height until hitting floor, 
@@ -3339,7 +3441,7 @@ class Item(GameObject):
 		if room is None:
 			room = self.room()
 		self.printNearby(f"{+self} {verb}s down.")
-		for occupant in self.occupants.copy():
+		for occupant in self.occupants():
 			occupant.fall(height,room)
 		self.clearOccupants()
 
@@ -3366,29 +3468,32 @@ class Item(GameObject):
 		return True
 
 
-	# Try to add occupant to self.occupants
-	def occupy(self,occupant,silent=False):
+	# Try to assign self as occupant's platform
+	def occupy(self,occupant,silent=False,actor=None):
+		assert isinstance(occupant,Item)
 		assert not isinstance(self.parent,Creature)
-		if occupant in self.occupants:
+		assert self.parent is not None and occupant.parent is self.parent
+		if actor is None:
+			actor = occupant if isinstance(occupant,Creature) else player
+		assert isinstance(actor,Creature)
+		if occupant in self.occupants():
 			if not silent:
-				Print(occupant+f"is already on {-self}.")
+				actor.Print(occupant+f"is already on {-self}.")
 			return False
-		### TODO: instead of just checking ancestors, should check tether loops
-		if occupant in self.ancestors():
-			if not silent:
-				Print(f"{+self} is already occupied by {-occupant}.")
+		action = f"get on {-self}" if actor is occupant else \
+			f"put {-occupant} on {-self}"
+		if self.checkTetherLoop(occupant,actor,action,silent=silent):
 			return False
 		if isinstance(occupant,Creature) and occupant.riding is not None:
 			occupant.removeRiding()
 		occupant.removePlatform()
 
-		if not self.checkOccupancy(occupant):
+		if not self.checkOccupancy(occupant,actor=actor,silent=silent):
 			return False
-		self.occupants.append(occupant)
 		occupant.platform = self
 		self.checkOccupantsWeight(silent=silent)
 
-		return occupant in self.occupants
+		return occupant.platform is self
 
 
 	# remove tethers when being obtained by a Creature
@@ -3397,29 +3502,29 @@ class Item(GameObject):
 		if self.platform:
 			self.platform.disoccupy(self)
 		self.clearOccupants()
-		if self.covering:
-			self.covering.removeCover()
+		self.clearCovering()
 		self.platform = None
 
 
-	# covered object from self.covering if exists
+	# stop covering object if it is covered by self
 	def removeCovering(self,covered):
-		if covered in self.covering:
-			self.covering.remove(covered)
+		if covered.cover is self:
 			covered.cover = None
-			if covered.carrying:
-				covered.carrying.removeCovering(covered)
+			covered.checkHidden()
 			return True
 		return False
 
 
-	# remove platform tether if exists
-	def removePlatform(self):
-		if self.platform is not None:
-			self.platform.disoccupy(self)
-			self.platform = None
-			return True
-		return False
+	# remove platform tether, optionally falling from its height
+	def removePlatform(self,drop=False):
+		platform = self.platform
+		if platform is None:
+			return False
+		removed = platform.disoccupy(self)
+		if removed and drop and self.parent is not None and \
+		platform is not getattr(self.parent,"floor",None):
+			self.fall(platform.Size()//5)
+		return removed
 
 
 	# describe smell based on composition
@@ -3479,6 +3584,52 @@ class Item(GameObject):
 		return self.platform
 
 
+	# return whether assigning self as dependent's anchor would create a tether loop
+	# for instance, player is riding a horse who is standing on a table, and player tries to carry the table
+	def checkTetherLoop(self,dependent,actor,action,silent=False):
+		assert isinstance(dependent,Item)
+		assert isinstance(actor,Creature)
+		current = self
+		traversed = set()
+		while current is not None and current not in traversed:
+			if current is dependent:
+				if not silent:
+					if self is dependent:
+						actor.Print(actor+f"can't {action}.")
+					else:
+						actor.Print(actor+f"can't {action}; {self.anchorDescription()}.")
+				return True
+			traversed.add(current)
+			current = current.anchor()
+		if current in traversed:
+			if not silent:
+				actor.Print(actor+f"can't {action}; {self.anchorDescription()}.")
+			return True
+		return False
+
+
+	# return the chain of physical anchors below this object
+	def anchors(self):
+		anchors = []
+		anchor = self.anchor()
+		while anchor is not None and anchor not in anchors:
+			anchors.append(anchor)
+			anchor = anchor.anchor()
+		return anchors
+
+
+	# describe this Item's direct anchor relationship
+	def anchorDescription(self):
+		anchor = self.anchor()
+		assert anchor is not None
+		if getattr(self,"carrier",None) is anchor:
+			return self/f"is being carried by {-anchor}"
+		if getattr(self,"riding",None) is anchor:
+			return self/f"is riding {-anchor}"
+		assert self.platform is anchor
+		return self/f"is on {-anchor}"
+
+
 	# returns this object wrapped as a projectile (gives it a speed and other properties)
 	def asProjectile(self):
 		return Projectile(self.name,self.desc,self.weight,self.durability,
@@ -3495,7 +3646,7 @@ class Item(GameObject):
 	# determine cover available for obj from this Item
 	def availableCover(self,obj):
 		return self.Size() - obj.Size() - \
-		sum(c.Size() for c in self.covering if c is not obj)
+		sum(c.Size() for c in self.covering() if c is not obj)
 
 
 	# normal Items can't contain other objects
@@ -3532,6 +3683,29 @@ class Item(GameObject):
 		return sum(1 for obj in parent if key(obj))
 
 
+	# return sibling Creatures covered by this Item
+	def covering(self):
+		if self.parent is None:
+			return []
+		objects = list(self.parent)
+		# player has a Room parent but is not stored in Room.creatures
+		if player.parent is self.parent and player not in objects:
+			objects.append(player)
+		return [obj for obj in objects if getattr(obj,"cover",None) is self]
+
+
+	# return sibling objects anchored to this Item, excluding virtual room floors
+	def occupants(self):
+		if self.parent is None or self is getattr(self.parent,"floor",None):
+			return []
+		objects = list(self.parent)
+		# player has a Room parent but is not stored in Room.creatures
+		if player.parent is self.parent and player not in objects:
+			objects.append(player)
+		return [obj for obj in objects if getattr(obj,"platform",None) is self or \
+			getattr(obj,"riding",None) is self]
+
+
 	# used so we don't bog down the player asking for which item they want
 	# when two items are negligibly different
 	def objMatch(self,other):
@@ -3551,12 +3725,12 @@ class Item(GameObject):
 
 	# get total size of all occupants, excluding 'exclude' if given
 	def occupantsSize(self,exclude=None):
-		return sum(o.Size() for o in self.occupants if o is not exclude)
+		return sum(o.Size() for o in self.occupants() if o is not exclude)
 
 
 	# get total weight of all occupants, excluding 'exclude' if given
 	def occupantsWeight(self,exclude=None):
-		return sum(o.Weight() for o in self.occupants if o is not exclude)
+		return sum(o.Weight() for o in self.occupants() if o is not exclude)
 
 
 	# get the Room that ultimately contains this Item at the root of its object tree
@@ -3592,6 +3766,11 @@ class Item(GameObject):
 		return self.Size() + self.occupantsSize()
 
 
+	# get grips needed to wield based on structural minimum, weight, and wielder strength
+	def gripsNeeded(self,wielder):
+		return max(self.minGripsNeeded,self.Weight()//(4*wielder.STR()))
+
+
 	# get the total weight of Item and everything upon it
 	def Weight(self):
 		return self.weight + self.occupantsWeight()
@@ -3603,8 +3782,9 @@ class Item(GameObject):
 	def describe(self):
 		Print(f"It's {~self}.")
 		Print(f"{self.desc}")
-		if len(bagObjects(self.occupants)) > 2:
-			Print(listObjects("On it is ",self.occupants,"."))
+		occupants = self.occupants()
+		if len(bagObjects(occupants)) > 2:
+			Print(listObjects("On it is ",occupants,"."))
 
 
 	# the name of the item colored by rarity for display in inventory
@@ -3621,10 +3801,11 @@ class Item(GameObject):
 		if det.lower() == "the":
 			strname = self.name
 		else:
-			if len(bagObjects(self.occupants)) > 2:
+			occupants = self.occupants()
+			if len(bagObjects(occupants)) > 2:
 				strname = f"{self.name} with things on it"
-			elif self.occupants:
-				strname = listObjects(f"{self.name} with ",self.occupants," on it")
+			elif occupants:
+				strname = listObjects(f"{self.name} with ",occupants," on it")
 			else:
 				strname = self.descname
 
@@ -3676,7 +3857,8 @@ class Item(GameObject):
 		if game.mode == 2:
 			args.insert(0,f"[{self.id} {self.name}]:")
 			color="k"
-		if (player in self.surroundings() or game.mode == 2) and self is not player:
+		if (player.surroundings() is self.surroundings() or game.mode == 2) and \
+		self is not player:
 			return Print(*args,end=end,sep=sep,delay=delay,color=color,
 			allowSilent=allowSilent,outfile=outfile)
 		return
@@ -3688,6 +3870,11 @@ class Item(GameObject):
 			return Data.reflexives[self.pronoun]
 		else:
 			return "itself"
+
+
+	# get subjective form of stored objective pronoun
+	def subjective(self):
+		return Data.subjectives.get(self.pronoun,"it")
 
 
 	# just like self.Print except waits for user input afterwards
@@ -3710,7 +3897,8 @@ class Creature(Item):
 	def __init__(self,name,desc,weight,traits,hp=None,mp=0,money=0,inv=None,gear=None,
 	love=0,fear=0,carrying=None,carrier=None,riding=None,platform=None,
 	cover=None,composition="flesh",memories=None,appraisal=None,lastAte=0,lastSlept=0,
-	lastBreathed=0,regenTimer=0,alert=False,lastSawPlayer=None,**kwargs):
+	lastBreathed=0,regenTimer=0,alert=False,lastSawPlayer=None,
+	carrySlots=None,gripSlots=None,**kwargs):
 		# Creatures have infinite durability, may not be fixed, and despawn after 1000
 		super().__init__(name,desc,weight,-1,composition,fixed=False,longevity=1000,
 		**kwargs)
@@ -3743,6 +3931,18 @@ class Creature(Item):
 		# values of gear must either be EmptyGear() or an Item in the inventory
 		self.gear = gear if gear else Data.initgear
 		self.gear = {k:(v if v else EmptyGear()) for k,v in self.gear.items()}
+		defaultCarrySlots = ("left","right")
+		self.carrySlots = tuple(slot for slot in defaultCarrySlots if slot in self.gear) \
+			if carrySlots is None else tuple(carrySlots)
+		assert len(self.carrySlots) == len(set(self.carrySlots)), \
+			f"Creature {self.name} has duplicate carry slots"
+		assert all(slot in self.gear for slot in self.carrySlots), \
+			f"Creature {self.name} has carry slot absent from gear"
+		self.gripSlots = self.carrySlots if gripSlots is None else tuple(gripSlots)
+		assert len(self.gripSlots) == len(set(self.gripSlots)), \
+			f"Creature {self.name} has duplicate grip slots"
+		assert all(slot in self.gear for slot in self.gripSlots), \
+			f"Creature {self.name} has grip slot absent from gear"
 		# when equipping gear in gear dict, these may be assigned
 		self.weapon = EmptyGear()
 		self.weapon2 = EmptyGear()
@@ -3763,7 +3963,7 @@ class Creature(Item):
 		# during __init__(), these are given as object IDs or None
 		# but are replaced with real object references in assignRefs()
 		self.riding = riding
-		self.carrying = carrying
+		self._inputCarrying = carrying
 		self.carrier = carrier
 		self.platform = platform
 		self.cover = cover
@@ -3801,16 +4001,60 @@ class Creature(Item):
 
 	### File I/O ###
 
+	# materialize input-only tether shorthands from World.json
+	def assignInputTethers(self):
+		super().assignInputTethers()
+		self.assignInputCarrying()
+
+
+	# materialize a nested carrying entry as a sibling whose carrier is self
+	def assignInputCarrying(self):
+		if self._inputCarrying is None:
+			del self._inputCarrying
+			return
+		if isinstance(self._inputCarrying,dict) and "__class__" not in self._inputCarrying:
+			carrying = list(self._inputCarrying.items())
+		elif isinstance(self._inputCarrying,list):
+			carrying = [(None,carried) for carried in self._inputCarrying]
+		else:
+			carrying = [(None,self._inputCarrying)]
+		isID = lambda x: isinstance(x,int)
+		for slot,carried in carrying:
+			carried = game.itemRegistry[carried] if isID(carried) else carried
+			assert isinstance(carried,Creature) and carried is not self
+			assert carried.carrier in (None,self,self.id)
+			if slot is None:
+				slot = next((s for s in self.carrySlots \
+					if self[s] in (EmptyGear(),"carrying",carried.id)),None)
+			assert slot in self.carrySlots and self[slot] in \
+				(EmptyGear(),"carrying",carried.id,carried)
+			if carried.carrier == self.id:
+				carried.carrier = self
+			slots = [s for s in self.carrySlots if self[s] is carried]
+			if self[slot] is not carried:
+				self[slot] = EmptyGear()
+			self.assignCarrySlots(carried,slots+([slot] if slot not in slots else []))
+			if carried not in self.parent:
+				if carried.id is not None and carried.id not in game.itemRegistry:
+					game.registerItem(carried)
+				added = self.parent.add(carried)
+				assert added
+				carried.assignRefs(carried.parent)
+				assignRefsRecur(carried)
+			assert carried.parent is self.parent
+		del self._inputCarrying
+
 	# take Item IDs from attributes and replace them with object references
 	def assignRefs(self,parent):
 		self.parent = parent
-		self.carrying = game.itemRegistry[self.carrying]
-		self.carrier = game.itemRegistry[self.carrier]
+		if isinstance(self.carrier,int):
+			self.carrier = game.itemRegistry[self.carrier]
+		if self.carrier and not self.hasStatus("restrained",Data.RESTRAINT_CARRY):
+			insort(self.status,["restrained",Data.RESTRAINT_CARRY])
 		self.riding = game.itemRegistry[self.riding]
 		self.cover = game.itemRegistry[self.cover]
-		self.covering = [game.itemRegistry[o] for o in self.covering]
-		self.occupants = [game.itemRegistry[o] for o in self.occupants]
 		self.platform = game.itemRegistry[self.platform]
+		self.assignInputTethers()
 
 		# ensure platform is assigned if unanchored
 		if self.anchor() is None and not self.hasStatus("flying"):
@@ -3822,9 +4066,14 @@ class Creature(Item):
 		uncompGear = {}
 		for slot, id in self.gear.items():
 			if id == "carrying":
-				assert self.carrying is not None, f"Creature {self.name} has gear " \
-				f"slot '{slot}' set to 'carrying' but is not carrying anything."
-				uncompGear[slot] = self.carrying
+				carried = [c for c in self.parent if isinstance(c,Creature) and \
+					c.carrier in (self,self.id) and c not in uncompGear.values()]
+				assert len(carried) == 1, f"Creature {self.name} has ambiguous " \
+					f"'carrying' gear slot '{slot}'"
+				uncompGear[slot] = carried[0]
+			elif isinstance(id,Creature) and id.carrier is self:
+				assert slot in self.carrySlots
+				uncompGear[slot] = id
 			# if id is already the real object, add it to inventory if needed
 			elif type(id) not in (int, EmptyGear, type(None)):
 				assert self.add(id)
@@ -3832,18 +4081,27 @@ class Creature(Item):
 			elif id is None or id is EmptyGear():
 				uncompGear[slot] = EmptyGear()
 			else:
-				uncompGear[slot] = game.itemRegistry[id]
+				item = game.itemRegistry[id]
+				if isinstance(item,Creature) and slot in self.carrySlots:
+					assert item.carrier in (self,self.id)
+					item.carrier = self
+				uncompGear[slot] = item
 		self.gear = uncompGear
 
 		for slot,item in self.gear.items():
-			assert item is EmptyGear() or item in self.inv or item is self.carrying, \
+			assert item is EmptyGear() or item in self.inv or item in self.carrying(), \
 			f"Creature {self.name} has item in gear slot '{slot}' not in inventory"
+			if isinstance(item,Creature):
+				assert slot in self.carrySlots and item.carrier is self
 			assert isinstance(item,Creature) or item.slots is None or slot in item.slots, \
 			f"Creature {self.name} has item {item.name} in invalid slot '{slot}'"
 
-		assert self.invWeight() + self.carryWeight() <= 2*self.BRDN(), f"Creature " \
-		f"{self.name} is carrying too much weight. BRDN is {self.BRDN()}, " \
-		f"but total weight is {self.invWeight() + self.carryWeight()}"
+		assert self.invWeight() <= 2*self.BRDN(), f"Creature {self.name} has too " \
+		f"much inventory weight. BRDN is {self.BRDN()}, but inventory weight is " \
+		f"{self.invWeight()}"
+		assert self.canCarryWeight(), f"Creature {self.name} has too " \
+		f"much cargo weight. BRDN is {self.BRDN()}, but cargo weight is " \
+		f"{self.carryWeight()}"
 
 
 	# returns a dict which contains all the necessary information to store
@@ -3852,20 +4110,19 @@ class Creature(Item):
 	def convertToJSON(self):
 		jsonGear = {}
 		for slot, item in self.gear.items():
-			if isinstance(item,Creature):
-				jsonGear[slot] = "carrying"
-			elif item is EmptyGear():
+			if item is EmptyGear():
 				jsonGear[slot] = None
 			else:
 				jsonGear[slot] = item.id
 
 		jsonDict = super().convertToJSON()
-		jsonDict["carrying"] = self.carrying.id if self.carrying else None
 		jsonDict["carrier"] = self.carrier.id if self.carrier else None
 		jsonDict["riding"] = self.riding.id if self.riding else None
 		jsonDict["cover"] = self.cover.id if self.cover else None
-		jsonDict["covering"] = [c.id for c in self.covering] if self.covering else None
-		del jsonDict["occupants"]
+		jsonDict["carrySlots"] = self.carrySlots
+		jsonDict["gripSlots"] = self.gripSlots
+		if "_inputCarrying" in jsonDict:
+			del jsonDict["_inputCarrying"]
 
 		dictkeys = list(jsonDict.keys())
 		delAttrs = ("gear","weapon","weapon2","shield","shield2")
@@ -3936,7 +4193,7 @@ class Creature(Item):
 
 		# lift off ground if added flying
 		if name == "flying" and self.platform is self.parent.floor:
-			self.platform = None
+			self.removePlatform()
 		insort(self.status,[name,dur])
 
 		if name in Data.blessings | Data.curses:
@@ -3954,11 +4211,15 @@ class Creature(Item):
 	# change location to a new Room/Container, return True on success
 	def changeLocation(self,newparent):
 		assert not isinstance(newparent,Creature)
+		carrying = self.carrying()
+		occupants = self.occupants()
 		# shouldn't be changing rooms alone if riding or being carried
 		if self.carrier and self.carrier.parent is not newparent:
 			return False
 		if self.riding and self.riding.parent is not newparent:
 			return self.riding.changeLocation(newparent)
+		if not self.canChangeLocation(newparent):
+			return False
 
 		self.removeCover()
 		self.clearCovering()
@@ -3986,13 +4247,31 @@ class Creature(Item):
 		newparent.enter(self)
 
 		# propagate location change to creatures riding or being carried
-		if self.carrying and self.carrying.parent is not self.parent:
-			self.carrying.changeLocation(newparent)
-		for occupant in self.occupants:
+		for carried in carrying:
+			if carried.carrier is self and carried.parent is not self.parent:
+				carried.changeLocation(newparent)
+		for occupant in occupants:
 			if occupant.parent is not self.parent:
 				occupant.changeLocation(newparent)
-		assert self.carrying is None or self.carrying.parent is self.parent
+		assert all(carried.parent is self.parent for carried in carrying)
 
+		return True
+
+
+	# check whether this creature and its tethered group can enter a new parent
+	def canChangeLocation(self,newparent):
+		if newparent.vacancy() != -1 and self.totalSize() > newparent.vacancy():
+			msg = f"There's not enough space for {-self}."
+			self.Print(msg)
+			if self in player.anchors():
+				self.printNearby(msg)
+			return False
+		if not newparent.canAdd(self):
+			msg = f"Entering {-newparent} fails."
+			self.Print(msg)
+			if self in player.anchors():
+				self.printNearby(msg)
+			return False
 		return True
 
 
@@ -4013,9 +4292,9 @@ class Creature(Item):
 				self.removeStatus(p,silent=silent)
 		# standing is the absence of the other conditions
 		if posture != "standing":
-			self.addStatus(posture,-4,silent=silent)
+			self.addStatus(posture,Data.POSTURE_ACTIVE,silent=silent)
 		if posture in ("standing","crouching"):
-			self.removeStatus("cozy",-4,silent=silent)
+			self.removeStatus("cozy",Data.COZY_BED,silent=silent)
 
 		self.checkHidden()
 		return self.posture() == posture
@@ -4041,25 +4320,33 @@ class Creature(Item):
 	def checkHidden(self):
 		transparent = ("glass","ice","water")
 		if getattr(self.parent,"closed",False):
-			self.addStatus("hidden",-4)
+			self.addStatus("hidden",Data.HIDDEN_CONTAINER)
 		elif self.coverBonus() >= 5 and self.cover.composition not in transparent:
-			self.addStatus("hidden",-4)
-		elif self.coverBonus() < 5:
-			self.removeStatus("hidden",-4)
+			self.addStatus("hidden",Data.HIDDEN_COVER)
+		else:
+			self.removeStatus("hidden",Data.HIDDEN_COVER)
 
 
-	# add/remove hindered status based on inventory weight and BRDN
+	# add/remove hindered status based on inventory and cargo weight
 	def checkHindered(self):
-		if self.invWeight() + self.carryWeight() > self.BRDN():
-			if not self.hasStatus("hindered",-4):
-				self.Print("Your Inventory grows heavy.")
-			if not self.hasStatus("hindered",-4):
-				self.addStatus("hindered",-4)
+		inventoryHindered = self.invWeight() > self.BRDN()
+		if inventoryHindered and \
+		not self.hasStatus("hindered",Data.HINDERED_INVENTORY):
+			self.Print("Your Inventory grows heavy.")
+			self.addStatus("hindered",Data.HINDERED_INVENTORY)
+		elif not inventoryHindered and \
+		self.hasStatus("hindered",Data.HINDERED_INVENTORY):
+			self.Print("Your Inventory feels lighter.")
+			self.removeStatus("hindered",Data.HINDERED_INVENTORY)
 
-		if self.invWeight() + self.carryWeight() <= self.BRDN():
-			if self.hasStatus("hindered",-4):
-				self.Print("Your Inventory feels lighter.")
-				self.removeStatus("hindered",-4)
+		cargoHindered = self.carryWeight() > self.BRDN()//4
+		if cargoHindered and not self.hasStatus("hindered",Data.HINDERED_CARGO):
+			self.Print("Your cargo weighs you down.")
+			self.addStatus("hindered",Data.HINDERED_CARGO)
+		elif not cargoHindered and \
+		self.hasStatus("hindered",Data.HINDERED_CARGO):
+			self.Print("Your cargo feels lighter.")
+			self.removeStatus("hindered",Data.HINDERED_CARGO)
 
 
 	# unused for Creatures, but used in Player subclass
@@ -4072,10 +4359,144 @@ class Creature(Item):
 		pass
 
 
+	# remove cover which no longer shares a parent or provides enough space
+	def checkCover(self):
+		if self.cover is None:
+			return
+		if self.cover.parent is self.parent and self.cover.availableCover(self) > 0:
+			self.checkHidden()
+			return
+		self.removeCover(silent=True)
+
+
+	# fall from an invalid ordinary platform and validate valid platform occupancy
+	def checkPlatform(self):
+		platform = self.platform
+		if platform is None or platform is getattr(self.parent,"floor",None):
+			return
+		if platform.parent is not self.parent:
+			self.removePlatform()
+			self.fall(platform.Size()//5)
+			return
+		platform.checkOccupancy(self)
+		if self.platform is platform:
+			platform.checkOccupantsWeight(silent=True)
+
+
+	# drop carried creatures which no longer fit a carry slot or burden limit
+	def checkCarrying(self):
+		carrying = self.carrying()
+		for carried in carrying:
+			assert carried is not self and carried.parent is self.parent
+			assert carried.carrier is self
+
+		cargoWeight = 0
+		toDrop = []
+		for carried in sorted(carrying,key=lambda carried:carried.Weight()):
+			slotsUsed = [slot for slot in self.carrySlots if self[slot] is carried]
+			slotsNeeded = carried.gripsNeeded(self)
+
+			# mark any cargo thats too heavy as to-be-dropped
+			if not self.canCarryWeight(carried,currentWeight=cargoWeight):
+				for slot in slotsUsed:
+					self[slot] = EmptyGear()
+				toDrop.append(carried)
+				continue
+
+			# mark any cargo that doesn't have enough grip slots as to-be-dropped
+			if len(slotsUsed) < slotsNeeded:
+				availableSlots = [slot for slot in self.carrySlots if self[slot] is EmptyGear()]
+				slotDeficit = slotsNeeded-len(slotsUsed)
+				if len(availableSlots) < slotDeficit:
+					for slot in slotsUsed:
+						self[slot] = EmptyGear()
+					toDrop.append(carried)
+					continue
+				# if we have them to spare, give cargo the additional slots it needs
+				for slot in availableSlots[:slotDeficit]:
+					self[slot] = carried
+
+			cargoWeight += carried.Weight()
+
+		for carried in toDrop:
+			self.Print(f"{+carried} is too heavy! " + "You drop"/carried + ".")
+			self.removeCarry(carried,silent=True,drop=True)
+
+
+	# adjust occupied grip slots when strength or wielded item weight changes
+	def checkGrips(self):
+		items = []
+		for slot in self.gripSlots:
+			item = self[slot]
+			if item is EmptyGear() or isinstance(item,Creature) or item in items:
+				continue
+			items.append(item)
+
+		for item in items:
+			occupied = [slot for slot in self.gripSlots if self[slot] is item]
+			gripsNeeded = item.gripsNeeded(self)
+			if len(occupied) < gripsNeeded:
+				available = [slot for slot in self.gripSlots \
+					if self[slot] is EmptyGear()]
+				if len(occupied) + len(available) < gripsNeeded:
+					self.Print(f"Your {item} is too heavy! You unequip it.")
+					self.unequip(occupied[0],silent=True)
+					continue
+				for slot in available[:gripsNeeded-len(occupied)]:
+					self[slot] = item
+			elif len(occupied) > gripsNeeded:
+				for slot in occupied[gripsNeeded:]:
+					self[slot] = EmptyGear()
+
+		self.assignWeaponAndShield()
+
+
+	# dismount riders which no longer fit the mount's size or burden limits
+	def checkRiding(self):
+		riders = self.riders()
+		for rider in riders:
+			if rider.Size()//2 <= self.Size():
+				continue
+			rider.removeRiding(silent=True)
+			rider.fall(self.Size()//5)
+
+		riders = self.riders()
+		while riders and self.occupantsWeight() > self.BRDN()//2:
+			rider = max(riders,key=lambda rider:rider.Weight())
+			rider.removeRiding(silent=True)
+			rider.fall(self.Size()//5)
+			riders.remove(rider)
+
+		riders = self.riders()
+		while len(riders) > 1 and self.ridingSpace() < 0:
+			rider = riders[-1]
+			rider.removeRiding(silent=True)
+			rider.fall(self.Size()//5)
+			riders.remove(rider)
+
+
+	# validate this creature and every carrier or mount above it
+	def checkTethers(self):
+		creature = self
+		checked = set()
+		while isinstance(creature,Creature) and creature not in checked:
+			checked.add(creature)
+			nextAnchor = creature.carrier or creature.riding
+			creature.checkCover()
+			creature.checkPlatform()
+			creature.checkCarrying()
+			creature.checkGrips()
+			creature.checkRiding()
+			creature = nextAnchor
+
+
 	# check all status conditions that may need updating
 	def checkStatus(self):
 		self.checkHungry()
 		self.checkTired()
+		self.checkCarrying()
+		self.checkGrips()
+		self.checkRiding()
 		self.checkHindered()
 		self.checkHidden()
 		# these should probably be not be checked like the others
@@ -4099,7 +4520,7 @@ class Creature(Item):
 			return self.reanimate()
 
 		self.removeRiding(silent=True)
-		self.removeCarry(silent=True)
+		self.clearCarrying(silent=True)
 
 		self.descname = f"dead {self.descname}"
 		self.aliases.extend(["dead "+a for a in self.aliases])
@@ -4117,6 +4538,7 @@ class Creature(Item):
 
 	# remove all tethers and references with this Creature, then destroy it
 	def destroy(self,silent=True):
+		carrying = list(self.carrying())
 		if not silent:
 			self.Print(f"{+self} disappears.")
 		if self.cover:
@@ -4124,10 +4546,9 @@ class Creature(Item):
 		self.clearCovering()
 		self.clearOccupants()
 		if self.carrier:
-			self.carrier.removeCarry()
-		if self.carrying:
-			self.carrying.fall()
-		self.removeCarry(silent=silent)
+			self.carrier.removeCarry(self,silent=True,drop=False)
+		for carried in carrying:
+			self.removeCarry(carried,silent=True,drop=True)
 		self.removePlatform()
 		self.removeRiding(silent=silent)
 
@@ -4142,9 +4563,9 @@ class Creature(Item):
 	# drop Inventory Items if over capacity
 	def ejectInventory(self):
 		# drop any items over capacity
-		if self.invWeight() + self.carryWeight() > 2*self.BRDN():
+		if self.invWeight() > 2*self.BRDN():
 			self.Print("Your Inventory overflows!",color="o")
-		while self.invWeight() + self.carryWeight() > 2*self.BRDN():
+		while self.invWeight() > 2*self.BRDN():
 			item = max(self.inv, key=lambda x: x.Weight())
 			self.remove(item)
 			self.Print(f"You drop {-item}.")
@@ -4217,8 +4638,8 @@ class Creature(Item):
 		for slot,obj in self.gear.items():
 			if I is obj:
 				self.unequip(slot,silent=silent)
-		if I is self.carrying:
-			self.removeCarry(silent=silent)
+		if I in self.carrying():
+			self.removeCarry(I,silent=silent,drop=True)
 		if I in self.inv:
 			self.inv.remove(I)
 		if hasMethod(I,"Drop"):
@@ -4227,9 +4648,16 @@ class Creature(Item):
 			self.checkStatus()
 
 
-	# remove any status condition with reqName and reqDuration
+	# remove any status condition with reqName and reqDuration(s)
 	# if reqName or reqDuration are None, remove all
-	def removeStatus(self,reqName=None,reqDuration=None,silent=False):
+	def removeStatus(self,reqName=None,reqDuration=None,silent=False,recheck=True):
+		# for each duration given, remove matching statuses
+		if isinstance(reqDuration,(list,tuple)):
+			removed = False
+			for duration in reqDuration:
+				removed = self.removeStatus(reqName,duration,silent=silent,
+				recheck=recheck) or removed
+			return removed
 		wasSleeping = self.hasStatus("asleep")
 		wellRested = False
 		condsRemoved = []
@@ -4256,7 +4684,7 @@ class Creature(Item):
 						Print(f"{+self} {verb} no longer {name}.")
 
 		# this recurs into removeStatus, so guard to prevent infinite loop
-		if condsRemoved:
+		if condsRemoved and recheck:
 			self.checkStatus()
 			if any(status in ("flying","waterwalking") for status in condsRemoved):
 				self.checkBathedIn()
@@ -4274,34 +4702,63 @@ class Creature(Item):
 			return self
 
 		parent = self.parent
+		coveredCreatures = self.covering().copy()
+		occupants = self.occupants()
+		carrying = list(self.carrying())
+		carrier = self.carrier
+		riding = self.riding
+		carrySlots = [] if carrier is None else \
+			[slot for slot in carrier.carrySlots if carrier[slot] is self]
 		if isinstance(newObj,str) or newObj.id is None:
 			newObj = game.spawn(newObj)
+
+		def checkReplacementTethers():
+			creatures = coveredCreatures + carrying + [carrier,riding]
+			if isinstance(newObj,Creature):
+				creatures.append(newObj)
+			for creature in {c for c in creatures if isinstance(c,Creature)}:
+				creature.checkTethers()
+
 		# if we fail to place this object in parent, displace the newObj
 		if not self.parent.replaceObj(self,newObj):
 			self.destroy()
-			return newObj.displace(self.parent)
+			result = newObj.displace(self.parent)
+			checkReplacementTethers()
+			return result
 
-		for covered in self.covering.copy():
+		for covered in coveredCreatures:
 			covered.removeCover(silent=True)
 			covered.addCover(newObj)
-		for occupant in self.occupants.copy():
+		for occupant in occupants:
 			occupant.replaceObj(self,newObj)
 		# if newObj was destroyed by new rider, then we can end here
 		if not newObj.parent:
-			return self.destroy()
+			result = self.destroy()
+			checkReplacementTethers()
+			return result
 
 		# TODO: when replacing creature with creature, copy carrying and riding?
-		if self.carrying:
-			c = self.carrying
+		if carrying:
 			# parent is used to removeCarry, so reassign it temporarily
 			self.parent = parent
-			self.removeCarry(silent=True)
+			self.clearCarrying(silent=True,drop=False)
 			self.parent = None
-			c.fall(self.Size()//5)
+			for carried in carrying:
+				carried.fall(self.Size()//5)
 
-		if self.carrier:
-			self.carrier.replaceObj(self,newObj)
+		if carrier:
+			carrier.clearCarrySlots(self)
+			if isinstance(newObj,Creature):
+				if newObj.carrier:
+					newObj.carrier.removeCarry(newObj,silent=True,drop=False)
+				if newObj.carry(carrier,silent=True):
+					carrier.assignCarrySlots(newObj,carrySlots)
+			elif carrier.canObtain(newObj,silent=True):
+				carrier.ObtainItem(newObj,silent=True)
+				for slot in carrySlots:
+					carrier[slot] = newObj
 		elif self.riding:
+			# TODO: preserve a replacement Creature as rider on the same mount
 			r = self.riding
 			self.removeRiding()
 			newObj.fall(r.Size()//5)
@@ -4314,9 +4771,11 @@ class Creature(Item):
 				p.occupy(newObj)
 
 		self.destroy()
+		checkReplacementTethers()
 		# newObj may have already been destroyed
 		if newObj.parent:
 			game.replaceID(self,newObj)
+			newObj.checkTethers() if isinstance(newObj,Creature) else None
 			return newObj
 
 
@@ -4327,23 +4786,33 @@ class Creature(Item):
 		if self.riding is oldObj:
 			self.removeRiding(silent=True)
 			if isinstance(newObj,Creature):
-				newObj.ride(self)
+				if not newObj.ride(self,silent=True):
+					self.fall(oldObj.Size()//5)
 			else:
-				newObj.occupy(self)
+				if not newObj.occupy(self,silent=True):
+					self.fall(oldObj.Size()//5)
 
-		if self.carrying is oldObj:
-			carrySlot = "left" if self["left"] is oldObj else "right"
-			carrySlot = carrySlot if self[carrySlot] is oldObj else None
-			self.removeCarry(silent=True)
+		if oldObj in self.carrying():
+			slotsUsed = [slot for slot in self.carrySlots if self[slot] is oldObj]
+			self.removeCarry(oldObj,silent=True,drop=False)
 			if isinstance(newObj,Creature):
-				newObj.carry(newObj,silent=True)
+				if newObj.carrier:
+					newObj.carrier.removeCarry(newObj,silent=True,drop=False)
+				if newObj.carry(self,silent=True):
+					self.assignCarrySlots(newObj,slotsUsed)
 			elif self.canObtain(newObj,silent=True):
-				self[carrySlot] = newObj
 				self.ObtainItem(newObj,silent=True)
-				self.equipInHand(newObj,slot=carrySlot)
+				for slot in slotsUsed:
+					self[slot] = newObj
+				if any(slot in self.gripSlots for slot in slotsUsed):
+					self.assignWeaponAndShield()
 			else:
+				self.checkTethers()
+				newObj.checkTethers() if isinstance(newObj,Creature) else None
 				return False
 		self.checkStatus()
+		self.checkTethers()
+		newObj.checkTethers() if isinstance(newObj,Creature) else None
 
 
 	# replace Item with a Creature or Item in tis Creature's tethers
@@ -4357,21 +4826,26 @@ class Creature(Item):
 				break
 
 		if isinstance(newObj,Creature):
-			# if Item is in gear, note which slot
-			carriedSlot = "left" if self["left"] is oldObj else "right"
-			carriedSlot = carriedSlot if self[carriedSlot] is oldObj else None
+			# if Item is in a carry slot, preserve that slot
+			carriedSlot = oldObjSlot if oldObjSlot in self.carrySlots else None
 
 			self.remove(oldObj,silent=True)
 			if not self.parent.canAdd(newObj):
+				self.checkTethers()
+				newObj.checkTethers()
 				return False
 			self.parent.add(newObj)
 
 			# if it was equipped in gear, carry the creature instead
-			if carriedSlot and not self.carrying:
-				self.carry(newObj,slot=carriedSlot)
+			if carriedSlot and self[carriedSlot] is EmptyGear():
+				if newObj.carrier:
+					newObj.carrier.removeCarry(newObj,silent=True,drop=False)
+				if newObj.carry(self,silent=True):
+					self.assignCarrySlots(newObj,[carriedSlot])
 		else:
 			self.remove(oldObj,silent=True)
 			if not self.canObtain(newObj):
+				self.checkTethers()
 				return False
 			self.ObtainItem(newObj,silent=True)
 
@@ -4379,6 +4853,8 @@ class Creature(Item):
 				self.gear[oldObjSlot] = newObj
 
 		self.checkStatus()
+		self.checkTethers()
+		newObj.checkTethers() if isinstance(newObj,Creature) else None
 		return True
 
 
@@ -4463,34 +4939,103 @@ class Creature(Item):
 
 	### Interaction ###
 
-	# add a Creature to be carried by this Creature, replace gear in given slot
-	def addCarry(self,creature,slot="left",silent=False):
+	# assign both ends of a carrying relationship to the given slots
+	def assignCarrySlots(self,creature,useSlots):
 		assert isinstance(creature,Creature)
-		assert self.carrying is None
-		assert creature.anchor() is None
-		otherSlot = "right" if slot == "left" else "left"
-		self.unequip(slot)
-		if getattr(self[otherSlot],"twohanded",False):
-			self.unequip(otherSlot)
+		assert creature.carrier in (None,self)
+		assert useSlots and len(useSlots) == len(set(useSlots))
+		for slot in useSlots:
+			assert slot in self.carrySlots
+			assert self[slot] is EmptyGear() or self[slot] is creature
 
-		self.carrying = creature
+		# clear possible existing slots that are holding creature
+		for slot in self.carrySlots:
+			if self[slot] is creature and slot not in useSlots:
+				self[slot] = EmptyGear()
+
+		# set creature's authoritative carrier tether and assign creature to slots
 		creature.carrier = self
+		for slot in useSlots:
+			self[slot] = creature
 
-		creature.parent.remove(creature)
-		self.parent.add(creature)
 
-		self[slot] = creature
-		self.checkStatus()
+	# clear both ends of a carrying relationship
+	def clearCarrySlots(self,creature):
+		for slot in self.carrySlots:
+			if self[slot] is creature:
+				self[slot] = EmptyGear()
+		if creature.carrier is self:
+			creature.carrier = None
+
+
+	# prepare carry slots, then attempt to carry and assign a Creature to them
+	def Heft(self,cargo,forceUnequip=False,silent=False):
+		assert isinstance(cargo,Creature)
+		assert self.parent is not None
+		assert cargo.parent is self.parent
+		if cargo is self:
+			if not silent:
+				self.Print("You can't lift yourself!")
+			return False
+		if cargo.carrier is self:
+			return False
+		# get the plan of what unequips, drops, and slots are needed to carry creature
+		plan = self.planCarrySlots(cargo,forceUnequip=forceUnequip)
+		if plan is None:
+			if not silent:
+				self.Print(f"You don't have enough free slots to carry {-cargo}.")
+			return False
+
+		while plan["unequip"] or plan["drop"]:
+			# finish the planned preparation before checking changed limits
+			slotsNeeded = cargo.gripsNeeded(self)
+			burdenLimit = self.BRDN()
+			while plan["unequip"]:
+				item = plan["unequip"].pop(0)
+				slotUsed = next(slot for slot in self.carrySlots if self[slot] is item)
+				self.unequip(slotUsed,silent=silent)
+			while plan["drop"]:
+				self.removeCarry(plan["drop"].pop(0),silent=silent,drop=True)
+
+			if cargo.gripsNeeded(self) != slotsNeeded or self.BRDN() != burdenLimit:
+				plan = self.planCarrySlots(cargo,forceUnequip=forceUnequip)
+				if plan is None:
+					return False
+
+		if not cargo.carry(self,silent=silent):
+			return False
+		assert all(self[slot] is EmptyGear() for slot in plan["slots"])
+		self.assignCarrySlots(cargo,plan["slots"])
+
+		assert cargo.parent is self.parent and cargo in self.carrying()
+		self.checkHindered()
+		return True
+
+
+	# place a released creature on the carrier's support when it can also hold them
+	def assignReleasedPlatform(self,carried):
+		platform = self.platform
+		if platform is None or platform.parent is not self.parent:
+			carried.platform = None
+			return False
+		if platform is getattr(self.parent,"floor",None):
+			carried.platform = platform
+			return True
+		carried.platform = None
+		return bool(platform.occupy(carried,silent=True))
 
 
 	# add cover to this Creature, attempt to hide
 	def addCover(self,cover):
 		if self.cover is cover:
-			return
-		cover.addCovering(self)
-		if self.carrying:
-			self.carrying.addCover(cover)
+			return False
+		if cover is None:
+			self.removeCover(silent=True)
+			return True
+		if not cover.addCovering(self):
+			return False
 		self.checkHidden()
+		return True
 
 
 	# add riding tether
@@ -4503,37 +5048,32 @@ class Creature(Item):
 	# only used by equip and unequip to reassign several attributes
 	# specifically, weapon, weapon2, shield, shield2
 	def assignWeaponAndShield(self):
-		#if unassigned, attributes are empty, self.weapon is always assigned
+		# if unassigned, attributes are empty, self.weapon is always assigned
+		self.weapon = EmptyGear()
 		self.weapon2 = EmptyGear()
 		self.shield = EmptyGear()
 		self.shield2 = EmptyGear()
 
-		# assign weapon and weapon2 based on types of gear in left and right
-		if isinstance(self["right"],Weapon) and isinstance(self["left"],Weapon):
-			self.weapon2 = self["left"]
-		elif isinstance(self["left"],Weapon) and not isinstance(self["right"],Weapon):
-			self.weapon = self["left"]
-		elif isinstance(self["left"],Item) and self["right"] == EmptyGear():
-			self.weapon = self["left"]
-		else:
-			self.weapon = self["right"]
+		gripped = []
+		for slot in self.gripSlots:
+			item = self[slot]
+			if item is EmptyGear() or isinstance(item,Creature) or item in gripped:
+				continue
+			gripped.append(item)
 
-		# ensure that weapons are of type Weapon
-		if not isinstance(self.weapon,Weapon):
-			if hasMethod(self.weapon,"asWeapon"):
-				self.weapon = self.weapon.asWeapon()
-		if not isinstance(self.weapon2,Weapon):
-			if hasMethod(self.weapon,"asWeapon"):
-				self.weapon2 = self.weapon.asWeapon()
+		weapons = [item for item in gripped if isinstance(item,Weapon)]
+		if not weapons:
+			weapons = [item.asWeapon() for item in gripped if hasMethod(item,"asWeapon")]
+		if weapons:
+			self.weapon = weapons[0]
+		if len(weapons) > 1:
+			self.weapon2 = weapons[1]
 
-		# assign shield and shield2 based on types of gear in left and right
-		if isinstance(self["right"],Shield) and isinstance(self["left"],Shield):
-			self.shield = self["right"]
-			self.shield2 = self["left"]
-		elif isinstance(self["right"],Shield):
-			self.shield = self["right"]
-		elif isinstance(self["left"],Shield):
-			self.shield = self["left"]
+		shields = [item for item in gripped if isinstance(item,Shield)]
+		if shields:
+			self.shield = shields[0]
+		if len(shields) > 1:
+			self.shield2 = shields[1]
 
 
 	# be bombarded by a projectile with a chance to hit
@@ -4551,35 +5091,37 @@ class Creature(Item):
 		return False
 
 
-	# try to carry this Creature in carrier's gear
-	def carry(self,carrier,slot="left",silent=False):
+	# permit another Creature to carry this Creature and remove old anchors
+	def carry(self,carrier,silent=False):
 		assert isinstance(carrier,Creature)
-		if self.checkTetherLoop(carrier,self,"carry"):
+		if carrier is self:
 			return False
-		if self > carrier.BRDN()//2:
-			carrier.Print(f"{+self} is too heavy to carry.")
+		if carrier.checkTetherLoop(self,carrier,f"carry {-self}",silent=silent):
 			return False
 		if self.carrier:
-			self.Print(f"{+self} is already being carried by {self.carrier}.")
-			if roll(carrier.ATHL()) > roll(self.carrier.ATHL()):
-				carrier.Print(f"You wrest {-self} away from {-self.carrier}!")
-			else:
-				carrier.Print(f"{+self.carrier} holds onto {-self}.")
-				return False
-
-		if not self.restrain(carrier):
+			if not silent:
+				carrier.Print(f"{+self} is already being carried by {-self.carrier}.")
+			return False
+		if self.gripsNeeded(carrier) > len(carrier.carrySlots):
+			if not silent:
+				carrier.Print(f"You aren't strong enough to carry {-self}.")
+			return False
+		if not carrier.canCarryWeight(self):
+			if not silent:
+				carrier.Print(f"{+self} is too heavy for you to carry.")
 			return False
 
-		if self.carrier:
-			self.carrier.removeCarry()	
-		self.removeRiding()
+		if not self.restrain(carrier,duration=Data.RESTRAINT_CARRY,silent=silent):
+			return False
+
+		self.removeRiding(silent=True)
 		self.removePlatform()
-
-		self.Dismount(posture="stand")
-		carrier.addCarry(self,slot=slot)
-
+		self.changePosture("stand",silent=True)
 		if carrier.cover is not self.cover:
-			self.addCover(carrier.cover)
+			self.removeCover(silent=True)
+			if carrier.cover is not None:
+				self.addCover(carrier.cover)
+		assert self.anchor() is None
 		return True
 
 
@@ -4597,45 +5139,46 @@ class Creature(Item):
 		return True
 
 
-	# unequips the lefthanded item, moves righthanded item to left,
-	# equips the new item in right hand
-	# if the new item is twohanded, set lefthand to EmptyGear()
-	# calls the new item's equip() method if it has one
-	def equipInHand(self,I,slot="right"):
-		assert I in self or I is self.carrying
-		if I is self["right"] or I is self["left"]:
-			return
-		if getattr(self["right"],"twohanded",False):
-			self.unequip("right")
+	# equip an item across as many grip slots as its weight and minimum require
+	def equipInHand(self,I,slot=None):
+		assert I in self or I in self.carrying()
+		if slot is None:
+			slot = "right" if "right" in self.gripSlots else self.gripSlots[0]
+		if slot not in self.gripSlots:
+			return False
+		if any(self[grip] is I for grip in self.gripSlots):
+			return False
 
-		if getattr(I,"twohanded",False):
-			self.unequip("right")
-			self.unequip("left")
-		elif slot == "right" and not self.carrying:
-			self.unequip("left")
-			self["left"] = self["right"]
-		elif slot == "left" and self["right"] is EmptyGear:
-			self["right"] = self["left"]
-		else:
-			self.unequip(slot)
-
-		self[slot] = I
+		gripsNeeded = I.gripsNeeded(self)
+		if gripsNeeded > len(self.gripSlots):
+			self.Print(f"{+I} requires more grips than you have.")
+			return False
+		grips = [slot] + [grip for grip in self.gripSlots if grip != slot]
+		grips = grips[:gripsNeeded]
+		for grip in grips:
+			self.unequip(grip)
+		for grip in grips:
+			self[grip] = I
 		self.assignWeaponAndShield()
 		if hasMethod(I,"equip"): I.equip(self)
 		self.checkStatus()
+		return True
 
 
 	# Creature falls through rooms accumulating fall height until hitting floor, 
 	# then take damage and set platform to room's floor
-	def fall(self,height=0,room=None):
-		Print(self,"falling but has anchor",self.anchor())
-		if self.riding or self.carrier:
-			return self.anchor().fall(height,room)
+	def fall(self,height=0,room=None,removeCarrier=False):
+		if self.carrier:
+			if not removeCarrier:
+				return False
+			self.carrier.removeCarry(self,silent=True,drop=False)
+		if self.riding:
+			return self.riding.fall(height,room)
 
 		verb = "sink" if self.hasStatus("submerged") else "fall"
 		if self.hasStatus("submerged") and self.canSwim(): return False
 
-		if player in self.occupants or player is self.carrying or player is self:
+		if player in self.occupants() or player in self.carrying() or player is self:
 			waitInput(self+f"{verb}s!",color="o")
 		else:
 			self.printNearby(self+f"{verb}s.",color="o")
@@ -4651,8 +5194,6 @@ class Creature(Item):
 			height += room.Capacity() // 5 # approximate height of room
 			room = room.links["down"]
 		if room != self.room():
-			if self.carrying:
-				self.carrying.fall(height,room)
 			if self is player:
 				ellipsis()
 			self.changeLocation(room)
@@ -4662,46 +5203,59 @@ class Creature(Item):
 
 		if self.anchor() is not self.parent.floor:
 			self.parent.floor.occupy(self,silent=True)
-			self.platform = self.parent.floor
 
 		force = min(height,20*self.weight)
 		if not self.hasAnyStatus("fleetfooted","submerged") and \
 		room.floor is not None and not self.bathedIn():
 			if force > 0:
 				self.takeDamage(force,"b")
-				for rider in self.occupants:
+				for rider in self.occupants():
 					rider.takeDamage(force//3,"b")
+				for carried in self.carrying():
+					carried.takeDamage(force//3,"b")
 			self.changePosture("laying")
 		return True
 
 
 	# occupying a Creature is equivalent to riding it
-	def occupy(self,creature,silent=False):
-		return self.ride(creature,silent=silent)
-
+	def occupy(self,occupant,silent=False,actor=None):
+		if not isinstance(occupant,Creature):
+			occupant.fall(self.Size()//5)
+			return False
+		return self.ride(occupant,silent=silent,actor=actor)
 
 
 	def offer(self,I):
 		self.Print(f"{+self} ignores your offer.")
 
 
-
 	# remove carrying tether if exists
-	def removeCarry(self,silent=False):
-		if self.carrying is None:
-			return
-		slot = "left" if self["left"] is self.carrying else "right"
-		assert self[slot] is self.carrying
-
-		self[slot] = EmptyGear()
+	def removeCarry(self,carried=None,silent=False,drop=False):
+		carrying = self.carrying()
+		if carried is None:
+			if len(carrying) != 1:
+				return False
+			carried = next(iter(carrying))
+		if carried not in carrying and carried.carrier is not self:
+			return False
+		slotsUsed = [slot for slot in self.carrySlots if self[slot] is carried]
+		self.clearCarrySlots(carried)
 		if not silent:
-			self.Print(f"You drop {-self.carrying}.")
-			self.carrying.Print(f"{+self} is no longer carrying you.")
-		self.carrying.carrier = None
-		self.carrying.platform = self.parent.floor
-		self.carrying.removeStatus("restrained",-4,silent=True)
-		self.carrying = None
-		self.checkStatus()
+			self.Print(f"You drop {-carried}.")
+			carried.Print(f"{+self} is no longer carrying you.")
+		carried.removeStatus("restrained",Data.RESTRAINT_CARRY,silent=True)
+		if drop and not self.assignReleasedPlatform(carried):
+			carried.fall(self.Size()//5)
+		assert carried not in self.carrying() and carried.parent is self.parent
+		self.checkHindered()
+		return bool(slotsUsed)
+
+
+	def clearCarrying(self,silent=False,drop=True):
+		carrying = self.carrying().copy()
+		for carried in carrying:
+			self.removeCarry(carried,silent=silent,drop=drop)
+		return carrying
 
 
 	# remove cover if exists
@@ -4710,8 +5264,8 @@ class Creature(Item):
 			self.Print(f"You are no longer behind {-self.cover}.") if not silent else None
 			self.cover.removeCovering(self)
 		self.cover = None
-		if self.carrying:
-			self.carrying.removeCover(silent=silent)
+		for carried in self.carrying():
+			carried.removeCover(silent=silent)
 		self.checkHidden()
 
 
@@ -4721,14 +5275,13 @@ class Creature(Item):
 			# store this because dismounting affects riding.print
 			wasRiding = self.riding
 			self.riding.disoccupy(self)
-			self.riding = None
 			if not silent:
 				self.Print(f"You are no longer riding {-wasRiding}.")
 				wasRiding.Print(f"{+self} is no longer riding {-wasRiding}.")
 
 
 	# attempt to restrain this Creature
-	def restrain(self,restrainer,item=None):
+	def restrain(self,restrainer,item=None,duration=Data.RESTRAINT_CARRY,silent=False):
 		if not self.isAlive():
 			return True
 		if not self.isFriendly() and self.canMove():
@@ -4736,71 +5289,101 @@ class Creature(Item):
 				#TODO: add restraining with items? like rope??
 				pass
 			if self.ATHL() > restrainer.ATHL():
-				restrainer.Print(f"{+self} resists restraint!",color="r")
+				if not silent:
+					restrainer.Print(f"{+self} resists restraint!",color="r")
 				return False
 			if self.EVSN() > restrainer.ATHL():
-				restrainer.Print(f"{+self} evades restraint!",color="r")
+				if not silent:
+					restrainer.Print(f"{+self} evades restraint!",color="r")
 				return False
-		self.addStatus("restrained",-4,silent=True)
-		restrainer.Print(f"You restrain {-self}!",color="g")
+		self.addStatus("restrained",duration,silent=True)
+		if not silent:
+			restrainer.Print(f"You restrain {-self}!",color="g")
 		return True
 
 
 	# attempt to ride this Creature
-	def ride(self,rider,silent=False):
-		if self.checkTetherLoop(rider,self,"ride"):
-			print("TETHER LOOPS")
+	def ride(self,rider,silent=False,actor=None):
+		assert isinstance(rider,Creature)
+		assert self.parent is not None and rider.parent is self.parent
+		if actor is None:
+			actor = rider
+		assert isinstance(actor,Creature)
+		if rider in self.riders():
+			if not silent:
+				actor.Print(rider+f"is already riding {-self}.")
 			return False
-		if rider > self.BRDN()//2:
-			rider.Print(f"You are too heavy to ride {-self}.")
-			rider.fall(self.Size()//5)
+		action = f"ride {-self}" if actor is rider else f"put {-rider} on {-self}"
+		if self.checkTetherLoop(rider,actor,action,silent=silent):
 			return False
 		if rider.Size()//2 > self.Size():
-			rider.Print(f"{+self} is too small to ride.")
+			if not silent:
+				actor.Print(self+f"is too small for {-rider} to ride.")
+			return False
+
+		# determine if there is a rider that needs to be pushed off due to lack of space.
+		riderToPush = None
+		if self.riders() and rider.Size() > self.ridingSpace(rider):
+			riderToPush = self.riders()[-1]
+		if riderToPush is not None and actor is not rider:
+			if not silent:
+				actor.Print("There's not enough space. " + \
+					(self+f"is occupied by {-riderToPush}."))
 			return False
 
 		rider.removeRiding()
 		rider.removePlatform()
 
-		if rider.Size() + self.occupantsSize() > self.Size():
-			pushOff = max(self.occupants, key=lambda x: x.Size())
-			self.Print(f"{+pushOff} is already riding {self}.")
-			if roll(rider.ATHL()) > roll(pushOff.ATHL()):
-				rider.Print(f"You push {-pushOff} off of {-self}.")
-				pushOff.Print(f"{+rider} pushes you off of {-self}.",color="r")
-				pushOff.removeRiding()
-				pushOff.fall(self.Size()//5)
+		# contest with existing rider to push eachother off
+		if riderToPush is not None:
+			if not silent:
+				actor.Print(riderToPush+f"is already riding {-self}.")
+			if roll(rider.ATHL()) > roll(riderToPush.ATHL()):
+				if not silent:
+					actor.Print(rider+f"push {-riderToPush} off of {-self}.")
+				riderToPush.Print(f"{+rider} pushes you off of {-self}.",color="r")
+				riderToPush.removeRiding()
+				riderToPush.fall(self.Size()//5)
 			else:
-				pushOff.Print(f"{+pushOff} hold onto {-self}.")
-				rider.Print(f"You don't manage to occupy {-self}",color="r")
+				if not silent:
+					actor.Print(riderToPush+f"hold onto {-self}.")
+					actor.Print(rider+f"does not manage to occupy {-self}.",color="r")
 				rider.fall(self.Size()//5)
 				return False
-		if rider.Size() + self.occupantsSize() > self.Size():
-			rider.Print(f"{+self} doesn't have enough space to ride.")
+
+		# fall off if the mount cannot bear the combined occupant weight
+		if rider.Weight() + self.occupantsWeight() > self.BRDN()//2:
+			if not silent:
+				actor.Print(rider+f"is too much additional weight for {-self}.")
 			rider.fall(self.Size()//5)
 			return False
 
+		# after pushing contest, you still might fall off if theres not enough space
+		if rider.Size() > self.ridingSpace(rider):
+			if not silent:
+				actor.Print(self+f"does not have enough space for {-rider} to ride.")
+			rider.fall(self.Size()//5)
+			return False
+
+		# next the mount might try to push you off
 		contest = not self.isFriendly() and self.canMove()
 		if contest:
-			rider.Print(f"{+self} struggles.",color="o")
-			contestPenalty = -10 if self.posture() == "laying" else 0
-			contestBonus = 10 if rider.posture() == "crouching" else 0
-			athl_contest = self.ATHL() - rider.ATHL() + contestBonus + contestPenalty
-			if athl_contest > 0:
-				rider.Print(f"{+self} shakes you off!",color="r")
-				fallHeight = athl_contest - rider.ATHL()
-				if fallHeight < 0:
-					fallHeight = 0
-				rider.fall(fallHeight)
+			if not silent:
+				actor.Print(self+f"struggle.",color="o")
+			mountPenalty = -10 if self.posture() == "laying" else 0
+			riderBonus = 10 if rider.posture() == "crouching" else 0
+			athleticsContest = self.ATHL() - rider.ATHL() - riderBonus + mountPenalty
+			if athleticsContest > 0:
+				if not silent:
+					actor.Print(self+f"shake {-rider} off!",color="r")
+				rider.fall(min0(athleticsContest) + self.Size()//5)
 				return False
 
-		# TODO: some additional checking to prevent too many riders here?
 		rider.addRiding(self)
-		self.occupants.append(rider)
-		rider.riding = self
-
-		# rider.Print(f"You ride {-self}.",color="g" if contest else "w")
-		rider.printNearby(rider+f"rides {-self}.")
+		if actor is rider:
+			actor.Print(rider+f"ride {-self}.",color="g" if contest else "w")
+		if actor is not player:
+			rider.printNearby(rider+f"rides {-self}.")
 		return True
 
 
@@ -4810,9 +5393,9 @@ class Creature(Item):
 			self.Print("You are already there.",color="w")
 			return
 		if self.carrier:
-			self.carrier.removeCarry(silent=True)
+			self.carrier.removeCarry(self,silent=True,drop=False)
 		self.removePlatform()
-		self.removeCarry()
+		self.clearCarrying()
 		self.removeRiding()
 		self.removeCover()
 		self.clearCovering()
@@ -4832,10 +5415,12 @@ class Creature(Item):
 		I = self[slot]
 		if I is EmptyGear():
 			return False
-		if I is self.carrying:
-			self.removeCarry(silent=silent)
+		if I in self.carrying():
+			self.removeCarry(I,silent=silent,drop=True)
 		else:
-			self[slot] = EmptyGear()
+			slotsEquipped = [s for s,item in self.gear.items() if item is I]
+			for equipSlot in slotsEquipped:
+				self[equipSlot] = EmptyGear()
 			self.assignWeaponAndShield()
 			if not silent:
 				self.Print(f"You unequip your {I}.")
@@ -4917,14 +5502,15 @@ class Creature(Item):
 		if I.fixed: # can't hide behind room fixtures
 			self.Print(f"You can't hide behind {-I}.")
 			return False
-
 		if hasMethod(I,"HideBehind"):
-			I.HideBehind(self)
+			return I.HideBehind(self)
 
-		self.Print(f"You {posture} behind {-I}.")
+		oldPosture = self.posture()
 		self.changePosture(posture,silent=True)
-		I.addCovering(self)
-		self.checkHidden()
+		if not self.addCover(I):
+			self.changePosture(oldPosture,silent=True)
+			return False
+		self.Print(f"You {posture} behind {-I}.")
 		return True
 
 
@@ -4956,8 +5542,6 @@ class Creature(Item):
 			return anchor.traverse(self,verb=posture,dir="on")
 		if anchor is self.platform or anchor is self.riding:
 			pass
-		elif self.checkTetherLoop(self,anchor,"get on"):
-			return False
 		else:
 			if anchor == anchor.parent.floor:
 				self.platform = anchor
@@ -5005,15 +5589,15 @@ class Creature(Item):
 			return False
 		if not self.canSwim():
 			return False
-		self.addStatus("submerged",-4)
+		self.addStatus("submerged",Data.SUBMERGED_LIQUID)
 
 
 	# throw a projectile at a target
 	def Throw(self,missile,target,maxspeed=None):
 		if missile is target:
 			return False
-		if missile is self.carrying:
-			self.removeCarry(silent=True)
+		if missile in self.carrying():
+			self.removeCarry(missile,silent=True,drop=False)
 		else:
 			if not self.parent.canAdd(missile):
 				return False
@@ -5100,7 +5684,7 @@ class Creature(Item):
 
 	def ATHL(self): return self.STR() + self.SKL() + self.STM()
 
-	def ATSP(self): return min0(self.SPD() - min0(self.handheldWeight()//4-self.STR()+10))
+	def ATSP(self): return min0(self.SPD() - min0(self.gripWeight()//4-self.STR()+10))
 
 	def BRDN(self): return 12*self.CON() + 6*self.STR() + 3*self.FTH() + self.weight
 
@@ -5193,13 +5777,10 @@ class Creature(Item):
 			refusal = f"You can't take {-I}. You're within {I.pronoun}."
 		elif I is self.anchor():
 			refusal = f"You can't take {-I}. You're on {I.pronoun}."
-		elif I.occupants:
+		elif I.occupants():
 			refusal = f"You can't take {-I}. It's occupied."
 		elif self.invWeight() + I.Weight() > 2*self.BRDN():
 			refusal = f"You can't hold {-I}. Your Inventory is too full."
-		# not necessary because you can't take creatures
-		# if self.checkTetherLoop(self,I,"take"):
-		# 	refusal = f"You can't take {-I}. It would create a tether loop."
 		if refusal:
 			if not silent:
 				self.Print(refusal)
@@ -5221,44 +5802,6 @@ class Creature(Item):
 		return self.Weight()+self.gearWeight() <= self.ATHL()+self.MVMT()+buoyancy
 
 
-	# since creatures can carry creatures while also being carried themselves,
-	# and same can happen for riding and riders, loops could form where
-	# a carrier is trying to carry the creature that is carrying them
-	# this must be prevented
-	def checkTetherLoop(self,actor,target,dverb):
-		assert dverb in ("carry","ride","take","get on")
-		looplink = None		
-
-		iverb = "carrying"
-		carrier = actor
-		while carrier:
-			if getattr(carrier,"carrier",None) == target:
-				looplink = carrier
-			# carrier may be an item, which can't have its own carrier
-			carrier = getattr(carrier,"carrier",None)
-
-		iverb = "being carried by"
-		carrying = actor
-		while carrying:
-			if carrying.carrying == target:
-				looplink = carrying
-			carrying = carrying.carrying
-
-		iverb = "being ridden by"
-		riding = actor
-		while riding:
-			if riding.riding == target:
-				looplink = riding
-			riding = riding.riding
-
-		# if a creature is found creating a loop with the actor and attempted target,
-		# identify the culprit
-		if looplink:
-			self.Print(f"You can't {dverb} {-target},", target/f"is {iverb} {looplink}")
-			return True
-		return False
-
-
 	# Creature may despawn if it is dead, it is midnight, not in current room,
 	def canDespawn(self):		
 		return self.despawnTimer is not None and \
@@ -5276,9 +5819,37 @@ class Creature(Item):
 		return self.isAlive() and not self.hasAnyStatus(conds)
 
 
+	# return whether current cargo plus an optional Creature fits the cargo limit
+	def canCarryWeight(self,creature=None,currentWeight=None):
+		assert creature is None or isinstance(creature,Creature)
+		weight = self.carryWeight() if currentWeight is None else currentWeight
+		if creature is not None:
+			weight += creature.Weight()
+		return weight <= self.BRDN()//2
+
+
+	# return unique Creatures occupying carry slots
+	def carrying(self):
+		return list(dict.fromkeys(self[slot] for slot in self.carrySlots \
+			if isinstance(self[slot],Creature)))
+
+
 	# returns weight of carried creature, or 0 if none
 	def carryWeight(self):
-		return 0 if self.carrying is None else self.carrying.Weight()
+		return sum(carried.Weight() for carried in self.carrying())
+
+
+	# return current riders sorted smallest first
+	def riders(self):
+		riders = [occupant for occupant in self.occupants() \
+			if isinstance(occupant,Creature) and occupant.riding is self]
+		return sorted(riders,key=lambda rider:rider.Size())
+
+
+	# return space available for riding, optionally excluding an existing rider
+	def ridingSpace(self,rider=None):
+		assert rider is None or isinstance(rider,Creature)
+		return self.Size() - self.occupantsSize(exclude=rider)
 
 
 	# modify a stat conditionally based on status effects
@@ -5310,14 +5881,13 @@ class Creature(Item):
 
 	# sum of the weight of all items in player gear
 	def gearWeight(self):
-		return sum(I.Weight() for I in self.gear.values())
+		return sum(I.Weight() for I in set(self.gear.values()))
 
 
 	# returns the sum of the weight of all items being held
-	def handheldWeight(self):
-		left = self.gear.get("left", EmptyGear()).Weight()
-		right = self.gear.get("right", EmptyGear()).Weight()
-		return left + right
+	def gripWeight(self):
+		gripped = {self[slot] for slot in self.gripSlots}
+		return sum(item.Weight() for item in gripped)
 
 
 	# returns number of allies creature can see
@@ -5377,6 +5947,50 @@ class Creature(Item):
 		return self.hasStatus("tamed")
 
 
+	# plan the gear and cargo displaced when carrying a Creature
+	def planCarrySlots(self,creature,forceUnequip=False):
+		assert isinstance(creature,Creature)
+		slotsNeeded = creature.gripsNeeded(self)
+		if slotsNeeded > len(self.carrySlots) or \
+		not self.canCarryWeight(creature,currentWeight=0):
+			return None
+
+		# use these to count what slots would be available if we unequip or drop items
+		toUnequip = []
+		toDrop = []
+		slotAvailable = lambda slot: self[slot] is EmptyGear() \
+			or self[slot] in toUnequip or self[slot] in toDrop
+
+		# start by counting slots that are already empty
+		availableSlots = [slot for slot in self.carrySlots if slotAvailable(slot)]
+		if not forceUnequip and (len(availableSlots) < slotsNeeded or \
+		not self.canCarryWeight(creature)):
+			return None
+
+		# determine which items need to be unequipped to free up enough carry slots
+		for slot in self.carrySlots:
+			if len(availableSlots) < slotsNeeded:
+				item = self[slot]
+				if item is EmptyGear() or isinstance(item,Creature) or item in toUnequip:
+					continue
+				toUnequip.append(item)
+				availableSlots = [slot for slot in self.carrySlots if slotAvailable(slot)]
+
+		# drop creatures until both the slot and total cargo limits are satisfied
+		carried = sorted(self.carrying(),key=lambda obj:obj.Weight())
+		plannedCargoWeight = self.carryWeight()
+		for carriedCreature in carried:
+			if len(availableSlots) < slotsNeeded or \
+			not self.canCarryWeight(creature,currentWeight=plannedCargoWeight):
+				toDrop.append(carriedCreature)
+				plannedCargoWeight -= carriedCreature.Weight()
+				availableSlots = [slot for slot in self.carrySlots if slotAvailable(slot)]
+
+		# return what unequips and drops are needed and the slots made available by them
+		assert len(availableSlots) >= slotsNeeded
+		assert self.canCarryWeight(creature,currentWeight=plannedCargoWeight)
+		return {"slots":availableSlots[:slotsNeeded],"unequip":toUnequip,"drop":toDrop}
+
 	# use posture and tethers to determine position description
 	def position(self,ignoreStanding=False,includeParent=False):
 		pos = ""
@@ -5415,7 +6029,7 @@ class Creature(Item):
 
 	# returns sum of all protection values of all items in gear
 	def protection(self):
-		return sum(getattr(item,"prot",0) for item in self.gear.values())
+		return sum(getattr(item,"prot",0) for item in set(self.gear.values()))
 
 
 	# size is normally equal to weight, but halved if not standing
@@ -5430,8 +6044,8 @@ class Creature(Item):
 
 	# total size includes size of those riding and those being carried by Creature
 	def totalSize(self):
-		ridersSize = sum(r.totalSize() for r in self.occupants)
-		carrySize = 0 if self.carrying is None else self.carrying.totalSize()
+		ridersSize = sum(r.totalSize() for r in self.occupants())
+		carrySize = sum(carried.totalSize() for carried in self.carrying())
 		return self.Size() + ridersSize + carrySize
 
 	# returns list of all weapons in inventory
@@ -5441,8 +6055,8 @@ class Creature(Item):
 
 	# total weight includes those riding and those being carried by Creature
 	def Weight(self):
-		ridersWeight = sum(r.Weight() for r in self.occupants)
-		carryWeight = 0 if self.carrying is None else self.carrying.Weight()
+		ridersWeight = sum(r.Weight() for r in self.occupants())
+		carryWeight = sum(carried.Weight() for carried in self.carrying())
 		return self.weight + ridersWeight + carryWeight
 
 
@@ -5457,13 +6071,14 @@ class Creature(Item):
 		if not name:
 			name = self.name
 		tethersMsgs = []
-		if self.carrying and allowCarrying:
-			tethersMsgs.append(f"carrying {-self.carrying}")
-		if self.occupants and allowRiding:
-			if len(self.occupants) < 3:
-				tethersMsgs.append(listObjects("being ridden by ",self.occupants))
+		if self.carrying() and allowCarrying:
+			tethersMsgs.append(listObjects("carrying ",self.carrying()))
+		occupants = self.occupants()
+		if occupants and allowRiding:
+			if len(occupants) < 3:
+				tethersMsgs.append(listObjects("being ridden by ",occupants))
 			else:
-				tethersMsgs.append(f"being ridden by {len(self.occupants)} creatures")
+				tethersMsgs.append(f"being ridden by {len(occupants)} creatures")
 		return f" {' and '.join(tethersMsgs)}" if tethersMsgs else ""
 
 
@@ -5472,8 +6087,8 @@ class Creature(Item):
 		Print(f"It's {~self}.")
 		Print(f"{self.desc}")
 		# tethersMsgs = []
-		# if self.carrying:
-		# 	tethersMsgs.append(f"carrying {-self.carrying}")
+		# if self.carrying():
+		# 	tethersMsgs.append(f"carrying {-self.carrying()}")
 		# if self.occupants:
 		# 	tethersMsgs.append(listObjects("being ridden by ",self.occupants))
 		# if tethersMsgs:
@@ -5530,12 +6145,11 @@ class Creature(Item):
 		   outfile=None):
 		# in godmode we can see all prints
 		if game.mode == 2:
-			text = f"[{self.id} {self.name}]:" + text if text else ""
+			args = (f"[{self.id} {self.name}]:",) + args
 			color="k"
-		elif self is not player.riding:
-			return
-		return Print(*args,end=end,sep=sep,delay=delay,color=color,
-		allowSilent=allowSilent,outfile=outfile)
+			return Print(*args,end=end,sep=sep,delay=delay,color=color,
+			allowSilent=allowSilent,outfile=outfile)
+		return False
 
 
 	# get reflexive pronoun
@@ -5550,12 +6164,11 @@ class Creature(Item):
 # The Player mostly behaves like a normal Humanoid Creature,
 # but it has an xp to track leveling up, and RP to track reputation
 class Player(Creature):
-	def __init__(self,name,desc,weight,traits,xp,rp,spells=None,**kwargs):
+	def __init__(self,name,desc,weight,traits,xp,rp,spells=None,pronoun="him",**kwargs):
 		self.xp = xp
 		self.rp = rp
 		self.spells = spells if spells else []
-		self.pronoun = "he"
-		super().__init__(name,desc,weight,traits,**kwargs)
+		super().__init__(name,desc,weight,traits,pronoun=pronoun,**kwargs)
 
 
 	### Dunder Methods ###
@@ -5569,6 +6182,10 @@ class Player(Creature):
 
 
 	def __invert__(self):
+		return "you"
+
+
+	def subjective(self):
 		return "you"
 
 
@@ -5675,7 +6292,7 @@ class Player(Creature):
 		# hunger takes longer with more endurance
 		sinceLastAte = game.time - self.lastAte
 		if sinceLastAte > 100 + 10*self.ENDR():
-			self.removeStatus("hungry",-2)
+			self.removeStatus("hungry",-2,recheck=False)
 			self.addStatus("starving",-2)
 		elif sinceLastAte > 50 + 5*self.ENDR() and not invigorated:
 			self.addStatus("hungry",-2)
@@ -5692,7 +6309,7 @@ class Player(Creature):
 		# sleep deprivation takes longer with more endurance
 		sinceLastSlept = game.time - self.lastSlept
 		if sinceLastSlept > 300 + 40*self.ENDR() and not invigorated:
-			self.removeStatus("tired",-2)
+			self.removeStatus("tired",-2,recheck=False)
 			self.addStatus("fatigued",-2)
 		elif sinceLastSlept > 150 + 20*self.ENDR() and not invigorated:
 			self.addStatus("tired",-2)
@@ -5713,7 +6330,7 @@ class Player(Creature):
 			return self.reanimate()
 
 		self.removeRiding(silent=True)
-		self.removeCarry(silent=True)
+		self.clearCarrying(silent=True)
 
 		waitInput()
 		return True
@@ -5835,12 +6452,6 @@ class Player(Creature):
 		self.display()
 
 
-	# returns the sum of the weight of all items being held
-	def handheldWeight(self):
-		carryingWeight = 0 if self.carrying is None else self.carrying.Weight()
-		return self["left"].Weight() + self["right"].Weight() + carryingWeight
-
-
 	# weird formula right? returns a positive number rounded down to nearest int
 	# also note that the level must be between 1 and 100
 	def level(self):
@@ -5881,8 +6492,8 @@ class Player(Creature):
 		if self.parent and self.platform is not None and self.platform != self.parent.floor:
 			occuprep = getattr(self.platform,"occupyprep","on")
 			tethersDisplay += f"\n{occuprep.capitalize()} {self.platform.name}"
-		if self.carrying is not None:
-			tethersDisplay += f"\nCarrying {self.carrying}"
+		if self.carrying():
+			tethersDisplay += "\n" + listObjects("Carrying ",self.carrying())
 		if self.riding is not None:
 			tethersDisplay += f"\nRiding {self.riding}"
 		if tethersDisplay:
@@ -5944,9 +6555,8 @@ class Player(Creature):
 
 	# takes args because interpreter passes them
 	def printCarrying(self,*args,silent=False,outfile=None):
-		if self.carrying is not None:
-			Print(f"You are carrying {~self.carrying}.", outfile=outfile)
-			# Print(f"Weight: {self.carrying.Weight()}")
+		if self.carrying():
+			Print(listObjects("You are carrying ",self.carrying(),"."), outfile=outfile)
 		elif silent is False and outfile is None:
 			Print("You aren't carrying anything.")
 
@@ -5964,7 +6574,7 @@ class Player(Creature):
 	# prints player inventory
 	def printInv(self,*args,outfile=None):
 		cols = 8 if outfile is None else 4
-		W = self.invWeight() + self.carryWeight()
+		W = self.invWeight()
 		color = "o" if W / self.BRDN() > 0.80 else "w"
 		color = "r" if W > self.BRDN() else color
 		displayInvWeight = f"Inv Weight: {W}/{self.BRDN()}"
@@ -6246,8 +6856,8 @@ class Humanoid(Creature):
 		if len(gearitems) != 0:
 			self.Print(listObjects("It has ", gearitems,"."))
 		# tethersMsgs = []
-		# if self.carrying:
-		# 	tethersMsgs.append(f"carrying {-self.carrying}")
+		# if self.carrying():
+		# 	tethersMsgs.append(f"carrying {-self.carrying()}")
 		# if self.occupants:
 		# 	tethersMsgs.append(listObjects("being ridden by ",self.occupants))
 		# if tethersMsgs:
@@ -6342,18 +6952,18 @@ class Person(Speaker,Humanoid):
 			prefix = "An " if self.descname[0] in Data.vowels else "A "
 			self.desc = prefix + self.descname
 
-		if self.pronoun == "he":
+		if self.pronoun == "him":
 			if isChild:
 				self.aliases.extend(["boy","male"])
 			else:
 				self.aliases.extend(["man","guy","dude","male"])
-		elif self.pronoun == "she":
+		elif self.pronoun == "her":
 			if isChild:
 				self.aliases.extend(["girl","female"])
 			else:
 				self.aliases.extend(["woman","lady","dudette","female"])
 		else:
-			self.pronoun = "they"
+			self.pronoun = "them"
 		if isChild:
 			self.aliases.extend(["child","kid"])
 		self.aliases.append("person")
@@ -6370,7 +6980,8 @@ class Person(Speaker,Humanoid):
 
 	# describe the Person using appropriate pronouns, including gear
 	def describe(self):
-		pro = "They're" if self.pronoun == "they" else self.pronoun.capitalize() + "'s"
+		subjective = self.subjective()
+		pro = "They're" if subjective == "they" else subjective.capitalize() + "'s"
 		nounPhrase = ~self
 		Print(f"{pro} {nounPhrase}.")
 		if nounPhrase.lower() != self.desc.lower():
@@ -6380,8 +6991,8 @@ class Person(Speaker,Humanoid):
 		if len(gearitems) != 0:
 			Print(listObjects(self*"has ", gearitems,"."))
 		tethersMsgs = []
-		if self.carrying:
-			tethersMsgs.append(f"carrying {-self.carrying}")
+		if self.carrying():
+			tethersMsgs.append(listObjects("carrying ",self.carrying()))
 		# if self.occupants:
 		# 	tethersMsgs.append(listObjects("being ridden by ",self.occupants))
 		if tethersMsgs:
@@ -6400,7 +7011,7 @@ class Person(Speaker,Humanoid):
 		# else:
 		# 	suffix = ""
 		tethersSuffixes = ""
-		if (self.carrying or self.occupants) and det == "a":
+		if (self.carrying() or self.occupants()) and det == "a":
 			tethersSuffixes = self.tethersDescription(allowCarrying=False)
 		if "met" in self.memories:
 			return self.name + tethersSuffixes
@@ -6643,7 +7254,7 @@ moon = Celestial("moon","The glowing moon hangs in the sky, illuminating the wor
 sun = Celestial("sun","The blazing sun shines down from above, its warmth felt by all.",
 0,"fire",aliases=["sun"])
 stars = Celestial("stars","The twinkling stars dot the night sky, each one a distant sun.",
-0,"fire",aliases=["star"],pronoun="they")
+0,"fire",aliases=["star"],pronoun="them")
 eclipse = Celestial("eclipse","The sun and moon align perfectly, casting an eerie shadow" \
 " over the land.",0,"fire",aliases=["solar eclipse","sun","moon"])
 meteorshower = Celestial("meteor shower","A dazzling meteor shower streaks across the" \
@@ -6788,20 +7399,26 @@ class Portal(Item):
 		if dir not in self.links:
 			Print(f"The {self.name} does not go '{dir}'.")
 			return False
+
+		if traverser.riding:
+			return self.traverse(traverser.riding,dir=dir,verb=verb)
 		if not self.canPass(traverser):
-			traverser.Print(f"{+traverser} can't fit through {-self}.")
+			msg = f"{+traverser} can't fit through {-self}."
+			traverser.Print(msg)
+			if traverser in player.anchors():
+				traverser.printNearby(msg)
 			return False
 
 		newloc = self.getNewLocation(dir)
-		if not newloc.canAdd(traverser):
-			if traverser is player:
-				Print(f"You can't enter {-self}. There's not enough room.")
+		if not traverser.canChangeLocation(newloc):
 			return False
 
-		if traverser is player:
-			waitInput(f"You go {dir} the {self.name}.")
-		traverser.changeLocation(newloc)
-		return True
+		action = f"go {dir} {-self}."
+		traverser.Print(traverser*action)
+		traverser.printNearby(traverser+action)
+		if traverser is player or traverser in player.anchors():
+			waitInput()
+		return traverser.changeLocation(newloc)
 
 
 	# for Items/Creatures travelling through Portal unintentionally
@@ -6885,6 +7502,7 @@ class Portal(Item):
 			newloc = newloc.parent
 			if isinstance(newloc,Creature):
 				newloc = newloc.parent
+			return newloc
 
 
 	# given a direction (like 'north' or 'down)...
@@ -6981,7 +7599,6 @@ class Container(Portal):
 
 	# add Item to Container's items list
 	def add(self,I):
-		Print("$$$ TRY TO ADD",I,"TO",self)
 		# spawn object if given as string or has no ID
 		if isinstance(I,str) or I.id is None:
 			I = game.spawn(I)
@@ -6989,7 +7606,6 @@ class Container(Portal):
 		# check if object can be added to room, displace it if not
 		# displacing it out of a room will probably destroy it
 		if not self.canAdd(I):
-			Print(f"$$$ CAN'T ADD {I} SO DISPLACING TO PARENT {self.parent}")
 			I.displace(self.parent)
 			return False
 
@@ -7000,7 +7616,6 @@ class Container(Portal):
 					item.merge(I)
 					return item
 
-		Print(f"$$$ ADDING {I} TO {self}")
 		insort(self.items,I)
 		I.parent = self
 		I.nullDespawn()
@@ -7110,8 +7725,7 @@ class Container(Portal):
 	def exit(self,traverser):
 		if traverser not in self:
 			return False
-		Print("REMOVING HIDDEN STATUS")
-		traverser.removeStatus("hidden",-4)
+		traverser.removeStatus("hidden",Data.HIDDEN_CONTAINER)
 		return Room.exit(self,traverser)
 
 
@@ -7134,7 +7748,9 @@ class Container(Portal):
 		if self in traverser.objTree():
 			traverser.Print(f"You can't enter {-self}. It's within your Inventory.")
 			return False
-		if traverser in self.occupants:
+		if traverser.riding:
+			return self.traverse(traverser.riding,dir=dir,verb=verb)
+		if traverser in self.occupants():
 			traverser.Print(f"You can't, you are {traverser.position()}.")
 			return False
 
@@ -7144,11 +7760,14 @@ class Container(Portal):
 				if hasMethod(self,"open") and getattr(self,"closed",False):
 					if not self.open(traverser,silent=False):
 						return False
-				traverser.Print(f"You get out of {-self}.")
-				if self.parent is not game.currentroom:
-					traverser.waitInput()
-				traverser.changeLocation(self.parent)
-				return True
+				if not traverser.canChangeLocation(self.parent):
+					return False
+				action = f"get out of {-self}."
+				traverser.Print(traverser*action)
+				traverser.printNearby(traverser+action)
+				if traverser is player or traverser in player.anchors():
+					waitInput()
+				return traverser.changeLocation(self.parent)
 			else:
 				traverser.Print(f"You're not in {-self}.",color="k")
 				return False
@@ -7164,15 +7783,17 @@ class Container(Portal):
 		if getattr(self,"closed",False):
 			if not self.open(traverser,silent=False):
 				return False
-		if not self.canAdd(traverser):
-			traverser.Print(f"You can't enter {-self}. There's not enough room.")
+		if not traverser.canChangeLocation(self):
 			return False
 
 		if dir is None: dir = "into"
 		if verb is None: verb = "get"
-		traverser.Print(f"You {verb} {dir} {-self}.")
-		traverser.changeLocation(self)
-		return True
+		action = f"{verb} {dir} {-self}."
+		traverser.Print(traverser*action)
+		traverser.printNearby(traverser+action)
+		if traverser is player or traverser in player.anchors():
+			waitInput()
+		return traverser.changeLocation(self)
 
 
 	### Getters ###
@@ -7405,21 +8026,21 @@ class Projectile(Item):
 			return self.fall(speed//4)
 		# if has occupants, then make them fall off
 		if isinstance(self.item,Item):
-			for occupant in self.occupants.copy():
+			for occupant in self.occupants():
 				occupant.fall(speed//4)
 			self.item.clearOccupants()
 
 		# when launching from within in a Container at something outside the Container
-		if self.item.parent not in (target,target.parent):
+		if self.parent not in (target,target.parent):
 			# if parnet is closed, bombard the parent
 			if getattr(self.parent,"closed",False):
 				return self.parent.bombard(self)
 			# otherwise change location to parent first
-			self.item.changeLocation(target.parent)
+			self.asItem().changeLocation(target.parent)
 
 		# try to bombard the target
 		if not target.bombard(self):
-			Print(f"{self.pronoun.title()} misses!")
+			Print(f"{self.subjective().title()} misses!")
 			self.miss(launcher,target)
 
 		# if not a true projectile, then fall to ground
@@ -7450,9 +8071,9 @@ class Projectile(Item):
 			return False
 		if victim is target.parent:
 			return victim.bombard(self)
-		Print(f"{self.pronoun.title()} whizzes toward {-victim}!", color="o")
+		Print(f"{self.subjective().title()} whizzes toward {-victim}!", color="o")
 		if not victim.bombard(self):
-			Print(f"{self.pronoun.title()} misses...")
+			Print(f"{self.subjective().title()} misses...")
 
 
 	# when colliding with target, deal damage and take self damage
@@ -7502,11 +8123,12 @@ class Projectile(Item):
 
 
 # Weapons are Items that can be used to attack
-# they have might, sleight, sharpness, range, type and twohanded attributes
+# they have might, sleight, sharpness, range, type and minimum grip requirements
 class Weapon(Item):
 	def __init__(self,name,desc,weight,durability,composition,might,sleight,sharpness,
-	range,type,twohanded=False,**kwargs):
-		Item.__init__(self,name,desc,weight,durability,composition,**kwargs)
+	range,type,minGripsNeeded=1,**kwargs):
+		Item.__init__(self,name,desc,weight,durability,composition,
+		minGripsNeeded=minGripsNeeded,**kwargs)
 		# amount of damage weapon deals
 		self.might = might
 		# accuracy of weapon
@@ -7515,8 +8137,6 @@ class Weapon(Item):
 		self.sharpness = sharpness
 		# effective distance weapon can reach
 		self.range = range
-		# whether weapon requires two hands to wield
-		self.twohanded = twohanded
 		# damage type
 		self.type = type
 
@@ -7530,7 +8150,7 @@ class Weapon(Item):
 	# display weapon and stats
 	def show(self):
 		Print(f"{self.name} {self.might} {self.sleight}")
-		Print(f"{self.sharpness} {self.twohanded} {self.range}")
+		Print(f"{self.sharpness} {self.minGripsNeeded} {self.range}")
 
 
 	# licking shark weapons hurts!

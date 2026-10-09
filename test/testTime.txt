@@ -1,0 +1,121 @@
+test
+
+\\ Positive status durations decrement and expire; permanent statuses remain
+\mbu self fleeting 2
+\mbu self enduring -1
+\chk player.hasStatus("fleeting",2)
+\exe game.passTime(1)
+\chk player.hasStatus("fleeting",1)
+\chk player.hasStatus("enduring",-1)
+\exe game.passTime(1)
+\chk not player.hasStatus("fleeting")
+\chk player.hasStatus("enduring",-1)
+\xpl enduring
+
+\\ Nonstacking statuses refuse duplicates and exact-duration removal preserves siblings
+\exe game.firstSingleClockAdded=player.addStatus("single clock",5,stackable=False,silent=True)
+\exe game.secondSingleClockAdded=player.addStatus("single clock",10,stackable=False,silent=True)
+\chk game.firstSingleClockAdded
+\chk not game.secondSingleClockAdded
+\chk player.hasStatus("single clock",5)
+\exe player.addStatus("split clock",5,silent=True)
+\exe player.addStatus("split clock",10,silent=True)
+\exe player.removeStatus("split clock",5,silent=True)
+\chk not player.hasStatus("split clock",5)
+\chk player.hasStatus("split clock",10)
+\exe player.removeStatus("single clock",silent=True)
+\exe player.removeStatus("split clock",silent=True)
+
+\\ Damaging conditions apply damage while active and stop after removal
+\set self hp 10000
+\mbu self poisoned -1
+\exe game.beforePoison=player.hp
+\exe player.passTime(1)
+\chk player.hp < game.beforePoison
+\xpl poisoned
+\exe game.afterPoison=player.hp
+\exe player.passTime(1)
+\chk player.hp >= game.afterPoison
+
+\\ Hunger advances to starvation and clears after eating time is reset
+\exe game.time=player.lastAte+51+5*player.ENDR()
+\exe player.checkHungry()
+\chk player.hasStatus("hungry",-2)
+\exe game.time=player.lastAte+101+10*player.ENDR()
+\exe player.checkHungry()
+\chk player.hasStatus("starving",-2)
+\chk not player.hasStatus("hungry",-2)
+\exe player.lastAte=game.time
+\exe player.checkHungry()
+\chk not player.hasAnyStatus("hungry","starving")
+
+\\ Wakefulness advances to tired and fatigued, then clears after rest
+\exe game.time=player.lastSlept+151+20*player.ENDR()
+\exe player.lastAte=game.time
+\exe player.checkTired()
+\chk player.hasStatus("tired",-2)
+\exe game.time=player.lastSlept+301+40*player.ENDR()
+\exe player.lastAte=game.time
+\exe player.checkTired()
+\chk player.hasStatus("fatigued",-2)
+\chk not player.hasStatus("tired",-2)
+\exe player.lastSlept=game.time
+\exe player.checkTired()
+\chk not player.hasAnyStatus("tired","fatigued")
+
+\\ Breath holding advances to breathless and drowning, then recovers
+\exe player.lastBreathed=0
+\exe game.time=player.ENDR()//3+1
+\exe player.lastAte=game.time
+\exe player.lastSlept=game.time
+\exe player.checkBreathing()
+\chk player.hasStatus("breathless",-2)
+\exe game.time=player.ENDR()//2+1
+\exe player.checkBreathing()
+\chk player.hasStatus("drowning",-2)
+\chk not player.hasStatus("breathless",-2)
+\exe player.lastBreathed=game.time
+\exe player.checkBreathing()
+\chk not player.hasAnyStatus("breathless","drowning")
+
+\\ Day and night select the expected persistent celestial bodies
+\exe game.time=0
+\exe game.checkDaytime(silent=True)
+\chk Core.sun in game.celestials
+\chk Core.moon not in game.celestials
+\chk "morning" in game.events
+\exe game.time=207
+\exe game.checkDaytime(silent=True)
+\chk Core.sun not in game.celestials
+\chk Core.moon in game.celestials and Core.stars in game.celestials
+
+\\ New and full moon events follow the monthly cycle
+\exe game.time=0
+\exe game.checkMoon(silent=True)
+\chk "new moon" in game.events and "full moon" not in game.events
+\exe game.time=2093
+\exe game.checkMoon(silent=True)
+\chk "full moon" in game.events and "new moon" not in game.events
+
+\\ Aurora, meteor shower, and eclipse events appear and clean up outside their windows
+\exe game.time=2000
+\exe game.checkAstrology(silent=True)
+\chk "aurora" in game.events and Core.aurora in game.celestials
+\exe game.time=2100
+\exe game.checkAstrology(silent=True)
+\chk "aurora" not in game.events and Core.aurora not in game.celestials
+\exe game.time=161
+\exe game.checkAstrology(silent=True)
+\chk "meteor shower" in game.events and Core.meteorshower in game.celestials
+\exe game.time=461
+\exe game.checkAstrology(silent=True)
+\chk "meteor shower" not in game.events and Core.meteorshower not in game.celestials
+\exe game.time=23
+\exe game.checkAstrology(silent=True)
+\chk "eclipse" in game.events and Core.eclipse in game.celestials
+\exe game.time=53
+\exe game.checkAstrology(silent=True)
+\chk "eclipse" not in game.events and Core.eclipse not in game.celestials
+
+quit
+yes

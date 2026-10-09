@@ -1,41 +1,82 @@
 
 test
-\tpt cabin basement
-take swords
-take a sword
-grab sword
-put down sword
-put sword down
-grab the python
-drop python
-take
-blah
-take
-the amulet of swords
-i will take the potion
-i will take the red potion
-go n
-take all
-go n
-open chest
-close the chest
-take the capsule
-take the golden key from the capsule
-open the capsule
-look chest
-put capsule in chest
-take small chest from the table
-take small chest from the chest
-open small chest
-put blue potion in the chest
-put down blue potion in the chest
-take blue potion
-put blue potion in the chest
-put compass in chest
+
+\\ Take an item from the floor and drop it back onto the floor
+\spn Core.Item("travel token","A token issued for one round trip through Inventory.",2,-1,"iron")
+take travel token
+\chk fo("travel token",queryType="player").parent is player
+\chk fo("travel token",queryType="player") in player
+drop travel token
+\chk fo("travel token",queryType="room").parent is player.parent
+\chk fo("travel token",queryType="room").platform is player.parent.floor
+
+\\ Put an item in an open container and take it back out
+\spn Items.Box("travel trunk","A trunk assigned to straightforward transfers.",10,-1,"wood",[],capacity=50)
+\spn Core.Item("packed scarf","A scarf folded with procedural precision.",2,-1,"cloth")
+take packed scarf
+put packed scarf in travel trunk
+\chk fo("packed scarf",queryType="room",roomD=3).parent is fo("travel trunk",queryType="room")
+take packed scarf from travel trunk
+\chk fo("packed scarf",queryType="player").parent is player
+
+\\ Closed containers hide their contents until explicitly opened
+put packed scarf in travel trunk
+close travel trunk
+\chk fo("travel trunk",queryType="room").closed
+take packed scarf from travel trunk
+\chk fo("travel trunk",queryType="room").closed
+\chk fo("packed scarf",queryType="room",roomD=3).parent is fo("travel trunk",queryType="room")
+open travel trunk
+take packed scarf from travel trunk
+\chk not fo("travel trunk",queryType="room").closed
+\chk fo("packed scarf",queryType="player").parent is player
+
+\\ A full container refuses an item without removing it from Inventory
+\spn Items.Box("thimble case","A case with room for almost nothing.",3,-1,"wood",[],capacity=1)
+\spn Core.Item("broad parcel","A parcel broader than its prospective case.",10,-1,"cloth")
+take broad parcel
+put broad parcel in thimble case
+\chk fo("broad parcel",queryType="player").parent is player
+\chk fo("broad parcel",queryType="player") not in fo("thimble case",queryType="room").items
+
+\\ Fixed and occupied objects cannot be taken
+\spn Core.Item("bolted plinth","A plinth fastened firmly to the room.",10,-1,"stone",fixed=True)
+take bolted plinth
+\chk fo("bolted plinth",queryType="room").parent is player.parent
+\spn Core.Item("occupied tray","A tray made inconvenient by its passenger.",10,-1,"wood")
+\spn Core.Item("tray passenger","A paperweight taking its role seriously.",2,-1,"stone")
+take tray passenger
+put tray passenger on occupied tray
+take occupied tray
+\chk fo("occupied tray",queryType="room").parent is player.parent
+\chk fo("tray passenger",queryType="room").platform is fo("occupied tray",queryType="room")
+
+\\ Take all retrieves every item from a container
+\spn Items.Box("supply satchel","A satchel prepared for a bulk retrieval.",5,-1,"cloth",[],capacity=30)
+\spn Core.Item("red counter","A red counter awaiting collection.",1,-1,"wood")
+\spn Core.Item("blue counter","A blue counter awaiting collection.",1,-1,"wood")
+take red counter
+take blue counter
+put red counter in supply satchel
+put blue counter in supply satchel
+take all from supply satchel
+\chk fo("red counter",queryType="player").parent is player
+\chk fo("blue counter",queryType="player").parent is player
+\chk not fo("supply satchel",queryType="room").items
+
+\\ Taking an item already held leaves it in Inventory
+take packed scarf
+\chk fo("packed scarf",queryType="player").parent is player
+
+\\ The final compass confirmation preserves or transfers it as answered
+put compass in travel trunk
 no
-drop compass
+\chk player.countCompasses() == 1
+\chk not any(isinstance(obj,Core.Compass) for obj in fo("travel trunk",queryType="room").items)
+put compass in travel trunk
 yes
-go n
-grab the amulet of poisoned
+\chk player.countCompasses() == 0
+\chk any(isinstance(obj,Core.Compass) for obj in fo("travel trunk",queryType="room").items)
+
 quit
 yes

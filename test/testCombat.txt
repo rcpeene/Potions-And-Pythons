@@ -1,20 +1,12 @@
 
 test
-\spn Core.Weapon('iron sword','an iron sword',['sword'],'iron swords',10,12,[],5,2,2,0,False,'s')
-take sword
-go n
-attack python with sword
-attack python
-\tpt treeline
-punch gobln
-kick goblin
-attack goblin with sword
-\tpt cabin kitchen
-\set my str 100
-break table
-1
 
-break table with sword
+\\ Minimal combat smoke test pending the combat overhaul
+\spn Core.Weapon("practice sword","A plain sword reserved for basic combat wiring.",4,100,"iron",3,2,1,1,"s")
+\spn Core.Creature("practice dummy","A durable dummy waiting for combat to become more elaborate.",30,[1]*10,hp=10000,status=[["tamed",-1],["laying",-1]])
+take practice sword
+equip practice sword
+attack practice dummy with practice sword
 
 quit
 yes

@@ -1,5 +1,6 @@
 
 test
+\\ Definitions, help, and expressive commands
 define xp
 define goblin
 define
@@ -9,7 +10,7 @@ cry
 dance
 examples
 
-
+\\ General player information
 gear
 hello
 hi
@@ -44,6 +45,7 @@ xp
 yell
 yawn
 no
+\\ Inspect creatures and the current room
 \tpt tunnel
 look at python
 look
@@ -54,10 +56,12 @@ describe a sword
 examine my compass
 hear python
 listen to python
+\\ Smell and taste an ordinary item
 \tpt cabin kitchen
 smell the bread
 lick the bread
 taste the bread
+\\ Inspect a container, then read a sign
 \tpt cabin quarters
 look in the chest
 \tpt glen

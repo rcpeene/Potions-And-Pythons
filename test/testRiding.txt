@@ -1,0 +1,237 @@
+test
+\tpt cabin basement
+
+\\ A friendly mount accepts the player and rejects duplicate lower-level riding
+\spn Core.Creature("patient palfrey","A horse with the patience of a saint and the expression of a clerk.",100,[10]*10,status=[["tamed",-1]])
+ride patient palfrey
+\chk player.riding is fo("patient palfrey",queryType="room")
+\chk fo("patient palfrey",queryType="room").riders() == [player]
+\exe game.repeatRideSucceeded=fo("patient palfrey",queryType="room").ride(player,silent=True)
+\chk not game.repeatRideSucceeded
+dismount
+\chk player.riding is None and player.platform is player.parent.floor
+
+\\ Player-directed placement creates riders and does not duplicate its command confirmation
+\spn Core.Creature("pocket squire","A squire compact enough for economical quests.",8,[1]*10,status=[["tamed",-1]])
+take pocket squire
+put pocket squire on patient palfrey
+\chk fo("pocket squire",queryType="room").riding is fo("patient palfrey",queryType="room")
+\chk fo("patient palfrey",queryType="room").riders() == [fo("pocket squire",queryType="room")]
+
+\\ Several riders fit when combined size and burden permit
+\spn Core.Creature("travel-sized bard","A bard whose ballads and luggage are both abbreviated.",6,[1]*10,status=[["tamed",-1]])
+take travel-sized bard
+put travel-sized bard on patient palfrey
+\chk len(fo("patient palfrey",queryType="room").riders()) == 2
+\chk fo("patient palfrey",queryType="room").riders() == sorted(fo("patient palfrey",queryType="room").riders(),key=lambda rider:rider.Size())
+
+\\ ridingSpace counts every occupant and can exclude an existing rider
+\spn Core.Item("illicit saddlebag","A saddlebag occupying space without technically riding.",7,-1,"cloth")
+\exe fo("illicit saddlebag",queryType="room").platform=fo("patient palfrey",queryType="room")
+\chk fo("patient palfrey",queryType="room").ridingSpace() == fo("patient palfrey",queryType="room").Size()-fo("patient palfrey",queryType="room").occupantsSize()
+\chk fo("patient palfrey",queryType="room").ridingSpace(fo("pocket squire",queryType="room")) == fo("patient palfrey",queryType="room").ridingSpace()+fo("pocket squire",queryType="room").Size()
+\chk fo("illicit saddlebag",queryType="room") not in fo("patient palfrey",queryType="room").riders()
+\exe fo("illicit saddlebag",queryType="room").platform=player.parent.floor
+
+\\ A rider too large is refused before losing an existing riding tether
+\spn Core.Creature("faithful charger","A charger committed to continuity.",100,[10]*10,status=[["tamed",-1]])
+\spn Core.Creature("thimble pony","A pony better suited to a dollhouse cavalry.",5,[10]*10,status=[["tamed",-1]])
+\exe player.removePlatform()
+\exe player.riding=fo("faithful charger",queryType="room")
+\exe game.oversizedRideSucceeded=fo("thimble pony",queryType="room").ride(player,silent=True)
+\chk not game.oversizedRideSucceeded
+\chk player.riding is fo("faithful charger",queryType="room")
+dismount
+
+\\ Excess individual weight removes the old support and makes the rider fall
+\spn Core.Creature("frail hobbyhorse","A hobbyhorse assembled from optimism and narrow dowels.",20,[0]*10,status=[["tamed",-1]])
+ride frail hobbyhorse
+\chk player.riding is None
+\chk player.platform is player.parent.floor
+
+\\ Combined occupant weight can reject an otherwise valid additional rider
+\spn Core.Creature("overworked yak","A yak already reconsidering its employment contract.",30,[0]*10,status=[["tamed",-1]])
+\spn Core.Creature("first parcel knight","A knight packaged for convenient transport.",15,[1]*10,status=[["tamed",-1]])
+\spn Core.Creature("second parcel knight","Another knight with suspiciously similar postage.",15,[1]*10,status=[["tamed",-1]])
+take first parcel knight
+put first parcel knight on overworked yak
+take second parcel knight
+put second parcel knight on overworked yak
+\chk fo("first parcel knight",queryType="room").riding is fo("overworked yak",queryType="room")
+\chk fo("second parcel knight",queryType="room").riding is None
+\chk fo("second parcel knight",queryType="room").platform is player.parent.floor
+
+\\ Declining the crowding prompt preserves the existing rider and player support
+\spn Core.Creature("crowded cob","A compact horse with a strict seating chart.",40,[10]*10,status=[["tamed",-1]])
+\spn Core.Creature("seated dignitary","A dignitary occupying more ceremony than space.",20,[1]*10,status=[["tamed",-1]])
+take seated dignitary
+put seated dignitary on crowded cob
+stand
+ride crowded cob
+no
+\chk player.riding is None and player.platform is player.parent.floor
+\chk fo("seated dignitary",queryType="room").riding is fo("crowded cob",queryType="room")
+
+\\ A strong incoming rider can push the largest existing rider off
+\set self str 20
+\set self skl 20
+\set self stm 20
+\exe game.originalRoll=Core.roll
+\exe Core.roll=lambda d,m=0:d+m
+ride crowded cob
+yes
+\chk player.riding is fo("crowded cob",queryType="room")
+\chk fo("seated dignitary",queryType="room").riding is None
+\chk fo("seated dignitary",queryType="room").platform is player.parent.floor
+dismount
+
+\\ A weak incoming rider loses the contest and falls
+\spn Core.Creature("unyielding courier","A courier who refuses to surrender a reserved seat.",20,[20]*10,status=[["tamed",-1]])
+take unyielding courier
+put unyielding courier on crowded cob
+\set self str 1
+\set self skl 1
+\set self stm 1
+ride crowded cob
+yes
+\chk player.riding is None and player.platform is player.parent.floor
+\chk fo("unyielding courier",queryType="room").riding is fo("crowded cob",queryType="room")
+
+\\ Winning one push can still leave too little space, causing the player to fall
+\spn Core.Creature("narrow nag","A horse whose seating policy was drafted by an optimist.",40,[10]*10,status=[["tamed",-1]])
+\spn Core.Creature("left pannier pilgrim","A pilgrim settled firmly on the left.",15,[1]*10,status=[["tamed",-1]])
+\spn Core.Creature("right pannier pilgrim","A pilgrim settled equally firmly on the right.",15,[1]*10,status=[["tamed",-1]])
+\set self str 20
+\set self skl 20
+\set self stm 20
+stand
+take left pannier pilgrim
+put left pannier pilgrim on narrow nag
+take right pannier pilgrim
+put right pannier pilgrim on narrow nag
+ride narrow nag
+yes
+\chk player.riding is None and player.platform is player.parent.floor
+\chk len(fo("narrow nag",queryType="room").riders()) == 1
+
+\\ Delegated placement on a crowded mount refuses without releasing carried cargo
+\spn Core.Creature("reserved pony","A pony displaying a tiny brass RESERVED plaque.",20,[10]*10,status=[["tamed",-1]])
+\spn Core.Creature("incumbent page","A page who arrived before the seating dispute.",10,[1]*10,status=[["tamed",-1]])
+\spn Core.Creature("prospective page","A page carrying hopes, dreams, and no reservation.",15,[1]*10,status=[["tamed",-1]])
+take incumbent page
+put incumbent page on reserved pony
+take prospective page
+put prospective page on reserved pony
+\chk fo("prospective page",queryType="room").carrier is player
+\chk fo("prospective page",queryType="room") in player.carrying()
+\chk fo("incumbent page",queryType="room").riding is fo("reserved pony",queryType="room")
+drop prospective page
+
+\\ A hostile strong mount shakes off a standing rider
+\set self str 4
+\set self skl 4
+\set self stm 4
+\spn Core.Creature("belligerent destrier","A destrier whose hospitality begins and ends with glaring.",100,[20]*10)
+ride belligerent destrier
+\chk player.riding is None and player.platform is player.parent.floor
+
+\\ Crouching before mounting improves the rider's contest
+\spn Core.Creature("calculating mule","A mule with exactly enough athletics to make posture matter.",100,[7,1,7,7,1,1,1,1,1,1])
+ride calculating mule
+\chk player.riding is None
+crouch
+ride calculating mule
+\chk player.riding is fo("calculating mule",queryType="room")
+\chk player.posture() == "standing"
+dismount
+
+\\ A laying mount suffers the intended contest penalty
+\spn Core.Creature("recumbent rouncey","A rouncey attempting resistance from a horizontal position.",100,[5,1,5,5,1,1,1,1,1,1])
+\exe fo("recumbent rouncey",queryType="room").changePosture("lay",silent=True)
+ride recumbent rouncey
+\chk player.riding is fo("recumbent rouncey",queryType="room")
+dismount
+
+\\ Placing a non-creature on a creature makes it fall and reports failure
+\spn Core.Item("misplaced tea service","A tea service discovering that horses are not tables.",5,-1,"ceramic")
+take misplaced tea service
+put misplaced tea service on patient palfrey
+\chk fo("misplaced tea service",queryType="room").platform is player.parent.floor
+\chk fo("misplaced tea service",queryType="room") not in fo("patient palfrey",queryType="room").occupants()
+
+\\ Riding tether loops are rejected without mutation
+\spn Core.Creature("recursive pony","A pony considering an advanced degree in topology.",50,[10]*10,status=[["tamed",-1]])
+\exe game.loopPony=fo("recursive pony",queryType="room")
+\exe player.removePlatform()
+\exe game.loopPony.removePlatform()
+\exe game.loopPony.riding=player
+\exe game.loopRideSucceeded=game.loopPony.ride(player,silent=True)
+\chk not game.loopRideSucceeded
+\chk game.loopPony.riding is player
+\chk player.riding is None
+\exe game.loopPony.removeRiding(silent=True)
+\exe player.platform=player.parent.floor
+\exe Core.roll=game.originalRoll
+
+\\ DYNAMIC RIDING CORRECTION
+\tpt tunnel
+\set self hp 1000
+
+\\ Mount shrinkage makes an individually invalid rider fall and clears the tether
+\set self str 20
+\spn Core.Creature("concertina","A horse with an alarming capacity for becoming compact.",100,[10]*10,status=[["tamed",-1]])
+ride concertina
+\chk player.riding is fo("concertina",queryType="room")
+\set concertina weight 10
+\chk player.riding is None
+\chk player.platform is player.parent.floor
+
+\\ A sourced weakness status lowers burden and drops one overweight rider
+\spn Core.Creature("burro","A sturdy burro until magic says otherwise.",50,[10,1,1,1,1,1,1,1,1,1],status=[["tamed",-1]])
+\spn Core.Creature("ballast","A knight who has taken the concept of heavy cavalry personally.",40,[1]*10,status=[["tamed",-1]])
+take ballast
+put ballast on burro
+\chk fo("ballast",queryType="room").riding is fo("burro",queryType="room")
+\mbu burro weakness -1
+\chk fo("ballast",queryType="room").riding is None
+\chk fo("ballast",queryType="room").platform is player.parent.floor
+\chk not fo("burro",queryType="room").riders()
+
+\\ Reduced burden drops the heaviest riders only until the group is valid
+\spn Core.Creature("dray","A broad dray horse with carefully itemized load limits.",100,[1]*10,status=[["tamed",-1]])
+\spn Core.Creature("waif","A remarkably portable wandering waif.",10,[1]*10,status=[["tamed",-1]])
+\spn Core.Creature("squire","A moderately substantial squire.",20,[1]*10,status=[["tamed",-1]])
+\spn Core.Creature("baron","A baron carrying the full weight of minor nobility.",30,[1]*10,status=[["tamed",-1]])
+take waif
+put waif on dray
+take squire
+put squire on dray
+take baron
+put baron on dray
+\chk len(fo("dray",queryType="room").riders()) == 3
+\set dray weight 70
+\chk fo("baron",queryType="room").riding is None
+\chk fo("baron",queryType="room").platform is player.parent.floor
+\chk fo("dray",queryType="room").riders() == [fo("waif",queryType="room"),fo("squire",queryType="room")]
+\chk fo("dray",queryType="room").occupantsWeight() <= fo("dray",queryType="room").BRDN()//2
+
+\\ Reduced space drops the largest riders only until the remaining group fits
+\spn Core.Creature("settee","A horse shaped suspiciously like upholstered seating.",100,[10]*10,status=[["tamed",-1]])
+\spn Core.Creature("sprite","A tiny sprite with a valid travel ticket.",10,[1]*10,status=[["tamed",-1]])
+\spn Core.Creature("abbot","An abbot of respectable dimensions.",20,[1]*10,status=[["tamed",-1]])
+\spn Core.Creature("duke","A duke whose title and luggage occupy equal space.",30,[1]*10,status=[["tamed",-1]])
+take sprite
+put sprite on settee
+take abbot
+put abbot on settee
+take duke
+put duke on settee
+\chk len(fo("settee",queryType="room").riders()) == 3
+\set settee weight 40
+\chk fo("duke",queryType="room").riding is None
+\chk fo("duke",queryType="room").platform is player.parent.floor
+\chk fo("settee",queryType="room").riders() == [fo("sprite",queryType="room"),fo("abbot",queryType="room")]
+\chk fo("settee",queryType="room").ridingSpace() >= 0
+
+quit
+yes

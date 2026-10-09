@@ -60,7 +60,11 @@ prepositions = {"above","across","around","at","away","away from","behind","belo
 
 pronouns = {"she","he","they","her","him","them","it"}
 
-reflexives = {"she":"herself","he":"himself","they":"themself","it":"itself","me":"myself","you":"yourself"}
+objectives = {"she":"her","he":"him","they":"them","her":"her","him":"him","them":"them","it":"it"}
+
+subjectives = {"her":"she","him":"he","them":"they","it":"it"}
+
+reflexives = {"her":"herself","him":"himself","them":"themself","it":"itself","me":"myself","you":"yourself"}
 
 compounds = {"downstairs":["down","stairs"], "indoors":["in","door"], "upstairs":["up","stairs"]}
 
@@ -78,6 +82,25 @@ dmgclasses = {"a":"elem","b":"phys","c":"elem","d":"phys","e":"dev","f":"elem","
 
 # gear dict used to initialize the player object
 initgear = {"head":None, "torso":None, "left":None, "right":None, "legs":None}
+
+
+############################
+## STATUS CONDITION CODES ##
+############################
+
+COZY_BED = -4
+COZY_FIRE = -5
+HIDDEN_COVER = -4
+HIDDEN_CONTAINER = -5
+HINDERED_INVENTORY = -4
+HINDERED_STICKY = -5
+HINDERED_CARGO = -6
+POSTURE_ACTIVE = -4
+RESTRAINT_CARRY = -4
+RESTRAINT_BINDINGS = -5
+SUBMERGED_LIQUID = -4
+WET_LIQUID = -4
+WET_STICKY = -5
 
 blessings = {"brawniness","swiftness","prowess","liveliness","toughness","felicity","sagacity","lucidity","fidelity","prosperity"}
 

@@ -1,0 +1,146 @@
+test
+\tpt cabin basement
+
+\\ Valid occupancy assigns a platform; assigning it again is rejected
+\spn Core.Item("stout little plinth","A plinth built for objects with delusions of grandeur.",20,100,"stone")
+\spn Core.Item("ceremonial turnip","A turnip awaiting an occasion worthy of it.",3,10,"vegetable")
+take ceremonial turnip
+put ceremonial turnip on stout little plinth
+\chk fo("ceremonial turnip",queryType="room").platform is fo("stout little plinth",queryType="room")
+\exe game.repeatOccupySucceeded=fo("stout little plinth",queryType="room").occupy(fo("ceremonial turnip",queryType="room"),silent=True)
+\chk not game.repeatOccupySucceeded
+\chk len(fo("stout little plinth",queryType="room").occupants()) == 1
+
+\\ An oversized first occupant falls to the floor
+\spn Core.Item("postage-stamp dais","A dais designed by someone unfamiliar with scale.",5,-1,"wood")
+\spn Core.Item("royal boulder","A boulder with impeccable courtly manners.",100,-1,"stone")
+take royal boulder
+put royal boulder on postage-stamp dais
+\chk fo("royal boulder",queryType="room").platform is player.parent.floor
+\chk not fo("postage-stamp dais",queryType="room").occupants()
+
+\\ Several occupants fit when their combined size fits
+\spn Core.Item("communal ottoman","An ottoman that firmly believes in sharing.",20,-1,"cloth")
+\spn Core.Item("left boot of diplomacy","A boot willing to negotiate for space.",5,10,"leather")
+\spn Core.Item("right boot of diplomacy","A boot willing to split the difference.",5,10,"leather")
+take left boot of diplomacy
+put left boot of diplomacy on communal ottoman
+take right boot of diplomacy
+put right boot of diplomacy on communal ottoman
+\chk len(fo("communal ottoman",queryType="room").occupants()) == 2
+\chk fo("communal ottoman",queryType="room").occupantsSize() == 10
+
+\\ A crowded proposed occupant falls without disturbing the valid occupant
+\spn Core.Item("stingy stool","A stool with strict opinions about personal space.",10,-1,"wood")
+\spn Core.Item("resident cabbage","A cabbage that got here first.",6,10,"vegetable")
+\spn Core.Item("visiting cabbage","A cabbage arriving without a reservation.",6,10,"vegetable")
+take resident cabbage
+put resident cabbage on stingy stool
+take visiting cabbage
+put visiting cabbage on stingy stool
+\chk fo("resident cabbage",queryType="room").platform is fo("stingy stool",queryType="room")
+\chk fo("visiting cabbage",queryType="room").platform is player.parent.floor
+\chk fo("stingy stool",queryType="room").occupants() == [fo("resident cabbage",queryType="room")]
+
+\\ Platform loops are rejected without mutating either relationship
+\spn Core.Item("upper pedestal","A pedestal aspiring to greater heights.",10,-1,"stone")
+\spn Core.Item("lower pedestal","A pedestal content with foundational work.",20,-1,"stone")
+take upper pedestal
+put upper pedestal on lower pedestal
+\exe game.loopOccupySucceeded=fo("upper pedestal",queryType="room").occupy(fo("lower pedestal",queryType="room"),actor=player,silent=True)
+\chk not game.loopOccupySucceeded
+\chk fo("upper pedestal",queryType="room").platform is fo("lower pedestal",queryType="room")
+\chk fo("lower pedestal",queryType="room").platform is player.parent.floor
+
+\\ Moving a platform throws its occupants into the destination and they land separately
+\spn Core.Item("peripatetic tea tray","A tea tray with somewhere else to be.",10,-1,"silver")
+\spn Core.Item("determined teacup","A teacup prepared for an eventful journey.",2,10,"ceramic")
+take determined teacup
+put determined teacup on peripatetic tea tray
+\exe game.movingPlatform=fo("peripatetic tea tray",queryType="room")
+\exe game.movingOccupant=fo("determined teacup",queryType="room")
+\exe game.movingPlatform.changeLocation(world["cabin hallway"])
+\chk game.movingPlatform.parent is world["cabin hallway"]
+\chk game.movingOccupant.parent is world["cabin hallway"]
+\chk game.movingOccupant.platform is world["cabin hallway"].floor
+
+\\ An occupant that cannot enter the destination remains behind and detaches
+\spn Core.Item("pocket-sized ferry","A ferry whose route planning exceeds its dimensions.",2,-1,"wood")
+\spn Core.Item("tenacious passenger trunk","A trunk unwilling to fit where it plainly cannot.",10,10,"wood")
+\spn Core.Container("thimble terminal","A terminal with room for almost nothing.",1,-1,"metal",[],capacity=2)
+take tenacious passenger trunk
+put tenacious passenger trunk on pocket-sized ferry
+\exe game.tinyDest=fo("thimble terminal",queryType="room")
+\exe game.failedPlatform=fo("pocket-sized ferry",queryType="room")
+\exe game.failedOccupant=fo("tenacious passenger trunk",queryType="room")
+\exe game.failedPlatform.changeLocation(game.tinyDest)
+\chk game.failedPlatform.parent is game.tinyDest
+\chk game.failedOccupant.parent is player.parent
+\chk game.failedOccupant.platform is player.parent.floor
+
+\\ Forced displacement drops occupants before relocating the platform
+\spn Core.Item("banished sideboard","A sideboard with a history of abrupt departures.",15,-1,"wood")
+\spn Core.Item("loyal gravy boat","A gravy boat whose loyalty has practical limits.",3,10,"ceramic")
+take loyal gravy boat
+put loyal gravy boat on banished sideboard
+\exe game.displacedPlatform=fo("banished sideboard",queryType="room")
+\exe game.displacedOccupant=fo("loyal gravy boat",queryType="room")
+\exe game.displacedPlatform.displace(world["cabin hallway"])
+\chk game.displacedPlatform.parent is world["cabin hallway"]
+\chk game.displacedOccupant.parent is player.parent
+\chk game.displacedOccupant.platform is player.parent.floor
+
+\\ Destroying a platform drops every occupant
+\spn Core.Item("doomed dessert cart","A dessert cart with one structural flaw too many.",20,1,"wood")
+\spn Core.Item("last slice of pie","A slice of pie displaying admirable composure.",2,10,"food")
+take last slice of pie
+put last slice of pie on doomed dessert cart
+\exe game.doomedCart=fo("doomed dessert cart",queryType="room")
+\exe game.pie=fo("last slice of pie",queryType="room")
+break doomed dessert cart
+\chk game.doomedCart.parent is None
+\chk game.pie.platform is player.parent.floor
+
+\\ A suitable replacement preserves occupant relationships
+\spn Core.Item("retiring hat stand","A hat stand ready to leave public life.",20,-1,"wood")
+\spn Core.Item("patient bowler hat","A bowler hat accustomed to administrative delays.",4,10,"cloth")
+take patient bowler hat
+put patient bowler hat on retiring hat stand
+\exe game.oldStand=fo("retiring hat stand",queryType="room")
+\exe game.hat=fo("patient bowler hat",queryType="room")
+\exe game.newStand=Core.Item("promoted coat rack","A coat rack accepting expanded responsibilities.",20,-1,"wood")
+\exe game.oldStand.replace(game.newStand)
+\chk game.hat.platform is game.newStand
+\chk game.newStand.parent is player.parent
+
+\\ An unsuitable replacement makes its former occupant fall
+\spn Core.Item("generous park bench","A bench with room to spare, for now.",20,-1,"wood")
+\spn Core.Item("sleepy valise","A valise settling in for the afternoon.",10,10,"leather")
+take sleepy valise
+put sleepy valise on generous park bench
+\exe game.oldBench=fo("generous park bench",queryType="room")
+\exe game.valise=fo("sleepy valise",queryType="room")
+\exe game.newBench=Core.Item("mean little footstool","A footstool opposed to hospitality.",1,-1,"wood")
+\exe game.oldBench.replace(game.newBench)
+\chk game.valise.platform is player.parent.floor
+\chk game.newBench.parent is player.parent
+
+\\ Occupant weight warnings preserve the platform; excessive total weight collapses it
+\spn Core.Item("optimistic card table","A card table confident beyond its engineering.",20,5,"wood")
+\spn Core.Item("lead playing card","The ace of anvils.",6,10,"lead")
+\spn Core.Item("lead joker","The punchline is structural failure.",6,10,"lead")
+\exe game.cardTable=fo("optimistic card table",queryType="room")
+\exe game.leadCard=fo("lead playing card",queryType="room")
+\exe game.leadJoker=fo("lead joker",queryType="room")
+take lead playing card
+put lead playing card on optimistic card table
+\chk game.cardTable.parent is player.parent
+\chk game.leadCard.platform is game.cardTable
+take lead joker
+put lead joker on optimistic card table
+\chk game.cardTable.parent is None
+\chk game.leadCard.platform is player.parent.floor
+\chk game.leadJoker.platform is player.parent.floor
+
+quit
+yes

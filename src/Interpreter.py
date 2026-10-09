@@ -59,7 +59,7 @@ def chooseObject(name,objects,verb=None):
 			labels.append("here")
 		elif obj in Core.celestials:
 			labels.append("sky")
-		elif obj is Core.player.carrying:
+		elif obj in Core.player.carrying():
 			labels.append("carrying")
 		elif obj is Core.player.riding:
 			labels.append("riding")
@@ -117,8 +117,9 @@ reqSource=None,silent=False,allowRooms=False):
 		matches |= Core.player.surroundings().nameQuery(term,d=roomD)
 	if not allowRooms:
 		matches = {match for match in matches if not isinstance(match,Core.Room)}
-	if queryType == "player" and Core.nameMatch(term,Core.player.carrying):
-		matches.add(Core.player.carrying)
+	if queryType == "player":
+		matches |= {carried for carried in Core.player.carrying() \
+			if Core.nameMatch(term,carried)}
 	if term in ("me","myself","player","self"):
 		matches.add(Core.player)
 	if term in ("here","room","place","surroundings"):
@@ -184,8 +185,8 @@ permitDistance=False,permitOutside=False):
 		Core.Print(f"You can't {verb} {-obj}, you're {parent.passprep} {parent.pronoun}.")
 		return True
 	if not permitOutside and obj is not parent and obj.parent not in (parent,Core.player):
-		Core.Print(f"You can't {verb} {-obj}, " \
-		f"{obj.pronoun}'s {obj.parent.passprep} {-obj.parent}.")
+		Core.Print(f"You can't {verb} {-obj},",obj/
+		f"is {obj.parent.passprep} {-obj.parent}.")
 		return True
 	if not permitSelf and obj is Core.player:
 		Core.Print(f"You can't {verb} yourself.")
@@ -425,7 +426,10 @@ def interpret():
 		Core.Print()
 		command = queuedInput
 	else:
-		command = tokenize(read("\n\nWhat will you do?",storeRawCmd=True))
+		rawCommand = read("\n\nWhat will you do?",storeRawCmd=True)
+		if rawCommand.startswith("\\\\"):
+			return False
+		command = tokenize(rawCommand)
 	if len(command) == 0:
 		return promptHelp("Command not understood.")
 	verb = command[0]	# verb is always first word
@@ -505,6 +509,20 @@ def Evaluate(command):
 	except Exception as e:
 		Core.Print("Error: Code was unable to be executed.",color="k")
 		Core.Print(traceback.format_exc(),color="k",delay=0)
+
+
+def Check(command):
+	assert len(command) >= 2, "No check expression given"
+	code = " ".join(command[1:])
+	def raises(exception,func):
+		try:
+			func()
+		except exception:
+			return True
+		return False
+	context = globals() | {"fo":findObject,"player":Core.player,"world":Core.world,
+		"game":Core.game,"room":Core.game.currentroom,"raises":raises}
+	assert eval(code,context), f"Check failed: {code}"
 
 
 def Execute(command):
@@ -650,10 +668,10 @@ def Learn(command):
 	if len(command) < 2:
 		Core.Print("Error: No xp value given",color="k")
 		return
-	# try:
-	Core.player.gainxp(int(command[1]))
-	# except:
-	# 	Core.Print(f"Error: Value not number {command[1]}",color="k")
+	try:
+		Core.player.gainxp(int(command[1]))
+	except ValueError:
+		Core.Print(f"Error: Value not number {command[1]}",color="k")
 
 
 def Lob(command):
@@ -687,14 +705,18 @@ def Lob(command):
 		return False
 
 	if getattr(missile,"carrier",None):
-		missile.carrier.removeCarry(missile)
-	if getattr(missile,"rider",None):
-		missile.rider.removeRiding(missile)
+		missile.carrier.removeCarry(missile,silent=True,drop=False)
+	if getattr(missile,"riding",None):
+		missile.removeRiding(silent=True)
 	if getattr(missile,"platform",None):
-		missile.platform.disoccupy(missile)
+		missile.removePlatform()
+	if isinstance(missile.parent,Core.Creature):
+		owner = missile.parent
+		owner.remove(missile,silent=True)
+		owner.parent.add(missile)
 	missile = missile.asProjectile()
 	Core.Print(f"{+missile} is launched {prep} {-target}.",color="k")
-	missile.Launch(50,100,None,target)
+	return missile.launch(50,100,Core.player,target)
 
 
 def Mode(command):
@@ -1100,19 +1122,32 @@ def Caress(dobj,iobj,prep):
 def CarryCreature(creature):
 	Core.game.setPronouns(creature)
 	if enforceVerbScope("carry",creature): return False
-	carrying = Core.player.carrying
+	carrying = Core.player.carrying()
 
-	if carrying:
-		Core.Print(f"You're already carrying {-carrying}.")
-		if carrying is creature:
-			return False
+	if creature in carrying:
+		Core.Print(f"You're already carrying {-creature}.")
+		return False
 	if not isinstance(creature,Core.Creature):
 		Core.Print(f"You can't carry {-creature}")
 		return False
+	plan = Core.player.planCarrySlots(creature,forceUnequip=True)
+	if plan is None:
+		Core.Print("You don't have enough free hands to carry that creature.")
+		return False
 
-	Core.player.unequip("left")
+	consequences = []
+	if plan["unequip"]:
+		consequences.append(Core.listObjects("unequip ",plan["unequip"]))
+	if plan["drop"]:
+		consequences.append(Core.listObjects("drop ",plan["drop"]))
+	if consequences:
+		changes = " and ".join(consequences)
+		question = f"Carrying {-creature} will {changes}. Proceed?"
+		if not Core.yesno(question):
+			return False
+
 	Core.Print(f"You try to pick up {-creature}.",color="o")
-	if not creature.carry(Core.player):
+	if not Core.player.Heft(creature,forceUnequip=True):
 		return False
 	Core.Print(f"You are carrying {-creature}.")
 	return True
@@ -1160,7 +1195,8 @@ def Climb(dobj,iobj,prep):
 	M = findObject(dobj,f"climb {verbprep}","room")
 	if M is None: return False
 	Core.game.setPronouns(M)
-	if enforceVerbScope(f"climb {verbprep}",M,permitParent=True): return False
+	if enforceVerbScope(f"climb {verbprep}",M,permitParent=True,
+	permitDistance=Core.player.riding is not None): return False
 
 	# prevents absurdity of climbing onto a small item
 	if M.Size() < Core.player.Size() // 5:
@@ -1347,7 +1383,7 @@ def Don(dobj,iobj,prep):
 	if I is None: return False
 	Core.game.setPronouns(I)
 
-	displayName = f"{-I}" if Core.player.carrying is I else f"your {I}"
+	displayName = f"{-I}" if I in Core.player.carrying() else f"your {I}"
 	if not isinstance(I,Core.Armor):
 		Core.Print(f"You cannot wear {displayName}.")
 		return False
@@ -1406,7 +1442,7 @@ def Drop(dobj,iobj,prep,I=None):
 			if getattr(R,"open",True):
 				Core.Print(f"You drop {-I} {prep} {-R}.")
 				if isinstance(I,Core.Creature):
-					Core.player.removeCarry(I)
+					Core.player.removeCarry(I,drop=False)
 				else:
 					Core.player.remove(I)
 					Core.player.parent.add(I)
@@ -1419,7 +1455,7 @@ def Drop(dobj,iobj,prep,I=None):
 			return False
 
 	if isinstance(I,Core.Creature):
-		Core.player.removeCarry()
+		Core.player.removeCarry(I,drop=True)
 	elif not Core.player.parent.canAdd(I) and I not in Core.player.parent.contents():
 		Core.Print(f"You can't drop {-I}. There's not enough room.")
 		return False
@@ -1439,7 +1475,7 @@ def Dump(dobj,iobj,prep):
 	Core.game.setPronouns(I)
 	if enforceVerbScope("dump",I): return False
 
-	if Core.hasMethod(I,"Pour"):
+	if Core.hasMethod(I,"pour"):
 		return Pour(dobj,iobj,prep,I=I)
 	else:
 		return Drop(dobj,iobj,prep,I=I)
@@ -1542,7 +1578,7 @@ def Fly(dobj,iobj,prep):
 		print("Casting fly here.")
 		return Cast("fly",None,None)
 	if Core.player.posture() != "floating":
-		Core.player.platform = None
+		Core.player.removePlatform()
 	return Go(dobj,iobj,prep)
 
 
@@ -2072,7 +2108,7 @@ def Lock(dobj,iobj,prep):
 	Core.game.setPronouns(I)
 	if enforceVerbScope("lock",I,permitParent=True): return False
 
-	if not Core.hasMethod(I,"Lock"):
+	if not Core.hasMethod(I,"lock"):
 		Core.Print(f"{+I} doesn't lock.")
 		return False
 
@@ -2082,7 +2118,7 @@ def Lock(dobj,iobj,prep):
 	if not isinstance(K,Items.Key):
 		Core.Print(f"You can't lock with {-K}.")
 		return False
-	return I.Lock(K)
+	return I.lock(Core.player,K)
 
 
 def Look(dobj,iobj,prep):
@@ -2158,6 +2194,15 @@ def Mount(dobj,iobj,prep,M=None,posture=None):
 
 	if posture is None:
 		posture = "stand"
+	if isinstance(M,Core.Creature) and Core.player.riding is not M:
+		# determine if there is a rider that needs to be pushed off due to lack of space.
+		riderToPush = None
+		if M.riders() and Core.player.Size() > M.ridingSpace(Core.player):
+			riderToPush = M.riders()[-1]
+		if riderToPush is not None:
+			question = f"You would have to push {-riderToPush} off of {-M}. Proceed?"
+			if not Core.yesno(question):
+				return False
 	return Core.player.Mount(M,posture)
 
 
@@ -2291,15 +2336,14 @@ def Put(dobj,iobj,prep):
 			Core.Print(f"There's not enough room in {-R} for {-I}.")
 			return False
 		if isinstance(I,Core.Creature):
-				Core.player.removeCarry(I)
+			Core.player.removeCarry(I,drop=False)
 		else:
 			Core.player.remove(I)
 			Core.player.parent.add(I)
 		return R.transfer(I)
 
 	if R in Core.player:
-		Core.Print(f"You can't put anything {prep} {-R}," \
-		f" {R.pronoun} is in your Inventory.")
+		Core.Print(f"You can't put anything {prep} {-R},"+R/"is in your Inventory.")
 		return False
 	elif not Core.hasMethod(R,"occupy"):
 		Core.Print(f"You can't put {-I} {prep} {-R}.")
@@ -2310,16 +2354,22 @@ def Put(dobj,iobj,prep):
 
 	idet = "your" if Core.player in I.ancestors() else 'the'
 	rdet = "your" if Core.player in R.ancestors() else 'the'
-	# outprep = "on" if isinstance(R,Items.Table) else "in"
-	if iobj == "here": Core.Print(f"You put your {I.name} here.")
-	else: Core.Print(f"You put {idet} {I} on {R.nounPhrase(det=rdet)}.")
+	if isinstance(I,Core.Creature) and isinstance(R,Core.Creature):
+		riders = R.riders()
+		if riders and I.Size() > R.ridingSpace(I):
+			Core.Print("There's not enough space. " + \
+				(R+f"is occupied by {-riders[-1]}."))
+			return False
 
-	if I is Core.player.carrying:
-		Core.player.removeCarry(silent=True)
+	if I in Core.player.carrying():
+		Core.player.removeCarry(I,silent=True,drop=False)
 	I.parent.remove(I)
 	if not R.parent.add(I):
 		return False
-	R.occupy(I)
+	if not R.occupy(I,actor=Core.player):
+		return False
+	if iobj == "here": Core.Print(f"You put your {I.name} here.")
+	else: Core.Print(f"You put {idet} {I} on {R.nounPhrase(det=rdet)}.")
 	return True
 
 
@@ -2635,7 +2685,7 @@ def TakeAllRecur(objToTake):
 
 def TakeAll(takeFrom):
 	if takeFrom is None: return False
-	occupants = getattr(takeFrom,"occupants",[])
+	occupants = takeFrom.occupants() if Core.hasMethod(takeFrom,"occupants") else []
 	items = getattr(takeFrom,"items",[])
 	if len(occupants) == 0 and len(items) == 0:
 		Core.Print(f"{+takeFrom} doesn't have anything to take.")
@@ -2646,7 +2696,8 @@ def TakeAll(takeFrom):
 		takenAny = TakeAllRecur(obj) or takenAny
 	# if there's items to take from within closed takeFrom, try to open it first
 	if len(items) > 0:
-		if getattr(takeFrom,"closed",False) and not takeFrom.open(Core.player):
+		if getattr(takeFrom,"closed",False):
+			Core.Print(f"{+takeFrom} is closed.")
 			return False
 	# take items from within takeFrom
 	for obj in sorted(items):
@@ -2678,9 +2729,6 @@ def Take(dobj,iobj,prep):
 		objToTake = findObject(dobj,"take",reqSource=iobj)
 	if objToTake is None:
 		return False
-	if getattr(objToTake.parent,"closed",False) and Core.player not in objToTake.parent:
-		if not objToTake.parent.open(Core.player):
-			return False
 	Core.game.setPronouns(objToTake)
 	if enforceVerbScope("take",objToTake,permitAnchor=False,permitOutside=True):
 		return False
@@ -2867,7 +2915,7 @@ def Unlock(dobj,iobj,prep):
 	if not isinstance(K,Items.Key):
 		Core.Print(f"You can't unlock with {-K}.")
 		return False
-	return I.unlock(K)
+	return I.unlock(Core.player,K)
 
 
 def Untie(dobj,iobj,prep):
@@ -2905,6 +2953,7 @@ def Wave(dobj,iobj,prep):
 
 
 cheatcodes = {
+	"\\chk":Check,
 	"\\dgn":Diagnostic,
 	"\\evl":Evaluate,
 	"\\exe":Execute,

@@ -1,5 +1,6 @@
 
 test
+\\ Try valid and invalid horizontal and vertical movement phrases
 go up the hallway
 go up
 go blah
@@ -13,6 +14,7 @@ north
 go hallway
 east
 exit to the big tree
+\\ Try passage and bare-direction phrasing from a different room
 \tpt cave
 go stairwell
 up

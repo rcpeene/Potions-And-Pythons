@@ -1,0 +1,55 @@
+test
+\tpt cabin basement
+
+\\ Spawn an object instance into the current room and register it
+\spn Core.Item("effect spark","A small spark waiting for a larger repertoire of effects.",1,-1,"energy")
+\chk fo("effect spark",queryType="room").parent is player.parent
+\chk game.itemRegistry[fo("effect spark",queryType="room").id] is fo("effect spark",queryType="room")
+\chk fo("effect spark",queryType="room").platform is player.parent.floor
+
+\\ Spawn creatures and items by their factory names
+\spn goblin
+\chk isinstance(fo("goblin",queryType="room"),Core.Creature)
+\chk game.itemRegistry[fo("goblin",queryType="room").id] is fo("goblin",queryType="room")
+\spn iron ingot
+\chk isinstance(fo("iron ingot",queryType="room"),Core.Item)
+\chk game.itemRegistry[fo("iron ingot",queryType="room").id] is fo("iron ingot",queryType="room")
+
+\\ Unknown factory names fail without registering an object
+\chk raises(Exception,lambda:game.spawn("imaginary effect fixture"))
+\chk not any(obj and obj.name == "imaginary effect fixture" for obj in game.itemRegistry.values())
+
+\\ Effects can spawn directly into another valid parent
+\spn Items.Box("effect chest","A chest reserved for arriving effects.",10,-1,"wood",[],capacity=20)
+\exe game.effectGem=Effects.spawnObject(Core.Item("effect gem","A gem that appears exactly where requested.",2,-1,"crystal"),parent=fo("effect chest",queryType="room"),silent=True)
+\chk game.effectGem.parent is fo("effect chest",queryType="room")
+\chk game.itemRegistry[game.effectGem.id] is game.effectGem
+
+\\ Failed parent admission destroys and unregisters the rejected object
+\spn Items.Box("effect thimble","A thimble with no room for grand manifestations.",2,-1,"iron",[],capacity=1)
+\exe game.failedEffectSpawn=Effects.spawnObject(Core.Item("oversized apparition","An apparition much too substantial for a thimble.",100,-1,"stone"),parent=fo("effect thimble",queryType="room"),silent=True)
+\chk not game.failedEffectSpawn
+\chk not any(obj and obj.name == "oversized apparition" for obj in game.itemRegistry.values())
+
+\\ Explicit duplicate IDs fail without replacing the registered object
+\chk raises(AssertionError,lambda:game.spawn(Core.Item("duplicate spark","A spark carrying someone else's paperwork.",1,-1,"energy",id=fo("effect spark",queryType="room").id)))
+\chk game.itemRegistry[fo("effect spark",queryType="room").id] is fo("effect spark",queryType="room")
+
+\\ Generated IDs skip IDs that are already registered
+\exe game.nextObjId=fo("effect spark",queryType="room").id
+\spn Core.Item("id skipper","An effect that refuses to stand on occupied registry space.",1,-1,"energy")
+\chk fo("id skipper",queryType="room").id != fo("effect spark",queryType="room").id
+\chk game.itemRegistry[fo("id skipper",queryType="room").id] is fo("id skipper",queryType="room")
+
+\\ Timed room spawning uses the same parent-aware spawn API
+\exe game.originalPercentChance=Core.percentChance
+\exe Core.percentChance=lambda chance:True
+\exe game.effectWild=Core.Room("Effect Wild","Woodlands","An empty woodland used for timed manifestations.",{},[],[],[],floor="earth")
+\exe game.effectWild.passTime(1)
+\chk len(game.effectWild.creatures) == 1
+\chk game.effectWild.creatures[0].parent is game.effectWild
+\chk game.itemRegistry[game.effectWild.creatures[0].id] is game.effectWild.creatures[0]
+\exe Core.percentChance=game.originalPercentChance
+
+quit
+yes

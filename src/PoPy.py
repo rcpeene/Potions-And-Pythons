@@ -5,11 +5,30 @@
 import os
 import sys
 import traceback
+from datetime import datetime
 
 import Data
 import Core
 import Menu
 import Interpreter
+
+
+
+def nextRunLogPath():
+	logDir = "./logs"
+	os.makedirs(logDir,exist_ok=True)
+	runLogs = [os.path.join(logDir,name) for name in os.listdir(logDir) \
+		if name.startswith("game-") and name.endswith(".log")]
+	runLogs.sort(key=os.path.getmtime)
+	while len(runLogs) >= 10:
+		os.remove(runLogs.pop(0))
+	timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S_%f")
+	logPath = os.path.join(logDir,f"game-{timestamp}.log")
+	duplicate = 1
+	while os.path.exists(logPath):
+		logPath = os.path.join(logDir,f"game-{timestamp}-{duplicate}.log")
+		duplicate += 1
+	return logPath
 
 
 
@@ -26,7 +45,7 @@ def main(testing=False):
 		# run intro logo animation
 		Menu.gameIntro()
 
-		logger = Core.TeeLogger("./gamedata/transcript.log")
+		logger = Core.TeeLogger(nextRunLogPath())
 		sys.stdin = logger
 		sys.stdout = logger
 		sys.stderr = logger
@@ -54,6 +73,8 @@ def main(testing=False):
 			creature = max(creaturesToAct, key=lambda c: (c.MVMT(), c.SPD(), c.id))
 			creaturesToAct.remove(creature)
 			Core.game.whoseTurn = creature
+			if creature.id not in Core.game.itemRegistry or creature.parent is None:
+				continue
 			if not creature.hasAnyStatus("asleep","dead"):
 				if creature is Core.player:
 					# take user input until player successfully performs an action
@@ -88,6 +109,12 @@ if __name__ == "__main__":
 ################################################################################
 
 # CURRENT TASKS
+
+# read 4 main new carry functions, evalute and add comments
+# read the latesst checkTethers functions, evaluate and add comments
+# then finish the tether refactor by refactoring the riding/occupying/platform to remove the lists
+
+# numeral conjugation does '11st' rather than '11th and '12nd' rather than '12th'
 
 # WATER AND LIQUIDS
 
@@ -187,6 +214,10 @@ if __name__ == "__main__":
 
 # DROPPING, PUTTING, STEALING
 # add 'hold' verb, make it take or equip?
+
+# prevent softlock of rooms getting overcrowded with items so theres no vacancy
+	# if a room gets too full, maybe intelligently eject objects to nearby rooms during passTime, or despawn worthless items
+	# figure out what happens if theres a pit with no vacancy, and you fall into it. Do you get destroyed by displace()?
 # test "put on hat" and "put hat on"
 # redo put to account for occupancy versus containment
 	# consider "put maiden on horse" versus "put sword on table"
@@ -201,6 +232,9 @@ if __name__ == "__main__":
 # add Steal
 # implement steal
 	# "take bird from earl"
+# handle case when trying to Heft a creature thats already being carried,
+	# warn player and ask if they want to proceed before the unequip everything
+	# contest with enemy carrier?
 # do a name query for plurals; if user tries to input plural; then chooseObject?
 # add possession? (so you can say 'break goblin's sword', 'take his food')... these could be easily restructured as "break sword from goblin", "take food from him"
 	# 'take goblins sword from him'

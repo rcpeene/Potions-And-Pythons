@@ -1,0 +1,143 @@
+test
+\tpt cabin basement
+\set self hp 10000
+
+\\ Make probabilistic projectile branches deterministic for this script
+\exe game.originalPercentChance=Core.percentChance
+\exe game.originalRoll=Core.roll
+\exe Core.percentChance=lambda chance:chance>=50
+\exe Core.roll=lambda sides,modifier=0:1+modifier
+
+\\ Lob an inventory Item at an object target
+\spn Core.Creature("dummy","A patient target dummy with unusually deep reserves.",100,[1]*10,hp=10000,status=[["tamed",-1]])
+\spn Core.Item("dart","A dart eager to become somebody else's problem.",4,-1,"iron")
+take dart
+\lob dart dummy
+\chk fo("dart",queryType="room").parent is player.parent
+\chk fo("dart",queryType="room") not in player
+\chk fo("dummy",queryType="room").hp < 10000
+
+\\ Lob a carried Creature and clear every carrying slot
+\spn Core.Creature("captive","A compact captive bracing for unconventional travel.",4,[1]*10,status=[["tamed",-1]])
+take captive
+\chk fo("captive",queryType="room").carrier is player
+\lob captive dummy
+\chk fo("captive",queryType="room").carrier is None
+\chk fo("captive",queryType="room") not in player.carrying()
+\chk all(player[slot] is not fo("captive",queryType="room") for slot in player.carrySlots)
+
+\\ Lob a riding Creature and clear its riding tether
+\spn Core.Creature("pony","A pony serving briefly as launch infrastructure.",80,[10]*10,status=[["tamed",-1]])
+\spn Core.Creature("jockey","A jockey discovering an obscure clause in the job description.",4,[1]*10,status=[["tamed",-1]])
+take jockey
+put jockey on pony
+\chk fo("jockey",queryType="room").riding is fo("pony",queryType="room")
+\lob jockey dummy
+\chk fo("jockey",queryType="room").riding is None
+\chk fo("jockey",queryType="room").parent is player.parent
+
+\\ Lob an object from an ordinary platform
+\spn Core.Item("platter","A platter reluctantly volunteering as a launchpad.",20,-1,"silver")
+\spn Core.Item("token","A token redeemable for one abrupt departure.",3,-1,"iron")
+take token
+put token on platter
+\chk fo("token",queryType="room").platform is fo("platter",queryType="room")
+\lob token dummy
+\chk fo("token",queryType="room").platform is player.parent.floor
+\chk fo("token",queryType="room") not in fo("platter",queryType="room").occupants()
+
+\\ Lob toward a linked room or direction
+\tpt tunnel
+\spn Core.Item("northstone","A pebble with northern ambitions.",2,-1,"stone")
+take northstone
+\lob northstone north
+go north
+\chk fo("northstone",queryType="room").parent is player.parent
+\chk fo("northstone",queryType="room").platform is player.parent.floor
+
+\\ Homing and calamity can ricochet back to the launcher, who catches it
+\spn Core.Creature("homingdummy","A nimble dummy that sends enchanted missiles home.",30,[1000]*10,hp=10000,status=[["tamed",-1]])
+\spn Core.Item("seeker","A missile enchanted to miss in a highly intentional manner.",4,-1,"iron",status=[["homing",-1]])
+\mbu self calamity -1
+take seeker
+throw seeker at homingdummy
+yes
+\chk fo("seeker",queryType="player").parent is player
+\chk fo("seeker",queryType="player") in player.gear.values()
+\xpl calamity
+
+\\ A forced miss has a valid launcher and can ricochet into a selected victim
+\tpt cabin basement
+\spn Core.Creature("missdummy","A dummy positioned to be missed with confidence.",30,[1000]*10,hp=10000,status=[["tamed",-1]])
+\spn Core.Creature("victim","A volunteer wearing the curse of narrative inevitability.",30,[1]*10,hp=10000,status=[["tamed",-1],["calamity",-1]])
+\spn Core.Item("boomerang","A boomerang with only a theoretical understanding of returning.",4,-1,"wood")
+take boomerang
+throw boomerang at missdummy
+\chk fo("victim",queryType="room").hp < 10000
+\chk fo("boomerang",queryType="room").parent is player.parent
+
+\\ Launching a platform makes all occupants fall off before impact
+\spn Core.Item("flyingtray","A tea tray committed to dramatic service.",15,-1,"silver")
+\spn Core.Item("passenger","A teacup that did not consent to aviation.",2,-1,"ceramic")
+take passenger
+put passenger on flyingtray
+\lob flyingtray dummy
+\chk fo("passenger",queryType="room").platform is player.parent.floor
+\chk fo("passenger",queryType="room") not in fo("flyingtray",queryType="room").occupants()
+
+\\ An open container receives a projectile
+\spn Items.Box("basket","A basket practicing for an extremely local sport.",10,-1,"wicker",[],capacity=20)
+\spn Core.Item("basketball","A ball named with remarkable foresight.",3,-1,"leather")
+take basketball
+throw basketball into basket
+\chk fo("basketball",queryType="room",roomD=3).parent is fo("basket",queryType="room")
+\chk fo("basketball",queryType="room",roomD=3) in fo("basket",queryType="room").items
+
+\\ Closed and full containers collide instead of admitting the projectile
+\spn Items.Box("coffer","A coffer firmly closed to unsolicited deliveries.",10,-1,"wood",[],capacity=20,closed=True)
+\spn Core.Item("letter","A letter addressed to WHOM IT MAY CONCERN AT SPEED.",2,-1,"paper")
+take letter
+throw letter into coffer
+\chk fo("letter",queryType="room").parent is player.parent
+\chk fo("letter",queryType="room") not in fo("coffer",queryType="room").items
+\spn Items.Box("fullbox","A box full of confidence and nothing else useful.",10,-1,"wood",[],capacity=1)
+\spn Core.Item("parcel","A parcel too broad for this particular box.",3,-1,"cloth")
+take parcel
+throw parcel into fullbox
+\chk fo("parcel",queryType="room").parent is player.parent
+\chk fo("parcel",queryType="room") not in fo("fullbox",queryType="room").items
+
+\\ A true Projectile removes itself from its parent after collision
+\spn Core.Projectile("arcanebolt","A bolt made entirely of poor decisions.",1,5,"energy",2,0,"e")
+\exe game.arcaneBolt=fo("arcanebolt",queryType="room")
+take arcanebolt
+throw arcanebolt at dummy
+\chk game.arcaneBolt.parent is None
+
+\\ Catch fails for a projectile too heavy to hold
+\spn Core.Item("catchanvil","An anvil included in a very short-lived catching lesson.",1000,-1,"iron")
+\\ TODO: Replace this direct Catch API check when the catch command is implemented.
+\exe game.heavyCatchSucceeded=player.Catch(fo("catchanvil",queryType="room").asProjectile())
+\chk not game.heavyCatchSucceeded
+\chk fo("catchanvil",queryType="room").parent is player.parent
+
+\\ An excessively heavy normal throw fails and leaves the object on the floor
+\spn Core.Item("throwanvil","An anvil optimized for remaining exactly where it is.",200,-1,"iron")
+take throwanvil
+throw throwanvil at dummy
+\chk fo("throwanvil",queryType="room").parent is player.parent
+\chk fo("throwanvil",queryType="room").platform is player.parent.floor
+
+\\ A flying missile remains unsupported after launch instead of falling
+\spn Core.Item("papercrane","A paper crane taking the projectile designation personally.",1,-1,"paper",status=[["flying",-1]])
+take papercrane
+throw papercrane at dummy
+\chk fo("papercrane",queryType="room").parent is player.parent
+\chk fo("papercrane",queryType="room").platform is None
+
+\\ Restore production randomness
+\exe Core.percentChance=game.originalPercentChance
+\exe Core.roll=game.originalRoll
+
+quit
+yes
