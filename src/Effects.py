@@ -24,12 +24,11 @@ def applyAreaEffect(effect,root,condfunc=lambda x:True):
 def spawnObject(obj,parent=None,silent=False):
 	if parent is None:
 		parent = Core.game.currentroom
-	obj = Core.game.spawn(obj)
+	obj = Core.game.spawn(obj,parent)
 
-	if not parent.canAdd(obj):
+	if not obj:
 		Core.Print("It failed...")
 		return False
-	parent.add(obj)
 	if not Core.game.silent and not silent:
 		obj.printNearby(f"{obj.nounPhrase('a',cap=1)} appeared!")
 		Core.game.setPronouns(obj)

@@ -1,38 +1,63 @@
 
 test
-
-\tpt cabin kitchen
-eat the bread
-drink the red potion
-2
-take blue potion
-pour out the blue potion
-take green potion
 \tpt cabin basement
-take helm
-don helm
-put on helm
-take off helm
-put on helm
-doff helm
-take sword
-broken sword
-take rusty sword
-\tpt big stump
-take axe
-\tpt tunnel
-dump green potion on python
-equip rusty sword
-equip hatchet
-equip axe
-dump rusty sword
-drop hatchet
-\tpt cabin quarters
-take rusty key
-\tpt cabin privy
-take capsule
-open capsule
-unlock capsule
-my sword
-unlock capsule with rusty key
-open capsule
+
+\\ Eating food heals the player and consumes the food
+\spn Items.Food("test biscuit","A biscuit baked for controlled snacking.",1,1,"bread",10)
+take test biscuit
+\set self hp 1
+eat test biscuit
+\chk player.hp > 1
+\chk not any(obj and obj.name == "test biscuit" for obj in game.itemRegistry.values())
+
+\\ Drinking a potion replaces it with an empty bottle
+\spn Items.Potion("test tonic","A tonic bottled for a very small clinical trial.",3,3,"glass")
+take test tonic
+drink test tonic
+\chk not any(obj and obj.name == "test tonic" for obj in game.itemRegistry.values())
+\chk fo("bottle",queryType="player").parent is player
+
+\\ Weapons equip into a hand and return to Inventory when unequipped
+\spn Core.Weapon("practice sabre","A sabre with no ambitions beyond a fitting session.",4,20,"iron",4,2,5,1,"s")
+take practice sabre
+equip practice sabre
+\chk fo("practice sabre",queryType="player") in player.gear.values()
+unequip practice sabre
+\chk fo("practice sabre",queryType="player") not in player.gear.values()
+\chk fo("practice sabre",queryType="player").parent is player
+
+\\ Armor can be donned and doffed through ordinary commands
+\spn Core.Armor("fitting helm","A helm awaiting a final adjustment.",3,20,"iron",2,slots=["head"])
+take fitting helm
+don fitting helm
+\chk player["head"] is fo("fitting helm",queryType="player")
+doff fitting helm
+\chk fo("fitting helm",queryType="player") not in player.gear.values()
+
+\\ Pouring a potion onto a target empties it into a bottle
+\spn Items.Potion("test draught","A draught destined for anywhere but a mouth.",3,3,"glass")
+\spn Core.Item("pouring stone","A stone volunteering to be dampened.",5,-1,"stone")
+take test draught
+pour test draught on pouring stone
+\chk not any(obj and obj.name == "test draught" for obj in game.itemRegistry.values())
+\chk len(player.inInv("bottle")) == 2
+
+\\ A matching key unlocks, opens, closes, and relocks a lockbox
+\spn Items.Key("trial key","A key cut for exactly one trial lock.",1,10,"iron")
+\spn Items.Lockbox("trial lockbox","A lockbox with an unusually transparent testing schedule.",10,20,"wood",[],True,items=[],capacity=20,closed=True)
+\\ Key binding has no player command, so assign the spawned key ID directly.
+\exe fo("trial lockbox",queryType="room").keyids=[fo("trial key",queryType="room").id]
+take trial key
+open trial lockbox
+\chk fo("trial lockbox",queryType="room").locked
+unlock trial lockbox with trial key
+\chk not fo("trial lockbox",queryType="room").locked
+open trial lockbox
+\chk not fo("trial lockbox",queryType="room").closed
+close trial lockbox
+\chk fo("trial lockbox",queryType="room").closed
+lock trial lockbox with trial key
+\chk fo("trial lockbox",queryType="room").locked
+
+quit
+yes

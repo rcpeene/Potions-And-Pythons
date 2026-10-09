@@ -1,0 +1,226 @@
+test
+\\ Basic one-slot carrying, movement propagation, duplicate refusal, and cleanup
+\tpt cabin basement
+
+\spn green python
+\mbu green python tamed -1
+
+take green python
+\chk len(player.carrying()) == 1
+\chk player.carrying()[0].carrier is player
+\chk sum(player[s] is player.carrying()[0] for s in player.carrySlots) == 1
+carrying
+gear
+go up
+go down
+\chk player.carrying()[0].parent is player.parent
+carrying
+take green python
+drop green python
+\chk not player.carrying()
+\chk all(player[s] is Core.EmptyGear() for s in player.carrySlots)
+\chk fo("green python",queryType="room").platform is player.parent.floor
+carrying
+take green python
+drop green python
+
+
+\\ Declining preparation preserves equipped gear and existing cargo
+take broken sword
+equip broken sword
+\spn red python
+\mbu red python tamed -1
+take red python
+\spn goblin
+\mbu goblin tamed -1
+\grw goblin 4
+
+take goblin
+no
+\chk len(player.carrying()) == 1 and player.carrying()[0].name == "red python"
+\chk any(item.name == "broken sword" for item in player.gear.values())
+carrying
+gear
+
+\\ Accepting preparation unequips gear, drops old cargo, and fills both carry slots
+take goblin
+yes
+\chk len(player.carrying()) == 1 and player.carrying()[0].name == "goblin"
+\chk sum(player[s] is player.carrying()[0] for s in player.carrySlots) == 2
+\chk all(getattr(item,"name",None) != "broken sword" for item in player.gear.values())
+carrying
+gear
+
+\\ Full carry slots reject another creature; dropping clears slots for reuse
+take red python
+no
+\chk len(player.carrying()) == 1 and player.carrying()[0].name == "goblin"
+carrying
+drop goblin
+\chk not player.carrying()
+\chk all(player[s] is Core.EmptyGear() for s in player.carrySlots)
+equip broken sword
+take red python
+\chk len(player.carrying()) == 1
+carrying
+drop red python
+
+
+\\ Growth allocates an additional grip, then excess burden drops the cargo
+unequip broken sword
+take green python
+\grw green python 11
+\chk len(player.carrying()) == 1
+\chk sum(player[s] is player.carrying()[0] for s in player.carrySlots) == 2
+\chk player.hasStatus("hindered",Core.Data.HINDERED_CARGO)
+gear
+carrying
+status
+
+\grw green python 2
+\chk not player.carrying()
+\chk all(player[s] is Core.EmptyGear() for s in player.carrySlots)
+carrying
+gear
+status
+take green python
+\chk not player.carrying()
+\shk green python 2
+take green python
+\chk len(player.carrying()) == 1
+carrying
+status
+drop green python
+\chk not player.hasStatus("hindered",Core.Data.HINDERED_CARGO)
+status
+
+
+\\ Authored carrying survives loading, description, and a dynamic tether check
+\tpt treeline
+\chk any(creature.carrying() for creature in room.creatures)
+here
+wait
+\chk any(creature.carrying() for creature in room.creatures)
+here
+
+
+\\ Multiple cargo remain unique and follow carry-slot order
+\spn green python
+\mbu green python tamed -1
+\spn red python
+\mbu red python tamed -1
+take green python
+take red python
+\chk player.carrying() == [player[s] for s in player.carrySlots]
+\chk len(player.carrying()) == len(set(player.carrying())) == 2
+drop green python
+drop red python
+
+\\ Self-carrying is rejected without changing slots
+\exe game.selfHeftSucceeded=player.Heft(player,silent=True)
+\chk not game.selfHeftSucceeded
+\chk all(player[s] is Core.EmptyGear() for s in player.carrySlots)
+
+\\ Non-forced carrying preserves both equipped gear and existing cargo
+equip broken sword
+take green python
+\spn goblin
+\grw goblin 4
+\exe game.unforcedHeftSucceeded=player.Heft(fo("goblin",queryType="room"),forceUnequip=False,silent=True)
+\chk not game.unforcedHeftSucceeded
+\chk any(item.name == "broken sword" for item in player.gear.values())
+\chk len(player.carrying()) == 1 and player.carrying()[0].name == "green python"
+\chk fo("goblin",queryType="room").carrier is None
+drop green python
+unequip broken sword
+
+\\ Replanning when unequipping an item changes strength and required grips
+\\ \set self str 10
+\\ \spn Core.Item("strength charm","",1,-1,"cloth")
+\\ \spn Core.Item("filler","",1,-1,"cloth")
+\\ \spn Core.Creature("replan cargo","",20,[1]*10)
+\\ take strength charm
+\\ take filler
+\\ \exe fo("strength charm",queryType="player").unequip=__import__("types").MethodType(lambda item:setattr(Core.player,"str",1),fo("strength charm",queryType="player"))
+\\ equip strength charm
+\\ equip filler
+\\ \chk not player.Heft(fo("replan cargo",queryType="room"),forceUnequip=True,silent=True)
+\\ \chk fo("replan cargo",queryType="room").carrier is None
+\\ \chk all(player[s] is not fo("replan cargo",queryType="room") for s in player.carrySlots)
+\\ unequip filler
+\\ \set self str 4
+
+\\ Hostile cargo resistance and evasion leave every carry slot untouched
+\set goblin str 20
+\set goblin skl 20
+\set goblin stm 20
+take goblin
+\chk fo("goblin",queryType="room").carrier is None
+\set goblin str 1
+\set goblin skl 1
+\set goblin stm 1
+\set goblin spd 20
+\set goblin lck 20
+take goblin
+\chk fo("goblin",queryType="room").carrier is None
+\chk all(player[s] is Core.EmptyGear() for s in player.carrySlots)
+\mbu goblin tamed -1
+\shk goblin 4
+
+\\ Carrying removes riding/platform tethers and inherits the carrier's cover
+\spn horse
+\mbu horse tamed -1
+\mbu green python tamed -1
+take green python
+put green python on horse
+\spn Core.Item("test cover","",100,-1,"wood")
+hide behind test cover
+take green python
+\chk player.carrying()[0].riding is None and player.carrying()[0].platform is None
+\chk player.carrying()[0].cover is player.cover
+
+\\ Released cargo occupies a shared platform when it fits
+drop green python
+take green python
+mount test cover
+drop green python
+\chk fo("green python",queryType="room").platform is player.platform
+\chk fo("green python",queryType="room").carrier is None
+
+\\ Released cargo falls to the floor when the shared platform cannot hold it
+dismount
+take green python
+mount test cover
+\shk test cover 100
+drop green python
+\chk fo("green python",queryType="room").platform is player.parent.floor
+dismount
+
+\\ Inventory and cargo hinder sources remain independent
+\mbu goblin tamed -1
+\grw goblin 4
+take goblin
+\spn Core.Item("heavy test item","",120,-1,"iron")
+take heavy test item
+\chk player.hasStatus("hindered",Core.Data.HINDERED_INVENTORY)
+\chk player.hasStatus("hindered",Core.Data.HINDERED_CARGO)
+drop heavy test item
+\chk not player.hasStatus("hindered",Core.Data.HINDERED_INVENTORY)
+\chk player.hasStatus("hindered",Core.Data.HINDERED_CARGO)
+drop goblin
+\chk not player.hasStatus("hindered",Core.Data.HINDERED_CARGO)
+
+\\ Creature replacement has no gameplay command, so invoke replacement directly
+\mbu green python tamed -1
+\grw green python 11
+take green python
+\exe game.oldCargo=player.carrying()[0]
+\exe game.newCargo=Core.Creature("new cargo","",1,[1]*10)
+\exe game.newCargo.addStatus("tamed",-1,silent=True)
+\exe game.oldCargo.replace(game.newCargo)
+\chk game.newCargo.carrier is player
+\chk all(player[s] is game.newCargo for s in player.carrySlots)
+\chk all(player.convertToJSON()["gear"][s] == game.newCargo.id for s in player.carrySlots)
+
+quit
+yes

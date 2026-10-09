@@ -894,7 +894,7 @@
 				"__class__": "Person",
 				"name": "Dale",
 				"descname": "plain man",
-				"pronoun": "he",
+				"pronoun": "him",
 				"weight": 15,
 				"traits": [1,1,1,1,1,1,1,1,1,1],
 				"hp": 10,
@@ -916,7 +916,7 @@
 				"id": 3,
 				"descname": "adorned man",
 				"aliases": ["earl","earl of chesterbrook"],
-				"pronoun": "he",
+				"pronoun": "him",
 				"weight": 15,
 				"traits": [1,1,1,1,1,1,1,1,1,1],
 				"hp": 10,
@@ -951,7 +951,7 @@
 				"gear": {
 					"head": 4,
 					"torso": 5,
-					"left": "carrying",
+					"left": 2,
 					"right": null,
 					"legs": null
 				},

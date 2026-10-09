@@ -1,0 +1,240 @@
+test
+\TPT cabin basement
+
+\\ Failed ordinary movement leaves the object and destination unchanged
+\spn Items.Box("packed trunk","A trunk packed according to an aggressively literal inventory.",10,-1,"wood",[],capacity=5)
+\spn Core.Item("resident brick","A brick with permanent residency paperwork.",5,-1,"stone")
+take resident brick
+put resident brick in packed trunk
+\spn Core.Item("hopeful parcel","A parcel optimistic about limited storage.",4,-1,"cloth")
+\exe game.ordinaryMoveSucceeded=fo("hopeful parcel",queryType="room").changeLocation(fo("packed trunk",queryType="room"))
+\chk not game.ordinaryMoveSucceeded
+\chk fo("hopeful parcel",queryType="room").parent is player.parent
+\chk fo("packed trunk",queryType="room").items == [fo("resident brick",queryType="room",roomD=3)]
+
+\\ Invalid direct add invokes displacement but preserves an outward destination
+\exe game.invalidAddSucceeded=fo("packed trunk",queryType="room").add(fo("hopeful parcel",queryType="room"))
+\chk not game.invalidAddSucceeded
+\chk fo("hopeful parcel",queryType="room").parent is player.parent
+\chk fo("hopeful parcel",queryType="room") in player.parent.items
+\chk fo("hopeful parcel",queryType="room").id in game.itemRegistry
+
+\\ A full Room rejects an atomic object without mutating its source
+\exe game.broomCloset=Core.Room("Broom Closet","Test","A closet already full of conceptual brooms.",{},[],[],[],capacity=3,floor="wood")
+\exe game.roomEntrySucceeded=game.broomCloset.enter(fo("hopeful parcel",queryType="room"))
+\chk not game.roomEntrySucceeded
+\chk fo("hopeful parcel",queryType="room").parent is player.parent
+\chk not game.broomCloset.items
+
+\\ Full containers enforce the same atomic admission rule
+\spn Items.Box("thimble chest","A chest whose carpenter specialized in thimbles.",5,-1,"wood",[],capacity=3)
+\exe game.containerEntrySucceeded=fo("thimble chest",queryType="room").enter(fo("hopeful parcel",queryType="room"))
+\chk not game.containerEntrySucceeded
+\chk fo("hopeful parcel",queryType="room").parent is player.parent
+\chk not fo("thimble chest",queryType="room").items
+
+\\ Aggregate creature groups are rejected even when the leader alone fits
+\spn Core.Creature("processional pony","A pony followed by more procession than expected.",20,[10]*10,status=[["tamed",-1]])
+\spn Core.Creature("ceremonial rider","A rider equipped with twenty units of ceremony.",20,[1]*10,status=[["tamed",-1]])
+take ceremonial rider
+put ceremonial rider on processional pony
+\exe game.tinyStable=Core.Room("Tiny Stable","Test","A stable priced by the square inch.",{},[],[],[],capacity=25,floor="wood")
+\chk game.tinyStable.canAdd(fo("processional pony",queryType="room"))
+\exe game.groupMoveSucceeded=fo("processional pony",queryType="room").changeLocation(game.tinyStable)
+\chk not game.groupMoveSucceeded
+\chk fo("processional pony",queryType="room").parent is player.parent
+\chk fo("ceremonial rider",queryType="room").parent is player.parent
+\chk fo("ceremonial rider",queryType="room").riding is fo("processional pony",queryType="room")
+
+\\ Displacement searches outward through nested containers
+\spn Items.Box("outer hamper","A hamper that has already given all available room to another box.",15,-1,"wicker",[],capacity=15)
+\spn Items.Box("inner hamper","A hamper nesting where no hamper should.",15,-1,"wicker",[],capacity=5)
+\spn Core.Item("expanding accordion","An accordion taking a deep and spatially inconvenient breath.",3,-1,"wood")
+take inner hamper
+put inner hamper in outer hamper
+\exe game.accordion=fo("expanding accordion",queryType="room")
+\exe game.innerHamper=fo("inner hamper",queryType="room",roomD=3)
+\exe player.parent.remove(game.accordion)
+\exe game.innerHamper.add(game.accordion)
+\grw expanding accordion 4
+\exe game.accordion.displace(game.innerHamper.parent)
+\chk game.accordion.parent is player.parent
+\chk game.accordion.platform is player.parent.floor
+\chk game.innerHamper.parent is fo("outer hamper",queryType="room")
+
+\\ Displacement destroys an object only when no destination exists
+\spn Core.Item("nowhere vase","A vase with nowhere left to go.",4,-1,"ceramic")
+\exe game.nowhereVase=fo("nowhere vase",queryType="room")
+\exe game.nowhereId=game.nowhereVase.id
+\exe game.nowhereVase.displace(None)
+\chk game.nowhereVase.parent is None
+\chk game.nowhereId not in game.itemRegistry
+
+\\ Replacing an occupied platform preserves valid occupants and registry identity
+\spn Core.Item("retiring plinth","A plinth submitting its retirement paperwork.",20,-1,"stone")
+\spn Core.Item("tenured turnip","A turnip whose position is contractually protected.",3,-1,"vegetable")
+take tenured turnip
+put tenured turnip on retiring plinth
+\exe game.oldPlinth=fo("retiring plinth",queryType="room")
+\exe game.turnip=fo("tenured turnip",queryType="room")
+\exe game.oldPlinthId=game.oldPlinth.id
+\exe game.newPlinth=Core.Item("successor plinth","A plinth promoted through orderly succession.",20,-1,"stone")
+\exe game.oldPlinth.replace(game.newPlinth)
+\chk game.turnip.platform is game.newPlinth
+\chk game.newPlinth.parent is player.parent
+\chk game.newPlinth.id == game.oldPlinthId
+\chk game.itemRegistry[game.oldPlinthId] is game.newPlinth
+\chk game.oldPlinth not in game.itemRegistry.values()
+
+\\ Replacing a mount preserves a valid rider
+\spn Core.Creature("veteran mount","A mount approaching a dignified retirement.",80,[10]*10,status=[["tamed",-1]])
+\spn Core.Creature("mounted herald","A herald determined to retain the same seat.",8,[1]*10,status=[["tamed",-1]])
+take mounted herald
+put mounted herald on veteran mount
+\exe game.oldMount=fo("veteran mount",queryType="room")
+\exe game.herald=fo("mounted herald",queryType="room")
+\exe game.newMount=Core.Creature("relief mount","A fresh mount reporting for the next shift.",80,[10]*10,status=[["tamed",-1]])
+\exe game.oldMount.replace(game.newMount)
+\chk game.herald.riding is game.newMount
+\chk game.newMount.parent is player.parent
+
+\\ An incompatible replacement mount drops the former rider without dangling tethers
+\spn Core.Creature("broad palfrey","A broad palfrey with generous seating.",80,[10]*10,status=[["tamed",-1]])
+\spn Core.Creature("substantial envoy","An envoy requiring substantial diplomatic seating.",30,[1]*10,status=[["tamed",-1]])
+take substantial envoy
+put substantial envoy on broad palfrey
+\exe game.broadPalfrey=fo("broad palfrey",queryType="room")
+\exe game.envoy=fo("substantial envoy",queryType="room")
+\exe game.tinyReplacement=Core.Creature("replacement mouse","A mouse issued as a replacement mount in error.",2,[1]*10,status=[["tamed",-1]])
+\exe game.broadPalfrey.replace(game.tinyReplacement)
+\chk game.envoy.riding is None
+\chk game.envoy.platform is player.parent.floor
+\chk game.tinyReplacement.parent is player.parent
+
+\\ Replacing carried cargo with an Item preserves its exact occupied slots
+\spn green python
+\mbu green python tamed -1
+\grw green python 11
+take green python
+\exe game.oldCargo=player.carrying()[0]
+\exe game.cargoSlots=tuple(player.carrySlots)
+\exe game.cargoParcel=Core.Item("python-shaped parcel","A parcel preserving the exact ergonomic demands of a python.",3,-1,"cloth",minGripsNeeded=2)
+\exe game.oldCargo.replace(game.cargoParcel)
+\chk game.cargoParcel.parent is player
+\chk all(player[slot] is game.cargoParcel for slot in game.cargoSlots)
+\chk game.oldCargo.carrier is None
+\chk game.oldCargo not in game.itemRegistry.values()
+
+\\ Replacing an equipped Item with a Creature converts the occupied slot to carrying
+\spn Core.Item("enchanted oven mitt","An oven mitt destined for an improbable metamorphosis.",1,-1,"cloth")
+take enchanted oven mitt
+equip enchanted oven mitt
+\exe game.oldMitt=fo("enchanted oven mitt",queryType="player")
+\exe game.mittSlot=player.inGear("enchanted oven mitt")[0]
+\exe game.mittSprite=Core.Creature("oven sprite","A sprite emerging from the mitt with excellent heat resistance.",1,[1]*10,status=[["tamed",-1]])
+\exe game.oldMitt.replace(game.mittSprite)
+\chk game.mittSprite.carrier is player
+\chk player[game.mittSlot] is game.mittSprite
+\chk game.mittSprite.parent is player.parent
+\chk game.oldMitt not in game.itemRegistry.values()
+
+\\ Failed replacement admission displaces the replacement outward without dangling refs
+\spn Items.Box("exact box","A box exactly large enough for what it already contains.",10,-1,"wood",[],capacity=1)
+\spn Core.Item("small original","An original occupying every available inch.",1,-1,"cloth")
+take small original
+put small original in exact box
+\exe game.exactBox=fo("exact box",queryType="room")
+\exe game.smallOriginal=fo("small original",queryType="room",roomD=3)
+\exe game.originalId=game.smallOriginal.id
+\exe game.largeReplacement=Core.Item("oversized successor","A successor arriving with expansion plans.",10,-1,"wood")
+\exe game.smallOriginal.replace(game.largeReplacement)
+\chk game.largeReplacement.parent is player.parent
+\chk game.largeReplacement.id == game.originalId
+\chk game.itemRegistry[game.originalId] is game.largeReplacement
+\chk game.smallOriginal not in game.itemRegistry.values()
+\chk game.smallOriginal.parent is None
+
+\\ Destroying an ordinary Item removes its parent and registry references
+\spn Core.Item("departing vase","A vase making a clean and orderly departure.",4,-1,"ceramic")
+\exe game.departingVase=fo("departing vase",queryType="room")
+\exe game.departingVaseId=game.departingVase.id
+\exe game.departingVase.destroy()
+\chk game.departingVase.parent is None
+\chk game.departingVaseId not in game.itemRegistry
+\chk game.departingVase not in player.parent.items
+
+\\ Destroying equipped gear clears Inventory, gear slots, and derived weapon state
+\spn Core.Weapon("vanishing blade","A blade practicing an especially complete disappearance.",4,20,"iron",3,2,1,1,"s")
+take vanishing blade
+equip vanishing blade
+\exe game.vanishingBlade=fo("vanishing blade",queryType="player")
+\exe game.vanishingBladeId=game.vanishingBlade.id
+\exe game.vanishingBlade.destroy()
+\chk game.vanishingBlade.parent is None
+\chk game.vanishingBlade not in player
+\chk game.vanishingBlade not in player.gear.values()
+\chk game.vanishingBladeId not in game.itemRegistry
+
+\\ Destroying an occupied platform drops its occupants onto the room floor
+\spn Core.Item("doomed dais","A dais with a demolition appointment.",20,-1,"stone")
+\spn Core.Item("surviving cup","A cup determined to outlive the furniture.",2,-1,"ceramic")
+take surviving cup
+put surviving cup on doomed dais
+\exe game.doomedDais=fo("doomed dais",queryType="room")
+\exe game.doomedDaisId=game.doomedDais.id
+\exe game.survivingCup=fo("surviving cup",queryType="room")
+\exe game.doomedDais.destroy()
+\chk game.survivingCup.parent is player.parent
+\chk game.survivingCup.platform is player.parent.floor
+\chk game.doomedDaisId not in game.itemRegistry
+
+\\ Destroying carried cargo clears its carrier and every occupied carry slot
+\spn Core.Creature("departing courier","A courier whose final delivery is its own cleanup.",4,[1]*10,status=[["tamed",-1]])
+take departing courier
+\exe game.departingCourier=fo("departing courier",queryType="room")
+\exe game.departingCourierId=game.departingCourier.id
+\exe game.departingCourier.destroy()
+\chk game.departingCourier.parent is None
+\chk game.departingCourier.carrier is None
+\chk all(player[slot] is not game.departingCourier for slot in player.carrySlots)
+\chk game.departingCourierId not in game.itemRegistry
+
+\\ Destroying a mount releases its rider onto the room floor
+\spn Core.Creature("retiring destrier","A mount retiring by unusually final means.",80,[10]*10,status=[["tamed",-1]])
+\spn Core.Creature("surviving rider","A rider with excellent continuity planning.",6,[1]*10,status=[["tamed",-1]])
+take surviving rider
+put surviving rider on retiring destrier
+\exe game.retiringDestrier=fo("retiring destrier",queryType="room")
+\exe game.retiringDestrierId=game.retiringDestrier.id
+\exe game.survivingRider=fo("surviving rider",queryType="room")
+\exe game.retiringDestrier.destroy()
+\chk game.survivingRider.riding is None
+\chk game.survivingRider.platform is player.parent.floor
+\chk game.retiringDestrierId not in game.itemRegistry
+
+\\ Destroying cover clears dependent cover and hidden state
+\spn Core.Item("condemned screen","A screen that has concealed its last secret.",100,-1,"wood")
+hide behind condemned screen
+\chk player.cover is fo("condemned screen",queryType="room")
+\exe game.condemnedScreen=fo("condemned screen",queryType="room")
+\exe game.condemnedScreenId=game.condemnedScreen.id
+\exe game.condemnedScreen.destroy()
+\chk player.cover is None
+\chk not player.hasStatus("hidden",Core.Data.HIDDEN_COVER)
+\chk game.condemnedScreenId not in game.itemRegistry
+
+\\ Destroying a populated container displaces its contents outward
+\spn Items.Box("condemned coffer","A coffer whose contents deserve another chance.",10,-1,"wood",[],capacity=20)
+\spn Core.Item("rescued keepsake","A keepsake surviving the loss of its container.",2,-1,"cloth")
+take rescued keepsake
+put rescued keepsake in condemned coffer
+\exe game.condemnedCoffer=fo("condemned coffer",queryType="room")
+\exe game.condemnedCofferId=game.condemnedCoffer.id
+\exe game.rescuedKeepsake=fo("rescued keepsake",queryType="room",roomD=3)
+\exe game.condemnedCoffer.destroy()
+\chk game.rescuedKeepsake.parent is player.parent
+\chk game.rescuedKeepsake.platform is player.parent.floor
+\chk game.condemnedCofferId not in game.itemRegistry
+
+quit
+yes

@@ -1,20 +1,24 @@
 
 test
+\\ Deliberately malformed Execute calls verify its error handling.
 \exe
 \exe Core.player.addCondition("flying",3)
 \exe this should not execute
 
-\spn Items.Bottle("bottle","an empty glass bottle",3,3,[])
+\\ Spawn valid and invalid objects
+\spn Items.Bottle("bottle","an empty glass bottle",3,3,"glass",[])
 take bottle
 break bottle
 \spn blah
 
+\\ Add and remove status conditions, including malformed input
 \xpl cool
 \mbu cool
 \xpl cool
 \mbu cool NaN
 \mbu cool 3
 
+\\ Inspect valid and invalid objects and attributes
 \get
 \get blah
 \get p
@@ -23,17 +27,20 @@ break bottle
 \get room items
 \get world
 
+\\ Grant valid and invalid experience values
 \lrn
 \lrn blah
 \lrn 1
 \lrn 100
 
+\\ Exercise stat commands and an unknown command
 STR
 STR
 STR
 
 blah
 
+\\ Change game mode and money with valid and invalid values
 \mod
 \mod blah
 \mod -1
@@ -44,6 +51,7 @@ blah
 \pot 1
 \pot -100
 
+\\ Set attributes with incomplete, invalid, and valid input
 \set
 \set p
 \set p blah
@@ -54,6 +62,7 @@ blah
 \set room name testroom
 here
 
+\\ Teleport, inspect test output, and warp time
 \tpt
 \tpt blah
 \tpt big tree
@@ -69,12 +78,12 @@ time
 time
 \wrp -20
 
+\\ Destroy invalid targets, world objects, and finally the player
 \zap
 \zap here
-\zap player
 \zap sword
 \tpt tunnel
 \zap python
-
-quit
+\zap player
+no
 yes

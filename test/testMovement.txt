@@ -1,0 +1,166 @@
+test
+\tpt tunnel
+
+\\ An unanchored player moves through direct room links
+\chk player.parent is world["tunnel"]
+go north
+\chk player.parent is world["glen"]
+\chk game.currentroom is world["glen"]
+go south
+\chk player.parent is world["tunnel"]
+
+\\ A mounted player and carried creature move as one tethered group
+\mbu green python tamed -1
+take green python
+\spn Core.Creature("road pony","A pony with excellent route knowledge and no sense of direction.",80,[10]*10,status=[["tamed",-1]])
+ride road pony
+go north
+\chk player.parent is world["glen"]
+\chk player.riding is fo("road pony",queryType="room")
+\chk fo("road pony",queryType="room").parent is player.parent
+\chk player.carrying()[0].name == "green python"
+\chk player.carrying()[0].parent is player.parent
+\chk player.carrying()[0].carrier is player
+
+\\ Carried creatures cannot independently leave their carrier
+\exe game.carriedMoveSucceeded=player.carrying()[0].changeLocation(world["cave"])
+\chk not game.carriedMoveSucceeded
+\chk player.carrying()[0].parent is player.parent
+
+go south
+\chk player.parent is world["tunnel"]
+\chk player.riding.parent is player.parent
+\chk player.carrying()[0].parent is player.parent
+
+\\ Aggregate container capacity blocks the whole group atomically
+\spn Items.Box("snug wardrobe","A wardrobe with ambitions exceeding its interior.",20,-1,"wood",[],capacity=90,aliases=["wardrobe"])
+\chk fo("snug wardrobe",queryType="room").canAdd(player.riding)
+enter snug wardrobe
+\chk player.parent is world["tunnel"]
+\chk player.riding.parent is world["tunnel"]
+\chk player.carrying()[0].parent is world["tunnel"]
+\chk fo("snug wardrobe",queryType="room").items == []
+
+\\ Increasing capacity allows mounted container entry and exit with tethers preserved
+\set wardrobe capacity 200
+enter snug wardrobe
+\chk player.parent is fo("snug wardrobe",queryType="room")
+\chk player.riding.parent is player.parent
+\chk player.carrying()[0].parent is player.parent
+\chk player.carrying()[0].carrier is player
+exit
+\chk player.parent is world["tunnel"]
+\chk player.riding.parent is player.parent
+\chk player.carrying()[0].parent is player.parent
+
+\\ Portal capacity checks the complete mounted group, then permits it when enlarged
+\spn Core.Portal("miserly arch","An arch that measures every traveler twice.",100,-1,"stone",{"through":Core.world["cave"]},capacity=90,aliases=["arch"])
+\chk fo("miserly arch",queryType="room").canPass(player.riding) == False
+go through miserly arch
+\chk player.parent is world["tunnel"]
+\set arch capacity 200
+go through miserly arch
+\chk player.parent is world["cave"]
+\chk player.riding.parent is player.parent
+\chk player.carrying()[0].parent is player.parent
+\chk game.currentroom is world["cave"]
+
+dismount
+drop green python
+
+\\ Movement removes cover that no longer shares the destination
+\spn Core.Item("portable battlement","A battlement whose portability is mostly theoretical.",100,-1,"stone")
+hide behind portable battlement
+go north
+\chk player.parent is world["tunnel"]
+\chk player.cover is None
+
+\\ Riding delegates cliff traversal to a surefooted mount
+\tpt cliffside
+\spn Core.Creature("surefooted ibex","An ibex that regards cliffs as mildly sloped suggestions.",60,[10]*10,status=[["tamed",-1],["clingfast",-1]])
+ride surefooted ibex
+climb up cliff
+\chk player.parent is world["clifftop"]
+\chk player.riding is fo("surefooted ibex",queryType="room")
+\chk player.riding.parent is player.parent
+climb down cliff
+\chk player.parent is world["cliffside"]
+\chk player.riding.parent is player.parent
+dismount
+
+\\ Carrying cargo blocks ordinary climbing without moving either object
+\spn green python
+\mbu green python tamed -1
+take green python
+climb up cliff
+\chk player.parent is world["cliffside"]
+\chk player.carrying()[0].parent is player.parent
+drop green python
+
+\\ Flying allows unsupported movement and losing flight returns the player to the floor
+\tpt tunnel
+fly north
+\chk player.parent is world["tunnel"]
+\mbu self flying -1
+fly north
+\chk player.parent is world["glen"]
+\chk player.platform is None
+\xpl flying
+wait
+\chk player.platform is player.parent.floor
+
+\\ A flying mount has no platform and moves its rider normally
+\tpt tunnel
+\spn Core.Creature("cloud pony","A pony held aloft by confidence and a modest enchantment.",60,[10]*10,status=[["tamed",-1],["flying",-1]])
+\chk fo("cloud pony",queryType="room").platform is None
+ride cloud pony
+fly north
+\chk player.parent is world["tunnel"]
+\chk player.riding is fo("cloud pony",queryType="room")
+go north
+\chk player.parent is world["glen"]
+\chk player.riding.parent is player.parent
+\chk player.riding.platform is None
+go south
+\chk player.parent is world["tunnel"]
+dismount
+
+\\ Jumping off a platform returns the player to the floor
+\spn Core.Item("springboard of questionable judgment","A springboard eager to disclaim responsibility.",40,-1,"wood")
+mount springboard of questionable judgment
+stand
+jump down
+\chk player.platform is player.parent.floor
+
+\\ Swimming while riding is refused without dismounting or relocating the group
+\tpt cliffside
+ride surefooted ibex
+swim in stream
+\chk player.riding is fo("surefooted ibex",queryType="room")
+\chk player.parent is world["cliffside"]
+\chk player.riding.parent is player.parent
+dismount
+
+\\ An unrelated NPC can traverse a portal without changing the player location
+\spn Core.Creature("errand knight","A knight dispatched on a very short errand.",20,[10]*10,status=[["tamed",-1]])
+\spn Core.Portal("errand hatch","A hatch marked THIS WAY TO THE ERRAND.",50,-1,"wood",{"through":Core.world["tunnel"]},capacity=50)
+\exe game.errandKnight=fo("errand knight",queryType="room")
+\exe game.errandTraversalSucceeded=fo("errand hatch",queryType="room").traverse(game.errandKnight,dir="through")
+\chk game.errandTraversalSucceeded
+\chk game.errandKnight.parent is world["tunnel"]
+\chk player.parent is world["cliffside"]
+
+\\ Malformed anchor cycles terminate safely when inspected
+\spn Core.Creature("cycle mare","A mare going nowhere in particular, repeatedly.",20,[1]*10,status=[["tamed",-1]])
+\spn Core.Creature("cycle foal","A foal following its mother with mathematical precision.",10,[1]*10,status=[["tamed",-1]])
+take cycle foal
+put cycle foal on cycle mare
+\exe game.cycleMare=fo("cycle mare",queryType="room")
+\exe game.cycleFoal=fo("cycle foal",queryType="room")
+\exe game.cycleMare.removePlatform()
+\exe game.cycleMare.riding=game.cycleFoal
+\chk game.cycleMare.anchors() == [game.cycleFoal,game.cycleMare]
+\chk game.cycleFoal.anchors() == [game.cycleMare,game.cycleFoal]
+
+quit
+yes

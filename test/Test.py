@@ -11,6 +11,26 @@ import PoPy
 import Core
 
 
+def runLoggedTest(testFunc):
+	originalStdin = sys.stdin
+	originalStdout = sys.stdout
+	originalStderr = sys.stderr
+	logger = Core.TeeLogger(f"test/logs/{testFunc.__name__}.log")
+	sys.stdin = logger
+	sys.stdout = logger
+	sys.stderr = logger
+	try:
+		testFunc()
+	finally:
+		logger.forceDrainBuffer()
+		if logger.stdin is not logger.originalStdin:
+			logger.stdin.close()
+		logger.log.close()
+		sys.stdin = originalStdin
+		sys.stdout = originalStdout
+		sys.stderr = originalStderr
+
+
 # test the main menu
 def testMenu():
 	sys.stdin.setInputFile("test/testMenu.txt")
@@ -49,9 +69,27 @@ def testInventory():
 	PoPy.main(testing=True)
 
 
+# tests carrying creatures, carry slots, burden, and dynamic tether correction
+def testCarrying():
+	sys.stdin.setInputFile("test/testCarrying.txt")
+	PoPy.main(testing=True)
+
+
+# tests ordinary platform occupancy, movement, displacement, and replacement
+def testPlatforms():
+	sys.stdin.setInputFile("test/testPlatforms.txt")
+	PoPy.main(testing=True)
+
+
+# tests mounting, multiple riders, crowding contests, burden, and riding loops
+def testRiding():
+	sys.stdin.setInputFile("test/testRiding.txt")
+	PoPy.main(testing=True)
+
+
 # tests use, eat, equip, lock, pour and related actions
 def testBasicItems():
-	sys.stdin.setInputFile("test/testInventory.txt")
+	sys.stdin.setInputFile("test/testBasicItems.txt")
 	PoPy.main(testing=True)
 
 
@@ -61,9 +99,40 @@ def testCombat():
 	PoPy.main(testing=True)
 
 
-# tests crawl, hide, stealth, mount, laying, flying, jump, climb, swim
-def testMobility():
-	pass
+# tests tethered group movement, traversal, climbing, flying, jumping, and swimming
+def testMovement():
+	sys.stdin.setInputFile("test/testMovement.txt")
+	PoPy.main(testing=True)
+
+
+# tests admission, displacement recovery, replacement tethers, and registry identity
+def testSpatialIntegrity():
+	sys.stdin.setInputFile("test/testSpatialIntegrity.txt")
+	PoPy.main(testing=True)
+
+
+# tests throwing, lobbing, collision, ricochet, catching, and container admission
+def testProjectiles():
+	sys.stdin.setInputFile("test/testProjectiles.txt")
+	PoPy.main(testing=True)
+
+
+# tests effect spawning, parent admission, cleanup, IDs, and timed room spawning
+def testEffects():
+	sys.stdin.setInputFile("test/testEffects.txt")
+	PoPy.main(testing=True)
+
+
+# tests a minimal player conversation and persistent social state
+def testDialogue():
+	sys.stdin.setInputFile("test/testDialogue.txt")
+	PoPy.main(testing=True)
+
+
+# tests status duration, survival clocks, and celestial event transitions
+def testTime():
+	sys.stdin.setInputFile("test/testTime.txt")
+	PoPy.main(testing=True)
 
 
 # tests push, pull, catch, throw, tie, fish, press, ignite
@@ -89,16 +158,10 @@ def testSpells():
 
 if __name__ == "__main__":
 	os.chdir("..")
-	logger = Core.TeeLogger("test/test.log")
-	sys.stdin = logger
-	sys.stdout = logger
-	sys.stderr = logger
-	testMenu()
-	testInfo()
-	testCheatcodes()
-	testNavigation()
-	testInventory()
-	testBasicItems()
-	testCombat()
-	testSpells()
+	tests = (testMenu,testInfo,testCheatcodes,testNavigation,testInventory,
+		testCarrying,testPlatforms,testRiding,testMovement,testSpatialIntegrity,
+		testProjectiles,testEffects,testDialogue,testTime,testBasicItems,testCombat,
+	)
+	for testFunc in tests:
+		runLoggedTest(testFunc)
 	print("\nAll tests passed without error\n")

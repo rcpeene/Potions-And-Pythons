@@ -463,7 +463,7 @@ def testGame():
 	Core.world = readJSON("gamedata/World.json",object_hook=worldDecoder)
 
 	dlogForest = readDialogue("gamedata/Dialogue.json")
-	Core.game = Core.Game(0,Core.world["cave"],Core.world["tunnel"],0,set(),dlogForest,
+	Core.game = Core.Game(1,Core.world["cave"],Core.world["tunnel"],0,set(),dlogForest,
 	Creatures.factory,Items.factory)
 
 	Core.buildWorld()
@@ -474,7 +474,6 @@ def testGame():
 	# describe the current room
 	Core.game.startUp()
 
-	# Core.game.mode = 1
 	Core.game.silent = False
 
 
