@@ -19,5 +19,29 @@ exit to the big tree
 go stairwell
 up
 
+\\ Runtime portal connections are reciprocal and reject invalid mutations atomically
+\TPT cabin basement
+\spn Core.Portal("first test portal","",1,10,"magic",{})
+\spn Core.Portal("second test portal","",1,10,"magic",{})
+\exe game.firstTestPortal=fo("first test portal",queryType="room")
+\exe game.secondTestPortal=fo("second test portal",queryType="room")
+\chk game.firstTestPortal.connect("east",game.secondTestPortal,"west")
+\chk game.firstTestPortal.links["east"] is game.secondTestPortal
+\chk game.secondTestPortal.links["west"] is game.firstTestPortal
+\exe game.firstTestPortal.links["north"]=player.parent
+\chk raises(ValueError,lambda: game.firstTestPortal.connect("north",game.secondTestPortal,"south"))
+\chk "south" not in game.secondTestPortal.links
+\exe game.unregisteredPortal=Core.Portal("unregistered","",1,10,"magic",{})
+\chk raises(ValueError,lambda: game.firstTestPortal.connect("up",game.unregisteredPortal,"down"))
+\chk "up" not in game.firstTestPortal.links
+
+\\ Runtime portal connection rolls back both links after validation fails
+\spn Core.Portal("rejecting test portal","",1,10,"magic",{})
+\exe game.rejectingTestPortal=fo("rejecting test portal",queryType="room")
+\exe game.rejectingTestPortal.validate=lambda: (_ for _ in ()).throw(ValueError("invalid connection"))
+\chk raises(ValueError,lambda: game.firstTestPortal.connect("up",game.rejectingTestPortal,"down"))
+\chk "up" not in game.firstTestPortal.links
+\chk "down" not in game.rejectingTestPortal.links
+
 quit
 yes

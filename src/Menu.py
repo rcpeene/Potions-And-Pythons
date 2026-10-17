@@ -38,6 +38,10 @@ def writeGame(filename,Game,World):
 
 visitedobjects = set()
 class worldEncoder(json.JSONEncoder):
+	def __init__(self,*args,**kwargs):
+		super().__init__(*args,**kwargs)
+		self.portalLinkIds = {}
+
 	def default(self,objToWrite):
 		# for k,v in getattr(objToWrite,"__dict__",{}).items():
 		# 	print(f"  {k}: {v}")
@@ -47,8 +51,13 @@ class worldEncoder(json.JSONEncoder):
 		JSONprimitives = {dict,list,str,int,float,bool,None}
 		if type(objToWrite) is set:
 			return {"__class__":"set","setdata":list(objToWrite)}
+		elif type(objToWrite) is Core.Player:
+			return {"__class__": "Player"}
 		elif Core.hasMethod(objToWrite,"convertToJSON"):
-			jsonDict = objToWrite.convertToJSON()
+			if isinstance(objToWrite,Core.Portal):
+				jsonDict = objToWrite.convertToJSON(self.portalLinkIds)
+			else:
+				jsonDict = objToWrite.convertToJSON()
 			jsonDict = {"__class__": objToWrite.__class__.__name__, **jsonDict}
 			if "parent" in jsonDict:
 				del jsonDict["parent"]
@@ -56,8 +65,6 @@ class worldEncoder(json.JSONEncoder):
 				if isinstance(v, (Core.Creature, Core.Item)):
 					jsonDict[k] = v.id
 			return jsonDict
-		elif type(objToWrite) is Core.Player:
-			return {"__class__": "Player"}
 		# elif type(objToWrite) == Room:
 		# 	return objToWrite.__dict__
 		elif type(objToWrite) not in JSONprimitives:
@@ -148,55 +155,14 @@ def writePlayer(filename,Player):
 ## READ DATA FUNCTIONS ##
 #########################
 
-
-def objDecoder(jsonDict):
-	# print("==== converting object of type: " + str(type(jsonDict)))
-	if "__class__" in jsonDict:
-		objClassname = jsonDict["__class__"]
-		# print("=== class is " + objClassname)
-		del jsonDict["__class__"]
-		if objClassname == "set":
-			return set(jsonDict["setdata"])
-		if objClassname == "DialogueTree":
-			return jsonDict
-		if objClassname == "factoryCreature":
-			return Creatures.factory[jsonDict["name"]]()
-		elif objClassname == "factoryItem":
-			return Items.factory[jsonDict["name"]]()
-		objClass = Core.strToClass(objClassname,["Core","Creatures","Items"])
-		if objClass == None:
-			raise Exception("Could not find class for classname in world:",objClassname)
-		objAttributes = jsonDict
-		# print("========: " + jsonDict["name"] + " " + str(objAttributes))
-		if objClassname == "Room":
-			return Core.Room(**objAttributes)
-		elif objClass != None:
-			# if Core.hasMethod(objClass,"convertFromJSON"):
-			# 	return objClass.convertFromJSON(jsonDict)
-			try:
-				return objClass(**objAttributes)
-			except TypeError as e:
-				attributeStr = "\n".join(f"{key}: {value}" for \
-				key, value in objAttributes.items())
-				raise TypeError(f"Failed to instantiate object: '{objClassname}'" \
-				f"from JSON with attributes above: {attributeStr}", e)
-		else:
-			raise Exception("ERROR in decoding JSON object class type: " + objClassname)
-	else:
-		return jsonDict
-
-
-def worldDecoder(jsonDict):
-	if jsonDict.get("__class__",None) == "Player":
-		return Core.player
-	else:
-		return objDecoder(jsonDict)
-
-
-def readJSON(filename,object_hook=None):
+def readJSON(filename):
 	with open(filename,"r") as fd:
-		JSON = json.load(fd,object_hook=object_hook)
+		JSON = json.load(fd)
 	return JSON
+
+
+def readWorldJSON(filename):
+	return readJSON(filename)
 
 
 def readDialogue(filename):
@@ -212,7 +178,7 @@ def readDialogue(filename):
 
 # reads the global game class file, probably named "game.txt"
 # takes the world dict as input, returns the Game object
-def readGame(filename,World,dlogForest):
+def readGameData(filename):
 	gfd = open(filename,"r")
 	gametext = gfd.readlines()			# split game file into a list of lines
 	mode = int(gametext[0][:-1])		# first line is gamemode int
@@ -221,6 +187,11 @@ def readGame(filename,World,dlogForest):
 	time = int(gametext[3][:-1])		# fourth line is time int
 	events = eval(gametext[4][:-1])
 	gfd.close()
+	return mode,currentroom,prevroom,time,events
+
+
+def readGame(filename,World,dlogForest):
+	mode,currentroom,prevroom,time,events = readGameData(filename)
 	return Core.Game(mode,World[currentroom],World[prevroom],time,events,dlogForest,
 	Creatures.factory,Items.factory)
 
@@ -324,10 +295,15 @@ def loadGame(filename=None):
 	os.chdir(savename)
 	# try to load the player, world, and game objects
 	# try:
-	Core.player = readJSON("player.json",object_hook=objDecoder)
-	Core.world = readJSON("world.json",object_hook=worldDecoder)
+	playerData = readJSON("player.json")
+	worldData = readWorldJSON("world.json")
 	dlogForest = readDialogue("../../gamedata/Dialogue.json")
-	Core.game = readGame("game.txt",Core.world,dlogForest)
+	mode,currentroom,prevroom,time,events = readGameData("game.txt")
+	Core.game = Core.Game(mode,Core.defaultRoom,Core.defaultRoom,time,events,dlogForest,
+	Creatures.factory,Items.factory)
+	Core.world,Core.player = Core.game.buildWorld(worldData,playerData)
+	Core.game.currentroom = Core.world[currentroom]
+	Core.game.prevroom = Core.world[prevroom]
 	# hopefully load doesn't fail, that would suck
 	# except:
 	# 	Core.Print("Could not load game, save data corrupted\n",delay=0,color="k")
@@ -336,8 +312,6 @@ def loadGame(filename=None):
 	# 	return False
 
 	os.chdir("../..")
-	Core.buildWorld()
-
 	# open side panel
 	Core.player.display()
 
@@ -430,12 +404,13 @@ def newGame():
 	Creatures.factory,Items.factory)
 	# initializes from the character creation screen
 	Core.player = createCharacter()
+	playerSpec = json.loads(json.dumps(Core.player.convertToJSON(),cls=worldEncoder))
 	# tries to load a clean new world from initial world file, must be defined after player
-	Core.world = readJSON("./gamedata/World.json",object_hook=worldDecoder)
+	worldData = readWorldJSON("./gamedata/World.json")
+	Core.world,Core.player = Core.game.buildWorld(worldData,playerSpec)
 
 	Core.game.currentroom = Core.world["cave"]
 	Core.game.prevroom = Core.world["cave"]
-	Core.buildWorld()
 
 	# open side panel
 	Core.player.display()
@@ -459,14 +434,14 @@ def testGame():
 	Core.player = Core.Player("Norman","a hero",29,[4]*10,1000,50,inv=inv,love=100,
 	fear=100,spells=[],status=status)
 
-	# world must be defined after player
-	Core.world = readJSON("gamedata/World.json",object_hook=worldDecoder)
-
 	dlogForest = readDialogue("gamedata/Dialogue.json")
-	Core.game = Core.Game(1,Core.world["cave"],Core.world["tunnel"],0,set(),dlogForest,
+	Core.game = Core.Game(1,Core.defaultRoom,Core.defaultRoom,0,set(),dlogForest,
 	Creatures.factory,Items.factory)
-
-	Core.buildWorld()
+	playerSpec = json.loads(json.dumps(Core.player.convertToJSON(),cls=worldEncoder))
+	worldData = readWorldJSON("gamedata/World.json")
+	Core.world,Core.player = Core.game.buildWorld(worldData,playerSpec)
+	Core.game.currentroom = Core.world["cave"]
+	Core.game.prevroom = Core.world["tunnel"]
 
 	Core.clearScreen()
 	Core.flushInput()

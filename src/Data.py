@@ -80,8 +80,9 @@ dmgtypes = {"a":"acid","b":"bludgeoning","c":"cold","d":"drowning","e":"essentia
 dmgclasses = {"a":"elem","b":"phys","c":"elem","d":"phys","e":"dev","f":"elem","h":"phys","i":"mag","l":"elem","n":"mag","p":"phys","r":"mag","s":"phys","t":"elem","v":"mag","x":"elem"}
 
 
-# gear dict used to initialize the player object
-initgear = {"head":None, "torso":None, "left":None, "right":None, "legs":None}
+# gear dict used to initialize creatures
+initgear = {"over":None, "head":None, "torso":None, "left":None, "right":None,
+"legs":None, "feet":None}
 
 
 ############################
@@ -104,7 +105,7 @@ WET_STICKY = -5
 
 blessings = {"brawniness","swiftness","prowess","liveliness","toughness","felicity","sagacity","lucidity","fidelity","prosperity"}
 
-curses = {"weakness","slowness","clumsiness","tiredness","illness","timidity","stupidity","insanity","apathy","calamity"}
+curses = {"weakness","slowness","clumsiness","weariness","illness","timidity","stupidity","insanity","apathy","calamity"}
 
 buffs = {"anointed","fleetfooted","flying","invigorated","mending","wildspeaking"}
 
@@ -113,12 +114,6 @@ debuffs = {"dead","hindered","hungry","starving","tired","fatigued","drowning"}
 privateStatus = {"dead","invisible","hidden","hindered"}
 
 immobileStatus = ("asleep","frozen","paralyzed","unconscious","stunned","dead","restrained")
-
-# ANSI color codes for terminal output
-colorCodes = {
-	"r":"31", "o": "38;5;215", "y":"38;5;227", "g":"32", 
-	"b":"34", "m":"35", "k":"90", "w":"37"
-}
 
 conditionDmg = {
 	"burning":(50,"f"),
@@ -143,6 +138,12 @@ colors = {
 	"magenta": "m",
 	"grey": "k",
 	"white": "w"
+}
+
+# ANSI color codes for terminal output
+colorCodes = {
+	"r":"31", "o": "38;5;215", "y":"38;5;227", "g":"32",
+	"b":"34", "m":"35", "k":"90", "w":"37"
 }
 
 rarityColors = {-1:"r",0:"k",1:"w",2:"o",3:"g",4:"b",5:"m",6:"y"}
@@ -357,7 +358,7 @@ glossary = {
 
 "item":"Item\nAnything in the game that can be interacted with, but does not act on its own, unlike a Creature.",
 
-"knowledge":"Knowledge\nAbility and likelihood to know things. KNWL is determined primarily by INT, and is also determined by LCK. Type 'knwl' to view your KNWL.",
+"knowledge":"Knowledge\nAbility and likelihood to know things. KNWL is determined primarily by INT, and is also determined by LCK. Type 'knwl' to view your KNWL. |20+| <m>THIS IS A HIDDEN MESSAGE... IF YOU CAN READ THIS, YOU ARE VERY SMART :)</>",
 
 "knwl":"Knowledge\nAbility and likelihood to know things. KNWL is determined primarily by INT, and is also determined by LCK. Type 'knwl' to view your KNWL.",
 

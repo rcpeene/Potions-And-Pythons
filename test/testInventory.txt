@@ -1,6 +1,9 @@
 
 test
 
+\\ Creatures receive the complete ordered default gear layout
+\chk tuple(player.gear) == ("over","head","torso","left","right","legs","feet")
+
 \\ Take an item from the floor and drop it back onto the floor
 \spn Core.Item("travel token","A token issued for one round trip through Inventory.",2,-1,"iron")
 take travel token

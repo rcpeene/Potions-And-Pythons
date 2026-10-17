@@ -63,6 +63,13 @@ test
 \exe player.checkTired()
 \chk not player.hasAnyStatus("tired","fatigued")
 
+\\ Weariness is the stamina curse, distinct from ordinary tiredness
+\mbu self weariness -1
+\chk "weariness" in Data.curses
+\chk "tired" not in Data.curses
+\chk player.STM() == 1
+\xpl weariness
+
 \\ Breath holding advances to breathless and drowning, then recovers
 \exe player.lastBreathed=0
 \exe game.time=player.ENDR()//3+1

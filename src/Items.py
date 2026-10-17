@@ -5,6 +5,7 @@
 
 from bisect import insort
 from random import randint, choice,choices
+from pathlib import Path
 
 import Effects
 import Core
@@ -74,7 +75,7 @@ class Bottle(Core.Item):
 			self.weight -= shardWeight
 			shard = Shard("glass shard","a sharp shard of glass",shardWeight,-1,"glass",
 			{"shard"})
-			parent.add(shard)
+			Core.game.spawn(shard,parent)
 		self.destroy()
 		return True
 
@@ -296,6 +297,13 @@ class Hand(Core.Item):
 
 
 class Key(Core.Item):
+	def __init__(self,name,desc,weight,durability,composition,skeletonId=0,**kwargs):
+		# Zero is an ordinary key; negative IDs identify compatible skeleton-key locks.
+		assert isinstance(skeletonId,int) and skeletonId <= 0
+		super().__init__(name,desc,weight,durability,composition,**kwargs)
+		self.skeletonId = skeletonId
+
+
 	def lockWith(self,box):
 		pass
 
@@ -308,8 +316,19 @@ class Key(Core.Item):
 class Lockbox(Box):
 	def __init__(self,name,desc,weight,durability,composition,keyids,locked,**kwargs):
 		super().__init__(name,desc,weight,durability,composition,**kwargs)
+		# Nonnegative IDs match Key.id; negative IDs match Key.skeletonId.
 		self.keyids = keyids
 		self.locked = locked
+
+
+	# Validate ordinary key references while reserving negative IDs for skeleton keys.
+	def validate(self):
+		for keyid in self.keyids:
+			if not isinstance(keyid,int):
+				raise ValueError(f"Lock {self} has invalid key ID {keyid}")
+			if keyid >= 0 and not isinstance(Core.game.itemRegistry.get(keyid),Key):
+				raise ValueError(f"Lock {self} references unknown key ID {keyid}")
+		return super().validate()
 
 
 	### Operation ###
@@ -330,11 +349,12 @@ class Lockbox(Box):
 		return super().examine(looker)
 
 
+	# Lock with either the key's object ID or its enabled skeleton ID.
 	def lock(self,locker,key):
 		if self.locked:
 			locker.Print(f"{+self} is already locked.")
 			return False
-		if key.id in self.keyids:
+		if key.id in self.keyids or key.skeletonId and key.skeletonId in self.keyids:
 			self.locked = True
 			locker.Print(f"You lock {-self}.")
 			if Core.hasMethod(key,"unlockWith"):
@@ -344,11 +364,12 @@ class Lockbox(Box):
 		return True
 
 
+	# Unlock with either the key's object ID or its enabled skeleton ID.
 	def unlock(self,unlocker,key):
 		if not self.locked:
 			unlocker.Print(f"{+self} is not locked.")
 			return False
-		if key.id in self.keyids:
+		if key.id in self.keyids or key.skeletonId and key.skeletonId in self.keyids:
 			self.locked = False
 			unlocker.Print(f"You unlock {-self}.")
 			if Core.hasMethod(key,"lockWith"):
@@ -416,17 +437,11 @@ class Plash(Core.Container):
 			self.aliases.append("water")
 
 
-	def convertToJSON(self):
-		jsonDict = Core.Container.convertToJSON(self)
+	def convertToJSON(self,portalLinkIds=None):
+		jsonDict = Core.Container.convertToJSON(self,portalLinkIds)
 		del jsonDict["fixed"]
 		del jsonDict["durability"]
 		return jsonDict
-
-
-	def assignRefs(self,parent):
-		super().assignRefs(parent)
-		self.floor = self.parent.floor
-		self.surfaces = (self.ceiling,self.walls,self.floor)
 
 
 	@Core.Container.parent.setter
@@ -554,7 +569,7 @@ class Plash(Core.Container):
 		self.weight += quantity
 		if overflow:
 			Core.Print(f"{self.parent} overflows!")
-			self.parent.add(self.Spill(weight=overflow))
+			Core.game.spawn(self.Spill(weight=overflow),self.parent)
 
 		# astute readers will notice that the lines above would cause self.parent to become
 		# full beyond capacity when you consider all of self's sibling objects;
@@ -803,9 +818,34 @@ class Sign(Core.Item):
 		self.text = text
 
 
-	# prints the text on the sign in quotes
+	# prints the text on the sign in single quotes
 	def examine(self,looker):
-		looker.Print(f'\n"{self.text}"',color='y')
+		looker.Print(f"\n'{self.text}'",color='y')
+
+
+
+class Painting(Sign):
+	def __init__(self,name,desc,weight,durability,composition,filepath,**kwargs):
+		kwargs.pop("text",None)
+		artworkPath = Path(__file__).resolve().parent.parent / "gamedata" / "artwork"
+		with open(artworkPath / filepath,"r",encoding="utf-8") as artworkFile:
+			text = artworkFile.read()
+		super().__init__(name,desc,weight,durability,composition,text,**kwargs)
+		self.filepath = filepath
+
+
+	def convertToJSON(self):
+		jsonDict = super().convertToJSON()
+		del jsonDict["text"]
+		return jsonDict
+
+
+	def examine(self,looker):
+		Core.waitInput()
+		Core.clearScreen()
+		looker.Print(self.text,delay=0)
+		Core.waitInput()
+		Core.clearScreen()
 
 
 
@@ -946,8 +986,8 @@ class Window(Core.Passage):
 		self.broken = broken
 
 
-	def convertToJSON(self):
-		jsonDict = Core.Passage.convertToJSON(self)
+	def convertToJSON(self,portalLinkIds=None):
+		jsonDict = Core.Passage.convertToJSON(self,portalLinkIds)
 		jsonDict["linkKeys"] = list(jsonDict["links"].keys())
 		jsonDict["linkPort"] = list(jsonDict["links"].values())[0]
 		del jsonDict["links"]
@@ -986,7 +1026,7 @@ class Window(Core.Passage):
 			self.weight -= shardWeight
 			shard = Shard("glass shard","a sharp shard of glass",shardWeight,-1,"glass",
 			{"shard"})
-			Core.game.currentroom.add(shard)
+			Core.game.spawn(shard,Core.game.currentroom)
 		for occupant in self.occupants():
 			occupant.fall(room=self.getNewLocation())
 			self.disoccupy(occupant)

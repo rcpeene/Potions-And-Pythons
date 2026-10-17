@@ -22,9 +22,21 @@ drink test tonic
 take practice sabre
 equip practice sabre
 \chk fo("practice sabre",queryType="player") in player.gear.values()
+\spn Core.Weapon("practice hatchet","A one-handed hatchet for testing a second grip.",4,20,"iron",3,1,2,0,"s")
+take practice hatchet
+equip practice hatchet
+\chk player["right"] is fo("practice sabre",queryType="player")
+\chk player["left"] is fo("practice hatchet",queryType="player")
+unequip practice hatchet
 unequip practice sabre
 \chk fo("practice sabre",queryType="player") not in player.gear.values()
 \chk fo("practice sabre",queryType="player").parent is player
+
+\\ A weapon requiring too many grips is not reported or recorded as equipped
+\spn Core.Weapon("unwieldy maul","A maul beyond the capacity of two hands.",100,20,"iron",4,0,0,1,"b")
+take unwieldy maul
+equip unwieldy maul
+\chk fo("unwieldy maul",queryType="player") not in player.gear.values()
 
 \\ Armor can be donned and doffed through ordinary commands
 \spn Core.Armor("fitting helm","A helm awaiting a final adjustment.",3,20,"iron",2,slots=["head"])
@@ -58,6 +70,23 @@ close trial lockbox
 \chk fo("trial lockbox",queryType="room").closed
 lock trial lockbox with trial key
 \chk fo("trial lockbox",queryType="room").locked
+
+\\ Skeleton keys use a negative compatibility ID separate from registry identity
+\spn Items.Key("trial skeleton key","A key cut for a family of locks.",1,10,"iron",skeletonId=-1)
+\spn Items.Lockbox("skeleton lockbox","A lockbox compatible with a skeleton key.",10,20,"wood",[-1],True,items=[],capacity=20,closed=True)
+take trial skeleton key
+\chk fo("trial skeleton key",queryType="player").id >= 0
+\chk fo("trial skeleton key",queryType="player").skeletonId == -1
+unlock skeleton lockbox with trial skeleton key
+\chk not fo("skeleton lockbox",queryType="room").locked
+lock skeleton lockbox with trial skeleton key
+\chk fo("skeleton lockbox",queryType="room").locked
+
+\\ Ordinary keys do not use skeleton ID zero as a compatibility value
+\exe game.ordinaryKey=Items.Key("ordinary key","",1,1,"iron",id=7)
+\exe game.zeroLock=Items.Lockbox("zero lock","",5,10,"wood",[0],True,items=[],capacity=20)
+\exe game.zeroLock.unlock(player,game.ordinaryKey)
+\chk game.zeroLock.locked
 
 quit
 yes

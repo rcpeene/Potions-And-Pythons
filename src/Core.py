@@ -120,6 +120,68 @@ def tinge(color,*args):
 	return tuple(args)
 
 
+# censor string based on in-text tags, denoting a required ability level
+# remove sections of text that follow a tag whose criterion is not met
+# allow specified inclusive ranges or thresholds
+# unprefixed tags use KNWL; for instance "|5+|", "|KNWL 5+|", or "|INVS 5+|"
+def censor(text):
+	# this detects tags, of the form specified above
+	# also consumes an optional preceding newline and following space
+	tagPattern = re.compile(
+		r"\n?\|[ \t]*(?:(?P<ability>KNWL|INVS)[ \t]+)?"
+		r"(?P<criterion>\d+[ \t]*(?:[+-]|:[ \t]*\d+)?[ \t]*)\| ?",
+		re.IGNORECASE)
+	tags = list(tagPattern.finditer(text))
+	if not tags:
+		return text
+
+	# determine if the selected player ability meets the tag criterion
+	def playerMeets(ability,criterion):
+		ability = ability.upper() if ability else "KNWL"
+		value = 100 if ability in ("KNWL","INVS") and player.hasStatus("sagacity") \
+			else getattr(player,ability)()
+		criterion = re.sub(r"\s", "", criterion)
+		if criterion.endswith("+"):
+			return value >= int(criterion[:-1])
+		if criterion.endswith("-"):
+			return value <= int(criterion[:-1])
+		if ":" in criterion:
+			lower,upper = map(int,criterion.split(":"))
+			return lower <= value <= upper
+		return value == int(criterion)
+
+	# accept any text before the first tag
+	sections = [text[:tags[0].start()]]
+	# append sections of text that meet the player's knowledge criterion
+	for idx,tag in enumerate(tags):
+		sectionEnd = tags[idx+1].start() if idx+1 < len(tags) else len(text)
+		if playerMeets(tag.group("ability"),tag.group("criterion")):
+			sections.append(text[tag.end():sectionEnd])
+	return "".join(sections)
+
+
+# replace inline color tags with ANSI formatting
+# under insanity, each opening tag becomes a random color
+def primer(text):
+	tagPattern = re.compile(r"</>|<(?P<color>[^<>])>")
+
+	def replaceTag(tag):
+		if tag.group(0) == "</>":
+			if player.hasStatus("apathy"):
+				return f"\033[{Data.colorCodes['w']}m"
+			return "\033[0m"
+		color = tag.group("color")
+		if color not in Data.colorCodes:
+			return ""
+		if player.hasStatus("apathy") and color != "k":
+			color = "w"
+		elif player.hasStatus("insanity"):
+			color = choice(tuple(Data.colorCodes))
+		return f"\033[{Data.colorCodes[color]}m"
+
+	return tagPattern.sub(replaceTag,text)
+
+
 # calculate lengths of displaying string by ignoring formatting chars
 def displayLength(text):
 	# Regular expression to match ANSI escape sequences
@@ -142,7 +204,7 @@ def Print(*args,end="\n",sep=None,delay=None,color=None,allowSilent=True,outfile
 		return 0
 
 	# preprocessing to handle conditions that affect text content
-	args = [str(arg) for arg in args]
+	args = [primer(censor(str(arg))) for arg in args]
 	if not player.canNavigate():
 		args = [ambiguateDirections(arg) for arg in args]
 	if player.hasStatus("stupidity") and color not in ("k","y"):
@@ -169,6 +231,8 @@ def Print(*args,end="\n",sep=None,delay=None,color=None,allowSilent=True,outfile
 		displayLength(sep)*(len(args)-1) + displayLength(end)
 	if color is not None:
 		args = tinge(color,*args)
+	elif any(ANSI_ESCAPE.search(arg) for arg in args):
+		args[-1] += "\033[0m"
 
 	# output text
 	if game.mode == 1 or delay is None or outfile is not sys.stdout:
@@ -449,6 +513,8 @@ def conjugate(noun,verbString):
 # returns the ordinal string for a number n
 def ordinal(n):
 	lastDigit = n % 10
+	penultimateDigit = (n % 100) // 10
+	if penultimateDigit == 1: return str(n) + "th"
 	if lastDigit == 1: return str(n)+"st"
 	elif lastDigit == 2: return str(n)+"nd"
 	elif lastDigit == 3: return str(n)+"rd"
@@ -460,9 +526,11 @@ def clean(string):
 	return string.lower().rstrip(Data.symbols) if string else None
 
 
-# helper for ambiguateDirections() when removing strings but want to keep grammar structure
-# takes a list of strings and a given index
-# lends the capitalization/punctuation of given string to following/preceding strings,
+# helper for ambiguateDirections()
+# when removing strings but want to keep grammar structure
+# takes a list of strings and a given index to remove
+# lends the capitalization of removed string to following string,
+# lends punctuation of removed string to preceding string
 # then removes the string at given index
 def subsume(lst,idx):
 	# lend punctuation to previous string
@@ -490,8 +558,8 @@ def ambiguateDirections(text):
 	# prepositions that precede directions, e.g. "from the north"
 	dirPreps = {"of","from","to","toward","into","on","in","at","by","across","along"}
 	# words that follow directional nouns, e.g. "Eastward, stands a window"
-	followsNounDir = {"there","theres","is","are","lie","stand","rise","begin","stretch",
-	"extend","run","rest","reach","flow"}
+	followsNounDir = {"there","theres","is","are","await","lay","lie","sit","stand",
+	"rise","begin","stretch","extend","run","rest","reside","reach","flow"}
 
 	# Assume a token t1 is a noun if it ends with punctuation or t2 is a relevant verb
 	def dirIsNoun(t1,t2):
@@ -520,11 +588,11 @@ def ambiguateDirections(text):
 			replacedYet = True
 		return newToken
 
-	# Loop over stream three tokens tracked at a time, replacing or removing as needed
-	# First we simplify the token stream; cases 0-5
+	# Loop over stream, three tokens tracked at a time, replacing or removing as needed
+	# First we simplify the terms in the token stream; cases 0-5
 	# Then replace directions with phrases depending if its noun or adjective; cases 6-7
 	# Since we only iterate when no replacements are made, 
-	# the triplet of tokens is fully simplified before they are replaced
+	# the triplet of tokens is fully simplified before any are replaced
 	i = 0
 	tokens = text.split(" ")
 	while i < len(tokens):
@@ -543,7 +611,7 @@ def ambiguateDirections(text):
 		# 2. Remove adjectival 'erns'; "a northern window" -> "a window"
 		elif clean(t2) in erns:
 			subsume(tokens,i+2)
-		# 3. Reduce lists; "north and east" -> "north east"
+		# 3. Reduce 'and's; "north and east" -> "north east"
 		elif clean(t1) in directions and clean(t2) == "and":
 			subsume(tokens,i+2)
 		# 4. Reduce lists; "North, east, west" -> "West"
@@ -554,6 +622,7 @@ def ambiguateDirections(text):
 		# 5. Remove determiner; "to the north" -> "to north"
 		elif clean(t1) == "the" and clean(t2) in directions:
 			subsume(tokens,i+1)
+
 		# 6. NOUN "to north, a window..." -> "in a certain direction, a window..."
 		# "to north lies a window" -> "in a certain direction lies a window"
 		elif clean(t1) in directions and dirIsNoun(t1,t2):
@@ -572,7 +641,7 @@ def ambiguateDirections(text):
 	return " ".join([t for t in tokens if t is not None])
 
 
-# replaces numbers in text with ambiguous alternative words
+# replaces numbers in text with ambiguous quantity words
 def ambiguateNumbers(text,grammatical=False):
 	text = str(text)
 	# capture the number and the preceding non-whitespace character (if any)
@@ -581,13 +650,14 @@ def ambiguateNumbers(text,grammatical=False):
 
 	replacementMap = {
 		"none": ("no","zero","not any"),
+		"one": ("one","a single","a lone"),
 		"two": ("two","a couple","a pair of"),
 		"few": ("a few","not many","a small amount of"),
 		"some": ("some","several","an amount of"),
 		"many": ("many","a lot of","a bunch of","a big amount of"),
 		"a ton": ("a ton of","a whole lot of","a really big amount of")
 	}
-	# when printing stats, don't use random selections
+	# when printing stats, don't use random grammatical selections
 	if not grammatical:
 		replacementMap = {k:(k,) for k in replacementMap}
 
@@ -601,7 +671,7 @@ def ambiguateNumbers(text,grammatical=False):
 		elif num == 0:
 			replacement = choice(replacementMap["none"])
 		elif num == 1:
-			replacement = "one"
+			replacement = choice(replacementMap["one"])
 		elif num == 2:
 			replacement = choice(replacementMap["two"])
 		elif num > 2 and num < 6:
@@ -631,13 +701,13 @@ def ambiguateNumbers(text,grammatical=False):
 
 # introduces common misspellings into text
 def misspell(text):
-	replacementMap = {
+	miscReplacementMap = {
 		"to":"too", "too":"to", "there":"their", "where":"wear", "sword":"sord",
 		"library":"libary", "higher":"hire", "break":"brake", "window":"windo",
 		"above":"abuv", "python":"pithon"
 	}
 	def getReplacement(oldToken):
-		newToken = replacementMap[clean(oldToken)]
+		newToken = miscReplacementMap[clean(oldToken)]
 		if oldToken[0].isupper():
 			newToken = newToken.capitalize()
 		if any(oldToken.endswith(s) for s in Data.symbols):
@@ -648,7 +718,7 @@ def misspell(text):
 	tokens = text.split(" ")
 	i = 0
 	while i < len(tokens):
-		if clean(tokens[i]) in replacementMap and randint(0,3) == 0:
+		if clean(tokens[i]) in miscReplacementMap and randint(0,3) == 0:
 			tokens[i] = getReplacement(tokens[i])
 		i += 1
 	text = " ".join(tokens)
@@ -657,6 +727,7 @@ def misspell(text):
 	def cat(*parts):
 		return "".join(p for p in parts if p)
 
+	# iterate, examining three tokens at a time
 	# for every character, chance to make a common misspelling
 	i = 0
 	while i < len(text):
@@ -879,78 +950,6 @@ def objQueryRecur(node,matches,key,d,traversed):
 		# recur the query on each object's subtree
 		matches = objQueryRecur(obj,matches,key,d,traversed)
 	return matches
-
-
-# recurs through objects within the parent and assigns it as their parent
-def assignRefsRecur(parent):
-	# assign all direct parents before resolving sibling object references
-	for obj in parent:
-		if obj not in celestials:
-			obj.parent = parent
-
-	for obj in parent:
-		if obj in celestials:
-			continue
-		# everything in the world or player inv should be Item or Creature
-		assert isinstance(obj, (Item, Creature)), \
-		f"Object {obj} is type {type(obj)} not Item or Creature"
-		obj.assignRefs(parent)
-		assignRefsRecur(obj)
-
-
-# removes any room links pointing to rooms which don't exist in the world,
-# to prevent errors if the world file was written incorrectly
-# also assigns references for all world objects (parent, occupants, cover, carrying etc.)
-# also assigns dialogue trees for speakers and validates them
-def buildWorld():
-	# assign all room links to existing rooms
-	# ensure all room names are stored as lowercase
-	for roomName in list(world.keys()):
-		room = world[roomName]
-		del world[roomName]
-		assert room.name.lower() == roomName, f"Room name {room.name.lower()} does not " \
-		f"match its key in world dict {roomName}"
-		assert room.name.lower() not in world, f"Room name {room.name.lower()} " \
-		"already exists in world"
-		world[room.name.lower()] = room
-
-	# register all objects that already have an ID
-	for room in world.values():
-		for obj in room.objTree():
-			if obj.id is not None:
-				game.registerItem(obj)
-
-	# assign IDs to global celestial objects
-	for celestial in celestials:
-		if celestial.id is None:
-			celestial.id = game.getNextID()
-			game.registerItem(celestial)
-
-	# assign IDs to all Items and Creatures that don't have one
-	for room in world.values():
-		for obj in room.objTree():
-			if obj.id is None:
-				obj.id = game.getNextID()
-				game.registerItem(obj)
-
-	# assign references for all rooms and objects, and assign dialogue trees
-	for room in world.values():
-		assert isinstance(room, Room)
-		room.assignRefs()
-		assignRefsRecur(room)
-
-		# assign the dialogue trees for all Creatures and validate them
-		for creature in objQuery(room, d=3, key=lambda x: isinstance(x,Speaker)):
-			creature.buildDialogue()
-
-	# TODO: After the staged world-building refactor, recursively checkTethers()
-	# here once every object has been instantiated and every reference resolved.
-
-	# ensure all containers with liquid floors have a 'down' direction
-	for item in game.itemRegistry.values():
-		if getattr(getattr(item,"floor",None),"composition",None) in Data.liquids:
-			assert "down" in item.dirs, f"Item {item} has a liquid floor " \
-			"but no down direction"
 
 
 #############
@@ -1719,6 +1718,13 @@ class GameObject():
 		return hash(id(self))
 
 
+	# Validate owned descendants after subclasses validate their local relationships.
+	def validate(self):
+		for child in game.ownedChildren(self):
+			child.validate()
+		return True
+
+
 	def __iter__(self):
 		yield from self.contents().copy()
 
@@ -2027,10 +2033,7 @@ class Game():
 		# references to all Items in the world, each item.id should be its key here
 		self.itemRegistry = {None: None}
 		self.nextObjId = 0
-		# counter for portal link ids (distinct from Item ids)
-		# used for saving portals in the world with unique links
-		self.portalLinkIds = 0
-
+		self.reservedObjIds = set()
 		### User I/O
 
 		# used for determining whether or not to print most things 
@@ -2055,13 +2058,503 @@ class Game():
 	def clearRegistry(self):
 		self.itemRegistry = {None: None}
 		self.nextObjId = 0
+		self.reservedObjIds = set()
 
 
 	# get next id to give an Item
 	def getNextID(self):
-		while self.nextObjId in self.itemRegistry:
+		while self.nextObjId in self.reservedObjIds or \
+		self.nextObjId in self.itemRegistry:
 			self.nextObjId += 1
-		return self.nextObjId
+		objId = self.nextObjId
+		self.nextObjId += 1
+		return objId
+
+
+	# Resolve an object specification's broad runtime type without constructing it.
+	def resolveSpecClass(self,candidate):
+		if not isinstance(candidate,dict):
+			return None
+		className = candidate.get("__class__")
+		if className in (None,"set","DialogueTree") or \
+		className == "Player" and len(candidate) == 1:
+			return None
+		if className == "factoryItem":
+			if candidate.get("name") not in self.itemFactory:
+				raise ValueError(f"Unknown item factory '{candidate.get('name')}'")
+			return Item
+		if className == "factoryCreature":
+			if candidate.get("name") not in self.creatureFactory:
+				raise ValueError(f"Unknown creature factory '{candidate.get('name')}'")
+			return Creature
+		objClass = strToClass(className,["Core","Creatures","Items"])
+		if objClass is None:
+			raise ValueError(f"Unknown object class '{className}'")
+		return objClass
+
+
+	# Reserve authored IDs before assigning new ones so generated IDs cannot collide.
+	def collectObjectIDs(self,rawData):
+		objectIds = set()
+
+		def collect(dataNode):
+			if isinstance(dataNode,list):
+				for childNode in dataNode:
+					collect(childNode)
+				return
+			if not isinstance(dataNode,dict):
+				return
+			if self.resolveSpecClass(dataNode) is not None and \
+			dataNode.get("id") is not None:
+				objId = dataNode["id"]
+				if objId in objectIds:
+					raise ValueError(f"Duplicate object ID {objId}")
+				objectIds.add(objId)
+			for childNode in dataNode.values():
+				collect(childNode)
+
+		collect(rawData)
+		return objectIds
+
+
+	# Give a nested object an identity so other specifications can refer to it by tether.
+	def assignSpecID(self,objectSpec):
+		if objectSpec.get("id") is None:
+			objectSpec["id"] = self.getNextID()
+			self.reservedObjIds.add(objectSpec["id"])
+		return objectSpec["id"]
+
+
+	# Place a tethered object beside its anchor because tethers connect sibling objects.
+	def addSiblingSpec(self,parentSpec,sourceCollection,objectSpec):
+		parentClass = parentSpec.get("__class__")
+		if parentClass == "Room":
+			objClass = self.resolveSpecClass(objectSpec)
+			if issubclass(objClass,Creature):
+				destination = "creatures"
+			elif objectSpec.get("fixed",issubclass(objClass,Fixture)):
+				destination = "fixtures"
+			else:
+				destination = "items"
+		else:
+			destination = sourceCollection
+		parentSpec.setdefault(destination,[]).append(objectSpec)
+
+
+	# Put an anchor's ID into an object specification to represent a tether connection.
+	def setSpecReference(self,objectSpec,tetherName,anchorId,anchorSpec):
+		existingTetherId = objectSpec.get(tetherName)
+		if existingTetherId not in (None,anchorId):
+			raise ValueError(f"{objectSpec.get('name',objectSpec.get('__class__'))} has " \
+			f"conflicting {tetherName} declarations {existingTetherId} and {anchorId} " \
+			f"from {anchorSpec.get('name',anchorSpec.get('__class__'))}")
+		objectSpec[tetherName] = anchorId
+
+
+	# Walk the containment tree so nested tether declarations are expanded at every depth.
+	def normalizeCollectionRecur(self,parentSpec,parentCollectionName):
+		collection = parentSpec.setdefault(parentCollectionName,[])
+		idx = 0
+		# for each child object in parent's collection
+		# note we use a while loop, because normalization may add to collection
+		while idx < len(collection):
+			objectSpec = collection[idx]
+			objClass = self.resolveSpecClass(objectSpec)
+			if objClass is None:
+				idx += 1
+				continue
+			# Normalize child's nested tethers first,
+			# since nested gear may be moved into the child's inventory.
+			self.normalizeObjectTethers(objectSpec,parentSpec,parentCollectionName)
+
+			# if this child object has children of its own, recur into its collections
+			if issubclass(objClass,Creature):
+				self.normalizeCollectionRecur(objectSpec,"inv")
+			elif issubclass(objClass,Container):
+				self.normalizeCollectionRecur(objectSpec,"items")
+			idx += 1
+
+
+	# In the world, sibling objects can have 'tethers' with each other
+	# tethers represent spatial relationships and have an anchor and a cargo
+	# In JSON, these can flexiby be stored by nesting objects within eachother instead of using IDs
+	# ex. a Horse (anchor) has a 'riders' list, which contains a whole knight object (cargo),
+	# rather than simply the ID of the knight. We want to relocate these nested objects,
+	# moving them into the parent's children to become a sibling, and replace
+	# the original relationship with a canonical ID referencing the now-moved object
+	def normalizeObjectTethers(self,anchorSpec,parentSpec,parentCollectionName):
+		anchorId = None
+
+		# Nested occupants, riders, and covered creatures become sibling references.
+		for nestedField,tetherName in (("occupants","platform"),
+		("riders","riding"),("covering","cover")):
+			tetheredSpecs = anchorSpec.pop(nestedField,[])
+			if not isinstance(tetheredSpecs,list):
+				tetheredSpecs = [tetheredSpecs]
+			for tetheredSpec in tetheredSpecs:
+				if isinstance(tetheredSpec,int):
+					raise ValueError(f"{nestedField} entries must be nested object " \
+						f"specifications, not ID {tetheredSpec}")
+				if self.resolveSpecClass(tetheredSpec) is None:
+					raise ValueError(f"Invalid object specification in {nestedField}")
+
+				# make sure anchor has an ID
+				if anchorId is None:
+					anchorId = self.assignSpecID(anchorSpec)
+				# give nested spec an ID
+				self.assignSpecID(tetheredSpec)
+				# move nested spec to be a sibling object
+				self.addSiblingSpec(parentSpec,parentCollectionName,tetheredSpec)
+				# replace the original tether with the given ID
+				self.setSpecReference(tetheredSpec,tetherName,anchorId,anchorSpec)
+
+		# Carrying is a special tether relationship, stored in the 'gear' dict
+		# nested creature cargo becomes a sibling, while nested gear enters inventory
+		gear = anchorSpec.get("gear",{})
+		if not isinstance(gear,dict):
+			return
+		for slot,gearObjSpec in list(gear.items()):
+			gearObjClass = self.resolveSpecClass(gearObjSpec)
+			if gearObjClass is None:
+				continue
+			if anchorId is None:
+				anchorId = self.assignSpecID(anchorSpec)
+			gearId = self.assignSpecID(gearObjSpec)
+			if issubclass(gearObjClass,Creature):
+				self.setSpecReference(gearObjSpec,"carrier",anchorId,anchorSpec)
+				self.addSiblingSpec(parentSpec,parentCollectionName,gearObjSpec)
+			else:
+				anchorSpec.setdefault("inv",[]).append(gearObjSpec)
+			gear[slot] = gearId
+
+
+	# Construct one normalized specification whose attributes have already been built.
+	def instantiateSpec(self,className,attributes):
+		# dialogue trees will be converted from JSON into objects later during enmeshWorld
+		if className == "DialogueTree":
+			return attributes
+		# special factory objects are instantiated via their factory, and their types are validated
+		if className in ("factoryItem","factoryCreature"):
+			if className == "factoryCreature":
+				runtimeObject = self.creatureFactory[attributes["name"]]()
+				validProduct = isinstance(runtimeObject,Creature)
+			else:
+				runtimeObject = self.itemFactory[attributes["name"]]()
+				validProduct = isinstance(runtimeObject,Item) and \
+					not isinstance(runtimeObject,Creature)
+			if not validProduct:
+				raise TypeError(f"{className} '{attributes['name']}' returned " \
+					f"{runtimeObject.__class__.__name__}")
+
+			# for flexibility when writing the JSON, set any additional attributes to the object
+			for key,attributeValue in attributes.items():
+				if key != "name":
+					setattr(runtimeObject,key,attributeValue)
+			return runtimeObject
+
+		# instantiate regular game objects from their modules
+		objClass = strToClass(className,["Core","Creatures","Items"])
+		if objClass is None:
+			raise ValueError(f"Unknown object class '{className}'")
+		try:
+			return objClass(**attributes)
+		except TypeError as error:
+			attributeStr = "\n".join(f"{key}: {value}" \
+				for key,value in attributes.items())
+			raise TypeError(f"Failed to instantiate object '{className}' from " \
+				f"attributes:\n{attributeStr}") from error
+
+
+	# Define which children are owned by and therefore receive this object as parent.
+	def ownedChildren(self,parentObject):
+		# obj.contents() may not be used to identify its children here
+		# contents() may include ephemeral or globally shared objects that aren't 'proper' child objects
+		if isinstance(parentObject,Room):
+			children = parentObject.fixtures + parentObject.items + parentObject.creatures
+			children += [surface for surface in parentObject.surfaces if surface is not None]
+			return children
+		if isinstance(parentObject,Creature):
+			return parentObject.inv
+		if isinstance(parentObject,Container):
+			return parentObject.items
+		return []
+
+
+	# Recursively instantiate objects from JSON specifications.
+	def buildObjectRecur(self,jsonValue):
+		# first recur into object children if given a list
+		if isinstance(jsonValue,list):
+			return [self.buildObjectRecur(childNode) for childNode in jsonValue]
+		# return value as-is if not given a list or dict
+		if not isinstance(jsonValue,dict):
+			return jsonValue
+
+		# if given a non-game-object dict, recur into its child values first, then return the dict
+		className = jsonValue.get("__class__")
+		attributes = {}
+		for key,attributeValue in jsonValue.items():
+			if key != "__class__":
+				attributes[key] = self.buildObjectRecur(attributeValue)
+		if className is None:
+			return attributes
+		# JSON doesn't natively support sets, they were with a special class label
+		if className == "set":
+			return set(attributes["setdata"])
+
+		# if given an actual game object specification, instantiate it
+		runtimeObject = self.instantiateSpec(className,attributes)
+		# set object as its children's parent
+		for childObject in self.ownedChildren(runtimeObject):
+			childObject.parent = runtimeObject
+
+		# if the object is a Room, register its surfaces as unique items
+		if isinstance(runtimeObject,Room):
+			for surface in runtimeObject.surfaces:
+				if surface is None:
+					continue
+				if surface.id is None:
+					surface.id = self.getNextID()
+				self.registerItem(surface)
+
+		# register the item if it is not already registered and return
+		if isinstance(runtimeObject,Item):
+			if runtimeObject.id is None:
+				runtimeObject.id = self.getNextID()
+			self.registerItem(runtimeObject)
+		return runtimeObject
+
+
+	# Instantiate all world objects before any cross-object references are connected.
+	def instantiateWorld(self,worldData):
+		builtWorld = {}
+		# instantiate each room and insert it in world
+		for roomKey,roomSpec in worldData.items():
+			room = self.buildObjectRecur(roomSpec)
+			if not isinstance(room,Room):
+				raise ValueError(f"World entry '{roomKey}' did not build a Room")
+			builtWorld[roomKey] = room
+
+		# ensure world only contains one player
+		players = [runtimeObject for runtimeObject in self.itemRegistry.values() \
+			if isinstance(runtimeObject,Player)]
+		if len(players) != 1:
+			raise ValueError(f"World must contain exactly one Player, found {len(players)}")
+
+		# celestials are global objects that don't belong in the world directly
+		# so make sure to register them too
+		for celestial in celestials:
+			celestial.parent = None
+			celestial.id = self.getNextID()
+			self.registerItem(celestial)
+
+		return builtWorld,players[0]
+
+
+	# Connect objects by reference, replacing IDs, once all objects exists in the registry.
+	def enmeshWorld(self):
+		# establish links between rooms, replacing their name ids with real references
+		for room in world.values():
+			for direction,destination in room.links.items():
+				if not isinstance(destination,str) or destination not in world:
+					raise ValueError(f"Room {room.name} has unknown {direction} " \
+						f"destination {destination}")
+				room.links[direction] = world[destination]
+
+		# Portal pair IDs may occur in several directions, but must join two portals.
+		portalPairs = {}
+		for obj in self.itemRegistry.values():
+			if not isinstance(obj,Portal):
+				continue
+			for direction,destination in list(obj.links.items()):
+				if isinstance(destination,str) and destination in world:
+					obj.links[direction] = world[destination]
+				elif isinstance(destination,str) and destination.startswith("port:"):
+					portalPairs.setdefault(destination,[]).append((obj,direction))
+				elif isinstance(destination,int):
+					if destination not in self.itemRegistry or \
+						self.itemRegistry[destination] is None:
+						raise ValueError(f"Portal {obj} has unknown {direction} object " \
+							f"destination {destination}")
+					obj.links[direction] = self.itemRegistry[destination]
+				elif not isinstance(destination,(Room,Item)):
+					raise ValueError(f"Portal {obj} has unknown {direction} " \
+						f"destination {destination}")
+
+		for linkId,endpoints in portalPairs.items():
+			Portal.resolveLinkPair(linkId,endpoints)
+
+		# Resolve object IDs from global item registry
+		def resolveId(runtimeObject,referencedId,tetherName):
+			if not isinstance(referencedId,int) or referencedId not in self.itemRegistry:
+				raise ValueError(f"{runtimeObject} references unknown " \
+					f"{tetherName} {referencedId}")
+			return self.itemRegistry[referencedId]
+
+		# for every game object, resolve its references and deduce some runtime-only states
+		for runtimeObject in self.itemRegistry.values():
+			if runtimeObject is None or runtimeObject in celestials:
+				continue
+
+			# replace object's platform, carrier, riding, and cover IDs with object references
+			if isinstance(runtimeObject.platform,int):
+				runtimeObject.platform = resolveId(runtimeObject,
+					runtimeObject.platform,"platform")
+			if isinstance(runtimeObject,Creature):
+				for tetherName in ("carrier","riding","cover"):
+					referencedId = getattr(runtimeObject,tetherName)
+					if referencedId is not None:
+						setattr(runtimeObject,tetherName,
+							resolveId(runtimeObject,referencedId,tetherName))
+
+				# carried creature must be restrained
+				if runtimeObject.carrier is not None and \
+					not runtimeObject.hasStatus("restrained",Data.RESTRAINT_CARRY):
+					insort(runtimeObject.status,["restrained",Data.RESTRAINT_CARRY])
+
+				# convert empty gear slots to the EmptyGear singleton
+				for slot,itemId in runtimeObject.gear.items():
+					if itemId is None or itemId is EmptyGear():
+						runtimeObject.gear[slot] = EmptyGear()
+					else:
+						runtimeObject.gear[slot] = resolveId(runtimeObject,itemId,
+							f"gear slot '{slot}'")
+
+				# assign Creature weapon and shield based on gear properties
+				runtimeObject.assignWeaponAndShield()
+				# build each Speaker's dialogue tree
+				if isinstance(runtimeObject,Speaker):
+					runtimeObject.buildDialogue()
+
+			# any unanchored non-flying creature should be on the floor
+			if runtimeObject.anchor() is None and \
+				not runtimeObject.hasStatus("flying") and \
+				not isinstance(runtimeObject.parent,Creature) and \
+				runtimeObject not in getattr(runtimeObject.parent,"surfaces",()):
+				runtimeObject.platform = runtimeObject.parent.floor
+
+
+	# Reject impossible world states before gameplay can depend on their relationships.
+	def validateWorld(self):
+		def require(condition,message):
+			if not condition:
+				raise ValueError(message)
+
+		contained = set()
+		visiting = set()
+
+		def validateContainmentRecur(parent):
+			require(parent not in visiting,
+				f"Containment cycle reaches {parent}")
+			visiting.add(parent)
+			for child in self.ownedChildren(parent):
+				require(isinstance(child,Item),
+					f"{parent} contains non-Item {child}")
+				require(child not in contained,
+					f"{child} appears in multiple containment positions")
+				require(child.parent is parent,
+					f"{child} has parent {child.parent}, expected {parent}")
+				contained.add(child)
+				validateContainmentRecur(child)
+			visiting.remove(parent)
+
+		for roomKey,room in world.items():
+			require(isinstance(room,Room),
+				f"World entry '{roomKey}' is not a Room")
+			require(room.name.lower() == roomKey,
+				f"Room name '{room.name}' does not match key '{roomKey}'")
+			validateContainmentRecur(room)
+
+		require(player in contained,
+			"Player does not occupy exactly one position in the world")
+		for celestial in celestials:
+			require(celestial.parent is None,
+				f"Celestial {celestial} unexpectedly has parent {celestial.parent}")
+
+		registryObjects = {runtimeObject for runtimeObject in self.itemRegistry.values() \
+			if runtimeObject is not None}
+		for objId,runtimeObject in self.itemRegistry.items():
+			if runtimeObject is None:
+				continue
+			require(isinstance(objId,int) and runtimeObject.id == objId,
+				f"Registry key {objId} does not match {runtimeObject}'s ID " \
+					f"{runtimeObject.id}")
+		require(registryObjects == contained | set(celestials),
+			"Registry and contained world objects do not match")
+
+		for room in world.values():
+			room.validate()
+		for celestial in celestials:
+			celestial.validate()
+
+
+	# Use the authored placeholder to put the loaded Player in the intended location.
+	def insertPlayer(self,dataNode,playerSpec):
+		if isinstance(dataNode,list):
+			placeholderCount = 0
+			for idx,childNode in enumerate(dataNode):
+				if isinstance(childNode,dict) and childNode == {"__class__":"Player"}:
+					dataNode[idx] = playerSpec
+					placeholderCount += 1
+				else:
+					placeholderCount += self.insertPlayer(childNode,playerSpec)
+			return placeholderCount
+		if not isinstance(dataNode,dict):
+			return 0
+		if dataNode.get("__class__") == "Player":
+			raise ValueError("World contains an embedded Player instead of a placeholder")
+		return sum(self.insertPlayer(childNode,playerSpec) \
+			for childNode in dataNode.values())
+
+
+	# Translate author-friendly world data into the canonical form construction expects.
+	def normalizeWorldData(self,worldSpec,playerSpec):
+		if not isinstance(playerSpec,dict) or playerSpec.get("__class__") != "Player":
+			raise ValueError("player data does not contain a Player specification")
+
+		# The placeholder determines the player's containment position.
+		playerCount = self.insertPlayer(worldSpec,playerSpec)
+		if playerCount != 1:
+			raise ValueError(f"World must contain one Player placeholder, found {playerCount}")
+
+		# extract the preexisting object ids from the JSON world data so they aren't reused
+		self.reservedObjIds = self.collectObjectIDs(worldSpec)
+
+		normalizedWorld = {}
+		for roomKey,roomSpec in worldSpec.items():
+			if roomKey != roomKey.lower():
+				raise ValueError(f"World key '{roomKey}' must be lowercase")
+			if roomKey in normalizedWorld:
+				raise ValueError(f"Duplicate room key '{roomKey}'")
+			if roomSpec.get("__class__") != "Room":
+				raise ValueError(f"World entry '{roomKey}' is not a Room")
+			if roomSpec["name"].lower() != roomKey:
+				raise ValueError(f"Room name '{roomSpec['name']}' does not match " \
+					f"world key '{roomKey}'")
+			normalizedWorld[roomKey] = roomSpec
+			for collectionName in ("fixtures","items","creatures"):
+				self.normalizeCollectionRecur(roomSpec,collectionName)
+		return normalizedWorld
+
+
+	# Build a playable world in an order that prevents dangling IDs and invalid state.
+	def buildWorld(self,worldSpec,playerSpec):
+		# clear the registry to start fresh
+		self.clearRegistry()
+		# convert the flexible JSON into the canonical form expected by the builder
+		normalizedWorld = self.normalizeWorldData(worldSpec,playerSpec)
+		# instantiate the world and its objects
+		builtWorld,playerObj = self.instantiateWorld(normalizedWorld)
+		# publish the world as global objects used by enmeshWorld and validateWorld
+		global world, player
+		world = builtWorld
+		player = playerObj
+		# establish tethered relationships between objects in world
+		self.enmeshWorld()
+		# validate the integrity and consistency of the built world
+		self.validateWorld()
+		# no need to keep the reserved ids around anymore
+		self.reservedObjIds.clear()
+		return builtWorld,playerObj
 
 
 	# Give Item an ID if it doesn't have one and add it to registry
@@ -2091,7 +2584,66 @@ class Game():
 		borrower.id = lender.id
 
 
-	# spawn a new item, register it, and optionally enter it into a parent
+	# Ensure a spawned object tree is registered, preserving valid existing entries.
+	def registerSpawnTree(self,root):
+		objects = []
+		newObjects = []
+		seen = set()
+		visiting = set()
+
+		def collect(obj,parent=None):
+			if not isinstance(obj,Item):
+				raise TypeError(f"Cannot spawn non-Item {obj}")
+			if obj in visiting:
+				raise ValueError(f"Containment cycle reaches {obj}")
+			if obj in seen:
+				raise ValueError(f"{obj} appears in multiple containment positions")
+			seen.add(obj)
+			visiting.add(obj)
+			objects.append((obj,parent))
+			for child in self.ownedChildren(obj):
+				collect(child,obj)
+			visiting.remove(obj)
+
+		collect(root)
+		explicitIds = set()
+		for obj,parent in objects:
+			if obj.id is None:
+				continue
+			if not isinstance(obj.id,int):
+				raise TypeError(f"Object ID {obj.id} from {obj} is not an integer")
+			registered = self.itemRegistry.get(obj.id)
+			if registered is obj:
+				continue
+			if obj.id in explicitIds or registered is not None:
+				raise ValueError(f"Duplicate object ID {obj.id}")
+			explicitIds.add(obj.id)
+
+		previousReservations = self.reservedObjIds.copy()
+		self.reservedObjIds.update(explicitIds)
+		try:
+			for obj,parent in objects:
+				if obj.id is not None and self.itemRegistry.get(obj.id) is obj:
+					continue
+				if obj.id is None:
+					obj.id = self.getNextID()
+				obj.parent = parent
+				self.registerItem(obj)
+				newObjects.append(obj)
+		finally:
+			self.reservedObjIds = previousReservations
+		return [obj for obj,parent in objects],newObjects
+
+
+	# Roll back only objects registered by the current spawn attempt.
+	# Objects that were already registered are intentionally preserved.
+	def unregisterSpawnTree(self,newObjects):
+		for obj in newObjects:
+			if self.itemRegistry.get(obj.id) is obj:
+				del self.itemRegistry[obj.id]
+
+
+	# spawn a new item tree, register it, and optionally enter its root into a parent
 	def spawn(self,obj,parent=None):
 		if isinstance(obj,str):
 			if obj in self.creatureFactory:
@@ -2103,14 +2655,28 @@ class Game():
 		else:
 			assert isinstance(obj,Item)
 
-		assert obj.id is None or obj.id not in self.itemRegistry
-		obj.id = self.getNextID()
-		self.registerItem(obj)
+		if parent is not None and obj.parent is not None:
+			raise ValueError(f"Cannot spawn {obj} into {parent}; it already has parent " \
+				f"{obj.parent}")
+
+		spawnedObjects,newObjects = self.registerSpawnTree(obj)
 		if parent is not None:
-			assert hasMethod(parent,"enter")
-			if not parent.enter(obj):
-				obj.destroy()
+			if isinstance(parent,Creature):
+				attached = parent.ObtainItem(obj,silent=True)
+			elif hasMethod(parent,"enter"):
+				attached = parent.enter(obj)
+			else:
+				self.unregisterSpawnTree(newObjects)
+				raise TypeError(f"Cannot spawn into {parent}")
+			if not attached:
+				self.unregisterSpawnTree(newObjects)
 				return False
+			try:
+				obj.validate()
+			except Exception:
+				parent.remove(obj)
+				self.unregisterSpawnTree(newObjects)
+				raise
 		return obj
 
 
@@ -2482,18 +3048,15 @@ class Room(GameObject):
 
 	### File I/O ###
 
-	# after all objects instantiated from json, assign room links to actual Room objects
-	# uses the string names in the links to get Room objects from world dict
-	def assignRefs(self):
-		for dir, dest in self.links.items():
-			assert dest in world, f"Room {self.name} has a link to unknown dest '{dest}'"
-			assert type(world[dest]) is Room, f"Room {self.name} has a link to" \
-			f" non-Room '{dest}'"
-			self.links[dir] = world[dest]
-
-		assert self.vacancy() >= -1, (f"Room {self.name} has negative space available"
-		f"size is {self.size}, but occupied space is {self.itemsSize()}")
-
+	# Validate room capacity and ensure every room link has been resolved.
+	def validate(self):
+		if self.vacancy() != -1 and self.vacancy() < 0:
+			raise ValueError(f"Room {self.name} exceeds its capacity")
+		for destination in self.links.values():
+			if not isinstance(destination,Room):
+				raise ValueError(f"Room {self.name} has unresolved or invalid link " \
+					f"{destination}")
+		return super().validate()
 
 	# restore links dict to using strings as values for saving to json
 	# restore surfaces to using strings representing their composition
@@ -2519,16 +3082,11 @@ class Room(GameObject):
 
 	### Operation ###
 
-	# spawn object if not fully instantiated, try to add it to contents depending on type
+	# Add an existing registered object to this room.
 	def add(self,O):
-		# spawn object if given as string or has no ID
-		if isinstance(O,str) or O.id is None:
-			O = game.spawn(O)
-
-		# check if object can be added to room, displace it if not
-		# displacing it out of a room will probably destroy it
+		if not isinstance(O,Item) or game.itemRegistry.get(O.id) is not O:
+			raise ValueError(f"Cannot add unregistered object {O} to {self}")
 		if not self.canAdd(O):
-			O.displace(None)
 			return False
 
 		# set platform surface for object if it has none
@@ -2556,6 +3114,11 @@ class Room(GameObject):
 			O.timeDespawn()
 			return O
 		return False
+
+
+	# Register and place an object in this room through Game.spawn().
+	def spawn(self,obj):
+		return game.spawn(obj,self)
 
 
 	# apply an area condition to all objs in the Room
@@ -2873,7 +3436,7 @@ class Item(GameObject):
 	def __init__(self,name,desc,weight,durability,composition,aliases=None,rarity=1,
 	status=None,plural=None,descname=None,determiner=None,pronoun="it",occupyprep="on",
 	fixed=False,mention=True,longevity=None,despawnTimer=None,scent=None,flavor=None,
-	texture=None,platform=None,occupants=None,covering=None,minGripsNeeded=1,id=None):
+	texture=None,platform=None,minGripsNeeded=1,id=None):
 
 		### Basic Properties
 	
@@ -2916,7 +3479,7 @@ class Item(GameObject):
 		# used for identifying object from player input
 		self.aliases = list(set(aliases)) if aliases else []
 
-		### World Properties -- may be reassigned during assignRefs() 
+		### World Properties -- resolved during enmeshWorld()
 
 		# used to uniquely identify this object instance
 		self.id = id
@@ -2935,10 +3498,6 @@ class Item(GameObject):
 
 		# these describe physical position relative to other objects
 		self.platform = platform
-		# input-only shorthand for nesting occupants in World.json and old saves
-		self._inputOccupants = occupants if occupants else []
-		# input-only shorthand for nesting covered Creatures in World.json
-		self._inputCovering = covering if covering else []
 
 
 	### Dunder Methods ###
@@ -2949,77 +3508,36 @@ class Item(GameObject):
 
 	### File I/O ###
 
-	# when instantiating this object, many other objects may not yet be instantiated,
-	# so during __init__ these are provided as object IDs (integers) or None.
-	# after all objects are instantiated, we call this to substitute IDs with real objects
-	def assignRefs(self,parent):
-		self.parent = parent
-		isID = lambda x: isinstance(x,int) or x is None
-		if isID(self.platform):
-			self.platform = game.itemRegistry[self.platform]
+	# Validate registry identity, ownership, platform relationships, and anchor cycles.
+	# These shared invariants apply to every Item subclass.
+	def validate(self):
+		if not isinstance(self.id,int) or game.itemRegistry.get(self.id) is not self:
+			raise ValueError(f"Registry does not contain {self} at its ID {self.id}")
+		if self not in celestials:
+			if self.parent is None or self not in game.ownedChildren(self.parent):
+				raise ValueError(f"{self} is not owned by its parent {self.parent}")
+		if self.platform is not None and not isinstance(self.platform,Item):
+			raise ValueError(f"{self} has invalid platform {self.platform}")
+		if self.platform is not None and \
+			self.platform is not getattr(self.parent,"floor",None) and \
+			self.platform.parent is not self.parent:
+			raise ValueError(f"{self} and platform {self.platform} are not siblings")
 
-		self.assignInputTethers()
-
-		# assign the item's anchor unless it is flying
-		if self.anchor() is None and not self.hasStatus("flying"):
-			# creatures don't have floors, and surfaces may not have a platform
-			if not isinstance(self.parent,Creature) and not self in self.parent.surfaces:
-				self.platform = self.parent.floor
-
+		anchors = set()
+		anchor = self.anchor()
+		while anchor is not None:
+			if anchor in anchors or anchor is self:
+				raise ValueError(f"Anchor cycle involving {self}")
+			anchors.add(anchor)
+			anchor = anchor.anchor()
+		return super().validate()
 
 	# convert these references back into integer IDs
 	def convertToJSON(self):
 		jsonDict = self.__dict__.copy()
-		jsonDict["platform"] = self.platform.id if self.platform else None
-		if "_inputOccupants" in jsonDict:
-			del jsonDict["_inputOccupants"]
-		if "_inputCovering" in jsonDict:
-			del jsonDict["_inputCovering"]
+		jsonDict["platform"] = self.platform.id if self.platform and \
+			self.platform is not getattr(self.parent,"floor",None) else None
 		return jsonDict
-
-
-	# materialize input-only tether shorthands from World.json
-	def assignInputTethers(self):
-		self.assignInputOccupants()
-		self.assignInputCovering()
-
-
-	# materialize nested occupants and normalize occupant references from old saves
-	def assignInputOccupants(self):
-		isID = lambda x: isinstance(x,int)
-		for occupant in self._inputOccupants:
-			fromID = isID(occupant)
-			occupant = game.itemRegistry[occupant] if fromID else occupant
-			if occupant.parent is not self.parent:
-				assert self.parent.add(occupant)
-				occupant.assignRefs(occupant.parent)
-				assignRefsRecur(occupant)
-			if isinstance(self,Creature):
-				assert isinstance(occupant,Creature)
-				assert not fromID or occupant.riding in (self,self.id)
-				if not fromID:
-					occupant.removePlatform()
-				occupant.riding = self
-			else:
-				assert not fromID or occupant.platform in (self,self.id)
-				if not fromID:
-					occupant.removePlatform()
-				occupant.platform = self
-		del self._inputOccupants
-
-
-	# materialize nested covering entries as siblings whose cover is self
-	def assignInputCovering(self):
-		isID = lambda x: isinstance(x,int)
-		for covered in self._inputCovering:
-			covered = game.itemRegistry[covered] if isID(covered) else covered
-			assert isinstance(covered,Creature)
-			assert self.parent.add(covered)
-			covered.assignRefs(covered.parent)
-			assignRefsRecur(covered)
-			assert covered.cover is None
-			assert covered.addCover(self)
-		del self._inputCovering
 
 
 	### Operation ###
@@ -3906,7 +4424,7 @@ class Item(GameObject):
 # In addition to platform anchor, Creatures can be carried or riding another Creature
 class Creature(Item):
 	def __init__(self,name,desc,weight,traits,hp=None,mp=0,money=0,inv=None,gear=None,
-	love=0,fear=0,carrying=None,carrier=None,riding=None,platform=None,
+	love=0,fear=0,carrier=None,riding=None,platform=None,
 	cover=None,composition="flesh",memories=None,appraisal=None,lastAte=0,lastSlept=0,
 	lastBreathed=0,regenTimer=0,alert=False,lastSawPlayer=None,
 	carrySlots=None,gripSlots=None,**kwargs):
@@ -3972,9 +4490,8 @@ class Creature(Item):
 
 		# these represent relationships to other Items in the Creature's parent
 		# during __init__(), these are given as object IDs or None
-		# but are replaced with real object references in assignRefs()
+		# but are replaced with real object references in enmeshWorld()
 		self.riding = riding
-		self._inputCarrying = carrying
 		self.carrier = carrier
 		self.platform = platform
 		self.cover = cover
@@ -4012,108 +4529,49 @@ class Creature(Item):
 
 	### File I/O ###
 
-	# materialize input-only tether shorthands from World.json
-	def assignInputTethers(self):
-		super().assignInputTethers()
-		self.assignInputCarrying()
+	# Validate anchor exclusivity, sibling tethers, carrying slots, and equipped gear.
+	# Also enforce the creature's inventory and carried-cargo capacity limits.
+	def validate(self):
+		anchors = (self.platform,self.carrier,self.riding)
+		if sum(anchor is not None for anchor in anchors) > 1:
+			raise ValueError(f"Creature {self} has multiple physical anchors")
+		for tetherName,expectedType in (("carrier",Creature),
+		("riding",Creature),("cover",Item)):
+			target = getattr(self,tetherName)
+			if target is not None and not isinstance(target,expectedType):
+				raise ValueError(f"Creature {self} has invalid {tetherName} {target}")
+			if target is not None and (target is self or target.parent is not self.parent):
+				raise ValueError(f"Creature {self} and {tetherName} {target} are not siblings")
 
-
-	# materialize a nested carrying entry as a sibling whose carrier is self
-	def assignInputCarrying(self):
-		if self._inputCarrying is None:
-			del self._inputCarrying
-			return
-		if isinstance(self._inputCarrying,dict) and "__class__" not in self._inputCarrying:
-			carrying = list(self._inputCarrying.items())
-		elif isinstance(self._inputCarrying,list):
-			carrying = [(None,carried) for carried in self._inputCarrying]
-		else:
-			carrying = [(None,self._inputCarrying)]
-		isID = lambda x: isinstance(x,int)
-		for slot,carried in carrying:
-			carried = game.itemRegistry[carried] if isID(carried) else carried
-			assert isinstance(carried,Creature) and carried is not self
-			assert carried.carrier in (None,self,self.id)
-			if slot is None:
-				slot = next((s for s in self.carrySlots \
-					if self[s] in (EmptyGear(),"carrying",carried.id)),None)
-			assert slot in self.carrySlots and self[slot] in \
-				(EmptyGear(),"carrying",carried.id,carried)
-			if carried.carrier == self.id:
-				carried.carrier = self
-			slots = [s for s in self.carrySlots if self[s] is carried]
-			if self[slot] is not carried:
-				self[slot] = EmptyGear()
-			self.assignCarrySlots(carried,slots+([slot] if slot not in slots else []))
-			if carried not in self.parent:
-				if carried.id is not None and carried.id not in game.itemRegistry:
-					game.registerItem(carried)
-				added = self.parent.add(carried)
-				assert added
-				carried.assignRefs(carried.parent)
-				assignRefsRecur(carried)
-			assert carried.parent is self.parent
-		del self._inputCarrying
-
-	# take Item IDs from attributes and replace them with object references
-	def assignRefs(self,parent):
-		self.parent = parent
-		if isinstance(self.carrier,int):
-			self.carrier = game.itemRegistry[self.carrier]
-		if self.carrier and not self.hasStatus("restrained",Data.RESTRAINT_CARRY):
-			insort(self.status,["restrained",Data.RESTRAINT_CARRY])
-		self.riding = game.itemRegistry[self.riding]
-		self.cover = game.itemRegistry[self.cover]
-		self.platform = game.itemRegistry[self.platform]
-		self.assignInputTethers()
-
-		# ensure platform is assigned if unanchored
-		if self.anchor() is None and not self.hasStatus("flying"):
-			# creatures don't have floors, and surfaces may not have a platform
-			if not isinstance(self.parent,Creature) and not self in self.parent.surfaces:
-				self.platform = self.parent.floor
-
-		# replace gear IDs with actual objects, replace None with EmptyGear()
-		uncompGear = {}
-		for slot, id in self.gear.items():
-			if id == "carrying":
-				carried = [c for c in self.parent if isinstance(c,Creature) and \
-					c.carrier in (self,self.id) and c not in uncompGear.values()]
-				assert len(carried) == 1, f"Creature {self.name} has ambiguous " \
-					f"'carrying' gear slot '{slot}'"
-				uncompGear[slot] = carried[0]
-			elif isinstance(id,Creature) and id.carrier is self:
-				assert slot in self.carrySlots
-				uncompGear[slot] = id
-			# if id is already the real object, add it to inventory if needed
-			elif type(id) not in (int, EmptyGear, type(None)):
-				assert self.add(id)
-				uncompGear[slot] = id
-			elif id is None or id is EmptyGear():
-				uncompGear[slot] = EmptyGear()
-			else:
-				item = game.itemRegistry[id]
-				if isinstance(item,Creature) and slot in self.carrySlots:
-					assert item.carrier in (self,self.id)
-					item.carrier = self
-				uncompGear[slot] = item
-		self.gear = uncompGear
+		if self.carrier is not None:
+			slots = [slot for slot in self.carrier.carrySlots \
+				if self.carrier[slot] is self]
+			if not slots:
+				raise ValueError(f"Carried creature {self} occupies no slots on " \
+					f"{self.carrier}")
+			if len(slots) < self.gripsNeeded(self.carrier):
+				raise ValueError(f"Carried creature {self} has too few occupied slots")
+			if not self.hasStatus("restrained",Data.RESTRAINT_CARRY):
+				raise ValueError(f"Carried creature {self} lacks carrying restraint")
 
 		for slot,item in self.gear.items():
-			assert item is EmptyGear() or item in self.inv or item in self.carrying(), \
-			f"Creature {self.name} has item in gear slot '{slot}' not in inventory"
+			if item is not EmptyGear() and not isinstance(item,Item):
+				raise ValueError(f"Creature {self} has unresolved gear in slot '{slot}'")
+			if item is EmptyGear():
+				continue
 			if isinstance(item,Creature):
-				assert slot in self.carrySlots and item.carrier is self
-			assert isinstance(item,Creature) or item.slots is None or slot in item.slots, \
-			f"Creature {self.name} has item {item.name} in invalid slot '{slot}'"
-
-		assert self.invWeight() <= 2*self.BRDN(), f"Creature {self.name} has too " \
-		f"much inventory weight. BRDN is {self.BRDN()}, but inventory weight is " \
-		f"{self.invWeight()}"
-		assert self.canCarryWeight(), f"Creature {self.name} has too " \
-		f"much cargo weight. BRDN is {self.BRDN()}, but cargo weight is " \
-		f"{self.carryWeight()}"
-
+				if slot not in self.carrySlots or item.carrier is not self:
+					raise ValueError(f"Creature {item} is invalid cargo in " \
+						f"{self}'s slot '{slot}'")
+			elif item not in self.inv:
+				raise ValueError(f"Gear item {item} is absent from {self}'s inventory")
+			elif item.slots is not None and slot not in item.slots:
+				raise ValueError(f"Gear item {item} cannot use slot '{slot}'")
+		if self.invWeight() > 2*self.BRDN():
+			raise ValueError(f"Creature {self} exceeds inventory capacity")
+		if not self.canCarryWeight():
+			raise ValueError(f"Creature {self} exceeds cargo capacity")
+		return super().validate()
 
 	# returns a dict which contains all the necessary information to store
 	# this object instance as a JSON object when saving the game
@@ -4132,8 +4590,6 @@ class Creature(Item):
 		jsonDict["cover"] = self.cover.id if self.cover else None
 		jsonDict["carrySlots"] = self.carrySlots
 		jsonDict["gripSlots"] = self.gripSlots
-		if "_inputCarrying" in jsonDict:
-			del jsonDict["_inputCarrying"]
 
 		dictkeys = list(jsonDict.keys())
 		delAttrs = ("gear","weapon","weapon2","shield","shield2")
@@ -4143,7 +4599,7 @@ class Creature(Item):
 				del jsonDict[key]
 		jsonDict["gear"] = jsonGear
 		# convert traits to a form more easily writable in a JSON object
-		jsonDict["traits"] = [self.str,self.skl,self.spd,self.stm,self.con,
+		jsonDict["traits"] = [self.str,self.spd,self.skl,self.stm,self.con,
 		self.cha,self.int,self.wis,self.fth,self.lck]
 
 		# delete attributes that should be given as defaults
@@ -4153,18 +4609,10 @@ class Creature(Item):
 
 	### Operation ###
 
-	# try to add an Item to Inventory, it will fail if the inventory is too heavy
+	# Atomically insert an existing registered Item into this creature's inventory.
 	def add(self,I):
-		# spawn new object if given as a string
-		newlySpawned = False
-		if isinstance(I,str) or I.id is None:
-			I = game.spawn(I)
-			newlySpawned = True
-
-		# check if can obtain item
-		if not self.canObtain(I,silent=True):
-			I.displace()
-			return False
+		if not isinstance(I,Item) or game.itemRegistry.get(I.id) is not I:
+			raise ValueError(f"Cannot add unregistered object {I} to {self}")
 
 		# Serpens can't get added to inventory
 		if isinstance(I,Serpens):
@@ -4396,7 +4844,9 @@ class Creature(Item):
 	def checkCarrying(self):
 		carrying = self.carrying()
 		for carried in carrying:
-			assert carried is not self and carried.parent is self.parent
+			assert carried is not self
+			# checkCarrying can be called during self.changeLocation when this is not true
+			# assert carried.parent is self.parent
 			assert carried.carrier is self
 
 		cargoWeight = 0
@@ -4535,7 +4985,7 @@ class Creature(Item):
 		self.aliases.extend(["dead "+a for a in self.aliases])
 
 		n = diceRoll(3,player.LOOT(),-2)
-		self.parent.add(Serpens(n))
+		game.spawn(Serpens(n),self.parent)
 		self.printNearby(f"Dropped §{n}.",color="g")
 
 		if game.whoseTurn is player:
@@ -5152,7 +5602,13 @@ class Creature(Item):
 	def equipInHand(self,I,slot=None):
 		assert I in self or I in self.carrying()
 		if slot is None:
-			slot = "right" if "right" in self.gripSlots else self.gripSlots[0]
+			emptyGrips = [grip for grip in self.gripSlots if self[grip] is EmptyGear()]
+			if "right" in emptyGrips:
+				slot = "right"
+			elif emptyGrips:
+				slot = emptyGrips[0]
+			else:
+				slot = "right" if "right" in self.gripSlots else self.gripSlots[0]
 		if slot not in self.gripSlots:
 			return False
 		if any(self[grip] is I for grip in self.gripSlots):
@@ -5160,7 +5616,8 @@ class Creature(Item):
 
 		gripsNeeded = I.gripsNeeded(self)
 		if gripsNeeded > len(self.gripSlots):
-			self.Print(f"{+I} requires more grips than you have.")
+			self.Print(f"{+I} is too unwieldy for you! " \
+				"It requires more grips than you have.")
 			return False
 		grips = [slot] + [grip for grip in self.gripSlots if grip != slot]
 		grips = grips[:gripsNeeded]
@@ -5575,9 +6032,10 @@ class Creature(Item):
 		elif self in I.ancestors(): suffix = " from your " + oldParent.name
 		elif oldParent: suffix = f" from {-oldParent}"
 		else: suffix = ""
-		strname = I.nounPhrase('a' if self.count()>1 else 'the')
+		itemCount = I.count(oldParent) if oldParent is not None else 1
+		strname = I.nounPhrase('a' if itemCount > 1 else 'the')
 
-		if self.canObtain(I):
+		if self.canObtain(I,silent=silent):
 			if oldParent:
 				oldParent.remove(I)
 			assert self.add(I)
@@ -6199,6 +6657,10 @@ class Player(Creature):
 		return "you"
 
 
+	def reflexive(self):
+		return "yourself"
+
+
 	### File I/O ###
 
 	def convertToJSON(self):
@@ -6435,6 +6897,8 @@ class Player(Creature):
 	# if the sun is not visible and they have no compass
 	def canNavigate(self):
 		location = self.parent
+		if self.hasStatus("sagacity"):
+			return True
 		if location is None or self.hasAnyStatus("blindness","stupidity"):
 			return False
 		return self.countCompasses() > 0 or (self.canSeeSky() and "sun" in location)
@@ -6574,6 +7038,27 @@ class Player(Creature):
 	# print each player gear slot and the items equipped in them
 	def printGear(self,*args,outfile=None):
 		Print(outfile=outfile)
+		if outfile is sidepanel:
+			slots = tuple(self.gear)
+			midpoint = (len(slots)+1)//2
+			leftSlots = slots[:midpoint]
+			rightSlots = slots[midpoint:]
+			labelWidth = max(len(slot) for slot in slots) + 1
+			gearEntry = lambda slot: \
+				f"{slot + ':':<{labelWidth}} {self[slot].displayName()}"
+			gearEntries = []
+			for idx,leftSlot in enumerate(leftSlots):
+				gearEntries.append(gearEntry(leftSlot))
+				if idx < len(rightSlots):
+					rightSlot = rightSlots[idx]
+					gearEntries.append(gearEntry(rightSlot))
+				else:
+					gearEntries.append("")
+			maxColWidth = (sidepanel.width-1)//2
+			colWidth = min(maxColWidth,
+				max(15,max(displayLength(entry) for entry in gearEntries) + 1))
+			columnPrint(gearEntries,2,w=colWidth,outfile=outfile)
+			return
 		for slot in self.gear:
 			val = self[slot].displayName()
 			Print(slot + ":\t" + val,outfile=outfile)
@@ -6639,8 +7124,6 @@ class Player(Creature):
 
 	# prints player level, money, hp, mp, rp, and status effects
 	def printStats(self, *args, outfile=None):
-		colWidth = None
-		nCols = 3
 		name = self.name
 		if len(name) > 45:
 			name = name[:42] + "..."
@@ -6654,8 +7137,8 @@ class Player(Creature):
 			colors = ["w"]*len(colors)
 		if self.hasStatus("stupidity"):
 			stats = [ambiguateNumbers(stat) for stat in stats]
-		if max(len(term) for term in stats) > 14:
-			nCols = 2
+		colWidth = max(displayLength(stat) for stat in stats) + 2
+		nCols = max(1,min(3,(sidepanel.width-1) // colWidth))
 		stats = [tinge(colors[i],stats[i])[0] for i in range(len(stats))]
 		columnPrint(stats,nCols,w=colWidth,outfile=outfile)
 
@@ -6717,9 +7200,9 @@ class Player(Creature):
 	def printTraits(self,trait=None,outfile=None):
 		if trait == None:
 			traits = [self.displayTrait(t) for t in Data.traits]
-			colWidth = max(displayLength(trait) for trait in traits)
-			# cols = min(50 // colWidth, 5)
-			return columnPrint(traits,5,outfile=outfile)
+			colWidth = max(displayLength(trait) for trait in traits) + 2
+			nCols = max(1,min(5,(sidepanel.width-1) // colWidth))
+			return columnPrint(traits,nCols,w=colWidth,outfile=outfile)
 
 		Print(self.displayTrait(trait))
 		return 1
@@ -7107,7 +7590,7 @@ class Animal(Speaker):
 		if not partner.hasStatus("wildspeaking"):
 			sounds = game.dlogForest["sounds"][self.species]
 			sound = sample(sounds,1)[0]
-			waitInput(f'"{sound}"',color="y")
+			waitInput(f'*{sound}*',color="y")
 			return True
 		if "met" not in self.memories:
 			self.firstImpression(partner)
@@ -7291,100 +7774,78 @@ class Portal(Item):
 
 	### File I/O ###
 
-	def prepareCompressedLinks(self):
-		# must copy links for saving to JSON so real links remain
-		if not hasattr(self, "compressedLinks"):
-			self.compressedLinks = self.links.copy()
+	# Resolve an authored portal-pair ID while loading the world.
+	@staticmethod
+	def resolveLinkPair(linkId,endpoints):
+		portals = {portal for portal,direction in endpoints}
+		if len(portals) != 2:
+			raise ValueError(f"Portal link {linkId} joins {len(portals)} portals")
+		for portal,direction in endpoints:
+			portal.links[direction] = next(other for other in portals if other is not portal)
+
+	# Validate resolved destinations; ordinary Portal targets must link back.
+	# Containers may remain one-way object targets, while pair creation establishes
+	# reciprocal container links through resolveLinkPair() or connect().
+	def validate(self):
+		for direction,destination in self.links.items():
+			if not isinstance(destination,(Room,Item)):
+				raise ValueError(f"Portal {self} has invalid {direction} link {destination}")
+			if isinstance(destination,Portal) and not isinstance(destination,Container) and \
+				self not in destination.links.values():
+				raise ValueError(f"Portal link from {self} to {destination} is not reciprocal")
+		return super().validate()
 
 
-	# In JSON, Portals' links eachother are represented by a unique link ID
-	# search in the World for the Portal that has a link with the same link ID
-	# and link that portal to self
-	def linkPortals(self,linkId):
-		# find paired portal in world
-		pairedPortals = set()
-		pairKey = lambda x: isinstance(x,Portal) and linkId in x.links.values()
-		for room in world.values():
-			pairedPortals |= objQuery(room,key=pairKey,d=3)
-		pairedPortals.remove(self)
-		assert len(pairedPortals) == 1, f"Portal {self.name} has an ambiguous" \
-		f" connection for '{linkId}'. Found {len(pairedPortals)} matches."
-		pairedPortal = list(pairedPortals)[0]
-
-		# link paired portal to self
-		for dir, dest in self.links.items():
-			if dest == linkId:
-				self.links[dir] = pairedPortal
-		# link self to the paired portal
-		for dir, dest in pairedPortal.links.items():
-			if dest == linkId:
-				pairedPortal.links[dir] = self
-
-
-	# after reading objects in from JSON portals must be linked to their destinations
-	# links to Rooms are stored as the Room's unique name
-	# for convenience, links to Portals are stored as int IDs or "port:<name>" strings
-	def assignRefs(self,parent):
-		super().assignRefs(parent)
-
-		for dir, dest in self.links.items():
-			# set one-way link to Room
-			if isinstance(dest,str) and dest in world:
-				self.links[dir] = world[dest]
-			# set two-way link to Portal with string pair ID
-			elif isinstance(dest,str) and dest.startswith("port:"):
-				self.linkPortals(dest)
-			# set two-way link to Portal with int pair ID
-			elif isinstance(dest,int):
-				self.linkPortals(dest)
-			# link is an object, so its already assigned
-			elif isinstance(dest,Room) or isinstance(dest,Portal):
-				continue
-			else:
-				raise Exception(f"Portal {self.name} has a connection to unknown" \
-				f" destination '{dest}'")
-
-
-	# replace link to paired Portal with given linkId for storing to json
-	# sometimes called from self, sometimes from the paired Portal
-	def assignLinkIDs(self,pairPortal,linkId):
-		self.prepareCompressedLinks()
-
-		assert pairPortal in self.compressedLinks.values()
-		for dir, dest in self.compressedLinks.items():
-			if dest is pairPortal:
-				self.compressedLinks[dir] = linkId
-
+	# Return the portal links that should be written to a save.
+	def serializableLinks(self):
+		return self.links
 
 	# replace object references in Portal Links with json-serializable values
-	def convertToJSON(self):
-		self.prepareCompressedLinks()
-		# convert Portal links to int IDs
-		for portal in {v for v in self.compressedLinks.values() if isinstance(v,Portal)}:
-			# get next available linkId
-			linkId = game.portalLinkIds
-			# replace this reference link with unique linkId in both Portals
-			self.assignLinkIDs(portal,linkId)
-			portal.assignLinkIDs(self,linkId)
-			# mark this linkId as used
-			game.portalLinkIds += 1
-
-		# convert Room links to unique name strings
-		for dir, dest in self.compressedLinks.items():
-			if isinstance(dest,Room):
-				self.compressedLinks[dir] = dest.name.lower()
-
-		# all links should now be either strings or ints
-		for dir,dest in self.compressedLinks.items():
-			assert isinstance(dest,(str,int)), f"Portal {self.name} failed to convert" \
-			f" link {dest} at direction {dir} into string or int"
-		jsonDict = self.__dict__.copy()
-		jsonDict["links"] = jsonDict["compressedLinks"]
-		del jsonDict["compressedLinks"]
+	def convertToJSON(self,portalLinkIds=None):
+		if portalLinkIds is None:
+			portalLinkIds = {}
+		jsonLinks = {}
+		for direction,destination in self.serializableLinks().items():
+			if isinstance(destination,Portal) and self in destination.links.values():
+				pair = frozenset((self,destination))
+				if pair not in portalLinkIds:
+					portalLinkIds[pair] = len(portalLinkIds)
+				jsonLinks[direction] = f"port:{portalLinkIds[pair]}"
+			elif isinstance(destination,Room):
+				jsonLinks[direction] = destination.name.lower()
+			elif isinstance(destination,Item) and isinstance(destination.id,int):
+				jsonLinks[direction] = destination.id
+			else:
+				raise ValueError(f"Portal {self} has invalid {direction} link {destination}")
+		jsonDict = super().convertToJSON()
+		jsonDict["links"] = jsonLinks
 		return jsonDict
 
 
 	### Operation ###
+
+	# Create and validate one reciprocal portal pair during gameplay.
+	def connect(self,direction,other,otherDirection):
+		if not isinstance(other,Portal) or other is self:
+			raise ValueError(f"Cannot connect {self} to {other}")
+		if game.itemRegistry.get(self.id) is not self or \
+			game.itemRegistry.get(other.id) is not other:
+			raise ValueError("Cannot connect unregistered portals")
+		if direction in self.links:
+			raise ValueError(f"Portal {self} already has a {direction} link")
+		if otherDirection in other.links:
+			raise ValueError(f"Portal {other} already has a {otherDirection} link")
+
+		self.links[direction] = other
+		other.links[otherDirection] = self
+		try:
+			self.validate()
+			other.validate()
+		except Exception:
+			del self.links[direction]
+			del other.links[otherDirection]
+			raise
+		return True
 
 	# for Creatures intentionally travelling through the portal
 	# takes a verb because some subclasses may take verbs to traverse
@@ -7571,21 +8032,35 @@ class Container(Portal):
 		self.walls = self
 		self.floor = self
 		self.surfaces = (self.ceiling,self.walls,self.floor)
+		if self.vacancy() != -1 and self.vacancy() < 0:
+			raise ValueError(f"Container {self} exceeds its capacity")
 
 
 	### File I/O ###
 
-	def prepareCompressedLinks(self):
-		# must copy links for saving to JSON so real links remain
-		# containers should remove their self-reference links
-		if not hasattr(self, "compressedLinks"):
-			self.compressedLinks = {k:v for k,v in self.links.items() \
-			if k not in (self.passprep,self.exitprep)}
+	# Validate capacity and the generated entrance and exit relationships.
+	def validate(self):
+		if self.vacancy() != -1 and self.vacancy() < 0:
+			raise ValueError(f"Container {self} exceeds its capacity")
+		if self.links.get(self.passprep) is not self:
+			raise ValueError(f"Container {self} has invalid entrance link")
+		if self.links.get(self.exitprep) is not self.parent:
+			raise ValueError(f"Container {self} has invalid exit link")
+		if self.floor.composition in Data.liquids and \
+			("down" not in self.links or \
+			not isinstance(self.links["down"],(Room,Portal))):
+			raise ValueError(f"Container {self} has a liquid floor but no valid down link")
+		return super().validate()
+
+	# Omit generated entrance and exit links from serialized container data.
+	def serializableLinks(self):
+		return {direction:destination for direction,destination in self.links.items() \
+			if direction not in (self.passprep,self.exitprep)}
 
 
 	# delete unneeded attributes for storing to json
-	def convertToJSON(self):
-		jsonDict = Portal.convertToJSON(self)
+	def convertToJSON(self,portalLinkIds=None):
+		jsonDict = Portal.convertToJSON(self,portalLinkIds)
 		del jsonDict["ceiling"]
 		del jsonDict["walls"]
 		del jsonDict["floor"]
@@ -7594,29 +8069,13 @@ class Container(Portal):
 		return jsonDict
 
 
-	# assign object references after reading from json, ensure capacity is not exceeded
-	def assignRefs(self,parent):
-		super().assignRefs(parent)
-
-		assert self.itemsSize() <= self.Capacity() or self.Capacity() == -1, (f"Container" \
-		f" {self.name} has negative vacancy available. Capacity is {self.Capacity()}," \
-		f" but occupied space is {self.itemsSize()}.")
-
-		self.links |= {self.passprep: self, self.exitprep: self.parent}
-
-
 	### Operation ###
 
 	# add Item to Container's items list
 	def add(self,I):
-		# spawn object if given as string or has no ID
-		if isinstance(I,str) or I.id is None:
-			I = game.spawn(I)
-
-		# check if object can be added to room, displace it if not
-		# displacing it out of a room will probably destroy it
+		if not isinstance(I,Item) or game.itemRegistry.get(I.id) is not I:
+			raise ValueError(f"Cannot add unregistered object {I} to {self}")
 		if not self.canAdd(I):
-			I.displace(self.parent)
 			return False
 
 		# ensure only one bunch of Gold exists here
@@ -7630,6 +8089,11 @@ class Container(Portal):
 		I.parent = self
 		I.nullDespawn()
 		return I
+
+
+	# Register and place an object in this container through Game.spawn().
+	def spawn(self,obj):
+		return game.spawn(obj,self)
 
 
 	# apply an area condition to all objs in the Container
@@ -7887,7 +8351,7 @@ class Container(Portal):
 
 
 
-# used as shorthand to make a Portal that is fixed and not mentioned by default
+# convenience Portal subclass that is fixed and not mentioned by default
 class Passage(Portal):
 	def __init__(self,name,desc,weight,composition,links,passprep="into",mention=False,
 	durability=-1,fixed=True,**kwargs):

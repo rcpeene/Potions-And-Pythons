@@ -30,12 +30,13 @@
 				"desc": "A gently flowing brook. The water is cool and clear. It carves a muddy bank as it pushes eastward.",
 				"weight": 100,
 				"composition": "freshwater",
+				"id": 6,
 				"items": [],
 				"aliases": ["stream","creek"],
 				"links": {
-					"east": "port:brook_to_pond",
-					"west": "port:stream_to_brook",
-					"down": "port:wooden_chest"
+					"east": "port:brook-pond",
+					"west": "port:brook-stream",
+					"down": 7
 				}
 			}
 		],
@@ -194,10 +195,19 @@
 				"aliases": ["mirror"]
 			},
 			{
+				"__class__": "Painting",
+				"name": "painting of strange animals",
+				"desc": "A very dusty and worn painting depicting strange animals in a surreal landscape.",
+				"weight": 15,
+				"durability": 10,
+				"aliases": ["art","artwork","painting","animals"],
+				"composition": "canvas",
+				"filepath": "thelivingroom.txt"
+			},
+			{
 				"__class__": "factoryItem",
 				"name": "green potion"
 			}
-
 		],
 		"creatures": [],
 		"status": [],
@@ -455,6 +465,7 @@
 				"weight": 8,
 				"durability": 10,
 				"composition": "wood",
+				"id": 7,
 				"closed": true,
 				"capacity": 30,
 				"items": [
@@ -473,7 +484,17 @@
 						"value": 12
 					}
 				],
-				"links": {"beyond": "port:wooden_chest"}
+				"links": {"beyond": 6}
+			},
+			{
+				"__class__": "Painting",
+				"name": "painting of the lights",
+				"desc": "A painting of the lights shimmering across a starry sky.",
+				"weight": 15,
+				"durability": 10,
+				"aliases": ["art","artwork","painting","lights","aurora"],
+				"composition": "canvas",
+				"filepath": "northern_lights.txt"
 			}
 		],
 		"creatures": [],
@@ -486,7 +507,7 @@
 		"__class__": "Room",
 		"name": "Cave",
 		"domain": "Woodlands",
-		"desc": "A wet cave. You are surrounded by stalactites above and stalagmites around. Dripping sounds can be heard echoing throughout the cave. A dim light can be seen down a tunnel to the north.",
+		"desc": "A wet cave. You are surrounded by stalactites above and stalagmites around. Dripping sounds can be heard echoing throughout the cave. A <b>dim light</> can be seen down a tunnel to the north.",
 		"links": {
 			"north": "tunnel",
 			"light": "tunnel",
@@ -553,10 +574,11 @@
 				"desc": "A small stream flowing out from a crack at the base of the cliff. The water seems to coax you eastward.",
 				"weight": 100,
 				"composition": "freshwater",
+				"id": 8,
 				"items": [],
 				"aliases": ["brook","creek"],
 				"links": {
-					"east": "port:stream_to_brook"
+					"east": "port:brook-stream"
 				}
 			}
 		],
@@ -836,9 +858,10 @@
 				"desc": "A murky medium-sized pond with some algae-covered water",
 				"weight": 60,
 				"composition": "mudwater",
+				"id": 9,
 				"items": [],
 				"links": {
-					"west": "port:brook_to_pond"
+					"west": "port:brook-pond"
 				}
 			}
 		],
@@ -954,8 +977,7 @@
 					"left": 2,
 					"right": null,
 					"legs": null
-				},
-				"carrying": 2
+				}
 			},
 			{
 				"__class__": "Animal",

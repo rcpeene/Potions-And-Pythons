@@ -1,6 +1,48 @@
 test
 \TPT cabin basement
 
+\\ Spawn recursively registers owned trees and preserves explicit IDs
+\exe game.spawnChild=Items.Key("spawn child","",1,1,"iron",id=900001)
+\exe game.spawnRoot=Items.Box("spawn root","",2,2,"wood",items=[game.spawnChild],capacity=10)
+\exe game.spawn(game.spawnRoot)
+\chk game.itemRegistry[game.spawnRoot.id] is game.spawnRoot
+\chk game.itemRegistry[900001] is game.spawnChild
+\chk game.spawnChild.parent is game.spawnRoot
+\exe game.explicitRoot=Items.Key("explicit root","",1,1,"iron",id=-900001)
+\exe game.spawn(game.explicitRoot)
+\chk game.itemRegistry[-900001] is game.explicitRoot
+
+\\ Registered detached objects may be placed but attached roots may not be moved by spawn
+\exe game.detachedKey=game.spawn(Items.Key("detached key","",1,1,"iron"))
+\exe game.placedKey=player.parent.spawn(game.detachedKey)
+\chk game.placedKey is game.detachedKey and game.detachedKey.parent is player.parent
+\chk raises(ValueError,lambda: game.spawn(game.detachedKey,player.parent))
+
+\\ Creature spawning uses inventory admission and rolls back failed admission
+\exe game.collector=game.spawn(Core.Creature("spawn collector","",20,[10]*10))
+\exe game.collectedKey=game.spawn(Items.Key("collected key","",1,1,"iron"),game.collector)
+\chk game.collectedKey.parent is game.collector and game.collectedKey in game.collector.inv
+\exe game.fixedSpawn=Core.Item("fixed spawn","",20,-1,"stone",fixed=True)
+\exe game.failedCreatureSpawn=game.spawn(game.fixedSpawn,game.collector)
+\chk not game.failedCreatureSpawn
+\chk game.fixedSpawn.parent is None and game.fixedSpawn.id not in game.itemRegistry
+
+\\ Spawn and atomic add reject registry identity violations
+\exe game.registeredKey=Items.Key("registered key","",1,1,"iron",id=900002)
+\exe game.impostorKey=Items.Key("impostor key","",1,1,"iron",id=900002)
+\exe game.itemRegistry[900002]=game.registeredKey
+\chk raises(ValueError,lambda: game.spawn(game.impostorKey))
+\exe game.unregisteredKey=Items.Key("unregistered key","",1,1,"iron")
+\chk raises(ValueError,lambda: player.parent.add(game.unregisteredKey))
+
+\\ Failed post-placement validation rolls back placement and registration
+\exe game.invalidSpawn=Core.Item("invalid spawn","",1,1,"stone")
+\exe game.invalidSpawn.validate=lambda: (_ for _ in ()).throw(ValueError("invalid spawned item"))
+\chk raises(ValueError,lambda: player.parent.spawn(game.invalidSpawn))
+\chk game.invalidSpawn not in player.parent.items
+\chk game.invalidSpawn not in game.itemRegistry.values()
+\chk game.invalidSpawn.parent is None
+
 \\ Failed ordinary movement leaves the object and destination unchanged
 \spn Items.Box("packed trunk","A trunk packed according to an aggressively literal inventory.",10,-1,"wood",[],capacity=5)
 \spn Core.Item("resident brick","A brick with permanent residency paperwork.",5,-1,"stone")
@@ -12,7 +54,7 @@ put resident brick in packed trunk
 \chk fo("hopeful parcel",queryType="room").parent is player.parent
 \chk fo("packed trunk",queryType="room").items == [fo("resident brick",queryType="room",roomD=3)]
 
-\\ Invalid direct add invokes displacement but preserves an outward destination
+\\ Invalid direct add fails without mutating the object or destination
 \exe game.invalidAddSucceeded=fo("packed trunk",queryType="room").add(fo("hopeful parcel",queryType="room"))
 \chk not game.invalidAddSucceeded
 \chk fo("hopeful parcel",queryType="room").parent is player.parent

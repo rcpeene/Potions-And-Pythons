@@ -1053,7 +1053,8 @@ def Attack(dobj,iobj,prep,target=None,weapon=None,weapon2=None):
 	if not isinstance(weapon,Core.Weapon):
 		weapon = weapon.asWeapon()
 
-	Core.Print(f"You attack {-target} with {weaponPhrase}.",color="o")
+	targetPhrase = target.reflexive() if target is Core.player else -target
+	Core.Print(f"You attack {targetPhrase} with {weaponPhrase}.",color="o")
 	if isinstance(target,Core.Creature): Core.player.attackCreature(target)
 	elif isinstance(target,Core.Item): Core.player.attackItem(target)
 	if stowed: Core.player.weapon,Core.player.weapon2 = stowedweapons
@@ -1528,9 +1529,11 @@ def Equip(dobj,iobj,prep):
 		return False
 	# if item is armor, equip it as armor, otherwise, equip it in hand
 	if isinstance(I,Core.Armor):
-		Core.player.equipArmor(I)
+		equipped = Core.player.equipArmor(I)
 	else:
-		Core.player.equipInHand(I)
+		equipped = Core.player.equipInHand(I)
+	if not equipped:
+		return False
 	Core.Print(f"You equip {-I}.")
 	return True
 
