@@ -31,7 +31,6 @@
 				"weight": 100,
 				"composition": "freshwater",
 				"id": 6,
-				"items": [],
 				"aliases": ["stream","creek"],
 				"links": {
 					"east": "port:brook-pond",
@@ -373,8 +372,7 @@
 				"composition": "stone",
 				"fixed": true,
 				"capacity": 100,
-				"status": [["AREA wet -2",-2]],
-				"items": []
+				"status": [["AREA wet -2",-2]]
 			},
 			{
 				"__class__": "Plash",
@@ -575,7 +573,6 @@
 				"weight": 100,
 				"composition": "freshwater",
 				"id": 8,
-				"items": [],
 				"aliases": ["brook","creek"],
 				"links": {
 					"east": "port:brook-stream"
@@ -859,7 +856,6 @@
 				"weight": 60,
 				"composition": "mudwater",
 				"id": 9,
-				"items": [],
 				"links": {
 					"west": "port:brook-pond"
 				}

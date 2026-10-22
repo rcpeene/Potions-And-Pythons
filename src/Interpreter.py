@@ -1342,10 +1342,11 @@ def Dismount(dobj,iobj,prep,posture=None):
 
 
 def Dive(dobj,iobj,prep):
-	if Core.player.bathedIn():
+	if Core.player.riding:
+		return Go(dobj,iobj,"down")
+	if Core.player.immersed is not None:
 		return Swim(dobj,iobj,"down")
-	else:
-		return Jump(dobj,iobj,"into")
+	return Jump(dobj,iobj,"into")
 
 
 def Do(dobj,iobj,prep):
@@ -1747,7 +1748,7 @@ def goPosture():
 		Core.waitInput()
 
 
-def limitGo():
+def limitGo(dir=None):
 	# if Core.player.anchor() not in (Core.player.parent.floor, Core.player.riding):
 	# 	Core.Print(f"You can't go anywhere, you are {Core.player.position()}.")
 	# 	return True
@@ -1764,11 +1765,13 @@ def limitGo():
 			Core.game.setPronouns(Core.player.riding)
 			return True
 
-	bathedIn = Core.player.bathedIn()
-	if bathedIn and not Core.player.canSwim() and \
-	getattr(Core.player.anchor(),"composition",None) in Data.liquids and \
-	not Core.player.hasAnyStatus("flying","waterwalking"):
-		Core.Print(f"You can't swim, so you flail in the {bathedIn}!")
+	goer = Core.player.riding if Core.player.riding else Core.player
+	immersionSource = goer.immersed
+	if isinstance(immersionSource,Core.Portal) and \
+	dir not in set(immersionSource.links) | \
+	{"in","on","through","out",immersionSource.passprep,
+	getattr(immersionSource,"exitprep","out")}:
+		Core.Print(f"You need to get out of {-immersionSource} first.")
 		return True
 
 	return False
@@ -1817,10 +1820,18 @@ def Go(dobj,iobj,prep):
 		else:
 			return promptHelp(f"There is no '{dobj}' here.{locRemind}",tip=tip)
 	# we want to do the 'there is no __' message before the limitGo message
-	if limitGo():
+	if limitGo(dir):
 		return False
 	if dir is None and dest is not None:
 		dir,passage = Core.player.parent.getDirPortalPair(dest.name.lower())
+
+	# An immersed Portal controls navigation until the player exits it.
+	goer = Core.player.riding if Core.player.riding else Core.player
+	immersionSource = goer.immersed
+	if isinstance(immersionSource,Core.Portal):
+		Core.game.setPronouns(immersionSource)
+		goPosture()
+		return immersionSource.traverse(Core.player,dir=dir)
 	# print(dir,dest,passage)
 	if (dest,passage) == (None,None):
 		if dir in Core.player.parent.links:
@@ -1889,7 +1900,7 @@ def Hide(dobj,iobj,prep,I=None,posture=None):
 	Core.game.setPronouns(I)
 	if enforceVerbScope(f"hide {prep}",I,permitParent=True): return False
 
-	if (prep == "under" and I.canSubmerse(Core.player)):
+	if (prep == "under" and I.canSubmerge(Core.player)):
 		prep = "in"
 	if prep in ("in","inside"):
 		if not isinstance(I,Core.Container):
@@ -1898,7 +1909,7 @@ def Hide(dobj,iobj,prep,I=None,posture=None):
 		if I.traverse(Core.player,dir=prep,verb="hide"):
 			if not getattr(I,"closed",True):
 				I.close(Core.player)
-			if I is Core.player.parent and I.canSubmerse(Core.player):
+			if I is Core.player.parent and I.canSubmerge(Core.player):
 				Core.player.Submerge()
 			return True
 		return False
@@ -2201,7 +2212,7 @@ def Mount(dobj,iobj,prep,M=None,posture=None):
 		# determine if there is a rider that needs to be pushed off due to lack of space.
 		riderToPush = None
 		if M.riders() and Core.player.Size() > M.ridingSpace(Core.player):
-			riderToPush = M.riders()[-1]
+			riderToPush = M.riders()[0]
 		if riderToPush is not None:
 			question = f"You would have to push {-riderToPush} off of {-M}. Proceed?"
 			if not Core.yesno(question):
@@ -2325,7 +2336,7 @@ def Put(dobj,iobj,prep):
 		else:
 			Core.player.remove(I)
 			R.add(I)
-			I.platform = getattr(R,"floor",None)
+			I.platform = I.floorSupport(R)
 			# outprep = "on" if isinstance(R,Items.Table) else "in"
 			if iobj == "here": Core.Print(f"You put {itemPhrase} here.")
 			else: Core.Print(f"You put {itemPhrase} in {recipientPhrase}.")
@@ -2359,7 +2370,7 @@ def Put(dobj,iobj,prep):
 		riders = R.riders()
 		if riders and I.Size() > R.ridingSpace(I):
 			Core.Print("There's not enough space. " + \
-				(R+f"is occupied by {-riders[-1]}."))
+				(R+f"is occupied by {-riders[0]}."))
 			return False
 
 	if I in Core.player.carrying():
@@ -2522,7 +2533,7 @@ def Sleep(dobj,iobj,prep):
 	if Core.player.hasStatus("weariness"):
 		sleeptime *= 2
 	Core.player.addStatus("asleep",sleeptime)
-	Core.ellipsis(sleeptime//30)
+	Core.ellipsis(sleeptime//Core.game.hourlength)
 	Core.game.silent=True
 	return True
 
@@ -2618,16 +2629,19 @@ def Swim(dobj,iobj,prep):
 	"toward","under")
 	swimPreps = ("across","d","down","in","inside","on","onto","over",
 	"through","u","up","upon")
+	swimmer = Core.player.riding if Core.player.riding else Core.player
 
 	if dobj in Data.directions: dobj = Data.directions[dobj]
 	if prep in goPreps or (dobj is None and prep in ("u","up","d","down")) or \
 	((dobj in Data.directions.values() or dobj in Core.player.parent.allDirs()) and \
 	prep not in swimPreps):
-		if not Core.player.bathedIn():
-			Core.Print("You are not swimming in anything.")
+		if swimmer.immersed is None:
+			Core.Print(("You are" if swimmer is Core.player else +swimmer+" is") + \
+				" not swimming in anything.")
 			return False
-		if not Core.player.canSwim():
-			Core.Print("You can't swim!")
+		if not swimmer.canSwim():
+			Core.Print("You can't swim!" if swimmer is Core.player else \
+				f"{+swimmer} can't swim!")
 			return False
 		if dobj is not None:
 			return Go(dobj,iobj,prep)
@@ -2635,10 +2649,10 @@ def Swim(dobj,iobj,prep):
 		Core.player.parent.composition in Data.liquids:
 			return Go(dobj,iobj,prep)
 		if prep in ("above","out","up") and \
-		Core.player.hasStatus("submerged"):
+		swimmer.hasStatus("submerged"):
 			return Core.player.Emerge()
 		elif prep in ("below","beneath","d","down","under") and \
-		not Core.player.hasStatus("submerged"):
+		not swimmer.hasStatus("submerged"):
 			return Core.player.Submerge()
 		return Go(dobj,iobj,prep)
 
@@ -2654,8 +2668,6 @@ def Swim(dobj,iobj,prep):
 	Core.game.setPronouns(S)
 	if enforceVerbScope(f"swim {verbprep}",S,permitParent=True): return False
 
-	if Core.player.riding:
-		Core.Print(f"You can't swim, you are riding {-Core.player.riding}.")
 	Core.player.Dismount(silent=True)
 	# TODO: handle 'swim out of here' in a normal room
 	if S.composition in Data.liquids or prep in ("in","inside","through"):
