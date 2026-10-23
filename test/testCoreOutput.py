@@ -2,6 +2,7 @@ import io
 import os
 import sys
 import unittest
+from types import MethodType
 from unittest.mock import patch
 
 
@@ -146,6 +147,82 @@ class CensorTests(unittest.TestCase):
 		self.assertTrue(all(line.find("[---]") == 7 for line in lines))
 		self.assertTrue(all(line.find("[---]",colWidth) == colWidth+7 \
 			for line in lines[:3]))
+
+
+class DeferredStatusReportTests(unittest.TestCase):
+	def setUp(self):
+		self.originalPlayer = Core.player
+		self.originalGame = Core.game
+		Core.player = Core.Player("Tester","",1,[1]*10,0,0)
+		Core.game = Core.Game(1,Core.defaultRoom,Core.defaultRoom,0,set(),{}, {}, {})
+		self.creature = Core.Creature("goblin","",10,[1]*10)
+
+	def tearDown(self):
+		Core.player = self.originalPlayer
+		Core.game = self.originalGame
+
+	def testNestedDeferralReportsOnlyNetStatusChange(self):
+		with patch.object(self.creature,"printNearby") as nearby:
+			with Core.game.deferStatusReports():
+				self.creature.addStatus("on fire",-1)
+				with Core.game.deferStatusReports():
+					self.creature.removeStatus("on fire",recheck=False)
+					self.creature.addStatus("on fire",-1)
+				self.assertFalse(nearby.called)
+
+		nearby.assert_called_once()
+		self.assertEqual(nearby.call_args.args[0],"The goblin is on fire.")
+
+	def testDeferralSuppressesNoNetChangeAndPrivateStatus(self):
+		with patch.object(self.creature,"printNearby") as nearby:
+			with Core.game.deferStatusReports():
+				self.creature.addStatus("wet",1)
+				self.creature.removeStatus("wet",recheck=False)
+				self.creature.addStatus("hidden",-1)
+			self.assertFalse(nearby.called)
+
+	def testDeferralTracksSilentMutationWithoutReportingIt(self):
+		with patch.object(self.creature,"printNearby") as nearby:
+			with Core.game.deferStatusReports():
+				self.creature.addStatus("submerged",-4,silent=True)
+			self.assertFalse(nearby.called)
+		self.assertTrue(self.creature.hasStatus("submerged"))
+
+	def testSilentTemporaryStatusDoesNotCauseFalseRemovalReport(self):
+		with patch.object(self.creature,"printNearby") as nearby:
+			with Core.game.deferStatusReports():
+				self.creature.addStatus("submerged",-4,silent=True)
+				self.creature.removeStatus("submerged",recheck=False)
+			self.assertFalse(nearby.called)
+
+	def testMovementReportsStatusAfterTransitionOutput(self):
+		events = []
+		with patch.object(self.creature,"printNearby",
+			side_effect=lambda message,**kwargs: events.append(message)):
+			def transition(creature,destination):
+				creature.addStatus("submerged",-4)
+				events.append("room description")
+				return True
+			self.creature._changeLocation = MethodType(transition,self.creature)
+			self.assertTrue(self.creature.changeLocation(None))
+
+		self.assertEqual(events,
+			["room description","The goblin is submerged."])
+
+	def testItemMovementDefersAffectedCreatureStatus(self):
+		events = []
+		item = Core.Item("barrel","",10,-1,"wood")
+		with patch.object(self.creature,"printNearby",
+			side_effect=lambda message,**kwargs: events.append(message)):
+			def transition(movingItem,destination):
+				self.creature.addStatus("submerged",-4)
+				events.append("item transition complete")
+				return True
+			item._changeLocation = MethodType(transition,item)
+			self.assertTrue(item.changeLocation(None))
+
+		self.assertEqual(events,
+			["item transition complete","The goblin is submerged."])
 
 
 if __name__ == "__main__":

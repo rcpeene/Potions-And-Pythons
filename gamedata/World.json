@@ -126,7 +126,7 @@
 		"fixtures": [],
 		"items": [],
 		"creatures": [],
-		"status": [["AREA burning -2",10]],
+		"status": [["AREA burning -3",10]],
 		"ceiling": "smoke",
 		"floor": "sand"
 	},
@@ -372,7 +372,7 @@
 				"composition": "stone",
 				"fixed": true,
 				"capacity": 100,
-				"status": [["AREA wet -2",-2]]
+				"status": [["AREA wet -3",-2]]
 			},
 			{
 				"__class__": "Plash",

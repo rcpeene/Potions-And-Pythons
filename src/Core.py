@@ -13,6 +13,7 @@ import sys, os, re, subprocess
 import tempfile
 import subprocess
 import atexit
+from contextlib import contextmanager
 try:
 	import msvcrt
 	sys.stdout.reconfigure(encoding='utf-8')
@@ -1785,12 +1786,20 @@ class GameObject():
 		return False
 
 
-	def canImmerse(self,obj,prospective=False):
+	def canImmerse(self,obj):
+		return False
+
+
+	def couldImmerse(self,obj,size=None,vacancy=None):
 		return False
 
 
 	def canEmerge(self,obj):
 		return True
+
+
+	def requiredImmersion(self,obj):
+		return None
 
 
 	# decrements the duration for each status condition applied to the object by t
@@ -1884,6 +1893,11 @@ class GameObject():
 	# compared with Container capacity and for checking cover/hiding
 	def Size(self):
 		return self.weight
+
+
+	# return the amount of this object's size that cannot be freed by spilling
+	def minimumSize(self):
+		return self.Size()
 
 
 	# gets the first ancestor that isn't open, or the final ancestor (room)
@@ -2064,6 +2078,9 @@ class Game():
 		self.lastRawCommand = None
 		# used to trigger a quit from the player
 		self.quit = False
+		# status reports may be deferred and collated during transitional states
+		self.pendingStatusReports = {}
+		self.statusReportDepth = 0
 
 
 	### Item Registry ###
@@ -2696,6 +2713,41 @@ class Game():
 
 	### Operation ###
 
+	@contextmanager
+	def deferStatusReports(self):
+		self.statusReportDepth += 1
+		try:
+			yield
+		finally:
+			self.statusReportDepth -= 1
+			if self.statusReportDepth == 0:
+				self.flushStatusReports()
+
+
+	def queueStatusReport(self,creature,name,hadStatus,silent=False):
+		if creature is not player and name in Data.privateStatus:
+			return False
+		if self.statusReportDepth > 0:
+			key = (creature,name)
+			initialState,shouldReport = self.pendingStatusReports.get(key,
+				(hadStatus,False))
+			visibleChange = not silent and hadStatus != creature.hasStatus(name)
+			self.pendingStatusReports[key] = \
+				(initialState,shouldReport or visibleChange)
+			return True
+		if silent:
+			return False
+		return creature.reportStatusChange(name,hadStatus)
+
+
+	def flushStatusReports(self):
+		pendingReports = self.pendingStatusReports
+		self.pendingStatusReports = {}
+		for (creature,name),(initialState,shouldReport) in pendingReports.items():
+			if shouldReport:
+				creature.reportStatusChange(name,initialState)
+
+
 	# has player exit the previous room and enter the new room
 	def changeRoom(self,newroom):
 		couldSeeSky = player.canSeeSky(self.currentroom)
@@ -3097,10 +3149,12 @@ class Room(GameObject):
 	### Operation ###
 
 	# Add an existing registered object to this room.
-	def add(self,O):
+	def add(self,O,allowOverflow=False):
 		if not isinstance(O,Item) or game.itemRegistry.get(O.id) is not O:
 			raise ValueError(f"Cannot add unregistered object {O} to {self}")
 		if not self.canAdd(O):
+			return False
+		if not allowOverflow and self.vacancy() != -1 and O.Size() > self.vacancy():
 			return False
 
 		# set platform surface for object if it has a usable floor
@@ -3161,10 +3215,12 @@ class Room(GameObject):
 
 
 	# apply any room effects to the obj entering
-	def enter(self,obj,silentSubmersion=False):
+	def enter(self,obj):
 		if not self.canAdd(obj):
 			return False
-		obj = self.add(obj)
+		isPlash = hasMethod(obj,"Spill")
+
+		obj = self.add(obj,allowOverflow=not isPlash)
 		if not obj:
 			return False
 		# add status conditions from this room
@@ -3175,17 +3231,42 @@ class Room(GameObject):
 				if key(obj):
 					obj.addStatus(name,dur)
 
-		obj.checkImmersion(silent=silentSubmersion)
+		fluids = [fluid for fluid in self.spatialContents() \
+			if hasMethod(fluid,"Spill") and fluid.canImmerse(obj)]
+		if fluids:
+			obj.immerse(max(fluids,key=lambda fluid:fluid.Size()))
+		else:
+			obj.checkImmersion()
+		self.overflow()
+		obj.checkImmersion()
 		return True
 
 
+	# spill reducible liquid until contents no longer exceed capacity
+	def overflow(self):
+		if self.Capacity() == -1 or self.vacancy() >= 0:
+			return False
+		assert self.couldSpill(0), f"{self} has irreducible contents beyond capacity"
+
+		overflowed = False
+		while self.vacancy() < 0:
+			plashes = [obj for obj in self.spatialContents() \
+				if hasMethod(obj,"Spill") and obj.Size() > obj.minimumSize()]
+			assert plashes, f"{self} has unresolved overflow without spillable liquid"
+			plash = max(plashes,key=lambda obj:obj.Size()-obj.minimumSize())
+			spill = plash.Spill(size=-self.vacancy())
+			game.spawn(spill)
+			spill.displace(self.parent)
+			overflowed = True
+
+		assert self.vacancy() >= 0
+		return overflowed
+
+
 	# remove any room effects from the obj exiting
-	def exit(self,obj,silentSubmersion=False):
-		# remove status conditions from this room
-		condsToRemove = [pair for pair in obj.status if pair[1] == -2]
-		for cond,dur in condsToRemove:
-			obj.removeStatus(cond,-1)
-		obj.unimmerse(silent=silentSubmersion)
+	def exit(self,obj):
+		obj.removeStatus(reqDuration=-3)
+		obj.unimmerse()
 		self.remove(obj)
 		assert obj not in self, f"Object {obj} still in Room {self.name} after exiting"
 		assert obj.parent is None, f"Object {obj} still has parent after exiting Room {self.name}"
@@ -3312,15 +3393,26 @@ class Room(GameObject):
 	def canAdd(self,I):
 		if self.ceiling and I in celestials:
 			return False
-		if I.Size() > self.vacancy() and self.vacancy() != -1:
-			return False
 		if I in self:
 			return False
-		return True
+		if hasMethod(I,"Spill"):
+			return self.vacancy() == -1 or I.Size() <= self.vacancy()
+		return self.couldSpill(I.minimumSize())
 
 
-	def canImmerse(self,obj,prospective=False):
-		return (prospective or obj in self) and self.immersionFluid() is self
+	# return whether spilling contents could accommodate additional size
+	def couldSpill(self,extraSize):
+		if self.Capacity() == -1:
+			return True
+		return self.minimumSolidSize() + extraSize <= self.Capacity()
+
+
+	def canImmerse(self,obj):
+		return obj in self and self.couldImmerse(obj)
+
+
+	def couldImmerse(self,obj,size=None,vacancy=None):
+		return self.composition in Data.liquids
 
 
 	def canSubmerge(self,creature):
@@ -3333,13 +3425,57 @@ class Room(GameObject):
 		return False
 
 
-	# return the environmental immersion source, if this environment has one
-	def immersionFluid(self):
+	# return the fluid an object cannot avoid in its current spatial arrangement
+	def requiredImmersion(self,obj):
+		# only direct contents participate in this Room's immersion calculation
+		if obj.parent is not self:
+			return None
+		# a Room composed of liquid has no dry region within it
 		if self.composition in Data.liquids:
 			return self
-		if self.floor and self.floor.composition in Data.liquids:
+
+		# carried creatures and riders are immersed if anchor is submerged
+		anchor = obj.anchor()
+		if isinstance(obj,Creature) and isinstance(anchor,Creature):
+			fluid = anchor.immersed
+			if fluid is None:
+				return None
+			if anchor.hasStatus("submerged") or not fluid.canEmerge(obj):
+				return fluid
+			return None
+
+		# waterwalking avoids contact unless there's no dry space to be in
+		if obj.hasStatus("waterwalking"):
+			forcedFluids = [fluid for fluid in self.spatialContents() \
+				if fluid is not obj and hasMethod(fluid,"Spill") \
+				and not fluid.canEmerge(obj)]
+			if not forcedFluids:
+				return None
+			return max(forcedFluids,
+				key=lambda fluid:(fluid.immersionSpace(),fluid.Size()))
+
+		# a liquid floor immerses grounded objects but not flying ones
+		if self.floor and self.floor.composition in Data.liquids and \
+		not obj.hasStatus("flying"):
 			return self.floor
-		return None
+		# an infinite-capacity Room always has enough dry space around its Plashes
+		if self.Capacity() == -1:
+			return None
+
+		# finite Rooms require immersion when Plashes consume the dry space
+		fluids = [fluid for fluid in self.spatialContents() \
+			if fluid is not obj and hasMethod(fluid,"Spill")]
+		eligible = [fluid for fluid in fluids if fluid.canImmerse(obj)]
+		if not eligible:
+			return None
+		unimmersed = [other for other in self.spatialContents() \
+			if other not in fluids and other is not obj and other.immersed is None]
+		drySpace = self.Capacity() - sum(fluid.Size() for fluid in fluids) \
+			- sum(other.Size() for other in unimmersed)
+		if obj.Size() < drySpace:
+			return None
+		return max(eligible,
+			key=lambda fluid:(fluid.immersionSpace(),fluid.Size()))
 
 
 	# room contents is the fixtures, items, creatures, surfaces, and celestials
@@ -3381,6 +3517,11 @@ class Room(GameObject):
 	# total size of all items in the Room (note this ignores celestials and surfaces)
 	def itemsSize(self):
 		return sum(obj.Size() for obj in self.spatialContents())
+
+
+	# return the combined size that cannot be freed by spilling contents
+	def minimumSolidSize(self):
+		return sum(obj.minimumSize() for obj in self.spatialContents())
 
 
 	# get items that are 'mentioned' and not anchored to some other platform
@@ -3592,23 +3733,32 @@ class Item(GameObject):
 
 	# establish immersion in a liquid parent, floor, or sibling
 	def immerse(self,fluid,silent=False):
-		if self.hasStatus("waterwalking") or \
-		getattr(fluid,"composition",None) not in Data.liquids:
+		if getattr(fluid,"composition",None) not in Data.liquids:
 			return False
 		if self.parent is None:
 			return False
 		if fluid.parent is not self.parent and \
 		fluid is not self.parent:
 			return False
+		requiredFluid = self.parent.requiredImmersion(self)
+		if requiredFluid is not None and fluid is not requiredFluid:
+			return False
+		if self.hasStatus("waterwalking") and requiredFluid is not fluid:
+			return False
 		if not fluid.canImmerse(self):
 			return False
 
+		# make self wet
 		self.immersed = fluid
 		if not self.hasStatus("wet"):
 			self.Print("Splash!")
 		if not self.hasStatus("wet",Data.WET_LIQUID):
 			self.addStatus("wet",Data.WET_LIQUID)
+
+		# check for full submersion in liquid
 		self.checkSubmersion(silent=silent)
+
+		# update dependent immersion statuses
 		for dependent in self.occupants():
 			dependent.checkImmersion(silent=silent)
 		if isinstance(self,Creature):
@@ -3649,13 +3799,19 @@ class Item(GameObject):
 		return True
 
 
-	# change location to a new Room/Container
+	# change location while deferring status reports until the transition is complete
 	def changeLocation(self,newparent):
-		if newparent.vacancy() != -1 and self.Size() > newparent.vacancy():
-			self.Print(f"There's not enough space for {-self}.")
-			return False
+		with game.deferStatusReports():
+			return self._changeLocation(newparent)
+
+
+	# change location to a new Room/Container
+	def _changeLocation(self,newparent):
 		if not newparent.canAdd(self):
-			self.Print(f"Entering {-newparent} fails.")
+			if newparent.vacancy() != -1 and self.Size() > newparent.vacancy():
+				self.Print(f"There's not enough space for {-self}.")
+			else:
+				self.Print(f"Entering {-newparent} fails.")
 			return False
 
 		# Item cant be covered by another object when changing rooms
@@ -3668,7 +3824,8 @@ class Item(GameObject):
 		if self is player.parent:
 			Print(f"{+self} rumbles...")
 
-		newparent.enter(self)
+		entered = newparent.enter(self)
+		assert entered, f"{self} failed to enter {newparent}"
 
 		# everything on top of this item is thrown with it, landing separately
 		for occupant in occupants:
@@ -3701,17 +3858,20 @@ class Item(GameObject):
 	def checkImmersion(self,silent=False):
 		if self.parent is None:
 			return self.unimmerse(silent=silent)
+		requiredFluid = self.parent.requiredImmersion(self)
 
 		# fall into a liquid platform when waterwalking ends
 		liquidPlatform = self.platform if self.platform is not None and \
 			self.platform.composition in Data.liquids else None
-		if liquidPlatform is not None and not self.hasStatus("waterwalking"):
+		if liquidPlatform is not None and \
+		(not self.hasStatus("waterwalking") or requiredFluid is liquidPlatform):
 			self.removePlatform()
 			if liquidPlatform.canImmerse(self):
 				return self.immerse(liquidPlatform,silent=silent)
 
 		# rise onto the liquid surface when waterwalking begins while immersed
-		if self.immersed is not None and self.hasStatus("waterwalking"):
+		if self.immersed is not None and self.hasStatus("waterwalking") and \
+		requiredFluid is None:
 			fluid = self.immersed
 			self.unimmerse(silent=silent)
 			if fluid is not self.parent and hasMethod(fluid,"occupy") and \
@@ -3720,33 +3880,24 @@ class Item(GameObject):
 			self.platform = self.floorSupport()
 			return True
 
+		# remove immersion if fluid can no longer immerse us for some reason
 		if self.immersed is not None and not self.immersed.canImmerse(self):
 			self.unimmerse(silent=silent)
 
-		# environmental fluid could either be the parent or the parent's floor
-		environmentalFluid = None
-		if hasMethod(self.parent,"immersionFluid"):
-			environmentalFluid = self.parent.immersionFluid()
-
+		# if anchor is not submerged, unimmerse ourselves
 		anchor = self.anchor()
 		creatureAnchored = isinstance(self,Creature) and isinstance(anchor,Creature)
+		if creatureAnchored and not anchor.hasStatus("submerged") and \
+		self.immersed is anchor.immersed and requiredFluid is None:
+			return self.unimmerse(silent=silent)
 
-		# if parent is the fluid itself, we'll immerse
-		if self.immersed is None and environmentalFluid is self.parent:
-			return self.immerse(environmentalFluid,silent=silent)
+		# immerse in required fluid if not already immersed there
+		if requiredFluid is not None and self.immersed is not requiredFluid:
+			if self.immersed is not None:
+				self.unimmerse(silent=silent)
+			return self.immerse(requiredFluid,silent=silent)
 
-		# riders and carried creatures stay above a liquid floor until their anchor submerges
-		elif creatureAnchored:
-			if anchor.hasStatus("submerged") and self.immersed is None:
-				return self.immerse(anchor.immersed,silent=silent)
-			elif not anchor.hasStatus("submerged") and \
-			self.immersed is anchor.immersed:
-				return self.unimmerse(silent=silent)
-
-		# if fluid is the floor, then immerse if not flying
-		elif self.immersed is None and not self.hasStatus("flying"):
-			return self.immerse(environmentalFluid,silent=silent)
-
+		# check submersion status after handling immersion
 		self.checkSubmersion(silent=silent)
 		# recursively check immersion for all dependents
 		for dependent in self.occupants():
@@ -4323,8 +4474,7 @@ class Item(GameObject):
 			getattr(fluid,"composition",None)
 		liquidDensity = Data.densities.get(fluidComposition,1)
 
-		density = Data.densities.get(self.composition,1)
-		return density < liquidDensity
+		return self.density() < liquidDensity
 
 
 	# return the parent's floor only when it can physically support this Item
@@ -4400,12 +4550,22 @@ class Item(GameObject):
 		return room
 
 
+	def density(self):
+		return Data.densities.get(self.composition,1)
+
+
+	# return the greatest weight that does not exceed the given size
+	# useful for examining hypothetical size changes
+	def maxWeightAtSize(self,size):
+		assert size >= 1
+		return (size + 1) * self.density() - 1
+
+
 	# get object size from weight, accounting for density based on composition
 	def Size(self):
 		# under normal conditions, size is equal to weight
 		# account for density based on composition
-		density = Data.densities.get(self.composition,1)
-		return min1(self.weight // density)
+		return min1(self.weight // self.density())
 
 
 	# get total size of Item and everything upon it
@@ -4748,33 +4908,58 @@ class Creature(Item):
 	def addStatus(self,name,dur,stackable=True,silent=False):
 		if self.hasStatus(name) and not stackable:
 			return False
-		if self.hasStatus(name) or (self is not player and name in Data.privateStatus):
-			silent = True
-		if not silent:
-			color = "w"
-			if name in Data.buffs | Data.blessings: color = "g"
-			if name in Data.debuffs | Data.curses: color = "r"
-			displayName = name
-			if name in Data.curses: displayName = "the curse of " + name
-			if name in Data.blessings: displayName = "the blessing of " + name
-			elif name in Data.curses | Data.blessings:
-				self.Print(self+f"have {displayName}.",color=color,allowSilent=silent)
-			elif name == "asleep":
-				self.Print(self+f"falls {name}.",allowSilent=silent)
-			else:
-				self.Print(self+f"are {name}.",color=color,allowSilent=silent)
+		hadStatus = self.hasStatus(name)
 
+		# wake up sleeping creature if it gets wet
 		if name == "wet" and self.hasStatus("asleep"):
 			self.removeStatus("asleep")
-
 		# lift off ground if added flying
 		if name == "flying" and self.platform is self.parent.floor:
 			self.removePlatform()
+
 		insort(self.status,[name,dur])
+		game.queueStatusReport(self,name,hadStatus,silent=silent)
 
 		if name in Data.blessings | Data.curses:
 			self.checkStatus()
 		self.display()
+		return True
+
+
+	# report a net status transition to this Creature and nearby observers
+	def reportStatusChange(self,name,hadStatus):
+		hasStatus = self.hasStatus(name)
+		if hadStatus == hasStatus or \
+		self is not player and name in Data.privateStatus:
+			return False
+		if not hasStatus and name == "asleep":
+			return False
+
+		if hasStatus and name in Data.curses:
+			msg = self+f"have the curse of {name}."
+		elif hasStatus and name in Data.blessings:
+			msg = self+f"have the blessing of {name}."
+		elif hasStatus and name == "asleep":
+			msg = self+f"falls {name}."
+		elif hasStatus:
+			msg = self+f"are {name}."
+		elif name in Data.curses:
+			verb = conjugate(+self,"has")
+			msg = f"{+self} no longer {verb} the curse of {name}."
+		elif name in Data.blessings:
+			verb = conjugate(+self,"has")
+			msg = f"{+self} no longer {verb} the blessing of {name}."
+		else:
+			msg = self+f"are no longer {name}."
+
+		color = "w"
+		if hasStatus and name in Data.buffs | Data.blessings:
+			color = "g"
+		elif hasStatus and name in Data.debuffs | Data.curses:
+			color = "r"
+		self.Print(msg,color=color)
+		if self is not player:
+			self.printNearby(msg,color=color)
 		return True
 
 
@@ -4783,8 +4968,14 @@ class Creature(Item):
 		pass
 
 
+	# change location while deferring status reports until the transition is complete
+	def changeLocation(self,newparent):
+		with game.deferStatusReports():
+			return self._changeLocation(newparent)
+
+
 	# change location to a new Room/Container, return True on success
-	def changeLocation(self,newparent,reportSubmersion=True):
+	def _changeLocation(self,newparent):
 		assert not isinstance(newparent,Creature)
 		wasSubmerged = self.hasStatus("submerged")
 		# store these, they would be empty after changing rooms
@@ -4803,13 +4994,14 @@ class Creature(Item):
 
 		prevparent = self.parent
 		if prevparent:
-			prevparent.exit(self,silentSubmersion=True)
+			prevparent.exit(self)
 		if self is player:
 			if not prevparent or \
 			(newparent.room() != prevparent.room()) and \
 			newparent.surroundings() is newparent.room():
 				game.changeRoom(newparent)
-		newparent.enter(self,silentSubmersion=True)
+		entered = newparent.enter(self)
+		assert entered, f"{self} failed to enter {newparent}"
 		if wasSubmerged and self.immersed is not None and \
 		self.immersed.canSubmerge(self) and not self.hasStatus("submerged"):
 			self.addStatus("submerged",Data.SUBMERGED_LIQUID,silent=True)
@@ -4828,19 +5020,13 @@ class Creature(Item):
 			if occupant.parent is not self.parent:
 				occupant.changeLocation(newparent)
 		assert all(carried.parent is self.parent for carried in carrying)
-		if reportSubmersion:
-			isSubmerged = self.hasStatus("submerged")
-			if wasSubmerged and not isSubmerged:
-				self.Print("You are no longer submerged.")
-			elif not wasSubmerged and isSubmerged:
-				self.Print("You are submerged.")
 
 		return True
 
 
 	# check whether this creature and its tethered group can enter a new parent
 	def canChangeLocation(self,newparent):
-		if newparent.vacancy() != -1 and self.totalSize() > newparent.vacancy():
+		if not newparent.couldSpill(self.totalSize()):
 			msg = f"There's not enough space for {-self}."
 			self.Print(msg)
 			if self in player.anchors():
@@ -4954,7 +5140,14 @@ class Creature(Item):
 
 		# carried creatures and riders move with their anchor instead of sinking alone
 		if isinstance(self.anchor(),Creature):
-			return False
+			if not fluid.canEmerge(self):
+				if not self.hasStatus("submerged",Data.SUBMERGED_LIQUID):
+					return self.addStatus("submerged",Data.SUBMERGED_LIQUID,
+						silent=silent)
+				return False
+			return self.removeStatus("submerged",silent=silent)
+
+		# if fluid can no longer submerge us for some reason, remove submerged
 		if not fluid.canSubmerge(self):
 			return self.removeStatus("submerged",silent=silent)
 		if self.hasStatus("submerged"):
@@ -5278,27 +5471,20 @@ class Creature(Item):
 		wasSleeping = self.hasStatus("asleep")
 		wellRested = False
 		condsRemoved = []
+		statusStates = {}
 
 		# copy to prevent removing-while-iterating errors
 		for name,duration in self.status.copy():
 			if reqName in (name,None) and reqDuration in (duration,None):
+				statusStates.setdefault(name,True)
 				self.status.remove([name,duration])
 				condsRemoved.append(name)
 				# TODO: this is hacky, it should check the total duration of time slept
 				# needs a counter sleepTime in the class
 				if name == "asleep" and duration < 30:
 					wellRested = True
-				if name != "asleep" and not self.hasStatus(name):
-					if silent:
-						continue
-					verb = conjugate(+self,"has")
-					if name in Data.curses:
-						Print(f"{+self} no longer {verb} the curse of {name}.")
-					elif name in Data.blessings:
-						Print(f"{+self} no longer {verb} the blessing of {name}.")
-					else:
-						verb = conjugate(+self,"is")
-						Print(f"{+self} {verb} no longer {name}.")
+		for name,hadStatus in statusStates.items():
+			game.queueStatusReport(self,name,hadStatus,silent=silent)
 
 		# this recurs into removeStatus, so guard to prevent infinite loop
 		if condsRemoved and recheck:
@@ -6140,6 +6326,8 @@ class Creature(Item):
 			self.Print("There isn't enough room to surface!")
 			return False
 		self.removeStatus("submerged")
+		if self is not player:
+			self.printNearby(self+"emerges.")
 		if self.platform is not None:
 			self.removePlatform()
 		self.lastBreathed = game.time
@@ -6263,6 +6451,8 @@ class Creature(Item):
 			self.Print("You can't submerge because you can't swim!")
 			return False
 		self.addStatus("submerged",Data.SUBMERGED_LIQUID)
+		if self is not player:
+			self.printNearby(self+"submerges.")
 		self.checkImmersion()
 		return True
 
@@ -7940,9 +8130,12 @@ class Surface(Fixture):
 		pass
 
 
-	def canImmerse(self,obj,prospective=False):
-		return self.composition in Data.liquids and \
-		(prospective or obj.parent is self.parent)
+	def canImmerse(self,obj):
+		return obj.parent is self.parent and self.couldImmerse(obj)
+
+
+	def couldImmerse(self,obj,size=None,vacancy=None):
+		return self.composition in Data.liquids
 
 
 	def canSubmerge(self,obj):
@@ -8298,10 +8491,12 @@ class Container(Portal):
 	### Operation ###
 
 	# add Item to Container's items list
-	def add(self,I):
+	def add(self,I,allowOverflow=False):
 		if not isinstance(I,Item) or game.itemRegistry.get(I.id) is not I:
 			raise ValueError(f"Cannot add unregistered object {I} to {self}")
 		if not self.canAdd(I):
+			return False
+		if not allowOverflow and self.vacancy() != -1 and I.Size() > self.vacancy():
 			return False
 
 		# ensure only one bunch of Gold exists here
@@ -8330,6 +8525,10 @@ class Container(Portal):
 	# add a status condition to the Container with a name and duration
 	def addStatus(self,name,dur,stackable=True):
 		return Room.addStatus(self,name,dur,stackable=stackable)
+
+
+	def overflow(self):
+		return Room.overflow(self)
 
 
 	# try to break the Container, spill its contents into parent
@@ -8399,10 +8598,8 @@ class Container(Portal):
 
 
 	# try to enter the Container, applying any relevant status effects
-	def enter(self,traverser,silentSubmersion=False):
-		if traverser in self:
-			return False
-		return Room.enter(self,traverser,silentSubmersion=silentSubmersion)
+	def enter(self,traverser):
+		return Room.enter(self,traverser)
 
 
 	# be looked at be a looking Creature and show description of contents
@@ -8422,11 +8619,11 @@ class Container(Portal):
 
 
 	# try to exit the Container, removing any relevant status effects
-	def exit(self,traverser,silentSubmersion=False):
+	def exit(self,traverser):
 		if traverser not in self:
 			return False
 		traverser.removeStatus("hidden",Data.HIDDEN_CONTAINER)
-		return Room.exit(self,traverser,silentSubmersion=silentSubmersion)
+		return Room.exit(self,traverser)
 
 
 	# replace oldItem in items with newItem if possible
@@ -8513,23 +8710,31 @@ class Container(Portal):
 
 	# check if item fits within Container's capacity
 	def canAdd(self,I):
-		if self in I.objTree():
+		if I is self or self in I.objTree():
 			return False
-		if self.Capacity() == -1:
-			return True
-		return I.Size() <= self.vacancy()
+		if hasMethod(I,"Spill"):
+			return self.vacancy() == -1 or I.Size() <= self.vacancy()
+		return self.couldSpill(I.minimumSize())
 
 
-	def canImmerse(self,obj,prospective=False):
-		return Room.canImmerse(self,obj,prospective=prospective)
+	def couldSpill(self,extraSize):
+		return Room.couldSpill(self,extraSize)
+
+
+	def canImmerse(self,obj):
+		return Room.canImmerse(self,obj)
+
+
+	def couldImmerse(self,obj,size=None,vacancy=None):
+		return Room.couldImmerse(self,obj,size=size,vacancy=vacancy)
 
 
 	def canSubmerge(self,creature):
 		return Room.canSubmerge(self,creature)
 
 
-	def immersionFluid(self):
-		return Room.immersionFluid(self)
+	def requiredImmersion(self,obj):
+		return Room.requiredImmersion(self,obj)
 
 
 	# return spatial contents plus surfaces that are not None or self
@@ -8557,6 +8762,10 @@ class Container(Portal):
 	# get total size of all items in Container
 	def itemsSize(self):
 		return sum(i.Size() for i in self.items)
+
+
+	def minimumSolidSize(self):
+		return Room.minimumSolidSize(self)
 
 
 	# get total weight of all items in Container

@@ -411,26 +411,14 @@ class Plash(Core.Portal):
 		"large pool":    200,
 	}
 
-	@classmethod
-	def Spill(cls,weight=None,name=None,composition="freshwater"):
-		assert name is not None or weight is not None, \
-		"Provide either name or weight"
-
-		names = list(cls.LIQUID_SIZES.keys())
-		limits = list(cls.LIQUID_SIZES.values())
-		if name is not None:
-			i = names.index(name)
-			lo = limits[i-1] + 1 if i > 0 else 1
-			weight = randint(lo,limits[i])
-		else:
-			name = next(n for n,hi in cls.LIQUID_SIZES.items() if weight <= hi)
-		desc = f"a {name} of {composition}"
-		return cls(name,desc,weight,composition)
-
-
-	def __init__(self,name,desc,weight,composition,infinite=False,
+	def __init__(self,weight,name=None,desc=None,composition="freshwater",infinite=False,
 	occupyprep="on",links=None,capacity=None,**kwargs):
 		assert composition in Data.liquids
+		if name is None:
+			name = next((name for name,limit in self.LIQUID_SIZES.items() \
+				if weight <= limit),list(self.LIQUID_SIZES)[-1])
+		if desc is None:
+			desc = f"a {name} of {composition}"
 		super().__init__(name,desc,weight,-1,composition,links or {},
 			capacity=capacity,passprep="in",fixed=True,**kwargs)
 		self.occupyprep = occupyprep
@@ -459,25 +447,57 @@ class Plash(Core.Portal):
 		return super().validate()
 
 
-	# return whether this Plash has enough volume to immerse an object
-	def canImmerse(self,obj,prospective=False):
-		if obj is self or obj.hasStatus("waterwalking"):
-			return False
-		if not prospective and obj.parent is not self.parent:
-			return False
-		otherImmersed = [other for other in self.immersedObjects() if other is not obj]
-		if not otherImmersed:
-			return self.Size() >= obj.Size() // 10
-		return self.immersedSize(exclude=obj) + obj.Size() <= self.immersionSpace()
+	def Spill(self,weight=None,size=None):
+		assert weight is not None or size is not None
+		minimumWeight = self.infinite if self.infinite else 0
+		if size is not None:
+			assert size > 0
+			targetSize = max(self.minimumSize(),self.Size()-size)
+			targetWeight = minimumWeight if targetSize == 0 else \
+				max(minimumWeight,self.maxWeightAtSize(targetSize))
+			weight = self.weight - targetWeight
+
+		assert weight > 0 and weight <= self.weight-minimumWeight
+		if self.parent is not None:
+			self.printNearby(f"{+self.parent} overflows with {self.composition}!")
+		composition = self.composition
+		self.drain(weight)
+		return Plash(weight,composition=composition)
 
 
+	# amount of space plash has for immersing other objects
 	# increase immersion allowance as the Plash's parent becomes more crowded
 	# very low parent vacancy makes the plash contact others more easily
-	def immersionSpace(self):
-		if self.parent is None or self.parent.vacancy() == -1:
-			return self.Size()
-		return self.parent.Capacity() * self.Size() // \
-			(self.Size() + self.parent.vacancy())
+	# very high parent capacity makes the plash less sensitive to parent vacancy
+	def immersionSpace(self,size=None,vacancy=None):
+		size = self.Size() if size is None else size
+		vacancy = self.parent.vacancy() if vacancy is None and self.parent else vacancy
+		if self.parent is None or vacancy == -1:
+			return size
+		return self.parent.Capacity() * size // (size + vacancy)
+
+
+	# return whether this Plash can currently immerse a sibling object
+	def canImmerse(self,obj):
+		if obj is self:
+			return False
+		if obj.parent is not self.parent:
+			return False
+		return self.couldImmerse(obj)
+
+
+	# return whether projected liquid size and parent vacancy could immerse obj
+	def couldImmerse(self,obj,size=None,vacancy=None):
+		if obj is self:
+			return False
+		size = self.Size() if size is None else size
+		otherImmersed = [other for other in self.immersedObjects() if other is not obj]
+		# plash can usually immerse at least one object even when theres little space available
+		if not otherImmersed:
+			return size >= obj.Size() // 10
+		# if there are already immersed objects, check if adding obj would exceed immersion space
+		return self.immersedSize(exclude=obj) + obj.Size() <= \
+			self.immersionSpace(size=size,vacancy=vacancy)
 
 
 	def canSubmerge(self,creature):
@@ -505,8 +525,16 @@ class Plash(Core.Portal):
 		return sorted(objects,key=lambda obj:obj.Size(),reverse=True)
 
 
+	# sum of sizes of immersed objects
 	def immersedSize(self,exclude=None):
 		return sum(obj.Size() for obj in self.immersedObjects() if obj is not exclude)
+
+
+	# finite Plashes can be fully spilled; infinite ones retain their threshold size
+	def minimumSize(self):
+		if not self.infinite:
+			return 0
+		return Core.min1(self.infinite // self.density())
 
 
 	def consume(self,eater):
@@ -526,7 +554,7 @@ class Plash(Core.Portal):
 		self.weight -= quantity
 		# if Plash has a point at which it is infinite, then only lower to that 
 		if self.infinite:
-			self.weight = Core.minm(self.weight,self.infinite)
+			self.weight = max(self.weight,self.infinite)
 		else:
 			self.weight = Core.min0(self.weight)
 
@@ -539,6 +567,10 @@ class Plash(Core.Portal):
 
 	# immerse the traverser in this Plash
 	def enter(self,traverser):
+		requiredFluid = self.parent.requiredImmersion(traverser)
+		if requiredFluid is not None and requiredFluid is not self:
+			traverser.Print(f"There isn't enough space to get out of {-requiredFluid}.")
+			return False
 		if not self.canImmerse(traverser):
 			return False
 		if self.Capacity() == -1 or self.Capacity() > self.Size():
@@ -552,6 +584,10 @@ class Plash(Core.Portal):
 	# remove the traverser from this Plash
 	def exit(self,traverser):
 		if traverser.immersed is not self:
+			return False
+		requiredFluid = self.parent.requiredImmersion(traverser)
+		if requiredFluid is not None:
+			traverser.Print(f"There isn't enough space to get out of {-requiredFluid}.")
 			return False
 		traverser.unimmerse()
 		return True
@@ -590,20 +626,29 @@ class Plash(Core.Portal):
 	def fill(self,quantity):
 		assert quantity >= 0
 		overflow = 0
-
-		# store first because this will change after adding weight or overflowing
+		oldSize = self.Size()
 		parentVacancy = self.parent.vacancy() if self.parent else -1
-		if quantity > parentVacancy and parentVacancy != -1:
-			overflow = quantity - parentVacancy
-			quantity = parentVacancy
+		if parentVacancy != -1:
+			maxSize = oldSize + Core.min0(parentVacancy)
+			# reverse of the floor division from weight to size
+			maxWeight = self.maxWeightAtSize(maxSize)
+			overflow = Core.min0(self.weight + quantity - maxWeight)
+			quantity -= overflow
 
 		self.weight += quantity
+		quantitySize = self.Size() - oldSize
 		if overflow:
-			Core.Print(f"{self.parent} overflows!")
-			Core.game.spawn(self.Spill(weight=overflow),self.parent)
-		for obj in self.immersedObjects().copy():
-			obj.checkImmersion()
-		self.engulf(quantity)
+			self.printNearby(f"{self.parent} overflows!")
+			self.parent.spawn(Plash(overflow,composition=self.composition))
+
+		# check if objects are immersed or unimmersed by the fill
+		if quantitySize:
+			objects = self.parent.spatialContents().copy() if self.parent else []
+			for obj in objects:
+				if obj is self:
+					continue
+				obj.checkImmersion()
+			self.engulf(quantitySize)
 
 
 	def imbibe(self,drinker):
@@ -651,28 +696,22 @@ class Plash(Core.Portal):
 
 	# move through a link while preserving compatible immersion and submersion
 	def transferImmersed(self,traverser,dir):
-		destination = self.links[dir]
-		isCreature = isinstance(traverser,Core.Creature)
-		wasSubmerged = isCreature and traverser.hasStatus("submerged")
-		if isCreature:
-			changedLocation = traverser.changeLocation(self.getNewLocation(dir),
-				reportSubmersion=False)
-		else:
+		with Core.game.deferStatusReports():
+			destination = self.links[dir]
+			isCreature = isinstance(traverser,Core.Creature)
+			wasSubmerged = isCreature and traverser.hasStatus("submerged")
 			changedLocation = traverser.changeLocation(self.getNewLocation(dir))
-		if not changedLocation:
-			return False
-		if traverser.immersed is not destination and destination.canImmerse(traverser):
-			traverser.immerse(destination,silent=True)
-		if wasSubmerged and traverser.immersed is not None and \
-		traverser.immersed.canSubmerge(traverser):
-			if not traverser.hasStatus("submerged"):
-				traverser.addStatus("submerged",Data.SUBMERGED_LIQUID,silent=True)
-		isSubmerged = isCreature and traverser.hasStatus("submerged")
-		if wasSubmerged and not isSubmerged:
-			traverser.Print("You are no longer submerged.")
-		elif not wasSubmerged and isSubmerged:
-			traverser.Print("You are submerged.")
-		return True
+			if not changedLocation:
+				return False
+			if traverser.immersed is not destination and \
+			destination.canImmerse(traverser):
+				traverser.immerse(destination)
+			if wasSubmerged and traverser.immersed is not None and \
+			traverser.immersed.canSubmerge(traverser):
+				if not traverser.hasStatus("submerged"):
+					traverser.addStatus("submerged",Data.SUBMERGED_LIQUID,
+						silent=True)
+			return True
 
 
 	def traverse(self,traverser,dir=None,verb=None):
@@ -735,7 +774,7 @@ class Plash(Core.Portal):
 			if not traverser.canChangeLocation(newLoc):
 				return False
 			destination = self.links[dir]
-			if not destination.canImmerse(traverser,prospective=True):
+			if not destination.couldImmerse(traverser):
 				traverser.Print(f"You can't {verb} {dir}. There isn't enough {self.composition} that way.")
 				return False
 			action = f"{verb} {dir} through {-self}."
@@ -1147,7 +1186,8 @@ factory = {
 	"compass": lambda: Core.Compass("compass","A plain steel compass with a red needle.",2,10,"steel",rarity=2,plural="compasses"),
 	"green potion": lambda: Potion("green potion", "A bubbling green liquid in a glass bottle.",10,3,"glass",["bottle","glass","potion"],2),
 	"iron ingot": lambda: Core.Item("iron ingot","A solid bar of iron.",20,200,"iron",["ingot","bar","iron"]),
-	"puddle": lambda: Plash("puddle","A small puddle of murky water.",randint(2,10),"water"),
+	"puddle": lambda: Plash(randint(2,10),name="puddle",
+		desc="A small puddle of murky water.",composition="water"),
 	"red potion": lambda: Potion("red potion", "A bubbling red liquid in a glass bottle.",10,3,"glass",["bottle","glass","potion"],2),
 	"shard": lambda: Shard("glass shard","A small glass shard.",2,1,"glass",["shard"])
 }
