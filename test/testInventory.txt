@@ -44,6 +44,8 @@ put broad parcel in thimble case
 
 \\ Fixed and occupied objects cannot be taken
 \spn Core.Item("bolted plinth","A plinth fastened firmly to the room.",10,-1,"stone",fixed=True)
+\chk fo("bolted plinth",queryType="room") in player.parent.items
+\chk fo("bolted plinth",queryType="room") not in player.parent.permanents
 take bolted plinth
 \chk fo("bolted plinth",queryType="room").parent is player.parent
 \spn Core.Item("occupied tray","A tray made inconvenient by its passenger.",10,-1,"wood")

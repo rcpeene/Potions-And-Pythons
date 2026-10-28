@@ -105,10 +105,10 @@ reqSource=None,silent=False,allowRooms=False):
 		return None
 
 	# allows for users to describe objects they possess
-	my = False
+	mine = False
 	if term.startswith("my "):
 		term = term[3:]
-		my = True
+		mine = True
 
 	matches = set()
 	if queryType == "player" or queryType == "both":
@@ -133,7 +133,7 @@ reqSource=None,silent=False,allowRooms=False):
 		isMatch = lambda obj: Core.nameMatch(reqSource,obj.parent) or \
 			Core.nameMatch(reqSource,obj.anchor())
 		matches = {match for match in matches if isMatch(match)}
-	if my:
+	if mine:
 		isMatch = lambda obj: Core.player in obj.ancestors() or obj.determiner == "your"
 		matches = {match for match in matches if isMatch(match)}
 
@@ -153,7 +153,7 @@ reqSource=None,silent=False,allowRooms=False):
 		if reqSource:
 			det = "an" if reqSource[0] in Data.vowels else 'a'
 			suffix += f" in {det} '{reqSource}'"
-		if queryType == "player" or my:
+		if queryType == "player" or mine:
 			suffix += " in your Inventory"
 		elif queryType == "room":
 			suffix += " in your surroundings"
@@ -218,24 +218,35 @@ def isMeaningful(noun):
 	if noun in Core.world or \
 	noun in actions or \
 	noun in statcommands or \
+	noun in Data.glossaryXrefs or \
 	noun in Data.glossary or \
 	noun in Data.miscexpressions or \
 	noun in Data.hellos or \
 	noun in Data.goodbyes or \
 	noun in Data.prepositions or \
-	noun in Core.game.currentroom.allDirs() or \
 	noun in Items.factory or \
 	noun in Creatures.factory or \
+	noun in Core.game.currentroom.allDirs() or \
 	Core.game.inWorld(noun) or \
 	Core.player.nameQuery(noun):
 		return True
 	return False
 
 
+# remove a grammatical leading article while preserving meaningful proper names
+def stripDeterminer(term):
+	words = term.split()
+	if len(words) > 1 and words[0] in ("a","an","the"):
+		withoutDeterminer = " ".join(words[1:])
+		if isMeaningful(withoutDeterminer):
+			return withoutDeterminer
+	return term
+
+
 # combines multiple words into single terms that appear to be a meaningful term
 # returns the command after any relevant words are joined into one term
 # e.g. ["attack","green","python"] -> ["attack","green python"]
-# this algorithm favors the meaningful terms that contain the most words
+# this algorithm favors the meaningful terms with the most words
 def nounify(command):
 	# i is the index of the starting word
 	i = 0
@@ -246,7 +257,8 @@ def nounify(command):
 			possibleNoun = " ".join(command[i:j+1])
 			if isMeaningful(possibleNoun) or command[i] == "my":
 				# replace elements with joined term element
-				command[i:j+1] = [possibleNoun]
+				command[i:j+1] = [stripDeterminer(possibleNoun)]
+				j = i+1
 			else:
 				j += 1
 		i += 1
@@ -266,7 +278,7 @@ def decompose(command):
 	return command
 
 
-# splits a list based on the present of particular elements as delimiters
+# splits a list based on the presence of particular elements as delimiters
 def splitList(lst,delims):
 	if lst is None or len(lst) == 0:
 		return [[]]
@@ -345,7 +357,7 @@ def parse(cmdInput):
 	iobj = None
 	prep = None
 
-	# iterates through the input and assigns...
+	# iterates through the input and assigns-
 	# terms based on their position relative to the other terms present
 	for term in cmdInput:
 		# preposition is defined if the term is a known preposition
@@ -383,33 +395,34 @@ def promptHelp(msg,tip=None):
 
 
 def dispatchShortCommand(command,verb):
-	# 'cast' may be a stat command or a regular action
-	if verb != "cast" or len(command) == 1:
-		if len(command) != 1:
-			return promptHelp(f"The '{verb}' command can only be one word.")
-		elif verb == "here":
-			Core.player.parent.describe()
-		elif verb == "room":
-			Core.game.currentroom.describe()
-		elif verb in ("clear","cls"):
-			Core.clearScreen()
-		elif verb in Data.hellos:
-			return Hello()
-		elif verb in Data.goodbyes:
-			return Goodbye()
-		elif verb in Data.laughs:
-			return Laugh()
-		elif verb == "quit":
-			return Quit()
-		elif verb in Data.abilities:
-			Core.player.printAbility(verb.upper())
-		elif verb in Data.traits:
-			Core.player.printTraits(verb)
-		elif verb in Data.colors:
-			Core.Print(verb.title()+".", color=Data.colors[verb])
-		else:
-			statcommands[verb](Core.player)
-		return False
+	# 'cast' may be a regular action rather than a shortcommand
+	if verb == "cast" and len(command) != 1:
+		return Cast(*parse(command[1:]))
+	if len(command) != 1:
+		return promptHelp(f"The '{verb}' command can only be one word.")
+	elif verb == "here":
+		Core.player.parent.describe()
+	elif verb == "room":
+		Core.game.currentroom.describe()
+	elif verb in ("clear","cls"):
+		Core.clearScreen()
+	elif verb in Data.hellos:
+		return Hello()
+	elif verb in Data.goodbyes:
+		return Goodbye()
+	elif verb in Data.laughs:
+		return Laugh()
+	elif verb == "quit":
+		return Quit()
+	elif verb in Data.abilities:
+		Core.player.printAbility(verb.upper())
+	elif verb in Data.traits:
+		Core.player.printTraits(verb)
+	elif verb in Data.colors:
+		Core.Print(verb.title()+".", color=Data.colors[verb])
+	else:
+		statcommands[verb](Core.player)
+	return False
 
 
 # the primary endpoint of the interpreter module
@@ -422,12 +435,12 @@ def interpret():
 		return True
 	if commandQueue:
 		queuedInput = commandQueue.pop(0)
-		Core.waitInput("\n& " + " ".join(queuedInput),end="")
+		Core.waitInput("\n& " + " ".join(queuedInput),end="",color="k")
 		Core.Print()
 		command = queuedInput
 	else:
 		rawCommand = read("\n\nWhat will you do?",storeRawCmd=True)
-		if rawCommand.startswith("\\\\"):
+		if rawCommand.startswith("\\\\"): # shortcut for a no-op
 			return False
 		command = tokenize(rawCommand)
 	if len(command) == 0:
@@ -712,8 +725,11 @@ def Lob(command):
 		missile.removePlatform()
 	if isinstance(missile.parent,Core.Creature):
 		owner = missile.parent
+		if not owner.parent.canAdd(missile):
+			return False
 		owner.remove(missile,silent=True)
-		owner.parent.add(missile)
+		entered = owner.parent.enter(missile)
+		assert entered, f"Failed to launch {missile} after successful admission check"
 	missile = missile.asProjectile()
 	Core.Print(f"{+missile} is launched {prep} {-target}.",color="k")
 	return missile.launch(50,100,Core.player,target)
@@ -886,6 +902,25 @@ def Zap(command):
 #######################################
 
 
+def Commands(*args):
+	Core.flushInput()
+	Core.clearScreen()
+	Core.Print("Short Commands (May only be one word)",color="k")
+	shortcommands = sorted(tuple(key for key in statcommands.keys() if key not in Data.emoticons) + Data.traits + Data.abilities)
+	Core.columnPrint(shortcommands,10,10,color="k")
+	Core.Print("\nVerb Commands (Does not include cheat codes and secret commands)",
+	color="k")
+	Core.columnPrint(actions.keys(),10,10,color="k")
+	Core.Print("\nDuring the game, type 'info' for information on the game and" \
+	" how to play.",color="k")
+	Core.waitInput()
+	Core.clearScreen()
+
+
+def Cough(*args):
+	Core.Print("Ahem...",color="y")
+
+
 def Cry(*args): Core.Print("A single tear sheds from your eye.")
 
 
@@ -914,21 +949,6 @@ def Goodbye(*args):
 def Hello(*args):
 	hello = choice(list(Data.hellos))
 	Core.Print(f'"{hello.title()}"',color="y")
-
-
-def Commands(*args):
-	Core.flushInput()
-	Core.clearScreen()
-	Core.Print("Short Commands (May only be one word)",color="k")
-	shortcommands = sorted(tuple(key for key in statcommands.keys() if key not in Data.emoticons) + Data.traits + Data.abilities)
-	Core.columnPrint(shortcommands,10,10,color="k")
-	Core.Print("\nVerb Commands (Does not include cheat codes and secret commands)",
-	color="k")
-	Core.columnPrint(actions.keys(),10,10,color="k")
-	Core.Print("\nDuring the game, type 'info' for information on the game and" \
-	" how to play.",color="k")
-	Core.waitInput()
-	Core.clearScreen()
 
 
 def Laugh(*args):
@@ -1285,8 +1305,10 @@ def Define(dobj,iobj,prep):
 		if dobj in Data.cancels: return False
 
 	if Core.player.hasStatus("stupidity"):
-		Core.Print("You have the curse of stupidity; you don't know anything!",color="k")
+		Core.Print("You have the curse of stupidity. You don't know anything!")
 		return False
+	if dobj in Data.glossaryXrefs:
+		dobj = Data.glossaryXrefs[dobj]
 	if dobj in Data.glossary:
 		Core.Print("\n"+Data.glossary[dobj])
 		return True
@@ -1442,12 +1464,17 @@ def Drop(dobj,iobj,prep,I=None):
 		if enforceVerbScope(f"drop {prep}",R,permitParent=True): return False
 		if isinstance(R,Core.Portal) and "down" in R.links:
 			if getattr(R,"open",True):
+				if not Core.player.parent.canAdd(I):
+					Core.Print(f"You can't drop {-I}. There's not enough room.")
+					return False
 				Core.Print(f"You drop {-I} {prep} {-R}.")
 				if isinstance(I,Core.Creature):
 					Core.player.removeCarry(I,drop=False)
 				else:
-					Core.player.remove(I)
-					Core.player.parent.add(I)
+					removed = Core.player.remove(I)
+					assert removed, f"Failed to remove {I} from the player's Inventory"
+					entered = Core.player.parent.enter(I)
+					assert entered, f"Failed to drop {I} after successful admission check"
 				return R.transfer(I)
 			else:
 				Core.Print(f"{+R} is closed.")
@@ -1463,8 +1490,10 @@ def Drop(dobj,iobj,prep,I=None):
 		return False
 	else:
 		Core.Print(f"You drop {-I}.")
-		I.parent.remove(I)
-		Core.player.parent.add(I)
+		removed = Core.player.remove(I)
+		assert removed, f"Failed to remove {I} from the player's Inventory"
+		entered = Core.player.parent.enter(I)
+		assert entered, f"Failed to drop {I} after successful admission check"
 	return True
 
 
@@ -1628,6 +1657,12 @@ def GoVertical(dir,passage=None,dobj=None):
 	# assert (dir,passage) in Core.player.parent.allLinks()
 	newroom = None
 	goer = Core.player.riding if Core.player.riding else Core.player
+	floor = getattr(Core.player.parent,"floor",None)
+	if dir == "down" and passage is None and floor is not None and \
+	floor.composition in Data.liquids and goer.hasStatus("waterwalking") and \
+	goer.immersed is None:
+		Core.Print(goer+f"can't go down through the {floor.composition} while waterwalking.")
+		return False
 	if goer.hasStatus("flying"):
 		newroom = Core.player.parent.allLinks()[dir,passage]
 		Core.waitInput(goer+f"flies {dir}!")
@@ -1681,22 +1716,25 @@ def parseGo(dobj,iobj,prep):
 	matchTerm = lambda t1, t2: t1 == t2
 	matchObj = lambda t, obj: Core.nameMatch(t, obj)
 
-	# look for any combination of input terms which matches a room's link
-	# None is treated as a wildcard
-	for (thisDir,thisPassage), thisDest in parentLinks.items():
-		# print("=",thisDir,thisPassage,thisDest)
-		for term in (dobj,iobj,prep):
-			if term is None:
+	# Match each input term to at most one navigation role.
+	terms = (dobj,iobj,prep)
+	def matchRole(candidates,matchKey):
+		for term in terms:
+			if term is None or termsMatched[term]:
 				continue
-			if dir is None and matchTerm(term,thisDir):
-				dir = thisDir
-				termsMatched[term] = True
-			elif passage is None and matchObj(term,thisPassage):
-				passage = thisPassage
-				termsMatched[term] = True
-			elif dest is None and matchObj(term,thisDest):
-				dest = thisDest
-				termsMatched[term] = True
+			for candidate in candidates:
+				if matchKey(term,candidate):
+					termsMatched[term] = True
+					return candidate
+		return None
+
+	directions = tuple(linkDir for linkDir,passage in parentLinks)
+	passages = tuple(passage for linkDir,passage in parentLinks if passage is not None)
+	destinations = tuple(parentLinks.values())
+	# Resolve roles in a fixed order so link iteration cannot change their priority.
+	dir = matchRole(directions,matchTerm)
+	passage = matchRole(passages,matchObj)
+	dest = matchRole(destinations,matchObj)
 
 	# if a term wasn't assigned above and is assigned by any of the following checks, 
 	# it will fail during Go()
@@ -2203,7 +2241,8 @@ def Mount(dobj,iobj,prep,M=None,posture=None):
 
 	if prep in ("in","into","inside") and prep != M.occupyprep:
 		if not Core.hasMethod(M,"traverse"):
-			return Core.Print(f"{+M} cannot be traversed.")
+			Core.Print(f"{+M} cannot be traversed.")
+			return False
 		return M.traverse(Core.player,verb=posture,dir=prep)
 
 	if posture is None:
@@ -2334,9 +2373,10 @@ def Put(dobj,iobj,prep):
 		elif getattr(R,"closed",False) and not R.open(Core.player):
 			return False
 		else:
-			Core.player.remove(I)
-			R.add(I)
-			I.platform = I.floorSupport(R)
+			removed = Core.player.remove(I)
+			assert removed, f"Failed to remove {I} from the player's Inventory"
+			entered = R.enter(I)
+			assert entered, f"Failed to put {I} in {R} after successful admission check"
 			# outprep = "on" if isinstance(R,Items.Table) else "in"
 			if iobj == "here": Core.Print(f"You put {itemPhrase} here.")
 			else: Core.Print(f"You put {itemPhrase} in {recipientPhrase}.")
@@ -2349,11 +2389,16 @@ def Put(dobj,iobj,prep):
 		if not R.canPass(I):
 			Core.Print(f"There's not enough room in {-R} for {-I}.")
 			return False
+		if I.parent is not R.parent and not R.parent.canAdd(I):
+			Core.Print(f"You can't put {-I} {prep} {-R}. There's not enough room.")
+			return False
 		if isinstance(I,Core.Creature):
 			Core.player.removeCarry(I,drop=False)
 		else:
-			Core.player.remove(I)
-			Core.player.parent.add(I)
+			removed = Core.player.remove(I)
+			assert removed, f"Failed to remove {I} from the player's Inventory"
+			entered = R.parent.enter(I)
+			assert entered, f"Failed to move {I} beside {R} after successful admission check"
 		return R.transfer(I)
 
 	if R in Core.player:
@@ -2375,9 +2420,11 @@ def Put(dobj,iobj,prep):
 
 	if I in Core.player.carrying():
 		Core.player.removeCarry(I,silent=True,drop=False)
-	I.parent.remove(I)
-	if not R.parent.add(I):
-		return False
+	if I.parent is not R.parent:
+		removed = Core.player.remove(I)
+		assert removed, f"Failed to remove {I} from the player's Inventory"
+		entered = R.parent.enter(I)
+		assert entered, f"Failed to move {I} beside {R} after successful admission check"
 	if not R.occupy(I,actor=Core.player):
 		return False
 	if iobj == "here": Core.Print(f"You put {itemPhrase} here.")
@@ -2611,8 +2658,7 @@ def Stand(dobj,iobj,prep):
 		obj = findObject(dobj,f"stand {prep}","room")
 		if enforceVerbScope("stand near",obj): return False
 		Core.Print("You are there.")
-	Core.player.changePosture("stand")
-	return True
+	return Core.player.changePosture("stand")
 
 
 def Steal(dobj,iobj,prep,I=None):
@@ -2630,6 +2676,15 @@ def Swim(dobj,iobj,prep):
 	swimPreps = ("across","d","down","in","inside","on","onto","over",
 	"through","u","up","upon")
 	swimmer = Core.player.riding if Core.player.riding else Core.player
+
+	if swimmer.hasStatus("waterwalking") and swimmer.immersed is None:
+		Core.Print(swimmer+"can't swim while waterwalking.")
+		return False
+	if (dobj,iobj,prep) == (None,None,None):
+		if swimmer.immersed is None:
+			dobj = getNoun("What will you swim in?")
+		if dobj in Data.cancels:
+			return False
 
 	if dobj in Data.directions: dobj = Data.directions[dobj]
 	if prep in goPreps or (dobj is None and prep in ("u","up","d","down")) or \
@@ -2944,8 +2999,7 @@ def Use(dobj,iobj,prep):
 	if not Core.hasMethod(I,"use"):
 		Core.Print(f"You can't use {-I}.")
 		return False
-	I.use(Core.player)
-	return True
+	return I.use(Core.player)
 
 
 def Wait(dobj,iobj,prep):
@@ -3007,6 +3061,7 @@ statcommands = {
 "back up":Return,
 "carrying":Core.Player.printCarrying,
 "commands":Commands,
+"cough":Cough,
 "examples":Examples,
 "exits":Exits,
 "gear":Core.Player.printGear,
@@ -3287,6 +3342,7 @@ actions = {
 # dress/undress/strip
 # hold -> take and equip? or assert in inv already?
 # spit
+# snatch
 # approach (redirect to go or talk)
 # ponder (the orb, to see future?)
 # douse,drench -> reverse of pour on?

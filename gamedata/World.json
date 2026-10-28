@@ -7,7 +7,7 @@
 		"links": {
 			"down": "glen"
 		},
-		"fixtures": [],
+		"permanents": [],
 		"items": [],
 		"creatures": [],
 		"status": []
@@ -23,7 +23,8 @@
 			"south": "glen",
 			"west": "cliffside"
 		},
-		"fixtures": [
+		"permanents": [],
+		"items": [
 			{
 				"__class__": "Plash",
 				"name": "brook",
@@ -32,6 +33,7 @@
 				"composition": "freshwater",
 				"id": 6,
 				"aliases": ["stream","creek"],
+				"mention": false,
 				"links": {
 					"east": "port:brook-pond",
 					"west": "port:brook-stream",
@@ -39,7 +41,6 @@
 				}
 			}
 		],
-		"items": [],
 		"creatures": [],
 		"status": [],
 		"floor": "mud"
@@ -53,7 +54,7 @@
 			"north": "cliffside",
 			"east": "glen"
 		},
-		"fixtures": [],
+		"permanents": [],
 		"items": [
 			{
 				"__class__": "Axe",
@@ -84,7 +85,7 @@
 			"south": "babbling brook",
 			"west": "mound"
 		},
-		"fixtures": [
+		"permanents": [
 			{
 				"__class__": "Fixture",
 				"name": "oak tree",
@@ -109,7 +110,7 @@
 			"south": "pond",
 			"west": "big oak"
 		},
-		"fixtures": [],
+		"permanents": [],
 		"items": [],
 		"creatures": [],
 		"status": [],
@@ -123,7 +124,7 @@
 		"links": {
 			"up": "large pit"
 		},
-		"fixtures": [],
+		"permanents": [],
 		"items": [],
 		"creatures": [],
 		"status": [["AREA burning -3",10]],
@@ -136,7 +137,7 @@
 		"domain": "Cabin",
 		"desc": "A damp, decrepit basement with a stone floor, covered in mud and moss from untold years of neglect. There is a creaky wooden stairway leading to above ground.",
 		"links": {},
-		"fixtures": [
+		"permanents": [
 			{
 				"__class__": "Passage",
 				"name": "stairway",
@@ -226,7 +227,7 @@
 			"out": "cliffside",
 			"doorway": "cabin kitchen"
 		},
-		"fixtures": [
+		"permanents": [
 			{
 				"__class__": "Passage",
 				"name": "stairway",
@@ -258,7 +259,7 @@
 			"out": "cabin hallway",
 			"doorway": "cabin hallway"
 		},
-		"fixtures": [
+		"permanents": [
 			{
 				"__class__": "Fixture",
 				"name": "hearth",
@@ -361,7 +362,7 @@
 			"out": "cabin hallway",
 			"doorway": "cabin hallway"
 		},
-		"fixtures": [
+		"permanents": [
 			{
 				"__class__": "Container",
 				"name": "bathtub",
@@ -373,7 +374,9 @@
 				"fixed": true,
 				"capacity": 100,
 				"status": [["AREA wet -3",-2]]
-			},
+			}
+		],
+		"items": [
 			{
 				"__class__": "Plash",
 				"name": "yellow puddle",
@@ -381,11 +384,8 @@
 				"weight": 5,
 				"capacity": -1,
 				"composition": "urine",
-				"aliases": ["puddle"],
-				"items": []
-			}
-		],
-		"items": [
+				"aliases": ["puddle"]
+			},
 			{
 				"__class__": "Lockbox",
 				"name": "capsule",
@@ -429,7 +429,7 @@
 		"domain": "Cabin",
 		"desc": "A small room with walls with torn floral wallpaper and a leaky ceiling.",
 		"links": {},
-		"fixtures": [
+		"permanents": [
 			{
 				"__class__": "Passage",
 				"name": "stairway",
@@ -511,7 +511,7 @@
 			"light": "tunnel",
 			"out": "tunnel"
 		},
-		"fixtures": [],
+		"permanents": [],
 		"items": [
 			{
 				"__class__": "factoryItem",
@@ -541,7 +541,7 @@
 			"cabin": "cabin hallway",
 			"up": "clifftop"
 		},
-		"fixtures": [
+		"permanents": [
 			{
 				"__class__": "Wall",
 				"name": "cliff",
@@ -565,7 +565,9 @@
 				"aliases": ["north window","window"],
 				"linkKeys": ["in","through"],
 				"linkPort": "port:cabin window"
-			},
+			}
+		],
+		"items": [
 			{
 				"__class__": "Plash",
 				"name": "stream",
@@ -578,8 +580,6 @@
 					"east": "port:brook-stream"
 				}
 			}
-		],
-		"items": [
 		],
 		"creatures": [
 			{
@@ -600,7 +600,7 @@
 		"links": {
 			"up":"above the woods"
 		},
-		"fixtures": [
+		"permanents": [
 			{
 				"__class__": "Wall",
 				"name": "cliff",
@@ -668,7 +668,7 @@
 			"north": "white beach",
 			"south": "treeline"
 		},
-		"fixtures": [],
+		"permanents": [],
 		"items": [
 			{
 				"__class__": "Timer",
@@ -740,7 +740,7 @@
 			"west": "big stump",
 			"up": "above the woods"
 		},
-		"fixtures": [],
+		"permanents": [],
 		"items": [
 			{
 				"__class__": "Sign",
@@ -776,7 +776,7 @@
 			"north": "pond",
 			"west": "glen"
 		},
-		"fixtures": [
+		"permanents": [
 			{
 				"__class__": "Wall",
 				"name": "black pit",
@@ -806,7 +806,7 @@
 			"east": "big oak",
 			"south": "cliffside"
 		},
-		"fixtures": [
+		"permanents": [
 			{
 				"__class__": "Controller",
 				"name": "runic statue",
@@ -834,7 +834,7 @@
 			"down": "seafloor"
 		},
 		"floor": "saltwater",
-		"fixtures": [],
+		"permanents": [],
 		"items": [],
 		"creatures": []
 	},
@@ -848,20 +848,43 @@
 			"south": "large pit",
 			"west": "babbling brook"
 		},
-		"fixtures": [
+		"permanents": [],
+		"items": [
 			{
 				"__class__": "Plash",
 				"name": "pond",
-				"desc": "A murky medium-sized pond with some algae-covered water",
-				"weight": 60,
+				"desc": "A murky medium-sized pond with some algae-covered water.",
+				"weight": 100,
 				"composition": "mudwater",
 				"id": 9,
 				"links": {
 					"west": "port:brook-pond"
-				}
+				},
+				"mention": false,
+				"immersedObjects": [
+					{
+						"__class__": "Item",
+						"name": "big mossy rock",
+						"desc": "A broad moss-covered rock rises above the pond's murky water.",
+						"weight": 40,
+						"durability": 100,
+						"composition": "stone",
+						"status": [["submerged",-4]],
+						"aliases": ["mossy rock", "big rock", "rock"],
+						"mention": true
+					}
+				]
+			},
+			{
+				"__class__": "Item",
+				"name": "broad bank shrub",
+				"desc": "A broad, sturdy shrub grows from the dry bank beside the pond.",
+				"weight": 100,
+				"durability": 40,
+				"composition": "wood",
+				"aliases": ["bank shrub", "shrub", "bush"]
 			}
 		],
-		"items": [],
 		"creatures": [],
 		"floor": "mud"
 	},
@@ -875,7 +898,7 @@
 			"shore": "white beach",
 			"down": "seafloor"
 		},
-		"fixtures": [],
+		"permanents": [],
 		"items": [],
 		"creatures": [],
 		"floor": "saltwater"
@@ -889,7 +912,7 @@
 			"up": "seacoast",
 			"east": "underwater tomb"
 		},
-		"fixtures": [],
+		"permanents": [],
 		"items": [],
 		"creatures": [],
 		"composition": "saltwater", 
@@ -906,7 +929,7 @@
 			"south": "big oak",
 			"southwest": "mound"
 		},
-		"fixtures": [],
+		"permanents": [],
 		"items": [],
 		"creatures": [
 			{
@@ -1011,7 +1034,7 @@
 			"out": "glen",
 			"opening": "glen"
 		},
-		"fixtures": [],
+		"permanents": [],
 		"items": [],
 		"creatures": [
 			{
@@ -1047,7 +1070,7 @@
 		},
 		"composition": "saltwater",
 		"floor": "sand",
-		"fixtures": [],
+		"permanents": [],
 		"items": [],
 		"creatures": []
 	},
@@ -1060,7 +1083,7 @@
 			"north": "seacoast",
 			"south": "field"
 		},
-		"fixtures": [],
+		"permanents": [],
 		"items": [],
 		"creatures": [],
 		"floor": "sand"

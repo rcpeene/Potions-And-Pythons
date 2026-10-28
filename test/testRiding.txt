@@ -23,7 +23,7 @@ put pocket squire on patient palfrey
 take travel-sized bard
 put travel-sized bard on patient palfrey
 \chk len(fo("patient palfrey",queryType="room").riders()) == 2
-\chk fo("patient palfrey",queryType="room").riders() == sorted(fo("patient palfrey",queryType="room").riders(),key=lambda rider:rider.Size())
+\chk fo("patient palfrey",queryType="room").riders() == sorted(fo("patient palfrey",queryType="room").riders(),key=lambda rider:rider.Size(),reverse=True)
 
 \\ ridingSpace counts every occupant and can exclude an existing rider
 \spn Core.Item("illicit saddlebag","A saddlebag occupying space without technically riding.",7,-1,"cloth")
@@ -212,7 +212,7 @@ put baron on dray
 \set dray weight 70
 \chk fo("baron",queryType="room").riding is None
 \chk fo("baron",queryType="room").platform is player.parent.floor
-\chk fo("dray",queryType="room").riders() == [fo("waif",queryType="room"),fo("squire",queryType="room")]
+\chk fo("dray",queryType="room").riders() == [fo("squire",queryType="room"),fo("waif",queryType="room")]
 \chk fo("dray",queryType="room").occupantsWeight() <= fo("dray",queryType="room").BRDN()//2
 
 \\ Reduced space drops the largest riders only until the remaining group fits
@@ -230,7 +230,7 @@ put duke on settee
 \set settee weight 40
 \chk fo("duke",queryType="room").riding is None
 \chk fo("duke",queryType="room").platform is player.parent.floor
-\chk fo("settee",queryType="room").riders() == [fo("sprite",queryType="room"),fo("abbot",queryType="room")]
+\chk fo("settee",queryType="room").riders() == [fo("abbot",queryType="room"),fo("sprite",queryType="room")]
 \chk fo("settee",queryType="room").ridingSpace() >= 0
 
 quit

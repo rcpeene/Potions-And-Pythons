@@ -205,8 +205,9 @@ def Print(*args,end="\n",sep=None,delay=None,color=None,allowSilent=True,outfile
 		return 0
 
 	# preprocessing to handle conditions that affect text content
+	# colors 'k' and 'y' represent interface and dialogue respectively
 	args = [primer(censor(str(arg))) for arg in args]
-	if not player.canNavigate():
+	if not player.canNavigate() and color not in ("k","y"):
 		args = [ambiguateDirections(arg) for arg in args]
 	if player.hasStatus("stupidity") and color not in ("k","y"):
 		args = [ambiguateNumbers(arg,grammatical=True) for arg in args]
@@ -259,10 +260,10 @@ def Print(*args,end="\n",sep=None,delay=None,color=None,allowSilent=True,outfile
 
 
 # waits for any keyboard input on windows and unix
-def waitInput(text=None,end="\n",delay=None,color=None):
-	sys.stdout.flush
+def waitInput(text=None,**kwargs):
+	sys.stdout.flush()
 	if text is not None:
-		Print(text,end=end,delay=delay,color=color,allowSilent=False)
+		Print(text,allowSilent=False,**kwargs)
 	# just pass if in test mode
 	if game.mode == 1:
 		return True
@@ -522,9 +523,27 @@ def ordinal(n):
 	else: return str(n)+"th"
 
 
-# cleans a string by remove trailing symbols and lowercasing
+# cleans a string by removing surrounding punctuation and lowercasing
 def clean(string):
-	return string.lower().rstrip(Data.symbols) if string else None
+	if not string: return ""
+	return string.lower().rstrip(Data.symbols).strip("'\"")
+
+
+# preserve capitalization and the punctuation runs around replaced tokens
+def formatReplacement(oldTokens,newToken):
+	symbols = Data.symbols + "'\""
+	firstToken = oldTokens[0]
+	lastToken = oldTokens[-1]
+	# find the run of leading punctuation symbols
+	prefixLength = len(firstToken) - len(firstToken.lstrip(symbols))
+	prefix = firstToken[:prefixLength]
+	# and the run of trailing punctuation symbols
+	suffix = lastToken[len(lastToken.rstrip(symbols)):]
+	# also preserve capitalization of the first token
+	coreToken = firstToken[prefixLength:]
+	if coreToken and coreToken[0].isupper():
+		newToken = newToken.capitalize()
+	return prefix + newToken + suffix
 
 
 # helper for ambiguateDirections()
@@ -552,25 +571,27 @@ def ambiguateDirections(text):
 		tuple(dir+"wards" for dir in directions)
 	erns = tuple(dir+"ern" for dir in directions)
 	unknownDirs = ("some direction","one way","in a certain direction","up ahead",
-	"a ways away","far off","over yonder","elsewhere")
-	additionalUnknownDirs = ("another direction","some other way","the other way",
+	"a ways away","far off","over yonder")
+	additionalUnknownDirs = ("another direction","elsewhere","some other way","the other way",
 	"behind","also ahead")
 	adjectivalUnknownDirs = ("the nearby","the far","the left","the right")
-	# prepositions that precede directions, e.g. "from the north"
-	dirPreps = {"of","from","to","toward","into","on","in","at","by","across","along"}
-	# words that follow directional nouns, e.g. "Eastward, stands a window"
+	# prepositions that precede directions, e.g. "[from] the north"
+	dirPreps = {"of","from","to","toward","into","on","in","at","by","across",
+	"along","through"}
+	# words that follow directional nouns, e.g. "Eastward, [stands] a window"
 	followsNounDir = {"there","theres","is","are","await","lay","lie","sit","stand",
 	"rise","begin","stretch","extend","run","rest","reside","reach","flow"}
 
-	# Assume a token t1 is a noun if it ends with punctuation or t2 is a relevant verb
+	# Assume a token t1 is a noun if it ends the phrase, or t2 is a relevant verb
+	# we assume t2 is a present-tense verb if it ends with "s"
 	def dirIsNoun(t1,t2):
-		return t1[-1] in Data.symbols or clean(t2).endswith("s") or \
-			clean(t2) in followsNounDir|dirPreps
+		return not t2 or t1[-1] in Data.symbols+"'\"" or \
+		clean(t2).endswith("s") or clean(t2) in followsNounDir|dirPreps
 
 	lastChoice = None
 	replacedYet = False
 	# get random string to replace old tokens, but keep the capitalization/punctuation
-	# for textual flavor, add more unknownDirs after first replacement
+	# for textual flavor, include more unknownDirs after first replacement
 	def getReplacement(oldTokens,newOptions):
 		nonlocal replacedYet, lastChoice, unknownDirs, additionalUnknownDirs
 		newToken = choice(newOptions)
@@ -578,11 +599,7 @@ def ambiguateDirections(text):
 		while newToken == lastChoice:
 			newToken = choice(newOptions)
 		lastChoice = newToken
-		# preserve capitalization and punctuation
-		if oldTokens[0][0] == oldTokens[0][0].upper():
-			newToken = newToken.capitalize()
-		if oldTokens[-1][-1] in Data.symbols:
-			newToken += oldTokens[-1][-1]
+		newToken = formatReplacement(oldTokens,newToken)
 		# after we've replaced one direction, we can use additional phrases
 		if not replacedYet and newOptions is unknownDirs:
 			unknownDirs += additionalUnknownDirs
@@ -627,7 +644,7 @@ def ambiguateDirections(text):
 		# 6. NOUN "to north, a window..." -> "in a certain direction, a window..."
 		# "to north lies a window" -> "in a certain direction lies a window"
 		elif clean(t1) in directions and dirIsNoun(t1,t2):
-			tokens[i+1] = getReplacement((tokens[i+1]),unknownDirs)
+			tokens[i+1] = getReplacement((tokens[i+1],),unknownDirs)
 			if clean(t0) in dirPreps:
 				subsume(tokens,i)
 		# 7. ADJECTIVE "the north side" -> "a nearby side"
@@ -709,11 +726,7 @@ def misspell(text):
 	}
 	def getReplacement(oldToken):
 		newToken = miscReplacementMap[clean(oldToken)]
-		if oldToken[0].isupper():
-			newToken = newToken.capitalize()
-		if any(oldToken.endswith(s) for s in Data.symbols):
-			newToken += oldToken[-1]
-		return newToken
+		return formatReplacement((oldToken,),newToken)
 
 	# chance to replace predetermined words with common misspellings
 	tokens = text.split(" ")
@@ -832,23 +845,57 @@ def bagObjects(objects,equivKey=None):
 # takes a prepend string and list of objects
 # converts list of objects to a bag of (obj,count) pairs
 # returns a string that grammatically lists all strings in names
-def listObjects(prepend,objects,append=""):
-	objBag = bagObjects(objects)
+def listObjects(prepend,objects,append="",includePosture=False):
+	phraseKey = lambda obj: obj.nounPhrase(includePosture=includePosture)
+	objBag = bagObjects(objects,equivKey=phraseKey)
 	liststring = ""
 	l = len(objBag)
 	for i, (obj, count) in enumerate(objBag):
 		if i == l-1:
-			liststring += obj.nounPhrase(n=count)
+			liststring += obj.nounPhrase(n=count,includePosture=includePosture)
 		elif i == l-2:
-			liststring += obj.nounPhrase(n=count) + " and "
+			liststring += obj.nounPhrase(n=count,
+				includePosture=includePosture) + " and "
 		else:
-			liststring += obj.nounPhrase(n=count) + ", "
+			liststring += obj.nounPhrase(n=count,
+				includePosture=includePosture) + ", "
 	liststring = prepend + liststring
 	liststring += append
 
 	if player.hasStatus("stupidity"):
 		liststring = ambiguateNumbers(liststring,grammatical=True)
 	return liststring
+
+
+# return every object connected above the given descriptive roots by visible tethers
+def tetherGroup(roots):
+	group = []
+	remaining = list(roots)
+	while remaining:
+		obj = remaining.pop(0)
+		if obj in group:
+			continue
+		group.append(obj)
+		remaining.extend(obj.occupants())
+		if isinstance(obj,Creature):
+			remaining.extend(obj.carrying())
+	return group
+
+
+# describe carrying separately from the noun phrases that describe occupancy
+def describeCarrying(roots):
+	carriers = [obj for obj in tetherGroup(roots) \
+		if isinstance(obj,Creature) and obj.carrying()]
+	phrases = [listObjects(f"{-carrier} is carrying ",carrier.carrying()) \
+		for carrier in carriers]
+	if not phrases:
+		return False
+	if len(phrases) > 1:
+		description = ", ".join(phrases[:-1]) + " and " + phrases[-1]
+	else:
+		description = phrases[0]
+	Print(capWords(description,1) + ".")
+	return True
 
 
 # used on room area conditions to extract the info of the condition it causses
@@ -881,7 +928,7 @@ def min1(n): return 1 if n < 1 else n
 def bound(n,lo,hi): return lo if n < lo else (hi if n > hi else n)
 
 
-# rolls n dice of range d, adds a modifier m, returns int >= 1
+# rolls n dice of range d, adds a modifier m, returns an int >= 1
 def diceRoll(n,d,m=0):
 	if d < 1:
 		n = 0
@@ -1927,7 +1974,7 @@ class GameObject():
 	# gets an object's name in various grammatical contexts
 	# such as 'an elephant', 'the elephants', 'The elephant', '3 elephants', etc.
 	# det should be given as 'a' or 'the'
-	def nounPhrase(self,det="",n=-1,plural=False,cap=0):
+	def nounPhrase(self,det="",n=-1,plural=False,cap=0,includePosture=False):
 		# if det.lower() == "the":
 		strname = self.name
 		if len(strname) == 0:
@@ -1996,7 +2043,7 @@ class EmptyGear(GameObject):
 
 	### Getters ###
 
-	def nounPhrase(self,det="",n=-1,plural=False,cap=0):
+	def nounPhrase(self,det="",n=-1,plural=False,cap=0,includePosture=False):
 		return "[EMPTY GEAR]"
 
 
@@ -2163,8 +2210,8 @@ class Game():
 			objClass = self.resolveSpecClass(objectSpec)
 			if issubclass(objClass,Creature):
 				destination = "creatures"
-			elif objectSpec.get("fixed",issubclass(objClass,Fixture)):
-				destination = "fixtures"
+			elif issubclass(objClass,Fixture):
+				destination = "permanents"
 			else:
 				destination = "items"
 		else:
@@ -2194,6 +2241,12 @@ class Game():
 			if objClass is None:
 				idx += 1
 				continue
+			# Assume the default floor of an object is the room's floor of not explicitly specified
+			# This is done here because object constructors cannot handle it prior to EnmeshWorld
+			if parentCollectionName in ("permanents","items","creatures") and \
+			"platform" not in objectSpec and \
+			objectSpec.get("riding") is None and objectSpec.get("carrier") is None:
+				objectSpec["platform"] = "floor"
 			# Normalize child's nested tethers first,
 			# since nested gear may be moved into the child's inventory.
 			self.normalizeObjectTethers(objectSpec,parentSpec,parentCollectionName)
@@ -2300,9 +2353,9 @@ class Game():
 	# Define which children are owned by and therefore receive this object as parent.
 	def ownedChildren(self,parentObject):
 		# obj.contents() may not be used to identify its children here
-		# contents() may include ephemeral or globally shared objects that aren't 'proper' child objects
+		# contents() may include ephemeral or globally shared objects that aren't proper child objects
 		if isinstance(parentObject,Room):
-			children = parentObject.fixtures + parentObject.items + parentObject.creatures
+			children = parentObject.permanents + parentObject.items + parentObject.creatures
 			children += [surface for surface in parentObject.surfaces if surface is not None]
 			return children
 		if isinstance(parentObject,Creature):
@@ -2321,19 +2374,20 @@ class Game():
 		if not isinstance(jsonValue,dict):
 			return jsonValue
 
-		# if given a non-game-object dict, recur into its child values first, then return the dict
+		# if given a dict, recur into its child values first
 		className = jsonValue.get("__class__")
 		attributes = {}
 		for key,attributeValue in jsonValue.items():
 			if key != "__class__":
 				attributes[key] = self.buildObjectRecur(attributeValue)
+
+		# if dict isnt a game object spec, then return as a dict
 		if className is None:
 			return attributes
-		# JSON doesn't natively support sets, they were with a special class label
+		# JSON doesn't natively support sets, they were given a special class label
 		if className == "set":
 			return set(attributes["setdata"])
-
-		# if given an actual game object specification, instantiate it
+		# if dict is an actual game object specification, instantiate it
 		runtimeObject = self.instantiateSpec(className,attributes)
 		# set object as its children's parent
 		for childObject in self.ownedChildren(runtimeObject):
@@ -2422,7 +2476,7 @@ class Game():
 					f"{tetherName} {referencedId}")
 			return self.itemRegistry[referencedId]
 
-		# for every game object, resolve its references and deduce some runtime-only states
+		# resolve all stored object references before deriving any runtime state
 		for runtimeObject in self.itemRegistry.values():
 			if runtimeObject is None or runtimeObject in celestials:
 				continue
@@ -2436,33 +2490,49 @@ class Game():
 					setattr(runtimeObject,tetherName,
 						resolveId(runtimeObject,referencedId,tetherName))
 
-			parent = runtimeObject.parent
-			platformState = getattr(runtimeObject,"platform",None)
-			if platformState == "floor":
-				runtimeObject.platform = runtimeObject.floorSupport(parent)
-			# surfaces themselves don't get immersed themselves
-			isSurface = runtimeObject in getattr(parent,"surfaces",())
-			if not isSurface:
-				runtimeObject.checkImmersion()
 			if isinstance(runtimeObject,Creature):
-				# carried creature must be restrained
-				if runtimeObject.carrier is not None and \
-					not runtimeObject.hasStatus("restrained",Data.RESTRAINT_CARRY):
-					insort(runtimeObject.status,["restrained",Data.RESTRAINT_CARRY])
-
-				# convert empty gear slots to the EmptyGear singleton
 				for slot,itemId in runtimeObject.gear.items():
-					if itemId is None or itemId is EmptyGear():
-						runtimeObject.gear[slot] = EmptyGear()
-					else:
+					if isinstance(itemId,int):
 						runtimeObject.gear[slot] = resolveId(runtimeObject,itemId,
 							f"gear slot '{slot}'")
 
-				# assign Creature weapon and shield based on gear properties
+
+	# Some object attributes, like the object's floor, cannot be determined-
+	# during instantiation, because objects don't yet have tethers or a parent.
+	# So here, convert serialized sentinel values to reestablish runtime object states.
+	def unpackWorld(self):
+		# get all registered objects; celestials don't need any unpacking
+		runtimeObjects = [runtimeObject for runtimeObject in self.itemRegistry.values() \
+			if runtimeObject is not None and runtimeObject not in celestials]
+
+		for runtimeObject in runtimeObjects:
+			parent = runtimeObject.parent
+			if getattr(runtimeObject,"platform",None) == "floor":
+				# determine object floor from parent's floor
+				runtimeObject.platform = runtimeObject.floorSupport(parent)
+
+			if isinstance(runtimeObject,Creature):
+				# carried creatures start out restrained by their carrier
+				if runtimeObject.carrier is not None and \
+				not runtimeObject.hasStatus("restrained",Data.RESTRAINT_CARRY):
+					insort(runtimeObject.status,["restrained",Data.RESTRAINT_CARRY])
+
+				# empty gear slots become EmptyGear objects
+				for slot,item in runtimeObject.gear.items():
+					if item is None or item is EmptyGear():
+						runtimeObject.gear[slot] = EmptyGear()
+
+				# assign weapon and shield, and build dialogue trees
 				runtimeObject.assignWeaponAndShield()
-				# build each Speaker's dialogue tree
 				if isinstance(runtimeObject,Speaker):
 					runtimeObject.buildDialogue()
+
+		# Immersion depends on every tether, platform, and gear reference above.
+		for runtimeObject in runtimeObjects:
+			parent = runtimeObject.parent
+			if runtimeObject not in getattr(parent,"surfaces",()):
+				runtimeObject.checkImmersion(silent=True)
+
 
 	# Reject impossible world states before gameplay can depend on their relationships.
 	def validateWorld(self):
@@ -2562,7 +2632,7 @@ class Game():
 				raise ValueError(f"Room name '{roomSpec['name']}' does not match " \
 					f"world key '{roomKey}'")
 			normalizedWorld[roomKey] = roomSpec
-			for collectionName in ("fixtures","items","creatures"):
+			for collectionName in ("permanents","items","creatures"):
 				self.normalizeCollectionRecur(roomSpec,collectionName)
 		return normalizedWorld
 
@@ -2581,6 +2651,8 @@ class Game():
 		player = playerObj
 		# establish tethered relationships between objects in world
 		self.enmeshWorld()
+		# convert serialized sentinels and derive runtime-only state
+		self.unpackWorld()
 		# validate the integrity and consistency of the built world
 		self.validateWorld()
 		# no need to keep the reserved ids around anymore
@@ -2743,6 +2815,8 @@ class Game():
 	def flushStatusReports(self):
 		pendingReports = self.pendingStatusReports
 		self.pendingStatusReports = {}
+		# if pendingReports:
+		# 	Print()
 		for (creature,name),(initialState,shouldReport) in pendingReports.items():
 			if shouldReport:
 				creature.reportStatusChange(name,initialState)
@@ -2784,7 +2858,8 @@ class Game():
 	# important for decrementing the duration counter on all status conditions
 	def passTime(self,t=1):
 		# print("T =",self.time)
-		prev_hour = self.hour()
+		prevHour = self.hour()
+		prevDaytime = self.daytime(prevHour)
 		self.time += t
 		self.silent = player.hasAnyStatus("asleep","dead")
 
@@ -2800,8 +2875,8 @@ class Game():
 
 		# check again, it may have changed during room.passTime
 		self.silent = player.hasAnyStatus("asleep","dead")
-		if prev_hour != self.hour():
-			self.checkDaytime()
+		if prevHour != self.hour():
+			self.checkDaytime(prevDaytime=prevDaytime)
 		self.checkAstrology()
 
 
@@ -2864,6 +2939,18 @@ class Game():
 	# hours have names in this game, get name of the hour from the time
 	def hour(self):
 		return Data.hours[(self.time % self.daylength) // self.hourlength]
+
+
+	def daytime(self,hour=None):
+		if hour is None:
+			hour = self.hour()
+		if hour in ("stag","rooster","juniper"):
+			return "morning"
+		if hour in ("bell","sword","willow","lily"):
+			return "day"
+		if hour in ("hearth","cat"):
+			return "evening"
+		return "night"
 
 
 	### Celestials ###
@@ -2933,33 +3020,41 @@ class Game():
 
 
 	# change time of day, print message if not silent, check moon phase
-	def checkDaytime(self,silent=False,newroom=False):
+	def checkDaytime(self,silent=False,newroom=False,prevDaytime=None):
 		if getattr(getattr(player,"parent",None),"ceiling",None) is not None:
 			silent=True
+		daytime = self.daytime()
 		self.celestials.add(sky)
-		for daytime in ("morning","day","evening","night"):
-			self.events.discard(daytime)
+		for daytimeEvent in ("morning","day","evening","night"):
+			self.events.discard(daytimeEvent)
+		self.events.add(daytime)
 		for celestial in (sun,moon,stars):
 			self.celestials.discard(celestial)
 
-		if self.hour() in ("stag","rooster","juniper"):
+		if daytime == "morning":
 			self.celestials.add(sun)
-			self.events.add("morning")
-		if self.hour() in ("bell","sword","willow","lily"):
+		elif daytime == "day":
 			self.celestials.add(sun)
-		if self.hour() in ("hearth","cat"):
+		elif daytime == "evening":
 			self.celestials.add(sun)
 			self.celestials.add(stars)
-		if self.hour() in ("mouse","owl","serpent","wolf"):
+		else:
 			self.celestials.add(moon)
 			self.celestials.add(stars)
 
-		if not silent or newroom:
-			for daytime in ("morning","day","evening","night"):
-				if daytime in self.events and not silent:
-					Print(f"It is {daytime}.")
-					break
-		self.checkMoon(silent=(silent or "night" not in self.events), newroom=newroom)
+		if not silent:
+			if newroom or prevDaytime is None:
+				displayDaytime = "daytime" if daytime == "day" else daytime
+				Print(f"It is {displayDaytime}.")
+			elif daytime != prevDaytime:
+				transitionMessages = {
+					"morning":"Dawn breaks.",
+					"day":"Morning gives way to afternoon.",
+					"evening":"Evening approaches.",
+					"night":"Night falls."
+				}
+				Print(transitionMessages[daytime])
+		self.checkMoon(silent=(silent or daytime != "night"),newroom=newroom)
 
 
 	### User Output ###		
@@ -2970,6 +3065,7 @@ class Game():
 		# if not sidepanel.isOpen():
 		# 	player.openDisplay()
 		self.describeRoom()
+		player.printPosition()
 		if self.currentroom.ceiling is None:
 			game.checkDaytime()
 			game.checkAstrology()
@@ -3049,7 +3145,7 @@ class Game():
 # directed graph, facilitated by the world dict, where the links dict specifies
 # the edges from a given node to its neighboring nodes.
 class Room(GameObject):
-	def __init__(self,name,domain,desc,links,fixtures,items,creatures,capacity=1000,
+	def __init__(self,name,domain,desc,links,permanents,items,creatures,capacity=1000,
 	passprep=None,composition=None,ceiling=None,walls=None,floor=None,status=None):
 		# name serves as the Room's unique id
 		self.name = name
@@ -3060,15 +3156,15 @@ class Room(GameObject):
 		self.links = links
 
 		# room's contents is split between these three, mostly for convenience
-		self.fixtures = fixtures
+		self.permanents = permanents
 		self.items = items
 		self.creatures = creatures
-		for f in self.fixtures:
+		for f in self.permanents:
 			assert f.fixed and not isinstance(f,Creature), \
-			f"Non-fixed fixture {f} in Room {self.name}"
+			f"Non-fixed permanent {f} in Room {self.name}"
 		for i in self.items:
-			assert not i.fixed and not isinstance(i,Creature), \
-			f"Fixture or creature {i} in Room {self.name} items list"
+			assert not isinstance(i,Creature), \
+			f"Creature {i} in Room {self.name} items list"
 		for c in self.creatures:
 			assert isinstance(c,Creature), \
 			f"Non-creature {c} in Room {self.name} creatures list"
@@ -3166,10 +3262,6 @@ class Room(GameObject):
 			insort(self.creatures,O)
 			O.parent = self
 			return O
-		elif O.fixed:
-			insort(self.fixtures,O)
-			O.parent = self
-			return O
 		elif isinstance(O,Item):
 			# merge object if mergeable with existing item here
 			for item in self.items:
@@ -3231,13 +3323,10 @@ class Room(GameObject):
 				if key(obj):
 					obj.addStatus(name,dur)
 
-		fluids = [fluid for fluid in self.spatialContents() \
-			if hasMethod(fluid,"Spill") and fluid.canImmerse(obj)]
-		if fluids:
-			obj.immerse(max(fluids,key=lambda fluid:fluid.Size()))
-		else:
-			obj.checkImmersion()
+		obj.checkImmersion()
 		self.overflow()
+		assert self.vacancy() == -1 or self.vacancy() >= 0, \
+			f"{obj} caused unresolved overflow in {self}"
 		obj.checkImmersion()
 		return True
 
@@ -3246,25 +3335,45 @@ class Room(GameObject):
 	def overflow(self):
 		if self.Capacity() == -1 or self.vacancy() >= 0:
 			return False
-		assert self.couldSpill(0), f"{self} has irreducible contents beyond capacity"
 
 		overflowed = False
 		while self.vacancy() < 0:
 			plashes = [obj for obj in self.spatialContents() \
 				if hasMethod(obj,"Spill") and obj.Size() > obj.minimumSize()]
-			assert plashes, f"{self} has unresolved overflow without spillable liquid"
+			if not plashes:
+				break
 			plash = max(plashes,key=lambda obj:obj.Size()-obj.minimumSize())
 			spill = plash.Spill(size=-self.vacancy())
 			game.spawn(spill)
 			spill.displace(self.parent)
 			overflowed = True
 
-		assert self.vacancy() >= 0
 		return overflowed
+
+
+	# restore capacity after an unexpected size change as a last-resort safeguard
+	def checkCapacity(self):
+		if self.Capacity() == -1 or self.vacancy() >= 0:
+			return True
+
+		self.overflow()
+
+		while self.vacancy() < 0:
+			permanents = getattr(self,"permanents",())
+			contents = [obj for obj in self.spatialContents() if obj not in permanents]
+			if not contents:
+				break
+			item = max(contents,key=lambda obj:obj.Size())
+			item.displace(self.parent)
+
+		assert self.vacancy() >= 0, f"{self} cannot recover enough capacity"
+		return True
 
 
 	# remove any room effects from the obj exiting
 	def exit(self,obj):
+		if obj in getattr(self,"permanents",()):
+			return False
 		obj.removeStatus(reqDuration=-3)
 		obj.unimmerse()
 		self.remove(obj)
@@ -3275,6 +3384,7 @@ class Room(GameObject):
 
 	# pass time for the Room, chance to spawn creatures, sort creatures by MVMT speed
 	def passTime(self,t):
+		self.checkCapacity()
 		super().passTime(t)
 
 		# chance to spawn up to 1 creature in the Room
@@ -3293,22 +3403,17 @@ class Room(GameObject):
 
 	# Try to remove object from contents, ignore if not present
 	def remove(self,O):
+		if O in self.permanents:
+			return False
 		if isinstance(O,Creature):
 			if O in self.creatures:
 				self.creatures.remove(O)
 				O.parent = None
 				return True
-		elif O.fixed:
-			if O in self.fixtures:
-				# TODO: should this even be possible? fixtures are fixed...
-				self.fixtures.remove(O)
-				O.parent = None
-				return True
-		elif isinstance(O,Item):
-			if O in self.items:
-				self.items.remove(O)
-				O.parent = None
-				return True
+		elif O in self.items:
+			self.items.remove(O)
+			O.parent = None
+			return True
 		return False
 
 
@@ -3326,6 +3431,8 @@ class Room(GameObject):
 	# returns True if successful, False if newObj was not added
 	def replaceObj(self,oldObj,newObj):
 		assert oldObj in self
+		if oldObj in self.permanents:
+			return False
 		self.remove(oldObj)
 
 		if not self.canAdd(newObj):
@@ -3444,6 +3551,13 @@ class Room(GameObject):
 				return fluid
 			return None
 
+		# occupants of submerged platforms share the platform's fluid
+		platform = obj.platform
+		if platform is not None and platform.immersed is not None and \
+		platform.hasStatus("submerged",Data.SUBMERGED_LIQUID) and \
+		platform.immersed.canImmerse(obj):
+			return platform.immersed
+
 		# waterwalking avoids contact unless there's no dry space to be in
 		if obj.hasStatus("waterwalking"):
 			forcedFluids = [fluid for fluid in self.spatialContents() \
@@ -3487,7 +3601,7 @@ class Room(GameObject):
 
 
 	def spatialContents(self):
-		return self.fixtures + self.items + self.creatures
+		return self.permanents + self.items + self.creatures
 
 
 	def getNewLocation(self,dir=None):
@@ -3526,8 +3640,9 @@ class Room(GameObject):
 
 	# get items that are 'mentioned' and not anchored to some other platform
 	def listableItems(self):
-		condition = lambda x: x.mention and x.platform in (None,self.floor)
-		objects = list(filter(condition,self.items+self.fixtures))
+		condition = lambda x: x.mention and x.immersed is None and \
+			x.platform in (None,self.floor)
+		objects = list(filter(condition,self.items+self.permanents))
 		return objects
 
 
@@ -3566,6 +3681,9 @@ class Room(GameObject):
 		if len(items) != 0:
 			Print(listObjects("There is ",items,"."))
 			game.setPronouns(items[-1])
+		for item in self.items+self.permanents:
+			if hasMethod(item,"describeImmersed"):
+				item.describeImmersed()
 
 
 	# prints all the creatures in the Room in sentence form
@@ -3574,27 +3692,15 @@ class Room(GameObject):
 		# or creatures riding another creature
 		select = lambda creature: creature not in \
 		(player, *player.carrying(), player.riding) and \
+		creature.immersed is None and \
 		creature.anchor() in (creature.parent.floor,None)
 
 		listCreatures = [creature for creature in self.creatures if select(creature)]
 		if len(listCreatures) != 0:
 			Print(listObjects("There is ",listCreatures,"."))
 
-		# now describe if one creature carrying another
-		carriers = [creature for creature in self.creatures if select(creature) and \
-		creature.carrying()]
-		carrierPhrases = [listObjects(f"{-creature} is carrying ",
-		creature.carrying()) for creature in carriers]
-
-		if len(carrierPhrases) > 1:
-			carrierDescriptions = (", ".join(carrierPhrases[:-1]) + \
-			" and " + carrierPhrases[-1])
-		elif len(carrierPhrases) == 1:
-			carrierDescriptions = carrierPhrases[0]
-		else:
-			carrierDescriptions = ""
-		if carrierDescriptions:
-			Print(capWords(carrierDescriptions,1) + ".")
+		# carrying is separate narration for every creature in a listed tether group
+		describeCarrying(self.listableItems()+listCreatures)
 
 		# set pronouns for the last creature described
 		for creature in listCreatures:
@@ -3750,8 +3856,10 @@ class Item(GameObject):
 
 		# make self wet
 		self.immersed = fluid
-		if not self.hasStatus("wet"):
-			self.Print("Splash!")
+		if isinstance(self,Creature) and self.anchor() is None:
+			self.changePosture("standing",silent=True)
+		if not self.hasStatus("wet") or self.hasStatus("asleep"):
+			self.waitInput("Splash!")
 		if not self.hasStatus("wet",Data.WET_LIQUID):
 			self.addStatus("wet",Data.WET_LIQUID)
 
@@ -3800,13 +3908,13 @@ class Item(GameObject):
 
 
 	# change location while deferring status reports until the transition is complete
-	def changeLocation(self,newparent):
+	def changeLocation(self,newparent,silent=False):
 		with game.deferStatusReports():
-			return self._changeLocation(newparent)
+			return self._changeLocation(newparent,silent=silent)
 
 
 	# change location to a new Room/Container
-	def _changeLocation(self,newparent):
+	def _changeLocation(self,newparent,silent=False):
 		if not newparent.canAdd(self):
 			if newparent.vacancy() != -1 and self.Size() > newparent.vacancy():
 				self.Print(f"There's not enough space for {-self}.")
@@ -3865,6 +3973,11 @@ class Item(GameObject):
 			self.platform.composition in Data.liquids else None
 		if liquidPlatform is not None and \
 		(not self.hasStatus("waterwalking") or requiredFluid is liquidPlatform):
+			if not silent:
+				fluidName = "the water" if liquidPlatform is \
+					getattr(self.parent,"floor",None) else -liquidPlatform
+				self.Print(self+f"fall into {fluidName}.")
+				self.printNearby(self+f"falls into {fluidName}.")
 			self.removePlatform()
 			if liquidPlatform.canImmerse(self):
 				return self.immerse(liquidPlatform,silent=silent)
@@ -3884,11 +3997,12 @@ class Item(GameObject):
 		if self.immersed is not None and not self.immersed.canImmerse(self):
 			self.unimmerse(silent=silent)
 
-		# if anchor is not submerged, unimmerse ourselves
+		# emerge onto any surfaced non-floor anchor
 		anchor = self.anchor()
-		creatureAnchored = isinstance(self,Creature) and isinstance(anchor,Creature)
-		if creatureAnchored and not anchor.hasStatus("submerged") and \
-		self.immersed is anchor.immersed and requiredFluid is None:
+		floor = getattr(self.parent,"floor",None)
+		if isinstance(self,Creature) and anchor not in (None,floor) and \
+		not anchor.hasStatus("submerged",Data.SUBMERGED_LIQUID) and \
+		requiredFluid is None:
 			return self.unimmerse(silent=silent)
 
 		# immerse in required fluid if not already immersed there
@@ -3907,9 +4021,68 @@ class Item(GameObject):
 				dependent.checkImmersion(silent=silent)
 
 
-	# ordinary Items do not use the Creature-only submerged status
+	# reconcile Item submersion with its liquid and support
 	def checkSubmersion(self,silent=False):
-		return
+		wasSubmerged = self.hasStatus("submerged",Data.SUBMERGED_LIQUID)
+		fluid = self.immersed
+		if fluid is None or not fluid.canSubmerge(self):
+			self.removeStatus("submerged",Data.SUBMERGED_LIQUID)
+		else:
+			platform = self.platform
+			onFluidFloor = platform is not None and platform is fluid.floor
+			onSubmergedPlatform = platform is not None and \
+				platform.immersed is fluid and \
+				platform.hasStatus("submerged",Data.SUBMERGED_LIQUID)
+			if onFluidFloor or onSubmergedPlatform:
+				if not wasSubmerged:
+					self.addStatus("submerged",Data.SUBMERGED_LIQUID)
+			else:
+				self.removeStatus("submerged",Data.SUBMERGED_LIQUID)
+
+		isSubmerged = self.hasStatus("submerged",Data.SUBMERGED_LIQUID)
+		if wasSubmerged == isSubmerged:
+			return False
+		if isSubmerged and not silent:
+			self.printNearby(self+"begins to sink!",color="o")
+		occupants = self.occupants().copy()
+		if isSubmerged:
+			for occupant in occupants:
+				self.disoccupy(occupant)
+				if occupant.immersed is fluid:
+					occupant.checkSubmersion(silent=silent)
+				elif fluid.canImmerse(occupant):
+					if occupant.immersed is not None:
+						occupant.unimmerse(silent=silent)
+					occupant.immerse(fluid,silent=silent)
+				occupant.fall(self.Size()//5)
+		else:
+			for occupant in occupants:
+				occupant.checkImmersion(silent=silent)
+		return True
+
+
+	# reconcile spatial relationships after this Item changes size
+	def checkSize(self):
+		if hasMethod(self.parent,"checkCapacity"):
+			self.parent.checkCapacity()
+		self.checkImmersion()
+		platform = self.platform
+		if platform is not None and platform is not getattr(self.parent,"floor",None):
+			platform.checkOccupancy(self)
+			if self.platform is platform:
+				platform.checkOccupantsWeight(silent=True)
+		self.checkOccupancy()
+		for covered in self.covering():
+			covered.checkCover()
+
+
+	# return whether this Item has enough space for an additional occupant
+	def canOccupy(self,occupant):
+		otherSize = self.occupantsSize(exclude=occupant)
+		tooSmall = self.Size() < occupant.Size()//5 and otherSize == 0
+		tooCrowded = otherSize > 0 and \
+			self.Size() < occupant.Size() + otherSize
+		return not (tooSmall or tooCrowded)
 
 
 	# if there's not enough space to occupy an Item, objects fall off, biggest first
@@ -3921,14 +4094,7 @@ class Item(GameObject):
 
 		anyFell = False
 		for occupant in occupants:
-			# An occupant can occupy something 5x smaller than itself
-			# But if theres more than one occupant total size must be less than item size
-			otherSize = self.occupantsSize(exclude=occupant)
-			tooSmall = self.Size() < occupant.Size()//5 and otherSize == 0
-			tooCrowded = otherSize > 0 and \
-				self.Size() < occupant.Size() + otherSize
-			fullyOccupied = tooSmall or tooCrowded
-			if fullyOccupied:
+			if not self.canOccupy(occupant):
 				if not silent:
 					assert isinstance(actor,Creature)
 					actor.Print(self+f"is too small for {-occupant}.",color="o")
@@ -3940,6 +4106,8 @@ class Item(GameObject):
 
 	# removes this Item and all references to it from the game
 	def destroy(self,silent=True):
+		if isinstance(self.parent,Room) and self in self.parent.permanents:
+			return False
 		if not silent:
 			self.Print(f"{+self} disappears.")
 
@@ -3970,7 +4138,12 @@ class Item(GameObject):
 	def displace(self,newparent=None):
 		self.clearOccupants()
 		if self.parent:
-			self.parent.remove(self)
+			oldParent = self.parent
+			if isinstance(oldParent,Creature):
+				removed = oldParent.remove(self,silent=True)
+			else:
+				removed = oldParent.exit(self)
+			assert removed, f"Failed to remove {self} from {oldParent}"
 		nextparent = getattr(newparent,"parent",None)
 		if hasMethod(newparent,"canObtain"):
 			if newparent.canObtain(self,silent=True):
@@ -4003,12 +4176,13 @@ class Item(GameObject):
 
 		self.checkOccupancy()
 		self.checkOccupantsWeight(silent=True)
-		self.checkImmersion()
 
 		if not isinstance(self.parent,Creature) and not self.fixed and \
 		not self.hasAnyStatus("flying"):
 			if self.anchor() is None:
 					self.fall()
+		# happens after fall, this allows for a 1 timestep delay for creature sinking
+		self.checkImmersion()
 
 
 	# removes all conditions of the same name
@@ -4062,6 +4236,8 @@ class Item(GameObject):
 				covered.checkCover()
 			if isinstance(newObj,Creature):
 				newObj.checkTethers()
+			if newObj.parent is not None:
+				newObj.checkSize()
 
 		# if it fails to place the new object in parent, displace it
 		if not parent.replaceObj(self,newObj):
@@ -4233,14 +4409,16 @@ class Item(GameObject):
 
 		immersionSource = self.immersed
 		if verb == "sink" and hasMethod(immersionSource,"transferImmersed"):
-			while "down" in immersionSource.links:
-				height += immersionSource.Capacity() // 5
-				if not immersionSource.transferImmersed(self,"down"):
-					break
+			destinationFluid = immersionSource
+			destinationParent = self.parent
+			while hasMethod(destinationFluid,"transferImmersed") and \
+			"down" in destinationFluid.links:
+				height += destinationFluid.Capacity() // 5
+				destinationParent = destinationFluid.getNewLocation("down")
+				destinationFluid = destinationFluid.links["down"]
+			if destinationFluid is not immersionSource and \
+			immersionSource.transferImmersed(self,destinationParent,destinationFluid):
 				self.printNearby(f"{~self} sinks from above!".capitalize())
-				immersionSource = self.immersed
-				if not hasMethod(immersionSource,"transferImmersed"):
-					break
 			floor = self.floorSupport()
 			if self.anchor() is not floor:
 				self.platform = floor
@@ -4268,6 +4446,26 @@ class Item(GameObject):
 		return True
 
 
+	# verify mounting can preserve immersion or emerge before changing tethers
+	def permitsMountImmersion(self,occupant,actor,silent=False):
+		fluid = occupant.immersed
+		if fluid is None:
+			return True
+		targetSubmerged = self.immersed is not None and \
+			self.hasStatus("submerged",Data.SUBMERGED_LIQUID)
+		if targetSubmerged:
+			if self.immersed is fluid:
+				return True
+			if not silent:
+				actor.Print(f"You can't move directly from {-fluid} onto {-self}.")
+			return False
+		if fluid.canEmerge(occupant):
+			return True
+		if not silent:
+			actor.Print(f"There isn't enough room to emerge from {-fluid}.")
+		return False
+
+
 	# Try to assign self as occupant's platform
 	def occupy(self,occupant,silent=False,actor=None):
 		assert isinstance(occupant,Item)
@@ -4287,6 +4485,9 @@ class Item(GameObject):
 			f"put {-occupant} on {-self}"
 		if self.checkTetherLoop(occupant,actor,action,silent=silent):
 			return False
+		if isinstance(occupant,Creature) and \
+		not self.permitsMountImmersion(occupant,actor,silent=silent):
+			return False
 		if isinstance(occupant,Creature) and occupant.riding is not None:
 			occupant.removeRiding()
 		occupant.removePlatform()
@@ -4295,6 +4496,7 @@ class Item(GameObject):
 			return False
 		occupant.platform = self
 		self.checkOccupantsWeight(silent=silent)
+		occupant.checkImmersion(silent=silent)
 
 		return occupant.platform is self
 
@@ -4363,7 +4565,7 @@ class Item(GameObject):
 	# try to use item (does nothing atm)
 	def use(self,user):
 		if user not in self.ancestors():
-			Print(f"{+self} is not in your Inventory.")
+			user.Print(f"{+self} is not in your Inventory.",color="k")
 			return False
 		Print(f"You use {-self}")
 		return True
@@ -4604,7 +4806,7 @@ class Item(GameObject):
 
 
 	# intelligently get name of this item in various grammatical forms
-	def nounPhrase(self,det="",n=-1,plural=False,cap=0):
+	def nounPhrase(self,det="",n=-1,plural=False,cap=0,includePosture=False):
 		if det.lower() == "the":
 			strname = self.name
 		else:
@@ -4685,12 +4887,12 @@ class Item(GameObject):
 
 
 	# just like self.Print except waits for user input afterwards
-	def waitInput(self,text=None,end="\n",delay=None,color=None):
+	def waitInput(self,text=None,**kwargs):
 		# in godmode we can see all prints
 		if game.mode == 2:
 			text = f"[{self.id} {self.name}]:" + text if text else ""
 			color="k"
-			return waitInput(text=text,end=end,delay=delay,color=color)
+			return waitInput(text=text,**kwargs)
 		return False
 
 
@@ -4969,13 +5171,13 @@ class Creature(Item):
 
 
 	# change location while deferring status reports until the transition is complete
-	def changeLocation(self,newparent):
+	def changeLocation(self,newparent,silent=False):
 		with game.deferStatusReports():
-			return self._changeLocation(newparent)
+			return self._changeLocation(newparent,silent=silent)
 
 
 	# change location to a new Room/Container, return True on success
-	def _changeLocation(self,newparent):
+	def _changeLocation(self,newparent,silent=False):
 		assert not isinstance(newparent,Creature)
 		wasSubmerged = self.hasStatus("submerged")
 		# store these, they would be empty after changing rooms
@@ -4985,8 +5187,8 @@ class Creature(Item):
 		if self.carrier and self.carrier.parent is not newparent:
 			return False
 		if self.riding and self.riding.parent is not newparent:
-			return self.riding.changeLocation(newparent)
-		if not self.canChangeLocation(newparent):
+			return self.riding.changeLocation(newparent,silent=silent)
+		if not self.canChangeLocation(newparent,silent=silent):
 			return False
 
 		self.removeCover()
@@ -5025,18 +5227,17 @@ class Creature(Item):
 
 
 	# check whether this creature and its tethered group can enter a new parent
-	def canChangeLocation(self,newparent):
+	def canChangeLocation(self,newparent,silent=False):
+		msg = None
 		if not newparent.couldSpill(self.totalSize()):
 			msg = f"There's not enough space for {-self}."
-			self.Print(msg)
-			if self in player.anchors():
-				self.printNearby(msg)
-			return False
 		if not newparent.canAdd(self):
 			msg = f"Entering {-newparent} fails."
-			self.Print(msg)
-			if self in player.anchors():
-				self.printNearby(msg)
+		if msg:
+			if not silent:
+				self.Print(msg)
+				if self in player.anchors():
+					self.printNearby(msg)
 			return False
 		return True
 
@@ -5050,7 +5251,14 @@ class Creature(Item):
 
 		validPostures = ("standing","crouching","sitting","laying")
 		assert posture in validPostures
+		if posture != "standing" and self.anchor() is None:
+			return False
 		if self.posture() == posture:
+			return False
+		sizeIncrease = self.Size(posture=posture) - self.Size()
+		if sizeIncrease > 0 and hasMethod(self.parent,"couldSpill") and \
+		not self.parent.couldSpill(sizeIncrease):
+			self.Print("There's not enough space to stand up.")
 			return False
 
 		for p in validPostures:
@@ -5062,6 +5270,7 @@ class Creature(Item):
 		if posture in ("standing","crouching"):
 			self.removeStatus("cozy",Data.COZY_BED,silent=silent)
 
+		self.checkSize()
 		self.checkHidden()
 		return self.posture() == posture
 
@@ -5120,9 +5329,11 @@ class Creature(Item):
 		return False
 
 
-	# TODO: if creature changes size, we need to check platform occupancy and parent capacity
+	# reconcile Creature tethers and burden after a size change
 	def checkSize(self):
-		pass
+		super().checkSize()
+		self.checkTethers()
+		self.checkHindered()
 
 
 	# reconcile the Creature-only submerged status with its liquid and support
@@ -5150,22 +5361,33 @@ class Creature(Item):
 		# if fluid can no longer submerge us for some reason, remove submerged
 		if not fluid.canSubmerge(self):
 			return self.removeStatus("submerged",silent=silent)
-		if self.hasStatus("submerged"):
+
+		platform = self.platform
+		onFluidFloor = platform is not None and platform is fluid.floor
+		onSubmergedPlatform = platform is not None and \
+			platform.immersed is fluid and \
+			platform.hasStatus("submerged",Data.SUBMERGED_LIQUID)
+		if onFluidFloor or onSubmergedPlatform:
+			if not self.hasStatus("submerged",Data.SUBMERGED_LIQUID):
+				return self.addStatus("submerged",Data.SUBMERGED_LIQUID,
+					silent=silent)
+			return False
+		if platform is not None:
+			return self.removeStatus("submerged",silent=silent)
+		if self.hasStatus("submerged",Data.SUBMERGED_LIQUID):
 			return False
 
-		solidPlatform = self.platform is not None and \
-			self.platform.composition not in Data.liquids
-		if solidPlatform:
-			pass
-		elif not self.canSwim(fluid):
+		if not self.canSwim(fluid):
 			if not silent:
 				self.Print("You are too heavy to keep yourself afloat!",color="o")
 		elif not fluid.canEmerge(self):
 			if not silent:
 				self.Print("There isn't enough room to remain surfaced!",color="o")
 		else:
-			return False
-		return self.addStatus("submerged",Data.SUBMERGED_LIQUID,silent=silent)
+			return self.removeStatus("submerged",silent=silent)
+		if not self.hasStatus("submerged",Data.SUBMERGED_LIQUID):
+			return self.addStatus("submerged",Data.SUBMERGED_LIQUID,silent=silent)
+		return False
 
 
 	# remove cover which no longer shares a parent or provides enough space
@@ -5445,17 +5667,28 @@ class Creature(Item):
 	# if it was equipped, unequip it. if it has a Drop() method, call that
 	# check if still hindered
 	def remove(self,I,silent=False):
-		for slot,obj in self.gear.items():
-			if I is obj:
-				self.unequip(slot,silent=silent)
+		removed = False
 		if I in self.carrying():
-			self.removeCarry(I,silent=silent,drop=True)
-		if I in self.inv:
+			removed = self.removeCarry(I,silent=silent,drop=True)
+		elif I in self.inv:
+			for slot,obj in self.gear.items():
+				if I is obj:
+					self.unequip(slot,silent=silent)
 			self.inv.remove(I)
-		if hasMethod(I,"Drop"):
+			I.parent = None
+			removed = True
+		# if removing an object within a child object, make sure its accessible
+		elif I in self.objTree():
+			invAncestors = I.ancestors()
+			invAncestors = invAncestors[:invAncestors.index(self)]
+			if any(getattr(ancestor,"locked",False) for ancestor in invAncestors):
+				return False
+			removed = I.parent.exit(I)
+		if removed and hasMethod(I,"Drop"):
 			I.Drop(self)
-		if not silent:
+		if removed and not silent:
 			self.checkStatus()
+		return removed
 
 
 	# remove any status condition with reqName and reqDuration(s)
@@ -5490,8 +5723,8 @@ class Creature(Item):
 		if condsRemoved and recheck:
 			self.checkStatus()
 			if any(status in ("flying","waterwalking") for status in condsRemoved):
-				self.checkImmersion()
-		if wasSleeping and not self.hasStatus("asleep"):
+				self.checkImmersion(silent=silent)
+		if "asleep" in condsRemoved and not self.hasStatus("asleep"):
 			self.awaken(wellRested=wellRested)
 		self.display()
 		return bool(condsRemoved)
@@ -5520,6 +5753,8 @@ class Creature(Item):
 				creatures.append(newObj)
 			for creature in {c for c in creatures if isinstance(c,Creature)}:
 				creature.checkTethers()
+			if newObj.parent is not None:
+				newObj.checkSize()
 
 		# if we fail to place this object in parent, displace the newObj
 		if not self.parent.replaceObj(self,newObj):
@@ -5636,7 +5871,8 @@ class Creature(Item):
 				self.checkTethers()
 				newObj.checkTethers()
 				return False
-			self.parent.add(newObj)
+			entered = self.parent.enter(newObj)
+			assert entered, f"Failed to place {newObj} after successful admission check"
 
 			# if it was equipped in gear, carry the creature instead
 			if carriedSlot and self[carriedSlot] is EmptyGear():
@@ -5816,17 +6052,45 @@ class Creature(Item):
 		return True
 
 
-	# place a released creature on the carrier's support when it can also hold them
+	# place a released creature on support, in nearby fluid, or on the room floor
 	def assignReleasedPlatform(self,carried):
 		platform = self.platform
-		if platform is None or platform.parent is not self.parent:
-			carried.platform = None
-			return False
-		if platform is self.floorSupport():
+		floor = self.floorSupport()
+		# preserve shared floor support without treating it as ordinary occupancy
+		if platform is floor and floor is not None:
 			carried.platform = carried.floorSupport()
-			return carried.platform is platform
+			carried.checkImmersion(silent=True)
+			if carried.platform is platform:
+				return True
+
+		# prefer the carrier's ordinary platform when it has room
+		validPlatform = platform is not None and platform.parent is self.parent
 		carried.platform = None
-		return bool(platform.occupy(carried,silent=True))
+		if validPlatform and platform.canOccupy(carried) and \
+		platform.occupy(carried,silent=True):
+			return True
+
+		# otherwise release into fluid surrounding the carrier or its platform
+		fluid = self.immersed
+		if fluid is None and validPlatform:
+			fluid = platform.immersed
+		if fluid is not None and fluid.canImmerse(carried):
+			if carried.immersed is fluid:
+				carried.checkSubmersion(silent=True)
+				return True
+			if carried.immersed is not None:
+				carried.unimmerse(silent=True)
+			if carried.immerse(fluid,silent=True):
+				return True
+
+		# use the room floor last; removeCarry() handles falling if none exists
+		if carried.immersed is not None:
+			carried.unimmerse(silent=True)
+		carried.platform = carried.floorSupport()
+		if carried.platform is None:
+			return False
+		carried.checkImmersion(silent=True)
+		return True
 
 
 	# add cover to this Creature, attempt to hide
@@ -5985,14 +6249,12 @@ class Creature(Item):
 			self.carrier.removeCarry(self,silent=True,drop=False)
 		if self.riding:
 			return self.riding.fall(height,room)
+		if self.immersed is not None and not self.hasStatus("submerged"):
+			return False
 
 		wasSubmerged = self.hasStatus("submerged")
 		self.checkImmersion()
 		if not wasSubmerged and self.hasStatus("submerged"):
-			if player in self.occupants() or player in self.carrying() or player is self:
-				waitInput(self+"begins to sink!",color="o")
-			else:
-				self.printNearby(self+"begins to sink.",color="o")
 			return True
 		verb = "sink" if self.hasStatus("submerged") else "fall"
 		if self.immersed is not None and self.canSwim():
@@ -6011,14 +6273,16 @@ class Creature(Item):
 			room = self.room()
 		immersionSource = self.immersed
 		if verb == "sink" and hasMethod(immersionSource,"transferImmersed"):
-			while "down" in immersionSource.links:
-				height += immersionSource.Capacity() // 5
-				if not immersionSource.transferImmersed(self,"down"):
-					break
+			destinationFluid = immersionSource
+			destinationParent = self.parent
+			while hasMethod(destinationFluid,"transferImmersed") and \
+			"down" in destinationFluid.links:
+				height += destinationFluid.Capacity() // 5
+				destinationParent = destinationFluid.getNewLocation("down")
+				destinationFluid = destinationFluid.links["down"]
+			if destinationFluid is not immersionSource and \
+			immersionSource.transferImmersed(self,destinationParent,destinationFluid):
 				self.printNearby(f"{~self} sinks from above!".capitalize())
-				immersionSource = self.immersed
-				if not hasMethod(immersionSource,"transferImmersed") or self.canSwim():
-					break
 			floor = self.floorSupport()
 			if self.anchor() is not floor:
 				self.platform = floor
@@ -6030,17 +6294,14 @@ class Creature(Item):
 		if room != self.room():
 			if self is player:
 				ellipsis()
-			self.changeLocation(room)
-			verb = "sink" if self.hasStatus("submerged") else "fall"
-			self.printNearby(f"{~self} {verb}s from above!".capitalize())
-			if self.hasStatus("submerged") and self.canSwim(): return False
+			if self.changeLocation(room,silent=True):
+				verb = "sink" if self.hasStatus("submerged") else "fall"
+				self.printNearby(f"{~self} {verb}s from above!".capitalize())
+				if self.hasStatus("submerged") and self.canSwim(): return False
 
 		floor = self.floorSupport()
 		if self.anchor() is not floor:
-			if floor is None:
-				self.platform = None
-			else:
-				floor.occupy(self,silent=True)
+			self.platform = floor
 
 		force = min(height,20*self.weight)
 		if not self.hasAnyStatus("fleetfooted","submerged") and \
@@ -6154,6 +6415,8 @@ class Creature(Item):
 		action = f"ride {-self}" if actor is rider else f"put {-rider} on {-self}"
 		if self.checkTetherLoop(rider,actor,action,silent=silent):
 			return False
+		if not self.permitsMountImmersion(rider,actor,silent=silent):
+			return False
 		if rider.Size()//2 > self.Size():
 			if not silent:
 				actor.Print(self+f"is too small for {-rider} to ride.")
@@ -6218,6 +6481,7 @@ class Creature(Item):
 				return False
 
 		rider.addRiding(self)
+		rider.checkImmersion(silent=silent)
 		if actor is rider:
 			actor.Print(rider+f"ride {-self}.",color="g" if contest else "w")
 		if actor is not player:
@@ -6290,7 +6554,8 @@ class Creature(Item):
 				self.Print(f"You get {disoccupyPrep} {-self.platform}.")
 			self.platform.disoccupy(self)
 
-		if not self.hasStatus("flying"):
+		if not (self.hasStatus("flying") or \
+		self.immersed is not None and self.canSwim()):
 			# self.parent.floor.occupy(self)
 			self.platform = self.floorSupport()
 		if self.anchor() in (None,self.parent.floor):
@@ -6303,7 +6568,15 @@ class Creature(Item):
 		if not hasMethod(food,"consume"):
 			self.Print(f"You can't eat {-food}.")
 			return False
-		food.parent.remove(food)
+		oldParent = food.parent
+		if oldParent is self:
+			removed = self.remove(food,silent=True)
+		elif isinstance(oldParent,Creature):
+			self.Print(f"You can't eat {-food} from another Creature's Inventory.")
+			return False
+		else:
+			removed = oldParent.exit(food)
+		assert removed, f"Failed to remove {food} from {oldParent}"
 		food.consume()
 
 
@@ -6379,8 +6652,13 @@ class Creature(Item):
 			if not self.changePosture(posture,silent=True):
 				self.Print(f"You are already {self.posture()} on {-anchor}.")
 				return False
-		elif anchor is self.parent.floor and not self.hasStatus("flying"):
-			return self.Dismount(posture=posture)
+		elif anchor is self.parent.floor and self.anchor() is not None:
+			floats = self.hasStatus("flying") or \
+				self.immersed is not None and self.canSwim()
+			if not floats:
+				return self.Dismount(posture=posture)
+			if not self.Dismount(posture=posture):
+				return False
 		elif self.anchor() not in (None,self.parent.floor):
 			self.Print(f"You can't, you are {self.position()}.")
 			return False
@@ -6388,7 +6666,8 @@ class Creature(Item):
 			self.Print(f"{+anchor} cannot be mounted.")
 			return False
 
-		if hasMethod(anchor,"traverse") and not getattr(anchor,"closed",False):
+		if anchor is not self.anchor() and hasMethod(anchor,"traverse") and \
+		not getattr(anchor,"closed",False):
 			if not getattr(anchor,"closed",True):
 				self.Print(f"{+anchor} is open.")
 			return anchor.traverse(self,verb=posture,dir="on")
@@ -6422,8 +6701,13 @@ class Creature(Item):
 
 		if self.canObtain(I,silent=silent):
 			if oldParent:
-				oldParent.remove(I)
-			assert self.add(I)
+				if isinstance(oldParent,Creature):
+					removed = oldParent.remove(I,silent=True)
+				else:
+					removed = oldParent.exit(I)
+				assert removed, f"Failed to remove {I} from {oldParent}"
+			added = self.add(I)
+			assert added, f"Failed to add {I} after successful obtain check"
 			if not silent:
 				self.Print(f"You take {strname}{suffix}.")
 				if self is player:
@@ -6469,7 +6753,8 @@ class Creature(Item):
 			# first must be equipped in hand to throw
 			self.equipInHand(missile)
 			self.remove(missile,silent=True)
-			self.parent.add(missile)
+			entered = self.parent.enter(missile)
+			assert entered, f"Failed to throw {missile} after successful admission check"
 
 		missile = missile.asProjectile()
 
@@ -6870,35 +7155,48 @@ class Creature(Item):
 	# use posture and tethers to determine position description
 	def position(self,ignoreStanding=False,includeParent=False):
 		pos = ""
+		floor = getattr(self.parent,"floor",None)
+		if self.immersed is not None and self.immersed is floor:
+			fluidPosition = "on the surface"
+		elif self.immersed not in (None,self.parent):
+			fluidPosition = f"in {-self.immersed}"
+		else:
+			fluidPosition = ""
 		# if self.carrier:
 		# 	pos += f"being carried by {~self.carrier}"
 		if self.riding:
 			pos += f"riding {~self.riding}"
 		elif self.platform:
 			pos += self.posture()
-			if self.platform != getattr(self.parent,"floor",None):
+			if fluidPosition:
+				pos += f" {fluidPosition}"
+			waterwalking = self.hasStatus("waterwalking") and \
+				self.platform is floor and floor.composition in Data.liquids
+			if self.platform is not floor or waterwalking:
 				occupyprep = getattr(self.platform,"occupyprep","on")
 				pos += f" {occupyprep} {-self.platform}"
 		else:
 			pos = "floating"
+		if fluidPosition and self.platform is None:
+			pos += f" {fluidPosition}"
 		if self.cover:
 			pos += f" behind {-self.cover}"
 		if ignoreStanding and pos == "standing":
 			pos = ""
-		if includeParent and not isinstance(self.parent,Room):
+		if includeParent and not isinstance(self.parent,Room) and \
+		self.parent is not self.immersed:
 			pos += f" in {-self.parent}"
 		return pos
 
 
 	# get posture from status and anchor
 	def posture(self):
+		if self.anchor() is None:
+			return "floating"
 		for pos in ("laying","sitting","crouching"):
 			if self.hasStatus(pos):
 				return pos
-		else:
-			if self.anchor() is None:
-				return "floating"
-			return "standing"
+		return "standing"
 
 
 	# returns sum of all protection values of all items in gear
@@ -6970,7 +7268,7 @@ class Creature(Item):
 
 
 	# intelligently get name of this Item in various grammatical forms
-	def nounPhrase(self,det="",n=-1,plural=False,cap=-1):
+	def nounPhrase(self,det="",n=-1,plural=False,cap=-1,includePosture=False):
 		strname = self.descname
 		# if self.riding and det != "the":
 		# 	strname = f"{strname} on {self.riding.nounPhrase()}"
@@ -6978,7 +7276,9 @@ class Creature(Item):
 		# elif self.platform not in (None,self.parent.floor) and det != "the":
 		# 	strname = f"{strname} {self.posture()} on {-self.platform}"
 		# position = self.position(ignoreStanding=True)
-		if det == "a" and self.determiner != "your":
+		indefinite = det == "a" or det == "" and n == 1 and \
+			self.definiteDeterminer() != "your"
+		if indefinite and self.determiner != "your":
 			strname = strname + self.tethersDescription(allowCarrying=False)
 			# if position == "floating":
 			# 	if self.anchor() is None:
@@ -6992,6 +7292,8 @@ class Creature(Item):
 			plural = True
 		if plural:
 			strname = self.plural
+		if includePosture:
+			strname = f"{self.posture()} {strname}"
 		if n > 1:
 			strname = str(n) + " " + strname
 		if self.determiner is not None:
@@ -7071,6 +7373,8 @@ class Player(Creature):
 
 	def convertToJSON(self):
 		jsonDict = super().convertToJSON()
+		if self.parent is None and self.anchor() is None:
+			del jsonDict["platform"]
 		# these lines seem redundant
 		# (the menu functions handle parent and __class__ attributes)
 		# but they are needed because player is read from its own file
@@ -7398,8 +7702,8 @@ class Player(Creature):
 		return displayTrait
 
 
-	def nounPhrase(self,det="",n=-1,plural=False,cap=-1):
-		strname = "you"
+	def nounPhrase(self,det="",n=-1,plural=False,cap=-1,includePosture=False):
+		strname = f"{self.posture()} you" if includePosture else "you"
 		if cap > 0:
 			strname = capWords(strname,c=cap)
 		return strname
@@ -7523,7 +7827,7 @@ class Player(Creature):
 	def printSpells(self,*args):
 		Print(f"Spells: {len(self.spells)}/{self.SPLS()}")
 		if len(self.spells) == 0:
-			Print("\nYou don't know any spells.")
+			Print("You don't know any spells.")
 		else:
 			columnPrint(self.spells,8,12)
 
@@ -7625,8 +7929,8 @@ class Player(Creature):
 
 
 	# This method does nothing for non-player creatures
-	def waitInput(self,text=None,delay=None,color=None):
-		return waitInput(text=text,delay=delay,color=color)
+	def waitInput(self,text=None,**kwargs):
+		return waitInput(text,**kwargs)
 
 
 
@@ -7827,12 +8131,18 @@ class Speaker(Creature):
 
 	# offer something to this speaker
 	def offer(self,I):
+		# Offers transfer an Item directly from one Creature's inventory to another.
+		assert isinstance(I.parent,Creature), f"Offered Item {I} is not Creature-owned"
 		if not self.canObtain(I):
 			Print(f"{+self} can't carry any more!")	
 		elif self.dlogTree.react("offer",self,I=I):
 			# if we fail to obtain item for whatever reason, drop it into room
 			if not self.ObtainItem(I):
-				game.currentroom.add(I)
+				if I.parent is not game.currentroom and game.currentroom.canAdd(I):
+					if I.parent:
+						I.parent.remove(I)
+					entered = game.currentroom.enter(I)
+					assert entered, f"Failed to drop rejected offer {I}"
 		else:
 			Print(f"{+self} ignores your offer.")			
 		return True
@@ -7900,7 +8210,7 @@ class Person(Speaker,Humanoid):
 
 	# intelligently get name of this Item in various grammatical forms
 	# display a description of them (descname) if they haven't met Player yet
-	def nounPhrase(self,det="",n=-1,plural=False,cap=0):
+	def nounPhrase(self,det="",n=-1,plural=False,cap=0,includePosture=False):
 		# if self.riding and det != "the":
 		# 	suffix = f" riding {self.riding.nounPhrase()}"
 		# elif self.anchor() not in (None,self.parent.floor) and det != "the":
@@ -7910,10 +8220,12 @@ class Person(Speaker,Humanoid):
 		# else:
 		# 	suffix = ""
 		tethersSuffixes = ""
-		if (self.carrying() or self.occupants()) and det == "a":
+		indefinite = det == "a" or det == "" and n == 1 and \
+			self.definiteDeterminer() != "your"
+		if (self.carrying() or self.occupants()) and indefinite:
 			tethersSuffixes = self.tethersDescription(allowCarrying=False)
 		if "met" in self.memories:
-			return self.name + tethersSuffixes
+			strname = self.name + tethersSuffixes
 		else:
 			strname = self.descname + tethersSuffixes
 
@@ -7923,6 +8235,8 @@ class Person(Speaker,Humanoid):
 			plural = True
 		if plural:
 			strname = self.plural
+		if includePosture:
+			strname = f"{self.posture()} {strname}"
 		if n > 1:
 			strname = str(n) + " " + strname
 		if self.determiner is not None and det == "":
@@ -8531,6 +8845,15 @@ class Container(Portal):
 		return Room.overflow(self)
 
 
+	def checkCapacity(self):
+		return Room.checkCapacity(self)
+
+
+	def passTime(self,t):
+		self.checkCapacity()
+		return super().passTime(t)
+
+
 	# try to break the Container, spill its contents into parent
 	def breaks(self):
 		# self.parent may get deleted during super().breaks()
@@ -8546,14 +8869,6 @@ class Container(Portal):
 			item.changeLocation(parent)
 			item.Print(f"{+item} comes out of {-self}.")
 		return True
-
-
-	# check that capacity is not exceeded, displacing largest items if so
-	def checkCapacity(self):
-		while self.Capacity() != -1 and self.itemsSize() > self.Capacity():
-			item = max(self.items, key=lambda x: x.Size())
-			self.Print(f"{+item} falls out of {-self}.")
-			item.displace(self.parent)
 
 
 	# remove Item
@@ -8843,7 +9158,7 @@ class Serpens(Item):
 	# absorb value of other into self, then update description
 	def merge(self,other):
 		if not isinstance(other,Serpens):
-			raise TypeError("Cannot merge non-Serpens with Serpens")
+			return False
 
 		self.status += other.status
 		self.value += other.value
@@ -8853,7 +9168,7 @@ class Serpens(Item):
 	### User Output ###
 
 	# intelligently get phrase to represent this in different grammatical contexts
-	def nounPhrase(self,det="",n=-1,plural=False,cap=0):
+	def nounPhrase(self,det="",n=-1,plural=False,cap=0,includePosture=False):
 		strname = "Gold"
 		if det:
 			# "a" only applies if there's 1, otherwise use indefinite plural

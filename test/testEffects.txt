@@ -32,7 +32,7 @@ test
 \chk not any(obj and obj.name == "oversized apparition" for obj in game.itemRegistry.values())
 
 \\ Explicit duplicate IDs fail without replacing the registered object
-\chk raises(AssertionError,lambda:game.spawn(Core.Item("duplicate spark","A spark carrying someone else's paperwork.",1,-1,"energy",id=fo("effect spark",queryType="room").id)))
+\chk raises(ValueError,lambda:game.spawn(Core.Item("duplicate spark","A spark carrying someone else's paperwork.",1,-1,"energy",id=fo("effect spark",queryType="room").id)))
 \chk game.itemRegistry[fo("effect spark",queryType="room").id] is fo("effect spark",queryType="room")
 
 \\ Generated IDs skip IDs that are already registered

@@ -2,6 +2,7 @@ import json
 import os
 import sys
 import unittest
+from unittest.mock import patch
 
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -23,7 +24,7 @@ class WorldLoadingTests(unittest.TestCase):
 	def makeRoomSpec(self,name,items=None,hasPlayer=False):
 		creatures = [{"__class__":"Player"}] if hasPlayer else []
 		return {"__class__":"Room","name":name.title(),"domain":"","desc":"",
-			"links":{},"fixtures":[],"items":items or [],"creatures":creatures,
+			"links":{},"permanents":[],"items":items or [],"creatures":creatures,
 			"ceiling":"stone","walls":"stone","floor":"stone"}
 
 	def makePortalSpec(self,name,links):
@@ -35,11 +36,25 @@ class WorldLoadingTests(unittest.TestCase):
 		self.assertIsInstance(raw["cave"],dict)
 		self.assertEqual(raw["cave"]["__class__"],"Room")
 
+	def testNewGameStartsPlayerLayingOnFloor(self):
+		worldSpec = {"cave":self.makeRoomSpec("cave",hasPlayer=True)}
+		newPlayer = Core.Player("Tester","",29,[1]*10,0,0)
+		with patch.object(Menu,"readDialogue",return_value={}), \
+		patch.object(Menu,"readWorldJSON",return_value=worldSpec), \
+		patch.object(Menu,"createCharacter",return_value=newPlayer), \
+		patch.object(Menu,"sleep"), patch.object(Core,"clearScreen"), \
+		patch.object(Core,"flushInput"), patch.object(Core.Player,"display"), \
+		patch.object(Core.Game,"startUp"):
+			Menu.newGame()
+
+		self.assertIs(Core.player.platform,Core.world["cave"].floor)
+		self.assertEqual(Core.player.posture(),"laying")
+
 	def testRoomKeysAreLowercaseDisplayNames(self):
 		game = self.makeGame()
 		playerSpec = Core.Player("Tester","",29,[1]*10,0,0).convertToJSON()
 		room = {"__class__":"Room","name":"Grand Hall","domain":"",
-			"desc":"","links":{},"fixtures":[],"items":[],
+			"desc":"","links":{},"permanents":[],"items":[],
 			"creatures":[{"__class__":"Player"}]}
 		normalized = game.normalizeWorldData({"grand hall":room},playerSpec)
 		self.assertIs(normalized["grand hall"],room)
@@ -49,7 +64,7 @@ class WorldLoadingTests(unittest.TestCase):
 		game = self.makeGame()
 		playerSpec = Core.Player("Tester","",29,[1]*10,0,0).convertToJSON()
 		room = {"__class__":"Room","name":"Cave","domain":"","desc":"",
-			"links":{},"fixtures":[],"items":[],
+			"links":{},"permanents":[],"items":[],
 			"creatures":[{"__class__":"Player"}]}
 		with self.assertRaisesRegex(ValueError,"World key 'Cave' must be lowercase"):
 			game.normalizeWorldData({"Cave":room},playerSpec)
@@ -68,7 +83,7 @@ class WorldLoadingTests(unittest.TestCase):
 		horse = {"__class__":"Creature","name":"horse","riders":[rider]}
 		covered = {"__class__":"Creature","name":"covered"}
 		blanket = {"__class__":"Item","name":"blanket","covering":[covered]}
-		room = {"__class__":"Room","name":"Cave","fixtures":[],
+		room = {"__class__":"Room","name":"Cave","permanents":[],
 			"items":[table,blanket],"creatures":[damsel,horse]}
 		world = {"cave":room}
 
@@ -89,7 +104,23 @@ class WorldLoadingTests(unittest.TestCase):
 		self.assertEqual(damsel["gear"]["tail"],mouse["id"])
 		self.assertEqual(coin["platform"],table["id"])
 		self.assertEqual(rider["riding"],horse["id"])
+		self.assertNotIn("platform",rider)
+		self.assertNotIn("platform",frog)
+		self.assertNotIn("platform",mouse)
 		self.assertEqual(covered["cover"],blanket["id"])
+
+	def testPermanentsDefaultToFloorUnlessExplicitlyFloating(self):
+		game = self.makeGame()
+		grounded = {"__class__":"Fixture","name":"grounded"}
+		floating = {"__class__":"Fixture","name":"floating","platform":None}
+		room = {"__class__":"Room","name":"Cave","permanents":[grounded,floating],
+			"items":[],"creatures":[{"__class__":"Player"}]}
+		playerSpec = Core.Player("Tester","",29,[1]*10,0,0).convertToJSON()
+
+		game.normalizeWorldData({"cave":room},playerSpec)
+
+		self.assertEqual(grounded["platform"],"floor")
+		self.assertIsNone(floating["platform"])
 
 	def testDuplicateIDsFailDuringReservation(self):
 		game = self.makeGame()
@@ -127,7 +158,7 @@ class WorldLoadingTests(unittest.TestCase):
 				game = self.makeGame()
 				owner = {"__class__":"Creature","name":"owner",field:[42]}
 				dependent = {"__class__":"Creature","id":42,"name":"dependent"}
-				room = {"__class__":"Room","name":"Cave","fixtures":[],
+				room = {"__class__":"Room","name":"Cave","permanents":[],
 					"items":[],"creatures":[owner,dependent,{"__class__":"Player"}]}
 				world = {"cave":room}
 				playerSpec = Core.Player("Tester","",29,[1]*10,0,0).convertToJSON()
@@ -138,7 +169,7 @@ class WorldLoadingTests(unittest.TestCase):
 	def testLockRejectsUnknownKeyID(self):
 		game = self.makeGame()
 		room = {"__class__":"Room","name":"Cave","domain":"","desc":"",
-			"links":{},"fixtures":[],"items":[{"__class__":"Lockbox",
+			"links":{},"permanents":[],"items":[{"__class__":"Lockbox",
 			"name":"chest","desc":"","weight":1,"durability":1,
 			"composition":"wood","items":[],"capacity":10,"keyids":[999],
 			"locked":True}],"creatures":[{"__class__":"Player"}],
@@ -152,7 +183,7 @@ class WorldLoadingTests(unittest.TestCase):
 	def testLockAllowsReservedSkeletonKeyID(self):
 		game = self.makeGame()
 		room = {"__class__":"Room","name":"Cave","domain":"","desc":"",
-			"links":{},"fixtures":[],"items":[{"__class__":"Lockbox",
+			"links":{},"permanents":[],"items":[{"__class__":"Lockbox",
 			"name":"chest","desc":"","weight":1,"durability":1,
 			"composition":"wood","items":[],"capacity":10,"keyids":[-1],
 			"locked":True}],"creatures":[{"__class__":"Player"}],
@@ -160,6 +191,33 @@ class WorldLoadingTests(unittest.TestCase):
 		playerSpec = Core.Player("Tester","",29,[1]*10,0,0).convertToJSON()
 
 		game.buildWorld({"cave":room},playerSpec)
+
+	def testPermanentPlashMustBeInfinite(self):
+		game = self.makeGame()
+		plash = {"__class__":"Plash","name":"spring","weight":20,
+			"composition":"freshwater"}
+		room = {"__class__":"Room","name":"Cave","domain":"","desc":"",
+			"links":{},"permanents":[plash],"items":[],
+			"creatures":[{"__class__":"Player"}],"floor":"stone"}
+		playerSpec = Core.Player("Tester","",29,[1]*10,0,0).convertToJSON()
+
+		with self.assertRaisesRegex(ValueError,
+		"Permanent Plash spring must be infinite"):
+			game.buildWorld({"cave":room},playerSpec)
+
+	def testInfinitePermanentPlashLoads(self):
+		game = self.makeGame()
+		plash = {"__class__":"Plash","name":"spring","weight":20,
+			"composition":"freshwater","infinite":10}
+		room = {"__class__":"Room","name":"Cave","domain":"","desc":"",
+			"links":{},"permanents":[plash],"items":[],
+			"creatures":[{"__class__":"Player"}],"floor":"stone"}
+		playerSpec = Core.Player("Tester","",29,[1]*10,0,0).convertToJSON()
+
+		world,player = game.buildWorld({"cave":room},playerSpec)
+
+		self.assertIn(next(obj for obj in world["cave"].permanents \
+			if isinstance(obj,Items.Plash)),world["cave"].permanents)
 
 	def testPortalDirectionsResolveDistinctPairsAndAliases(self):
 		game = self.makeGame()
@@ -307,6 +365,25 @@ class WorldLoadingTests(unittest.TestCase):
 		self.assertEqual(player.name,"Loaded")
 		self.assertIs(player.parent,world["cave"])
 		self.assertIs(player.platform,world["cave"].floor)
+
+	def testOmittedPlatformGroundsButExplicitNullFloats(self):
+		game = self.makeGame()
+		grounded = {"__class__":"Item","name":"grounded","desc":"",
+			"weight":1,"durability":1,"composition":"stone"}
+		groundedFlying = {"__class__":"Item","name":"grounded flying","desc":"",
+			"weight":1,"durability":1,"composition":"stone",
+			"status":[["flying",-1]]}
+		floating = {"__class__":"Item","name":"floating","desc":"",
+			"weight":1,"durability":1,"composition":"stone","platform":None}
+		roomSpec = self.makeRoomSpec("cave",[grounded,groundedFlying,floating],
+			hasPlayer=True)
+		playerSpec = Core.Player("Tester","",29,[1]*10,0,0).convertToJSON()
+
+		world,player = game.buildWorld({"cave":roomSpec},playerSpec)
+
+		self.assertIs(world["cave"].items[0].platform,world["cave"].floor)
+		self.assertIs(world["cave"].items[1].platform,world["cave"].floor)
+		self.assertIsNone(world["cave"].items[2].platform)
 
 	def testCurrentSaveRoundTrip(self):
 		game = self.makeGame()

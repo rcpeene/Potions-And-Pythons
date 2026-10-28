@@ -411,6 +411,8 @@ def newGame():
 
 	Core.game.currentroom = Core.world["cave"]
 	Core.game.prevroom = Core.world["cave"]
+	Core.player.platform = Core.player.parent.floor
+	Core.player.changePosture("laying",silent=True)
 
 	# open side panel
 	Core.player.display()
@@ -421,10 +423,8 @@ def newGame():
 	Core.clearScreen()
 	Core.flushInput()
 
-	Core.player.changeLocation(Core.game.currentroom)
 	# describe the current room
 	Core.game.startUp()
-
 
 
 # automatically starts a new game with a premade character for easy testing

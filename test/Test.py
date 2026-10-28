@@ -1,6 +1,7 @@
 
 import os
 import sys
+import traceback
 
 abspath = os.path.abspath(__file__)
 dname = os.path.dirname(abspath)
@@ -15,12 +16,18 @@ def runLoggedTest(testFunc):
 	originalStdin = sys.stdin
 	originalStdout = sys.stdout
 	originalStderr = sys.stderr
-	logger = Core.TeeLogger(f"test/logs/{testFunc.__name__}.log")
+	logPath = os.path.join(dname,"logs",f"{testFunc.__name__}.log")
+	logger = Core.TeeLogger(logPath)
 	sys.stdin = logger
 	sys.stdout = logger
 	sys.stderr = logger
 	try:
 		testFunc()
+	except Exception:
+		logger.forceDrainBuffer()
+		logger.log.write("\n" + traceback.format_exc())
+		logger.log.flush()
+		raise
 	finally:
 		logger.forceDrainBuffer()
 		if logger.stdin is not logger.originalStdin:
@@ -105,6 +112,12 @@ def testMovement():
 	PoPy.main(testing=True)
 
 
+# tests Plash traversal, immersion, submersion, and liquid displacement
+def testLiquids():
+	sys.stdin.setInputFile("test/testLiquids.txt")
+	PoPy.main(testing=True)
+
+
 # tests admission, displacement recovery, replacement tethers, and registry identity
 def testSpatialIntegrity():
 	sys.stdin.setInputFile("test/testSpatialIntegrity.txt")
@@ -159,9 +172,22 @@ def testSpells():
 if __name__ == "__main__":
 	os.chdir("..")
 	tests = (testMenu,testInfo,testCheatcodes,testNavigation,testInventory,
-		testCarrying,testPlatforms,testRiding,testMovement,testSpatialIntegrity,
+		testCarrying,testPlatforms,testRiding,testMovement,testLiquids,testSpatialIntegrity,
 		testProjectiles,testEffects,testDialogue,testTime,testBasicItems,testCombat,
 	)
+	failures = []
 	for testFunc in tests:
-		runLoggedTest(testFunc)
-	print("\nAll tests passed without error\n")
+		try:
+			runLoggedTest(testFunc)
+		except Exception:
+			failures.append((testFunc.__name__,traceback.format_exc()))
+		else:
+			print(f"[PASS] {testFunc.__name__}")
+	if failures:
+		print("\nTest failures:\n", file=sys.stderr)
+		for testName,error in failures:
+			print(f"[FAIL] {testName}\n{error}", file=sys.stderr)
+		failedNames = ", ".join(testName for testName,error in failures)
+		print(f"{len(failures)} test script(s) failed: {failedNames}\n", file=sys.stderr)
+		sys.exit(1)
+	print("\nAll test scripts passed without error\n")

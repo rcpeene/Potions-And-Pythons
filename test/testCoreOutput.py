@@ -10,6 +10,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0,os.path.join(ROOT,"src"))
 
 import Core
+import Items
 
 
 class CensorTests(unittest.TestCase):
@@ -199,7 +200,7 @@ class DeferredStatusReportTests(unittest.TestCase):
 		events = []
 		with patch.object(self.creature,"printNearby",
 			side_effect=lambda message,**kwargs: events.append(message)):
-			def transition(creature,destination):
+			def transition(creature,destination,silent=False):
 				creature.addStatus("submerged",-4)
 				events.append("room description")
 				return True
@@ -214,7 +215,7 @@ class DeferredStatusReportTests(unittest.TestCase):
 		item = Core.Item("barrel","",10,-1,"wood")
 		with patch.object(self.creature,"printNearby",
 			side_effect=lambda message,**kwargs: events.append(message)):
-			def transition(movingItem,destination):
+			def transition(movingItem,destination,silent=False):
 				self.creature.addStatus("submerged",-4)
 				events.append("item transition complete")
 				return True
@@ -223,6 +224,128 @@ class DeferredStatusReportTests(unittest.TestCase):
 
 		self.assertEqual(events,
 			["item transition complete","The goblin is submerged."])
+
+
+class LiquidDescriptionTests(unittest.TestCase):
+	def setUp(self):
+		self.originalPlayer = Core.player
+		self.originalGame = Core.game
+		Core.player = Core.Player("Tester","",1,[1]*10,0,0)
+		Core.game = Core.Game(1,Core.defaultRoom,Core.defaultRoom,0,set(),{}, {}, {})
+
+	def tearDown(self):
+		Core.player = self.originalPlayer
+		Core.game = self.originalGame
+
+	def makeRoom(self,items,creatures):
+		room = Core.Room("test room","test","",{},[],items,creatures)
+		for obj in room.spatialContents():
+			obj.parent = room
+		return room
+
+	def describeRoomContents(self,room):
+		output = io.StringIO()
+		with patch("sys.stdout",output):
+			room.describeItems()
+			room.describeCreatures()
+		return output.getvalue()
+
+	def testRoomListsFloatingObjectsThroughMentionedPlash(self):
+		pond = Items.Plash(100,name="pond")
+		lilyPad = Core.Item("lily pad","",5,-1,"wood")
+		frog = Core.Creature("frog","",1,[1]*10)
+		room = self.makeRoom([pond,lilyPad],[frog])
+		lilyPad.immersed = pond
+		lilyPad.platform = None
+		frog.platform = lilyPad
+
+		self.assertEqual(self.describeRoomContents(room),
+			"There is a pond.\n"
+			"Floating in the pond is a lily pad with a frog on it.\n")
+
+	def testRoomSeparatesFloatingAnchoredAndSurfaceGroups(self):
+		pond = Items.Plash(100,name="pond")
+		boat = Core.Item("wooden boat","",5,-1,"wood")
+		rock = Core.Item("rock","",20,-1,"stone")
+		athlete = Core.Creature("athlete","",5,[1]*10)
+		wizard = Core.Creature("wizard","",5,[1]*10)
+		room = Core.Room("test room","test","",{},[],[pond,boat,rock],
+			[athlete,wizard],floor="stone")
+		for obj in room.spatialContents()+[room.floor]:
+			obj.parent = room
+		boat.immersed = pond
+		boat.platform = None
+		rock.immersed = pond
+		rock.platform = None
+		athlete.immersed = pond
+		athlete.platform = room.floor
+		athlete.addStatus("sitting",Core.Data.POSTURE_ACTIVE,silent=True)
+		wizard.platform = pond
+
+		self.assertEqual(self.describeRoomContents(room),
+			"There is a pond.\n"
+			"Floating in the pond are a rock and a wooden boat.\n"
+			"In the pond is a sitting athlete.\n"
+			"On the pond's surface is a wizard.\n")
+
+	def testUnmentionedPlashUsesDefiniteNameAndLimitsEachGroup(self):
+		pond = Items.Plash(100,name="pond",mention=False)
+		floats = [Core.Item(f"float {idx}","",1,-1,"wood") for idx in range(4)]
+		room = self.makeRoom([pond]+floats,[])
+		for obj in floats:
+			obj.immersed = pond
+			obj.platform = None
+
+		self.assertEqual(self.describeRoomContents(room),
+			"There are many things floating in the pond.\n")
+
+	def testImmersedTetherGroupDescribesCarryingSeparately(self):
+		pond = Items.Plash(100,name="pond")
+		frog = Core.Creature("frog","",5,[10]*10)
+		fly = Core.Creature("fly","",1,[1]*10)
+		room = self.makeRoom([pond],[frog,fly])
+		frog.immersed = pond
+		frog.platform = None
+		frog.assignCarrySlots(fly,["left"])
+
+		self.assertEqual(self.describeRoomContents(room),
+			"There is a pond.\nFloating in the pond is a frog.\n"
+			"The frog is carrying a fly.\n")
+
+	def testExaminingPlashRevealsSubmergedRoots(self):
+		pond = Items.Plash(100,name="pond")
+		shark = Core.Creature("shark","",10,[10]*10)
+		surfer = Core.Creature("surfer","",5,[10]*10)
+		room = self.makeRoom([pond],[shark,surfer])
+		shark.immersed = pond
+		shark.platform = None
+		shark.addStatus("submerged",Core.Data.SUBMERGED_LIQUID,silent=True)
+		surfer.riding = shark
+
+		output = io.StringIO()
+		with patch("sys.stdout",output):
+			pond.examine(Core.player)
+
+		self.assertEqual(output.getvalue(),
+			"Under the surface, there appears to be "
+			"a shark being ridden by a surfer.\n")
+
+	def testSubmergedLookerSeesSurfacedRootsAbove(self):
+		pond = Items.Plash(100,name="pond")
+		lilyPad = Core.Item("lily pad","",5,-1,"wood")
+		room = self.makeRoom([pond,lilyPad],[Core.player])
+		lilyPad.immersed = pond
+		lilyPad.platform = None
+		Core.player.immersed = pond
+		Core.player.platform = None
+		Core.player.addStatus("submerged",Core.Data.SUBMERGED_LIQUID,silent=True)
+
+		output = io.StringIO()
+		with patch("sys.stdout",output):
+			pond.examine(Core.player)
+
+		self.assertEqual(output.getvalue(),
+			"Above the surface, there appears to be a lily pad.\n")
 
 
 if __name__ == "__main__":

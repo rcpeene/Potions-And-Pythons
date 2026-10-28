@@ -338,7 +338,7 @@ class Lockbox(Box):
 		if self.locked:
 			if not silent:
 				opener.Print(f"{+self} is locked.")
-			return False
+			return not silent
 		return Box.open(self,opener,silent=silent)
 
 
@@ -360,7 +360,7 @@ class Lockbox(Box):
 			if Core.hasMethod(key,"unlockWith"):
 				key.unlockWith(self)
 			return True
-		locker.Print(f"You can't lock {-self} with {-key}.")
+		locker.Print(f"{+key} doesn't work!")
 		return True
 
 
@@ -375,7 +375,7 @@ class Lockbox(Box):
 			if Core.hasMethod(key,"lockWith"):
 				key.lockWith(self)
 			return True
-		unlocker.Print(f"{+key} won't work!")
+		unlocker.Print(f"{+key} doesn't work!")
 		return True
 
 
@@ -429,14 +429,25 @@ class Plash(Core.Portal):
 			self.aliases.append("water")
 
 
+	@property
+	def floor(self):
+		parentFloor = getattr(self.parent,"floor",None)
+		return parentFloor if self.platform is parentFloor else None
+
+
 	def convertToJSON(self,portalLinkIds=None):
 		jsonDict = Core.Portal.convertToJSON(self,portalLinkIds)
 		del jsonDict["fixed"]
 		del jsonDict["durability"]
+		del jsonDict["passprep"]
+		del jsonDict["exitprep"]
 		return jsonDict
 
 
 	def validate(self):
+		if isinstance(self.parent,Core.Room) and \
+		self in self.parent.permanents and not self.infinite:
+			raise ValueError(f"Permanent Plash {self} must be infinite")
 		reservedDirs = {"in","on","out","through",self.passprep,self.exitprep}
 		for direction in self.links:
 			if direction in reservedDirs:
@@ -525,6 +536,67 @@ class Plash(Core.Portal):
 		return sorted(objects,key=lambda obj:obj.Size(),reverse=True)
 
 
+	# Surface occupants are described by describeImmersed(), not inline with the Plash.
+	def nounPhrase(self,det="",n=-1,plural=False,cap=0,includePosture=False):
+		return Core.GameObject.nounPhrase(self,det=det,n=n,plural=plural,cap=cap,
+			includePosture=includePosture)
+
+
+	# describe visible objects whose spatial relationship is owned by this liquid
+	def describeImmersed(self):
+		def describeGroup(prefix,objects,includePosture=False):
+			if not objects:
+				return False
+			if len(objects) > 3:
+				Core.Print(f"There are many things {prefix.lower()}.")
+				return True
+			verb = "is" if len(objects) == 1 else "are"
+			Core.Print(Core.listObjects(f"{prefix} {verb} ",objects,".",
+				includePosture=includePosture))
+			return True
+
+		immersed = [obj for obj in self.immersedObjects() \
+			if not obj.hasStatus("submerged")]
+		# Dependents appear recursively in their anchor's noun phrase.
+		roots = [obj for obj in immersed if obj.anchor() not in immersed]
+		floating = [obj for obj in roots if obj.anchor() is None]
+		anchored = [obj for obj in roots if obj.anchor() is not None]
+		surface = [obj for obj in self.occupants() \
+			if not obj.hasStatus("submerged")]
+		reference = -self
+
+		described = describeGroup(f"Floating in {reference}",floating)
+		described = describeGroup(f"In {reference}",anchored,
+			includePosture=True) or described
+		surfaceReference = reference + ("'" if reference.endswith("s") else "'s")
+		described = describeGroup(f"On {surfaceReference} surface",surface) or described
+		if described:
+			Core.describeCarrying(floating+anchored+surface)
+		return described
+
+
+	# reveal objects on the opposite side of the surface from the looker
+	def examine(self,looker):
+		belowSurface = looker.immersed is self and looker.hasStatus("submerged")
+		immersed = self.immersedObjects()
+		if belowSurface:
+			visible = [obj for obj in immersed if not obj.hasStatus("submerged")]
+			visible += self.occupants()
+			direction = "Above"
+		else:
+			visible = [obj for obj in immersed if obj.hasStatus("submerged")]
+			direction = "Under"
+		roots = [obj for obj in visible if obj is not looker and \
+			obj.anchor() not in visible]
+		if not roots:
+			return False
+		verb = "appears" if len(roots) == 1 else "appear"
+		looker.Print(Core.listObjects(
+			f"{direction} the surface, there {verb} to be ",roots,"."))
+		Core.describeCarrying(roots)
+		return True
+
+
 	# sum of sizes of immersed objects
 	def immersedSize(self,exclude=None):
 		return sum(obj.Size() for obj in self.immersedObjects() if obj is not exclude)
@@ -549,6 +621,12 @@ class Plash(Core.Portal):
 		return removed
 
 
+	def destroy(self,silent=True):
+		for obj in self.immersedObjects().copy():
+			obj.unimmerse(silent=silent)
+		return super().destroy(silent=silent)
+
+
 	def drain(self,quantity):
 		assert quantity >= 0
 		self.weight -= quantity
@@ -566,18 +644,31 @@ class Plash(Core.Portal):
 
 
 	# immerse the traverser in this Plash
-	def enter(self,traverser):
+	def enter(self,traverser,verb=None):
+		anchor = traverser.anchor()
+		floor = getattr(self.parent,"floor",None)
+		if anchor not in (None,floor):
+			traverser.Print(f"You need to get off {-anchor} first.")
+			return False
 		requiredFluid = self.parent.requiredImmersion(traverser)
 		if requiredFluid is not None and requiredFluid is not self:
 			traverser.Print(f"There isn't enough space to get out of {-requiredFluid}.")
 			return False
 		if not self.canImmerse(traverser):
+			traverser.Print(f"There isn't enough room in {-self}.")
 			return False
 		if self.Capacity() == -1 or self.Capacity() > self.Size():
 			traverser.waitInput("It's deeper than it looks!")
 		if self.canSubmerge(traverser) and \
 		traverser.platform is getattr(self.parent,"floor",None):
 			traverser.removePlatform()
+		if verb is not None:
+			action = "get" if traverser.anchor() is None and \
+				verb in ("lay","sit","crouch","stand") else verb
+			traverser.Print(traverser*f"{action} in {-self}.")
+			traverser.printNearby(traverser+f"{action} in {-self}.")
+			if traverser is Core.player or traverser in Core.player.anchors():
+				Core.waitInput()
 		return traverser.immerse(self)
 
 
@@ -590,6 +681,8 @@ class Plash(Core.Portal):
 			traverser.Print(f"There isn't enough space to get out of {-requiredFluid}.")
 			return False
 		traverser.unimmerse()
+		if traverser.anchor() is None:
+			traverser.platform = traverser.floorSupport()
 		return True
 
 
@@ -649,6 +742,7 @@ class Plash(Core.Portal):
 					continue
 				obj.checkImmersion()
 			self.engulf(quantitySize)
+		self.checkSize()
 
 
 	def imbibe(self,drinker):
@@ -666,9 +760,12 @@ class Plash(Core.Portal):
 
 
 	def merge(self,other):
+		return False
 		if not isinstance(other,Plash):
 			return False
 		if other.composition != self.composition:
+			return False
+		if self.links or other.links:
 			return False
 		if other.weight > self.weight:
 			return self.replace(other.merge(self))
@@ -694,18 +791,28 @@ class Plash(Core.Portal):
 		return False
 
 
-	# move through a link while preserving compatible immersion and submersion
-	def transferImmersed(self,traverser,dir):
+	# move to a specific parent and fluid while preserving compatible submersion
+	def transferImmersed(self,traverser,destinationParent,destinationFluid):
+		if destinationFluid is not destinationParent and \
+		destinationFluid.parent is not destinationParent:
+			return False
+		if isinstance(traverser,Core.Creature):
+			if not traverser.canChangeLocation(destinationParent,silent=True):
+				return False
+		elif not destinationParent.canAdd(traverser):
+			return False
+		if not destinationFluid.couldImmerse(traverser):
+			return False
+
 		with Core.game.deferStatusReports():
-			destination = self.links[dir]
 			isCreature = isinstance(traverser,Core.Creature)
 			wasSubmerged = isCreature and traverser.hasStatus("submerged")
-			changedLocation = traverser.changeLocation(self.getNewLocation(dir))
+			changedLocation = traverser.changeLocation(destinationParent)
 			if not changedLocation:
 				return False
-			if traverser.immersed is not destination and \
-			destination.canImmerse(traverser):
-				traverser.immerse(destination)
+			if traverser.immersed is not destinationFluid and \
+			destinationFluid.canImmerse(traverser):
+				traverser.immerse(destinationFluid)
 			if wasSubmerged and traverser.immersed is not None and \
 			traverser.immersed.canSubmerge(traverser):
 				if not traverser.hasStatus("submerged"):
@@ -720,7 +827,7 @@ class Plash(Core.Portal):
 		if dir in Data.directions: dir = Data.directions[dir]
 		# store if already immersed in this object
 		immersed = traverser.immersed is self
-		if traverser.hasStatus("waterwalking") and \
+		if traverser.hasStatus("waterwalking") and not immersed and \
 		(verb == "swim" or dir in self.links):
 			traverser.Print("You can't swim while waterwalking.")
 			return False
@@ -782,10 +889,13 @@ class Plash(Core.Portal):
 			traverser.printNearby(traverser+action)
 			if traverser is Core.player or traverser in Core.player.anchors():
 				Core.waitInput()
-			return self.transferImmersed(traverser,dir)
+			return self.transferImmersed(traverser,newLoc,destination)
 
 		if immersed and dir in ("in","on","through",self.passprep):
-			traverser.Print(f"You're already in {-self}.")
+			anchor = traverser.anchor()
+			floor = getattr(self.parent,"floor",None)
+			support = "" if anchor in (None,floor) else f" on {-anchor}"
+			traverser.Print(f"You're already in {-self}{support}.")
 			return False
 		if immersed:
 			traverser.Print(f"{+self} does not go {dir}.",color="k")
@@ -812,17 +922,12 @@ class Plash(Core.Portal):
 				Core.waitInput()
 			return True
 
-		if not self.enter(traverser):
-			traverser.Print(f"There isn't enough room in {-self}.")
+		if not self.enter(traverser,verb=verb):
 			return False
 
-		if verb in ("lay","sit","crouch","stand"):
+		if traverser.anchor() is not None and \
+		verb in ("lay","sit","crouch","stand"):
 			traverser.changePosture(verb,silent=True)
-		action = f"{verb} {dir} {-self}."
-		traverser.Print(traverser*action)
-		traverser.printNearby(traverser+action)
-		if traverser is Core.player or traverser in Core.player.anchors():
-			Core.waitInput()
 		if traverser is Core.player:
 			Core.game.setPronouns(self)
 		return True

@@ -66,6 +66,7 @@ def main(testing=False):
 
 		# loop over all creatures and initiate their actions
 		renderedCreatures = (room.allCreatures() for room in Core.game.renderedRooms())
+		# unpack into single list
 		creaturesToAct = [c for creatures in renderedCreatures for c in creatures]
 		while creaturesToAct:
 			if not Core.player.isAlive(): break
@@ -108,27 +109,16 @@ if __name__ == "__main__":
 
 ################################################################################
 
-# CURRENT TASKS
-
-# read 4 main new carry functions, evalute and add comments
-# read the latesst checkTethers functions, evaluate and add comments
-# then finish the tether refactor by refactoring the riding/occupying/platform to remove the lists
-
-# numeral conjugation does '11st' rather than '11th and '12nd' rather than '12th'
 
 # WATER AND LIQUIDS
 
 # POURING, LEAKING, FILLING, DRAINING
 
-### we need to allow for displacing the liquid instead of it blocking entrance?
-# What will you do?
-# > get in chest
-# You can't enter the wooden chest. There's not enough room.
-# this is because the puddle is filling the chest
+# we need to handle creatures obtaining liquid. Straightup liquids should probably-
+# not be allowed in inventories? What about a creature taking a barrel of wine, and then-
+# putting something in the barrel to casue overflow? 
+# The wine should displace out of the inventory
 
-# when in puddle in chest
-# > get out of puddle
-# causes error after displacement
 
 ### we need a way to handle interactions with puddles within containers
 # What will you do?
@@ -218,6 +208,8 @@ if __name__ == "__main__":
 # prevent softlock of rooms getting overcrowded with items so theres no vacancy
 	# if a room gets too full, maybe intelligently eject objects to nearby rooms during passTime, or despawn worthless items
 	# figure out what happens if theres a pit with no vacancy, and you fall into it. Do you get destroyed by displace()?
+# support one-way portals and multi-way portals? (several portals are are fully connected)
+
 # test "put on hat" and "put hat on"
 # redo put to account for occupancy versus containment
 	# consider "put maiden on horse" versus "put sword on table"
@@ -287,6 +279,8 @@ if __name__ == "__main__":
 	# you are hiding (if in one)
 # add 'open' to box descname when it is open
 # add 'floating' to objects descname that are floating
+# decide whether compressed occupant descriptions may conceal creatures among "things";
+	# examining reveals them but consumes a turn, potentially letting those creatures attack
 
 # TIME AND SLEEP
 # make sinceLastAte, sinceLast actual meters like hungriness and sleepiness, that rise or decay
@@ -315,6 +309,40 @@ if __name__ == "__main__":
 	# create system for 'recipes' with this
 # protect rare items from certain kinds of damage/effects
 
+# KNOWLEDGE
+# what can knowledge do??
+	# give you more dialogue options
+	# show extra descriptive flavor text/stats
+	# give you crafting recipes?? help you with spellcraft?
+		# if you've never done it before your tinkering odds will be worse?
+	# answer more definitions when player queries
+# how does it differ from investigation?
+	# maybe you get some extra description upon entering a room or interacting with an object?
+		# 'the table creaks slightly... the ashes are still warm... etc'
+	# investigation reveals hidden aspects of the environment, such as traps, concealed items
+	# lets you identify creatures that are stealthing
+	# investigation lets you detect lies (how?)
+	# investigation reveals hidden properties of objects or creatures (like +2 STR or smth)
+	# alter how mysterious names are shown ("The mysterious statue" vs "The malicious troll")
+# what gives you knowledge?
+	# your knowledge score gives you broad knowledge benefits
+	# gaining particular experiences/memories can grant more specific knowledge such as,
+		# having spoken to particular NPC lines
+		# having read a tome
+		# having already cast a spell before/read the scroll
+		# having interacted with the object or creature before?
+		# having already crafted something successfully
+	# however, just having experiences cannot
+		# update most descriptive flavor texts and stats info
+
+
+# fill out glossary more, change definitions of some things to be more expository and fantastical
+# add knowledge/intelligence value for glossary, 
+# player only knows something if the term is in their "knowledge" set or their KNWL fits the requirement
+# perhaps don't allow crafting certain things without it in their glossary?
+# or add items to glossary through trial and error in crafting?
+# create a curated list of verbs commands to show and separate out the complete list
+
 # DIALOGUE
 # allow for conditional replies. If both cases and replies are defined, only show replies whose cases are met
 # fix/add Creature.isNaked or Player.isNaked
@@ -323,14 +351,6 @@ if __name__ == "__main__":
 	# for instance, continue conversation if a truesight person speaks to invisible player, or if a goddess spirit gives you blessing
 	# maybe blessings actually would be the course of action of the NPC with which you speak... I guess, find a way to do that
 # add dialect processor to tritepool output?
-
-# KNOWLEDGE
-# fill out glossary more, change definitions of some things to be more expository and fantastical
-# add knowledge/intelligence value for glossary, 
-# player only knows something if the term is in their "knowledge" set or their KNWL fits the requirement
-# perhaps don't allow crafting certain things without it in their glossary?
-# or add items to glossary through trial and error in crafting?
-# create a curated list of verbs commands to show and separate out the complete list
 
 # CREATURE FORMS
 # make Player a subclass of Humanoid

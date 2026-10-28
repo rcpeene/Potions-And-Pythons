@@ -555,7 +555,7 @@ WIS - min0(inventory.weight - BRDN) - min0(armor.weight - CON)
 speed to cast a spell
 
 SPLS - number of spells
-2*INT
+3*INT
 the maximum number of spells known
 
 RSTN - resistance
