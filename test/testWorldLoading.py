@@ -372,7 +372,7 @@ class WorldLoadingTests(unittest.TestCase):
 			"weight":1,"durability":1,"composition":"stone"}
 		groundedFlying = {"__class__":"Item","name":"grounded flying","desc":"",
 			"weight":1,"durability":1,"composition":"stone",
-			"status":[["flying",-1]]}
+			"status":[["flying"]]}
 		floating = {"__class__":"Item","name":"floating","desc":"",
 			"weight":1,"durability":1,"composition":"stone","platform":None}
 		roomSpec = self.makeRoomSpec("cave",[grounded,groundedFlying,floating],

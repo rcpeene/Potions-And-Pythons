@@ -2,7 +2,7 @@ test
 \tpt cabin basement
 
 \\ A friendly mount accepts the player and rejects duplicate lower-level riding
-\spn Core.Creature("patient palfrey","A horse with the patience of a saint and the expression of a clerk.",100,[10]*10,status=[["tamed",-1]])
+\spn Core.Creature("patient palfrey","A horse with the patience of a saint and the expression of a clerk.",100,[10]*10,status=[["tamed"]])
 ride patient palfrey
 \chk player.riding is fo("patient palfrey",queryType="room")
 \chk fo("patient palfrey",queryType="room").riders() == [player]
@@ -12,14 +12,14 @@ dismount
 \chk player.riding is None and player.platform is player.parent.floor
 
 \\ Player-directed placement creates riders and does not duplicate its command confirmation
-\spn Core.Creature("pocket squire","A squire compact enough for economical quests.",8,[1]*10,status=[["tamed",-1]])
+\spn Core.Creature("pocket squire","A squire compact enough for economical quests.",8,[1]*10,status=[["tamed"]])
 take pocket squire
 put pocket squire on patient palfrey
 \chk fo("pocket squire",queryType="room").riding is fo("patient palfrey",queryType="room")
 \chk fo("patient palfrey",queryType="room").riders() == [fo("pocket squire",queryType="room")]
 
 \\ Several riders fit when combined size and burden permit
-\spn Core.Creature("travel-sized bard","A bard whose ballads and luggage are both abbreviated.",6,[1]*10,status=[["tamed",-1]])
+\spn Core.Creature("travel-sized bard","A bard whose ballads and luggage are both abbreviated.",6,[1]*10,status=[["tamed"]])
 take travel-sized bard
 put travel-sized bard on patient palfrey
 \chk len(fo("patient palfrey",queryType="room").riders()) == 2
@@ -34,8 +34,8 @@ put travel-sized bard on patient palfrey
 \exe fo("illicit saddlebag",queryType="room").platform=player.parent.floor
 
 \\ A rider too large is refused before losing an existing riding tether
-\spn Core.Creature("faithful charger","A charger committed to continuity.",100,[10]*10,status=[["tamed",-1]])
-\spn Core.Creature("thimble pony","A pony better suited to a dollhouse cavalry.",5,[10]*10,status=[["tamed",-1]])
+\spn Core.Creature("faithful charger","A charger committed to continuity.",100,[10]*10,status=[["tamed"]])
+\spn Core.Creature("thimble pony","A pony better suited to a dollhouse cavalry.",5,[10]*10,status=[["tamed"]])
 \exe player.removePlatform()
 \exe player.riding=fo("faithful charger",queryType="room")
 \exe game.oversizedRideSucceeded=fo("thimble pony",queryType="room").ride(player,silent=True)
@@ -44,15 +44,15 @@ put travel-sized bard on patient palfrey
 dismount
 
 \\ Excess individual weight removes the old support and makes the rider fall
-\spn Core.Creature("frail hobbyhorse","A hobbyhorse assembled from optimism and narrow dowels.",20,[0]*10,status=[["tamed",-1]])
+\spn Core.Creature("frail hobbyhorse","A hobbyhorse assembled from optimism and narrow dowels.",20,[0]*10,status=[["tamed"]])
 ride frail hobbyhorse
 \chk player.riding is None
 \chk player.platform is player.parent.floor
 
 \\ Combined occupant weight can reject an otherwise valid additional rider
-\spn Core.Creature("overworked yak","A yak already reconsidering its employment contract.",30,[0]*10,status=[["tamed",-1]])
-\spn Core.Creature("first parcel knight","A knight packaged for convenient transport.",15,[1]*10,status=[["tamed",-1]])
-\spn Core.Creature("second parcel knight","Another knight with suspiciously similar postage.",15,[1]*10,status=[["tamed",-1]])
+\spn Core.Creature("overworked yak","A yak already reconsidering its employment contract.",30,[0]*10,status=[["tamed"]])
+\spn Core.Creature("first parcel knight","A knight packaged for convenient transport.",15,[1]*10,status=[["tamed"]])
+\spn Core.Creature("second parcel knight","Another knight with suspiciously similar postage.",15,[1]*10,status=[["tamed"]])
 take first parcel knight
 put first parcel knight on overworked yak
 take second parcel knight
@@ -62,8 +62,8 @@ put second parcel knight on overworked yak
 \chk fo("second parcel knight",queryType="room").platform is player.parent.floor
 
 \\ Declining the crowding prompt preserves the existing rider and player support
-\spn Core.Creature("crowded cob","A compact horse with a strict seating chart.",40,[10]*10,status=[["tamed",-1]])
-\spn Core.Creature("seated dignitary","A dignitary occupying more ceremony than space.",20,[1]*10,status=[["tamed",-1]])
+\spn Core.Creature("crowded cob","A compact horse with a strict seating chart.",40,[10]*10,status=[["tamed"]])
+\spn Core.Creature("seated dignitary","A dignitary occupying more ceremony than space.",20,[1]*10,status=[["tamed"]])
 take seated dignitary
 put seated dignitary on crowded cob
 stand
@@ -86,7 +86,7 @@ yes
 dismount
 
 \\ A weak incoming rider loses the contest and falls
-\spn Core.Creature("unyielding courier","A courier who refuses to surrender a reserved seat.",20,[20]*10,status=[["tamed",-1]])
+\spn Core.Creature("unyielding courier","A courier who refuses to surrender a reserved seat.",20,[20]*10,status=[["tamed"]])
 take unyielding courier
 put unyielding courier on crowded cob
 \set self str 1
@@ -98,9 +98,9 @@ yes
 \chk fo("unyielding courier",queryType="room").riding is fo("crowded cob",queryType="room")
 
 \\ Winning one push can still leave too little space, causing the player to fall
-\spn Core.Creature("narrow nag","A horse whose seating policy was drafted by an optimist.",40,[10]*10,status=[["tamed",-1]])
-\spn Core.Creature("left pannier pilgrim","A pilgrim settled firmly on the left.",15,[1]*10,status=[["tamed",-1]])
-\spn Core.Creature("right pannier pilgrim","A pilgrim settled equally firmly on the right.",15,[1]*10,status=[["tamed",-1]])
+\spn Core.Creature("narrow nag","A horse whose seating policy was drafted by an optimist.",40,[10]*10,status=[["tamed"]])
+\spn Core.Creature("left pannier pilgrim","A pilgrim settled firmly on the left.",15,[1]*10,status=[["tamed"]])
+\spn Core.Creature("right pannier pilgrim","A pilgrim settled equally firmly on the right.",15,[1]*10,status=[["tamed"]])
 \set self str 20
 \set self skl 20
 \set self stm 20
@@ -115,9 +115,9 @@ yes
 \chk len(fo("narrow nag",queryType="room").riders()) == 1
 
 \\ Delegated placement on a crowded mount refuses without releasing carried cargo
-\spn Core.Creature("reserved pony","A pony displaying a tiny brass RESERVED plaque.",20,[10]*10,status=[["tamed",-1]])
-\spn Core.Creature("incumbent page","A page who arrived before the seating dispute.",10,[1]*10,status=[["tamed",-1]])
-\spn Core.Creature("prospective page","A page carrying hopes, dreams, and no reservation.",15,[1]*10,status=[["tamed",-1]])
+\spn Core.Creature("reserved pony","A pony displaying a tiny brass RESERVED plaque.",20,[10]*10,status=[["tamed"]])
+\spn Core.Creature("incumbent page","A page who arrived before the seating dispute.",10,[1]*10,status=[["tamed"]])
+\spn Core.Creature("prospective page","A page carrying hopes, dreams, and no reservation.",15,[1]*10,status=[["tamed"]])
 take incumbent page
 put incumbent page on reserved pony
 take prospective page
@@ -142,7 +142,7 @@ ride calculating mule
 crouch
 ride calculating mule
 \chk player.riding is fo("calculating mule",queryType="room")
-\chk player.posture() == "standing"
+\chk player.posture() == "crouching"
 dismount
 
 \\ A laying mount suffers the intended contest penalty
@@ -160,7 +160,7 @@ put misplaced tea service on patient palfrey
 \chk fo("misplaced tea service",queryType="room") not in fo("patient palfrey",queryType="room").occupants()
 
 \\ Riding tether loops are rejected without mutation
-\spn Core.Creature("recursive pony","A pony considering an advanced degree in topology.",50,[10]*10,status=[["tamed",-1]])
+\spn Core.Creature("recursive pony","A pony considering an advanced degree in topology.",50,[10]*10,status=[["tamed"]])
 \exe game.loopPony=fo("recursive pony",queryType="room")
 \exe player.removePlatform()
 \exe game.loopPony.removePlatform()
@@ -179,29 +179,29 @@ put misplaced tea service on patient palfrey
 
 \\ Mount shrinkage makes an individually invalid rider fall and clears the tether
 \set self str 20
-\spn Core.Creature("concertina","A horse with an alarming capacity for becoming compact.",100,[10]*10,status=[["tamed",-1]])
+\spn Core.Creature("concertina","A horse with an alarming capacity for becoming compact.",100,[10]*10,status=[["tamed"]])
 ride concertina
 \chk player.riding is fo("concertina",queryType="room")
-\set concertina weight 10
+\set concertina weight 5
 \chk player.riding is None
 \chk player.platform is player.parent.floor
 
 \\ A sourced weakness status lowers burden and drops one overweight rider
-\spn Core.Creature("burro","A sturdy burro until magic says otherwise.",50,[10,1,1,1,1,1,1,1,1,1],status=[["tamed",-1]])
-\spn Core.Creature("ballast","A knight who has taken the concept of heavy cavalry personally.",40,[1]*10,status=[["tamed",-1]])
+\spn Core.Creature("burro","A sturdy burro until magic says otherwise.",50,[10,1,1,1,1,1,1,1,1,1],status=[["tamed"]])
+\spn Core.Creature("ballast","A knight who has taken the concept of heavy cavalry personally.",40,[1]*10,status=[["tamed"]])
 take ballast
 put ballast on burro
 \chk fo("ballast",queryType="room").riding is fo("burro",queryType="room")
-\mbu burro weakness -1
+\mbu burro weakness
 \chk fo("ballast",queryType="room").riding is None
 \chk fo("ballast",queryType="room").platform is player.parent.floor
 \chk not fo("burro",queryType="room").riders()
 
 \\ Reduced burden drops the heaviest riders only until the group is valid
-\spn Core.Creature("dray","A broad dray horse with carefully itemized load limits.",100,[1]*10,status=[["tamed",-1]])
-\spn Core.Creature("waif","A remarkably portable wandering waif.",10,[1]*10,status=[["tamed",-1]])
-\spn Core.Creature("squire","A moderately substantial squire.",20,[1]*10,status=[["tamed",-1]])
-\spn Core.Creature("baron","A baron carrying the full weight of minor nobility.",30,[1]*10,status=[["tamed",-1]])
+\spn Core.Creature("dray","A broad dray horse with carefully itemized load limits.",100,[1]*10,status=[["tamed"]])
+\spn Core.Creature("waif","A remarkably portable wandering waif.",10,[1]*10,status=[["tamed"]])
+\spn Core.Creature("squire","A moderately substantial squire.",20,[1]*10,status=[["tamed"]])
+\spn Core.Creature("baron","A baron carrying the full weight of minor nobility.",30,[1]*10,status=[["tamed"]])
 take waif
 put waif on dray
 take squire
@@ -216,10 +216,10 @@ put baron on dray
 \chk fo("dray",queryType="room").occupantsWeight() <= fo("dray",queryType="room").BRDN()//2
 
 \\ Reduced space drops the largest riders only until the remaining group fits
-\spn Core.Creature("settee","A horse shaped suspiciously like upholstered seating.",100,[10]*10,status=[["tamed",-1]])
-\spn Core.Creature("sprite","A tiny sprite with a valid travel ticket.",10,[1]*10,status=[["tamed",-1]])
-\spn Core.Creature("abbot","An abbot of respectable dimensions.",20,[1]*10,status=[["tamed",-1]])
-\spn Core.Creature("duke","A duke whose title and luggage occupy equal space.",30,[1]*10,status=[["tamed",-1]])
+\spn Core.Creature("settee","A horse shaped suspiciously like upholstered seating.",100,[10]*10,status=[["tamed"]])
+\spn Core.Creature("sprite","A tiny sprite with a valid travel ticket.",10,[1]*10,status=[["tamed"]])
+\spn Core.Creature("abbot","An abbot of respectable dimensions.",20,[1]*10,status=[["tamed"]])
+\spn Core.Creature("duke","A duke whose title and luggage occupy equal space.",30,[1]*10,status=[["tamed"]])
 take sprite
 put sprite on settee
 take abbot

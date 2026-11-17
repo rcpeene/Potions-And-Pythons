@@ -98,7 +98,7 @@ def chooseObject(name,objects,verb=None):
 # roomD and playerD are the 'degree' of the query.
 # Look at Core.py objQuery for details on query degree
 def findObject(term,verb=None,queryType="both",filter=None,roomD=0,playerD=2,
-reqSource=None,silent=False,allowRooms=False):
+reqSource=None,silent=False,allowRooms=False,preferLocalTree=False):
 	if term is None and not silent and verb is not None:
 		term = getNoun(f"What will you {verb}?")
 	if term in Data.cancels or term is None or term == "nothing":
@@ -136,6 +136,11 @@ reqSource=None,silent=False,allowRooms=False):
 	if mine:
 		isMatch = lambda obj: Core.player in obj.ancestors() or obj.determiner == "your"
 		matches = {match for match in matches if isMatch(match)}
+	if preferLocalTree:
+		localTree = Core.player.parent.objTree(includeSelf=True)
+		localMatches = matches & localTree
+		if localMatches:
+			matches = localMatches
 
 	# if two items are practically identical, only keep one of them
 	uniqueMatches = set()
@@ -161,6 +166,25 @@ reqSource=None,silent=False,allowRooms=False):
 			suffix += " that you can see"
 		Core.Print(f"There is no '{term}'{suffix}.",color="k")
 	return None
+
+
+def refuseVerbDistance(verb,obj,describeTarget=True):
+	if describeTarget:
+		anchor = obj.anchor() if Core.hasMethod(obj,"anchor") else None
+		if anchor is not None:
+			targetPosition = obj.anchorDescription()
+		elif getattr(obj,"immersed",None) is not None:
+			targetPosition = f"{-obj} is in {-obj.immersed}"
+		elif getattr(obj,"parent",None) is not None:
+			targetPosition = f"{-obj} is {obj.parent.passprep} {-obj.parent}"
+		else:
+			targetPosition = f"{-obj} is elsewhere"
+	recommendation = f" Try jumping to {obj.pronoun}." if verb == "get on" else ""
+	message = f"You can't {verb} {-obj}; you're {Core.player.position()}"
+	if describeTarget:
+		message += f", and {targetPosition}"
+	Core.Print(f"{message}.{recommendation}")
+	return True
 
 
 def enforceVerbScope(verb,obj,permitAnchor=True,permitParent=False,permitSelf=False,
@@ -195,15 +219,26 @@ permitDistance=False,permitOutside=False):
 		anchor = Core.player.anchor()
 		if anchor in Core.player.parent.surfaces + (None,):
 			anchor = Core.player.parent
-		rec = f" Try jumping to {obj.pronoun}." if verb == "get on" else ""
-		if obj not in anchor.objTree(includeSelf=True):
-			Core.Print(f"You can't {verb} {-obj}, you're {Core.player.position()}.{rec}")
-			return True
+		# objects anchored on the player's own anchor are within reach
+		playerAnchor = Core.player.anchor()
+		objAnchor = obj.anchor() if Core.hasMethod(obj,"anchor") else None
+		coAnchored = playerAnchor is not None and objAnchor is playerAnchor
+		if obj not in anchor.objTree(includeSelf=True) and not coAnchored:
+			return refuseVerbDistance(verb,obj)
+		if obj not in (parent,Core.player.anchor()) and \
+		obj not in Core.player.objTree(includeSelf=True) and \
+		obj is not Core.player.immersed:
+			objImmersion = getattr(obj,"immersed",None)
+			objContext = obj.immersionContext()
+			if objImmersion is not Core.player.immersed or \
+			objContext is not Core.player.immersionContext():
+				describeTarget = objImmersion is not None or objContext is not None
+				return refuseVerbDistance(verb,obj,describeTarget=describeTarget)
 
 	if Core.player.parent.ceiling:
 		if obj in Core.player.parent.ceiling.objTree(includeSelf=True):
 			if Core.player.Size() < Core.player.parent.Size() // 2:
-				if not Core.player.hasAnyStatus("clingfast","flying"):
+				if not Core.player.hasStatus(("clingfast","flying")):
 					Core.Print(f"You can't {verb} {-obj}, it is too high.")
 					return True
 	if obj in Core.celestials:
@@ -357,8 +392,8 @@ def parse(cmdInput):
 	iobj = None
 	prep = None
 
-	# iterates through the input and assigns-
-	# terms based on their position relative to the other terms present
+	# iterates through the input and assigns terms
+	# based on their position relative to the other terms present
 	for term in cmdInput:
 		# preposition is defined if the term is a known preposition
 		if term in Data.prepositions and prep is None:
@@ -578,8 +613,10 @@ def Fortify(command):
 		obj.lastAte = Core.game.time
 	if hasattr(obj,"lastSlept"):
 		obj.lastSlept = Core.game.time
-	for cond in Data.debuffs:
-		obj.removeStatus(cond)
+	# debuffs are red-colored, unprefixed conditions (curses are distinct)
+	for cond in obj.conditions():
+		if cond.color == "r" and not cond.prefix:
+			obj.removeStatus(cond.name)
 	obj.checkStatus()
 
 
@@ -649,7 +686,7 @@ def Honor(command):
 
 def Imbue(command):
 	objname = "self"
-	duration = -1
+	duration = None
 	if len(command) < 2:
 		Core.Print("Error: No status condition given",color="k")
 		return
@@ -668,13 +705,14 @@ def Imbue(command):
 		Core.Print("Error: Object not found",color="k")
 		return
 
-	try:
-		duration = int(duration)
-	except:
-		Core.Print("Error: Duration not number",color="k")
-		return
+	if duration is not None:
+		try:
+			duration = int(duration)
+		except:
+			Core.Print("Error: Duration not number",color="k")
+			return
 
-	obj.addStatus(condname,duration)
+	obj.addStatus(condname,dur=duration)
 
 
 def Learn(command):
@@ -925,7 +963,7 @@ def Cry(*args): Core.Print("A single tear sheds from your eye.")
 
 
 def Dance(*args):
-	Core.player.removeStatus("hidden",-3)
+	# TODO: add alert() here
 	Core.Print("You bust down a boogie.",color="m")
 
 
@@ -953,7 +991,7 @@ def Hello(*args):
 
 def Laugh(*args):
 	Core.Print('"HAHAHAHAHA!"',color="y")
-	Core.player.removeStatus("hidden",-3)
+	# TODO: add alert() here
 
 
 def Quit(*args):
@@ -965,12 +1003,12 @@ def Quit(*args):
 
 def Shout(*args): 
 	Core.Print('"AHHHHHHHHHH"',color="y")
-	Core.player.removeStatus("hidden",-3)
+	# TODO: add alert() here
 
 
 def Sing(*args):
 	Core.Print('"Falalalaaaa"',color="y")
-	Core.player.removeStatus("hidden",-3)
+	# TODO: add alert() here
 
 
 def Smile(*args):
@@ -1056,12 +1094,14 @@ def Attack(dobj,iobj,prep,target=None,weapon=None,weapon2=None):
 	print(dobj,iobj,prep,target,weapon,weapon2)
 
 	if target is None:
-		target = findObject(dobj,"attack","room")
+		target = findObject(dobj,"attack","room",preferLocalTree=True)
 		if target is None: return False
 	# TODO: if weapon is ranged, then redirect to Shoot here
 	Core.game.setPronouns(target)
-	if enforceVerbScope("attack",target,permitParent=True,permitSelf=True): return False
-	Core.player.removeStatus("hidden",-3)
+	if enforceVerbScope("attack",target,permitParent=True,\
+	permitOutside=True,permitSelf=True): 
+		return False
+	# TODO: add alert() here
 
 	stowed = False
 	if isinstance(weapon,(Items.Foot,Items.Mouth)):
@@ -1084,7 +1124,7 @@ def Attack(dobj,iobj,prep,target=None,weapon=None,weapon2=None):
 def Bite(dobj,iobj,prep):
 	if prep is not None:
 		return promptHelp("Command not understood.")
-	I = findObject(dobj,"bite")
+	I = findObject(dobj,"bite",preferLocalTree=True)
 	if I is None: return False
 	if enforceVerbScope("bite",I): return False
 	Core.game.setPronouns(I)
@@ -1107,7 +1147,7 @@ def Break(dobj,iobj,prep):
 		return promptHelp("Command not understood.")
 	# TODO: maybe figure out times when you will just break, not attack?
 	# for instance though, a window should be attacked
-	I = findObject(dobj,"break")
+	I = findObject(dobj,"break",preferLocalTree=True)
 	if I is None: return False
 	Core.game.setPronouns(I)
 	if enforceVerbScope("break",I): return False
@@ -1124,7 +1164,7 @@ def Caress(dobj,iobj,prep):
 		return promptHelp("Command not understood.")
 	# TODO: include iobj validation
 
-	I = findObject(dobj,"caress")
+	I = findObject(dobj,"caress",preferLocalTree=True)
 	if I is None: return False
 	Core.game.setPronouns(I)
 	if enforceVerbScope("caress",I,permitSelf=True,permitParent=True): return False
@@ -1134,8 +1174,7 @@ def Caress(dobj,iobj,prep):
 	if Core.hasMethod(I,"touch"):
 		return I.touch(Core.player)
 
-	if I.composition in Data.textures:
-		Core.Print(Data.textures[I.composition])
+	Core.Print(I.Texture())
 	return True
 
 
@@ -1213,7 +1252,7 @@ def Climb(dobj,iobj,prep):
 	# if any(Core.nameMatch(dobj,o) for o in surfacesHere):
 	if dobj == "here":
 		dobj = getNoun(f"What will you climb {verbprep} here?")
-	M = findObject(dobj,f"climb {verbprep}","room")
+	M = findObject(dobj,f"climb {verbprep}","room",preferLocalTree=True)
 	if M is None: return False
 	Core.game.setPronouns(M)
 	if enforceVerbScope(f"climb {verbprep}",M,permitParent=True,
@@ -1235,7 +1274,7 @@ def Close(dobj,iobj,prep):
 	if prep is not None:
 		return promptHelp("Command not understood.")
 
-	I = findObject(dobj,"close")
+	I = findObject(dobj,"close",preferLocalTree=True)
 	if I is None: return False
 	Core.game.setPronouns(I)
 	if enforceVerbScope("close",I,permitParent=True): return False
@@ -1281,12 +1320,12 @@ def Crouch(dobj,iobj,prep):
 	if prep in ("below","beneath","behind","under"):
 		return Hide(dobj,iobj,prep,posture="crouch")
 	elif prep in ("on","onto","upon","in","inside","into"):
-		M = findObject(dobj,f"crouch {prep}","room")
+		M = findObject(dobj,f"crouch {prep}","room",preferLocalTree=True)
 		if M is None: return False
 		Core.game.setPronouns(M)
 		return Mount(dobj,iobj,prep,M=M,posture="crouch")
 	elif prep in ("at","by","near"):
-		obj = findObject(dobj,f"crouch {prep}","room")
+		obj = findObject(dobj,f"crouch {prep}","room",preferLocalTree=True)
 		if enforceVerbScope(f"crouch {prep}",obj): return False
 		Core.Print("You are there.")
 	Core.player.changePosture("crouch")
@@ -1431,7 +1470,7 @@ def Drink(dobj,iobj,prep):
 		return promptHelp("Command not understood.")
 	if prep == "from": dobj = iobj
 
-	I = findObject(dobj,"drink")
+	I = findObject(dobj,"drink",preferLocalTree=True)
 	if I is None: return False
 	Core.game.setPronouns(I)
 	if enforceVerbScope("drink",I,permitAnchor=False): return False
@@ -1459,7 +1498,7 @@ def Drop(dobj,iobj,prep,I=None):
 			return False
 
 	if iobj is not None:
-		R = findObject(iobj,f"drop {prep}","room")
+		R = findObject(iobj,f"drop {prep}","room",preferLocalTree=True)
 		if R is None: return False
 		if enforceVerbScope(f"drop {prep}",R,permitParent=True): return False
 		if isinstance(R,Core.Portal) and "down" in R.links:
@@ -1516,7 +1555,7 @@ def Eat(dobj,iobj,prep):
 	if prep not in ("using","with",None):
 		return promptHelp("Command not understood.")
 
-	I = findObject(dobj,"eat")
+	I = findObject(dobj,"eat",preferLocalTree=True)
 	if I is None: return False
 	Core.game.setPronouns(I)
 	if enforceVerbScope("eat",I,permitAnchor=False): return False
@@ -1638,7 +1677,7 @@ def Give(dobj,iobj,prep):
 		iobj = getNoun("Who will you give to?")
 		if iobj in Data.cancels:
 			return False
-	C = findObject(iobj,"room")
+	C = findObject(iobj,"room",preferLocalTree=True)
 	if C is None:
 		return False
 	if enforceVerbScope("give to",C,permitAnchor=False): return False
@@ -1659,7 +1698,7 @@ def GoVertical(dir,passage=None,dobj=None):
 	goer = Core.player.riding if Core.player.riding else Core.player
 	floor = getattr(Core.player.parent,"floor",None)
 	if dir == "down" and passage is None and floor is not None and \
-	floor.composition in Data.liquids and goer.hasStatus("waterwalking") and \
+	floor.material().liquid and goer.hasStatus("waterwalking") and \
 	goer.immersed is None:
 		Core.Print(goer+f"can't go down through the {floor.composition} while waterwalking.")
 		return False
@@ -1755,6 +1794,17 @@ def parseGo(dobj,iobj,prep):
 		if passage is None and termMaybePassage(term):
 			passages = Core.player.surroundings().nameQuery(term,d=1)
 			termsMatched[term] = len(passages) > 0
+
+	# if going 'out', try to filter passages to objects player is 'inside'
+	if dir == "out" and len(passages) > 1:
+		goer = Core.player.riding if Core.player.riding else Core.player
+		exitSources = set(Core.player.anchors() + Core.player.ancestors() +
+			goer.anchors() + goer.ancestors())
+		exitSources.update(filter(None,(Core.player.immersed,goer.immersed)))
+		preferred = [target for target in passages if target in exitSources]
+		if preferred:
+			passages = preferred
+
 	# if multiple passages matched, ask which one
 	if len(passages) == 1:
 		passage = passages.pop()
@@ -1790,18 +1840,22 @@ def limitGo(dir=None):
 	# if Core.player.anchor() not in (Core.player.parent.floor, Core.player.riding):
 	# 	Core.Print(f"You can't go anywhere, you are {Core.player.position()}.")
 	# 	return True
-	for cond in Data.immobileStatus:
-		if Core.player.hasStatus(cond) and Core.player.riding is None:
-			Core.Print(f"You can't go anywhere, you are {cond}.")
-			return True
-		if Core.player.riding is not None and Core.player.riding.hasStatus(cond):
-			spurRec = ""
-			if cond in ("laying","sitting"):
-				spurRec = f" Try to spur {Core.player.riding.pronoun}."
-			Core.Print(f"You can't go anywhere, you are riding {-Core.player.riding}" \
-			f" which is {cond}.{spurRec}")
-			Core.game.setPronouns(Core.player.riding)
-			return True
+	mount = Core.player.riding
+	if mount:
+		for cond in mount.conditions():
+			if cond.immobile:
+				spurRec = ""
+				if cond.name in ("laying","sitting"):
+					spurRec = f" Try to spur {mount.pronoun}."
+				Core.Print(f"You can't go anywhere, you are riding {-mount}" \
+				f" which is {cond.name}.{spurRec}")
+				Core.game.setPronouns(mount)
+				return True
+	else:
+		for cond in Core.player.conditions():
+			if cond.immobile:
+				Core.Print(f"You can't go anywhere, you are {cond.name}.")
+				return True
 
 	goer = Core.player.riding if Core.player.riding else Core.player
 	immersionSource = goer.immersed
@@ -1866,7 +1920,11 @@ def Go(dobj,iobj,prep):
 	# An immersed Portal controls navigation until the player exits it.
 	goer = Core.player.riding if Core.player.riding else Core.player
 	immersionSource = goer.immersed
-	if isinstance(immersionSource,Core.Portal):
+	if isinstance(immersionSource,Core.Portal) and \
+	passage in (None,immersionSource) and dest in (None,immersionSource):
+		if dir == "out" and isinstance(Core.player.parent,Core.Container) and \
+		Core.player.parent.requiredImmersion(goer) is immersionSource:
+			return Core.player.parent.traverse(Core.player,dir="out")
 		Core.game.setPronouns(immersionSource)
 		goPosture()
 		return immersionSource.traverse(Core.player,dir=dir)
@@ -1933,7 +1991,8 @@ def Hide(dobj,iobj,prep,I=None,posture=None):
 		return False
 
 	if dobj is None: dobj = iobj
-	if I is None: I = findObject(dobj,f"hide {prep}","room")
+	if I is None:
+		I = findObject(dobj,f"hide {prep}","room",preferLocalTree=True)
 	if I is None: return False
 	Core.game.setPronouns(I)
 	if enforceVerbScope(f"hide {prep}",I,permitParent=True): return False
@@ -1972,10 +2031,11 @@ def JumpFrom(dobj,iobj,prep):
 	if Core.player.posture() not in ("standing","crouching") or not Core.player.anchor():
 		Core.Print("You need to be standing to jump.")
 		return False
-	for cond in Data.immobileStatus:
-		if Core.player.hasStatus(cond) and Core.player.riding is None:
-			Core.Print(f"You can't jump, you are {cond}.")
-			return False
+	if Core.player.riding is None:
+		for cond in Core.player.conditions():
+			if cond.immobile:
+				Core.Print(f"You can't jump, you are {cond.name}.")
+				return False
 	if dobj is not None and not Core.nameMatch(dobj,Core.player.anchor()):
 		Core.Print(f"You're not on a '{dobj}'",color="k")
 		return False
@@ -1990,10 +2050,11 @@ def Jump(dobj,iobj,prep):
 	"in","inside","into","near","off","on","onto","over","out","through","to","toward",
 	"u","under","up","upon",None):
 		return promptHelp("Command not understood.")
-	for cond in Data.immobileStatus:
-		if Core.player.hasStatus(cond) and Core.player.riding is None:
-			Core.Print(f"You can't jump, you are {cond}.")
-			return False
+	if Core.player.riding is None:
+		for cond in Core.player.conditions():
+			if cond.immobile:
+				Core.Print(f"You can't jump, you are {cond.name}.")
+				return False
 	if Core.player.posture() not in ("standing","crouching") or not Core.player.anchor():
 		Core.Print("You need to be standing to jump.")
 		return False
@@ -2113,13 +2174,14 @@ def Lay(dobj,iobj,prep,M=None):
 	if prep in ("below","beneath","behind","under"):
 		return Hide(dobj,iobj,prep,posture="lay")
 	elif prep in ("on","onto","upon","in","inside","into"):
-		if M is None: M = findObject(dobj,f"lay {prep}","room")
+		if M is None:
+			M = findObject(dobj,f"lay {prep}","room",preferLocalTree=True)
 		if M is None: return False
 		if M is Core.player.parent: M = Core.player.parent.floor
 		Core.game.setPronouns(M)
 		return Mount(dobj,iobj,prep,M=M,posture="lay")
 	elif prep in ("at","by","near"):
-		obj = findObject(dobj,f"lay {prep}","room")
+		obj = findObject(dobj,f"lay {prep}","room",preferLocalTree=True)
 		if enforceVerbScope(f"lay {prep}",obj): return False
 		Core.Print("You are there.")
 	Core.player.changePosture("lay")
@@ -2130,7 +2192,7 @@ def Lick(dobj,iobj,prep):
 	if prep not in ("using","with",None):
 		return promptHelp("Command not understood.")
 
-	I = findObject(dobj,"lick")
+	I = findObject(dobj,"lick",preferLocalTree=True)
 	if I is None: return False
 	Core.game.setPronouns(I)
 	if enforceVerbScope("lick",I,permitSelf=True,permitParent=True): return False
@@ -2155,7 +2217,7 @@ def Lock(dobj,iobj,prep):
 	if prep not in ("using","with",None):
 		return promptHelp("Command not understood.")
 
-	I = findObject(dobj,"lock")
+	I = findObject(dobj,"lock",preferLocalTree=True)
 	if I is None: return False
 	Core.game.setPronouns(I)
 	if enforceVerbScope("lock",I,permitParent=True): return False
@@ -2180,6 +2242,19 @@ def Look(dobj,iobj,prep):
 	if prep is None: prep = "at"
 
 	if dobj is None: dobj = iobj
+	if dobj is None and prep == "out":
+		if isinstance(Core.player.parent,Core.Container):
+			container = Core.player.parent
+			if getattr(container,"closed",False):
+				Core.Print(f"{+container} is closed.")
+				return True
+			L = container.parent
+			Core.game.setPronouns(L)
+			L.describe()
+			if Core.hasMethod(L,"examine"):
+				L.examine(Core.player)
+			return True
+
 	if dobj is None and prep not in ("around","down","up"):
 		dobj = getNoun(f"What will you look {prep}?")
 		if dobj in Data.cancels: return False
@@ -2211,7 +2286,8 @@ def Mount(dobj,iobj,prep,M=None,posture=None):
 		return promptHelp("Command not understood.")
 
 	if dobj is None: dobj = iobj
-	if M is None: M = findObject(dobj,"get on","room")
+	if M is None:
+		M = findObject(dobj,"get on","room",preferLocalTree=True)
 	if M is None: return False
 	if M is Core.player.parent: M = Core.player.parent.floor
 	Core.game.setPronouns(M)
@@ -2226,16 +2302,16 @@ def Mount(dobj,iobj,prep,M=None,posture=None):
 			Core.Print(f"You can't get on {-M}.")
 			return False
 
-	if Core.hasMethod(M,"Ride"):
-		# Core.player.removeStatus("hidden",-3) TODO: readd this?
+	if Core.hasMethod(M,"ride"):
+		# TODO: add alert() here
 		if posture is None:
-			posture = "sit"
+			posture = "crouch" if Core.player.posture() == "crouching" else "sit"
 
 	# if "stand on snake" or something
 	if posture in ("stand","crouch"):
 		stepOn = isinstance(M,Core.Creature) and M.posture() == "laying"
 		stepOn = M.Weight() < Core.player.Weight() // 5 or stepOn
-		if stepOn and M.composition not in Data.liquids:
+		if stepOn and not M.material().liquid:
 			Core.player.changePosture(posture)
 			return Attack(dobj,"foot","with",target=M)
 
@@ -2263,7 +2339,7 @@ def Open(dobj,iobj,prep):
 	if prep not in ("using","with",None):
 		return promptHelp("Command not understood.")
 
-	I = findObject(dobj,"open")
+	I = findObject(dobj,"open",preferLocalTree=True)
 	if I is None: return False
 	Core.game.setPronouns(I)
 	if enforceVerbScope("open",I,permitParent=True): return False
@@ -2351,7 +2427,7 @@ def Put(dobj,iobj,prep):
 	if iobj is None:
 		iobj = getNoun(f"What will you put {itemPhrase} {prep}?")
 		if iobj in Data.cancels: return False
-	R = findObject(iobj,f"put {prep}")
+	R = findObject(iobj,f"put {prep}",preferLocalTree=True)
 	if R is None: return False
 	recipientPhrase = -R
 	if enforceVerbScope(f"put {prep}",R): return False
@@ -2375,11 +2451,11 @@ def Put(dobj,iobj,prep):
 		else:
 			removed = Core.player.remove(I)
 			assert removed, f"Failed to remove {I} from the player's Inventory"
+			if iobj == "here": Core.Print(f"You put {itemPhrase} here.")
+			else: Core.Print(f"You put {itemPhrase} in {recipientPhrase}.")
 			entered = R.enter(I)
 			assert entered, f"Failed to put {I} in {R} after successful admission check"
 			# outprep = "on" if isinstance(R,Items.Table) else "in"
-			if iobj == "here": Core.Print(f"You put {itemPhrase} here.")
-			else: Core.Print(f"You put {itemPhrase} in {recipientPhrase}.")
 			return True
 
 	if isinstance(R,Core.Portal) and "down" in R.links:
@@ -2440,7 +2516,7 @@ def Restrain(dobj,iobj,prep):
 	if prep not in ("using","with",None):
 		return promptHelp("Command not understood.")
 
-	C = findObject(dobj,"restrain","room")
+	C = findObject(dobj,"restrain","room",preferLocalTree=True)
 	if C is None: return False
 	Core.game.setPronouns(C)
 	if enforceVerbScope("restrain",C,permitParent=False): return False
@@ -2458,7 +2534,7 @@ def Restrain(dobj,iobj,prep):
 			Core.Print(f"You can't restrain with {-I}.")
 			return False
 
-	if "restrained" in C.status:
+	if C.hasStatus("restrained"):
 		Core.Print(f"{-C} is already restrained.")
 	Core.Print(f"You try to restrain {-C}",color="o")
 	if not C.restrain(Core.player,I):
@@ -2478,7 +2554,7 @@ def Rub(dobj,iobj,prep):
 	if prep not in ("using","with",None):
 		return promptHelp("Command not understood.")
 
-	I = findObject(dobj,"rub")
+	I = findObject(dobj,"rub",preferLocalTree=True)
 	if I is None: return False
 	Core.game.setPronouns(I)
 	if enforceVerbScope("rub",I): return False
@@ -2532,12 +2608,12 @@ def Sit(dobj,iobj,prep):
 	if prep in ("below","beneath","behind","under"):
 		return Hide(dobj,iobj,prep,posture="sit")
 	elif prep in ("on","onto","upon","in","inside","into"):
-		M = findObject(dobj,f"sit {prep}","room")
+		M = findObject(dobj,f"sit {prep}","room",preferLocalTree=True)
 		if M is None: return False
 		Core.game.setPronouns(M)
 		return Mount(dobj,iobj,prep,M=M,posture="sit")
 	elif prep in ("at","by","near"):
-		obj = findObject(dobj,f"sit {prep}","room")
+		obj = findObject(dobj,f"sit {prep}","room",preferLocalTree=True)
 		if enforceVerbScope(f"sit {prep}",obj): return False
 		Core.Print("You are there.")
 	Core.player.changePosture("sit")
@@ -2549,16 +2625,17 @@ def Sleep(dobj,iobj,prep):
 	"under","upon","using","with",None):
 		return promptHelp("Commmand not understood")
 
-	for condname in Data.conditionDmg.keys():
-		if Core.player.hasStatus(condname):
-			Core.Print(f"This is no time for slumber! You are {condname}.",color="o")
+	for condition in Core.player.conditions():
+		if condition.damage is not None:
+			Core.Print(f"This is no time for slumber! You are {condition.name}.",
+			color="o")
 			return False
 
 	if prep is None: prep = "on"
 	if dobj is None: dobj = iobj
 
 	if dobj is not None:
-		I = findObject(dobj,f"sleep {prep}","room")
+		I = findObject(dobj,f"sleep {prep}","room",preferLocalTree=True)
 		if I is None and not Core.yesno("Would you like to sleep on the ground?"):
 			return False
 	else:
@@ -2579,7 +2656,7 @@ def Sleep(dobj,iobj,prep):
 	sleeptime = 90 + randint(1,20)
 	if Core.player.hasStatus("weariness"):
 		sleeptime *= 2
-	Core.player.addStatus("asleep",sleeptime)
+	Core.player.addStatus("asleep",dur=sleeptime)
 	Core.ellipsis(sleeptime//Core.game.hourlength)
 	Core.game.silent=True
 	return True
@@ -2593,7 +2670,7 @@ def Smell(dobj,iobj,prep):
 	if dobj in ("here","room"):
 		I = Core.player.parent.floor
 	else:
-		I = findObject(dobj,"smell")
+		I = findObject(dobj,"smell",preferLocalTree=True)
 	if I is None: return False
 	Core.game.setPronouns(I)
 	if enforceVerbScope("smell",I,permitSelf=True,permitParent=True): return False
@@ -2610,7 +2687,7 @@ def Spur(dobj,iobj,prep):
 	if dobj is None:
 		dobj = getNoun("What will you spur?")
 		if dobj in Data.cancels: return False
-	M = findObject(dobj,"spur","room")
+	M = findObject(dobj,"spur","room",preferLocalTree=True)
 	if M is None: return False
 	Core.game.setPronouns(M)
 	if enforceVerbScope("spur",M): return False
@@ -2650,12 +2727,12 @@ def Stand(dobj,iobj,prep):
 	if prep in ("below","beneath","behind","under"):
 		return Hide(dobj,iobj,prep,posture="stand")
 	elif prep in ("on","onto","upon","in","inside","into"):
-		M = findObject(dobj,f"stand {prep}","room")
+		M = findObject(dobj,f"stand {prep}","room",preferLocalTree=True)
 		if M is None: return False
 		Core.game.setPronouns(M)
 		return Mount(dobj,iobj,prep,M=M,posture="stand")
 	elif prep in ("at","by","near"):
-		obj = findObject(dobj,f"stand {prep}","room")
+		obj = findObject(dobj,f"stand {prep}","room",preferLocalTree=True)
 		if enforceVerbScope("stand near",obj): return False
 		Core.Print("You are there.")
 	return Core.player.changePosture("stand")
@@ -2694,6 +2771,10 @@ def Swim(dobj,iobj,prep):
 			Core.Print(("You are" if swimmer is Core.player else +swimmer+" is") + \
 				" not swimming in anything.")
 			return False
+		if swimmer.anchor() is not None and \
+		not swimmer.immersed.canSubmerge(swimmer):
+			Core.Print(f"{+swimmer.immersed} is too shallow to swim in.")
+			return False
 		if not swimmer.canSwim():
 			Core.Print("You can't swim!" if swimmer is Core.player else \
 				f"{+swimmer} can't swim!")
@@ -2701,7 +2782,7 @@ def Swim(dobj,iobj,prep):
 		if dobj is not None:
 			return Go(dobj,iobj,prep)
 		if isinstance(Core.player.parent,Core.Room) and \
-		Core.player.parent.composition in Data.liquids:
+		Core.player.parent.material().liquid:
 			return Go(dobj,iobj,prep)
 		if prep in ("above","out","up") and \
 		swimmer.hasStatus("submerged"):
@@ -2718,14 +2799,18 @@ def Swim(dobj,iobj,prep):
 	if dobj is None: dobj = iobj
 	if dobj == "here":
 		dobj = getNoun(f"What will you swim {verbprep} here?")
-	S = findObject(dobj,f"swim {verbprep}","room")
+	S = findObject(dobj,f"swim {verbprep}","room",preferLocalTree=True)
 	if S is None: return False
 	Core.game.setPronouns(S)
 	if enforceVerbScope(f"swim {verbprep}",S,permitParent=True): return False
 
 	Core.player.Dismount(silent=True)
 	# TODO: handle 'swim out of here' in a normal room
-	if S.composition in Data.liquids or prep in ("in","inside","through"):
+	if S.material().liquid or prep in ("in","inside","through"):
+		if S.material().liquid and Core.player.anchor() is not None and \
+		not S.canSubmerge(Core.player):
+			Core.Print(f"{+S} is too shallow to swim in.")
+			return False
 		if Core.player in S:
 			Core.Print(f"You are already swimming in {-S}.")
 			return False
@@ -2745,6 +2830,8 @@ def TakeAllRecur(objToTake):
 		for content in contents:
 			takenAny = TakeAllRecur(content) or takenAny
 
+	if getattr(objToTake,"fixed",False):
+		return takenAny
 	if enforceVerbScope("take",objToTake,permitParent=False,permitAnchor=False,
 	permitOutside=True):
 		return False
@@ -2788,13 +2875,13 @@ def Take(dobj,iobj,prep):
 		if iobj is None:
 			takeFrom = Core.player.parent
 		else:
-			takeFrom = findObject(iobj,"take from")
+			takeFrom = findObject(iobj,"take from",preferLocalTree=True)
 		return TakeAll(takeFrom)
 
 	if iobj in ("here","room",None):
-		objToTake = findObject(dobj,"take","room")
+		objToTake = findObject(dobj,"take","room",preferLocalTree=True)
 	else:
-		objToTake = findObject(dobj,"take",reqSource=iobj)
+		objToTake = findObject(dobj,"take",reqSource=iobj,preferLocalTree=True)
 	if objToTake is None:
 		return False
 	Core.game.setPronouns(objToTake)
@@ -2924,7 +3011,7 @@ def Touch(dobj,iobj,prep):
 	if prep not in ("using","with",None):
 		return promptHelp("Command not understood.")
 
-	I = findObject(dobj,"touch")
+	I = findObject(dobj,"touch",preferLocalTree=True)
 	if I is None: return False
 	Core.game.setPronouns(I)
 	if enforceVerbScope("touch",I,permitParent=True,permitSelf=True): return False
@@ -2932,10 +3019,7 @@ def Touch(dobj,iobj,prep):
 	if Core.hasMethod(I,"touch"):
 		return I.touch(Core.player)
 
-	if I.composition in Data.textures:
-		Core.Print(Data.textures[I.composition])
-	elif I.composition in Data.liquids:
-		Core.Print(f"{+I} feels.")
+	Core.Print(I.Texture())
 	return True
 
 
@@ -2969,7 +3053,7 @@ def Unlock(dobj,iobj,prep):
 	if prep not in ("using","with",None):
 		return promptHelp("Command not understood.")
 
-	I = findObject(dobj,"unlock")
+	I = findObject(dobj,"unlock",preferLocalTree=True)
 	if I is None: return False
 	Core.game.setPronouns(I)
 	if enforceVerbScope("unlock",I,permitParent=True): return False
@@ -2991,7 +3075,7 @@ def Untie(dobj,iobj,prep):
 
 
 def Use(dobj,iobj,prep):
-	I = findObject(dobj,"use")
+	I = findObject(dobj,"use",preferLocalTree=True)
 	if I is None: return False
 	Core.game.setPronouns(I)
 	if enforceVerbScope("use",I,permitParent=True): return False

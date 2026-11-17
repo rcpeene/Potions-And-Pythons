@@ -10,9 +10,9 @@ go south
 \chk player.parent is world["tunnel"]
 
 \\ A mounted player and carried creature move as one tethered group
-\mbu green python tamed -1
+\mbu green python tamed
 take green python
-\spn Core.Creature("road pony","A pony with excellent route knowledge and no sense of direction.",80,[10]*10,status=[["tamed",-1]])
+\spn Core.Creature("road pony","A pony with excellent route knowledge and no sense of direction.",80,[10]*10,status=[["tamed"]])
 ride road pony
 go north
 \chk player.parent is world["glen"]
@@ -77,7 +77,7 @@ go north
 
 \\ Riding delegates cliff traversal to a surefooted mount
 \tpt cliffside
-\spn Core.Creature("surefooted ibex","An ibex that regards cliffs as mildly sloped suggestions.",60,[10]*10,status=[["tamed",-1],["clingfast",-1]])
+\spn Core.Creature("surefooted ibex","An ibex that regards cliffs as mildly sloped suggestions.",60,[10]*10,status=[["tamed"],["clingfast"]])
 ride surefooted ibex
 climb up cliff
 \chk player.parent is world["clifftop"]
@@ -90,7 +90,7 @@ dismount
 
 \\ Carrying cargo blocks ordinary climbing without moving either object
 \spn green python
-\mbu green python tamed -1
+\mbu green python tamed
 take green python
 climb up cliff
 \chk player.parent is world["cliffside"]
@@ -101,7 +101,7 @@ drop green python
 \tpt tunnel
 fly north
 \chk player.parent is world["tunnel"]
-\mbu self flying -1
+\mbu self flying
 fly north
 \chk player.parent is world["glen"]
 \chk player.platform is None
@@ -111,7 +111,7 @@ wait
 
 \\ A flying mount has no platform and moves its rider normally
 \tpt tunnel
-\spn Core.Creature("cloud pony","A pony held aloft by confidence and a modest enchantment.",60,[10]*10,status=[["tamed",-1],["flying",-1]])
+\spn Core.Creature("cloud pony","A pony held aloft by confidence and a modest enchantment.",60,[10]*10,status=[["tamed"],["flying"]])
 \chk fo("cloud pony",queryType="room").platform is None
 ride cloud pony
 fly north
@@ -142,7 +142,7 @@ swim in stream
 dismount
 
 \\ An unrelated NPC can traverse a portal without changing the player location
-\spn Core.Creature("errand knight","A knight dispatched on a very short errand.",20,[10]*10,status=[["tamed",-1]])
+\spn Core.Creature("errand knight","A knight dispatched on a very short errand.",20,[10]*10,status=[["tamed"]])
 \spn Core.Portal("errand hatch","A hatch marked THIS WAY TO THE ERRAND.",50,-1,"wood",{"through":Core.world["tunnel"]},capacity=50)
 \exe game.errandKnight=fo("errand knight",queryType="room")
 \exe game.errandTraversalSucceeded=fo("errand hatch",queryType="room").traverse(game.errandKnight,dir="through")
@@ -151,8 +151,8 @@ dismount
 \chk player.parent is world["cliffside"]
 
 \\ Malformed anchor cycles terminate safely when inspected
-\spn Core.Creature("cycle mare","A mare going nowhere in particular, repeatedly.",20,[1]*10,status=[["tamed",-1]])
-\spn Core.Creature("cycle foal","A foal following its mother with mathematical precision.",10,[1]*10,status=[["tamed",-1]])
+\spn Core.Creature("cycle mare","A mare going nowhere in particular, repeatedly.",20,[1]*10,status=[["tamed"]])
+\spn Core.Creature("cycle foal","A foal following its mother with mathematical precision.",10,[1]*10,status=[["tamed"]])
 take cycle foal
 put cycle foal on cycle mare
 \exe game.cycleMare=fo("cycle mare",queryType="room")

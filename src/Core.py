@@ -223,7 +223,7 @@ def Print(*args,end="\n",sep=None,delay=None,color=None,allowSilent=True,outfile
 	elif player.hasStatus("insanity") and color != "k" and outfile is sys.stdout:
 		color = choices(list(Data.colorCodes.keys()),[1]*7 + [28])[0]
 	if delay is None:
-		if player.hasAnyStatus("dead","slowness"): delay = 0.03
+		if player.hasStatus(("dead","slowness")): delay = 0.03
 		else: delay = 0.001
 	if sep is None:
 		sep=" " if len(args) > 1 else ""
@@ -457,6 +457,19 @@ def findFirst(text,substrs):
 
 
 # uses first word of verbString (assumes its a verb) and conjugates it based on noun
+# returns whether a word is an adverb: a known adverbial, or an -ly word
+# that isn't a known -ly verb
+def isAdverb(word):
+	adverbials = {"no","longer","still","now","never","always","once","again",
+		"almost","soon","often"}
+	lyVerbs = {"fly","rely","apply","rally","ally","bully","tally","dally",
+		"sully","comply","imply","reply","supply","multiply"}
+	word = word.lower()
+	if word in adverbials:
+		return True
+	return word.endswith("ly") and word not in lyVerbs
+
+
 def conjugate(noun,verbString):
 	irregulars = (('has','have'),('is','are'),("isn't","aren't"),('was','were'))
 	sibilants = ("s","sh","ch","x","z","o")
@@ -467,11 +480,16 @@ def conjugate(noun,verbString):
 	if verbString.startswith(" "):
 		verbString = verbString[1:]
 	firstWordEnd = findFirst(verbString,tuple(" .,!?"))
-	verb = verbString[:firstWordEnd]
+	supposedVerb = verbString[:firstWordEnd]
 	remainder = verbString[firstWordEnd:]
-	assert len(verb) > 1
-	if verb.lower() in modals:
-		return verb + remainder
+	assert len(supposedVerb) > 1
+	if supposedVerb.lower() in modals:
+		return supposedVerb + remainder
+
+	# leading adverbs pass through; the real verb that follows conjugates
+	if isAdverb(supposedVerb) and remainder.strip(" .,!?"):
+		return supposedVerb + " " + conjugate(noun,remainder)
+	verb = supposedVerb
 
 	# conjugate to infinitive form
 	if noun.lower() in ("you","they"):
@@ -898,22 +916,31 @@ def describeCarrying(roots):
 	return True
 
 
-# used on room area conditions to extract the info of the condition it causses
-def extractConditionInfo(roomCondition):
-	condInfo = roomCondition.split(" ")
-	assert len(condInfo) >= 3 and condInfo[0] in ("AREA","CREATURE","ITEM")
+# canonical status list order: alphabetical by name; same-named entries
+# longest-lasting first, with indefinite (None) durations foremost
+def statusEntryKey(entry):
+	return (entry[0], entry[2] is not None, -(entry[2] or 0))
 
-	key = condInfo[0]
-	if key == "CREATURE":
-		key = lambda x: isinstance(x,Creature)
-	elif key == "ITEM":
-		key = lambda x: not isinstance(x,Creature) and isinstance(x,Item)
-	else:
-		key = lambda x: True
 
-	name = ' '.join(condInfo[1:-1])
-	dur = int(condInfo[-1])
-	return key,name,dur
+# normalize one authored status entry to canonical [name, source, duration]:
+# "name" or ["name"] -> sourceless, indefinite; [name, source] -> indefinite
+def normalizeStatusEntry(entry):
+	if isinstance(entry,str):
+		entry = [entry]
+	if len(entry) == 1:
+		entry = [entry[0],None]
+	if len(entry) == 2:
+		entry = [entry[0],entry[1],None]
+	name,source,dur = entry
+	# durations are positive ints or None (indefinite)
+	assert isinstance(name,str) and (dur is None or
+		(isinstance(dur,int) and dur > 0))
+	assert source is None or isinstance(source,str) or \
+		(isinstance(source,int) and source >= 0)
+	return list(entry)
+
+
+
 
 
 # returns a number, n, with a lower bound of 0
@@ -942,7 +969,7 @@ def roll(d,m=0):
 
 # rolls a number between d//2 and d, adds m
 def halfRoll(d,m=0):
-	return roll(d//2,m+d//2)
+	return min1(roll(d//2,m+d//2))
 
 
 # has a p percent chance of returning True
@@ -1768,6 +1795,9 @@ class GameObject():
 
 	# Validate owned descendants after subclasses validate their local relationships.
 	def validate(self):
+		if getattr(self,"composition",None) not in Data.materials:
+			raise ValueError(f"{self} has unregistered composition " \
+				f"'{self.composition}'")
 		for child in game.ownedChildren(self):
 			child.validate()
 		return True
@@ -1849,17 +1879,24 @@ class GameObject():
 		return None
 
 
-	# decrements the duration for each status condition applied to the object by t
-	# removes status conditions whose duration is lowered past 0
-	def passTime(self,t):
-		for condition in self.status:
-			# subtract remaining duration on condition
-			# dont go below 0, negative durations have special meaning
-			if condition[1] > 0:
-				condition[1] = min0(condition[1] - t)
+	def immersionContext(self):
+		return None
 
-		# remove conditions with 0 duration left
+
+	# decrements the duration of each status entry on the object by t
+	# removes entries whose duration is lowered past 0
+	def passTime(self,t):
+		for entry in self.status:
+			# subtract remaining duration; None means indefinite
+			if entry[2] is not None:
+				entry[2] = min0(entry[2] - t)
+
+		# remove entries with 0 duration left
 		self.removeStatus(reqDuration=0)
+
+		# fire each present condition's onTick hooks, once per conditions() element
+		for cond in self.conditions():
+			self.evokeStatusHooks("onTick",cond.name)
 
 
 	### Getters ###
@@ -1883,31 +1920,170 @@ class GameObject():
 		return []
 
 
-	# True if object has a status condition with any of the given names
-	def hasAnyStatus(self,*names):
-		if len(names) == 1:
-			only = names[0]
-			if isinstance(only, str):
-				names = (only,)
-			elif isinstance(only, (list, tuple, set)):
-				names = tuple(only)
+	# the EFFECTS view of this object's statuses: what its conditions do
+	# as StatusCondition records (unknown names resolve to the default).
+	# A compounding condition may appear multiple times; others once per name.
+	def conditions(self):
+		conds = []
+		seen = set()
+		for name,source,duration in self.status:
+			cond = Data.StatusCondition.get(name)
+			if cond.compounds:
+				conds.append(cond)
+			elif name not in seen:
+				seen.add(name)
+				conds.append(cond)
+		return conds
 
-		if len(names) == 0:
-			return len(self.status) > 0
-		for name in names:
-			if self.hasStatus(name):
+
+	# the name of a present condition whose record vetoes adding the given
+	# name, or None if nothing blocks it
+	def blocksStatus(self,name):
+		for cond in self.conditions():
+			if name in cond.blocks:
+				return cond.name
+		return None
+
+
+	# the INSTANCE view of this object's statuses: count the raw entries
+	# unregistered/unknown condition names are still counted
+	# name may be one name, a collection (matching any), or "*" (match all)
+	# reqSource/reqDuration "*" match anything; None matches unsourced
+	# entries / indefinite durations respectively
+	def countStatus(self,name="*",reqSource="*",reqDuration="*"):
+		names = (name,) if isinstance(name,str) else name
+		n = 0
+		for condname,source,duration in self.status:
+			if name == "*" or condname in names:
+				if reqSource == "*" or reqSource == source:
+					if reqDuration == "*" or reqDuration == duration:
+						n += 1
+		return n
+
+
+	# True if any entry matches the countStatus criteria (checks for presence)
+	def hasStatus(self,name="*",reqSource="*",reqDuration="*"):
+		return self.countStatus(name,reqSource,reqDuration) >= 1
+
+
+	# get the status entry identified by (name, source), or None if absent
+	def getStatusEntry(self,name,source=None):
+		for entry in self.status:
+			if entry[0] == name and entry[1] == source:
+				return entry
+		return None
+
+
+	# update an existing entry's duration upon re-application
+	# fires no hooks or reports; returns whether the duration changed
+	def refreshStatus(self,entry,dur,canStack):
+		# re-application never shortens a duration (None means indefinite)
+		newDur = None if None in (entry[2],dur) else max(entry[2],dur)
+		# unstackable conditions have frozen durations
+		if not canStack or newDur == entry[2]:
+			return False
+		entry[2] = newDur
+		return True
+
+
+	# run the cascade descriptors the named condition authored for one kind
+	# of status event (action is one of the seven hook field names)
+	def evokeStatusHooks(self,action,name):
+		descriptors = getattr(Data.StatusCondition.get(name),action)
+		if not descriptors:
+			return
+		import Effects
+		Effects.evokeEffects(descriptors,self,None,self)
+
+
+	# a status cascade spans a status mutation and all its consequences;
+	# entries removed within it may not be re-added until it fully resolves
+	@contextmanager
+	def statusCascade(self):
+		self.statusCascadeDepth += 1
+		try:
+			yield
+		finally:
+			self.statusCascadeDepth -= 1
+			if self.statusCascadeDepth == 0:
+				self.alreadyRemoved.clear()
+
+
+	# plain objects run no status checks; Creature overrides this
+	def queueStatusCheck(self):
+		return
+
+
+	# add a status entry, print message unless silent
+	def addStatus(self,name,source=None,dur=None,allowStack=True,silent=False):
+		assert dur is None or (isinstance(dur,int) and dur > 0), \
+			f"status duration must be None or positive, got {dur}"
+		# a (name, source) removed during this cascade may not be re-added
+		if (name,source) in self.alreadyRemoved:
+			return False
+		blocker = self.blocksStatus(name)
+		if blocker is not None:
+			self.evokeStatusHooks("onBlock",blocker)
+			return False
+		canStack = allowStack and Data.StatusCondition.get(name).stackable
+		# (name, source) is an entry's identity; re-adding refreshes duration
+		entry = self.getStatusEntry(name,source)
+		if entry is not None:
+			if self.refreshStatus(entry,dur,canStack):
+				self.display()
 				return True
-		return False
+			return False
+		hadStatus = self.hasStatus(name)
+		if hadStatus and not canStack:
+			return False
+		# defer reports so the whole cascade narrates net transitions only:
+		# the report is queued first to record the pre-add state, but prints
+		# at the deferral's close, after any hooks have settled the outcome
+		# (a hook may wake the bearer, or even remove the new condition)
+		with game.deferStatusReports(), self.statusCascade():
+			insort(self.status,[name,source,dur],key=statusEntryKey)
+			game.queueStatusReport(self,name,hadStatus,silent=silent)
+			self.evokeStatusHooks("onAdd",name)
+			if not hadStatus:
+				self.evokeStatusHooks("onGain",name)
+			self.queueStatusCheck()
+		self.display()
+		return True
 
 
-	# returns True if the object has a status condition with given name.
-	# if reqDuration is given, only returns True if duration matches reqDur
-	def hasStatus(self,name,reqDuration=None):
-		for condname,duration in self.status:
-			if condname == name:
-				if reqDuration == None or reqDuration == duration:
-					return True
-		return False
+	# remove any status entry matching reqName, reqSource, reqDuration
+	# reqName may be one name, a collection of names (matching any), or "*"
+	# reqSource/reqDuration "*" match anything; None matches unsourced
+	# entries / indefinite durations respectively
+	def removeStatus(self,reqName="*",reqSource="*",reqDuration="*",silent=False):
+		reqNames = (reqName,) if isinstance(reqName,str) else reqName
+		condsRemoved = []
+		with self.statusCascade():
+			# copy to prevent removing-while-iterating errors
+			for entry in self.status.copy():
+				# cascades fired mid-loop may have already stripped this entry
+				if entry not in self.status:
+					continue
+				name,source,duration = entry
+				# PERMANENT-sourced entries are only removed by explicitly given source
+				if reqSource == "*" and source == "PERMANENT":
+					continue
+				if (reqName == "*" or name in reqNames) and \
+				reqSource in (source,"*") and reqDuration in (duration,"*"):
+					self.status.remove(entry)
+					condsRemoved.append(name)
+					game.queueStatusReport(self,name,True,silent=silent)
+					# the cascade may not re-add what it removed
+					self.alreadyRemoved.add((name,source))
+					self.evokeStatusHooks("onRemove",name)
+					if not self.hasStatus(name):
+						# only expiry matches entries with no time left
+						self.evokeStatusHooks("onExpire" if reqDuration == 0
+							else "onLoss",name)
+			if condsRemoved:
+				self.queueStatusCheck()
+		self.display()
+		return bool(condsRemoved)
 
 
 	def nameQuery(self,term,d=2):
@@ -1935,6 +2111,11 @@ class GameObject():
 		if not includeSelf and self in matches:
 			matches.remove(self)
 		return matches
+
+
+	# look up the shared Material record for this object's composition
+	def material(self):
+		return Data.Material.get(getattr(self,"composition",None))
 
 
 	# compared with Container capacity and for checking cover/hiding
@@ -2066,7 +2247,7 @@ class EmptyGear(GameObject):
 # rooms and finding information about them.
 class Game():
 	def __init__(self,mode,currentroom,prevroom,time,events,dlogForest,creatureFactory,
-	itemFactory):
+	itemFactory,nextObjId=0):
 		### Settings
 
 		# 0 for normal mode, 1 for testing mode, 2 for god mode
@@ -2107,7 +2288,9 @@ class Game():
 		self.itemFactory = itemFactory
 		# references to all Items in the world, each item.id should be its key here
 		self.itemRegistry = {None: None}
-		self.nextObjId = 0
+		# the ID watermark: always above every id ever seen, including the ids
+		# of dead objects persisted across saves, so no id is ever used twice
+		self.nextObjId = nextObjId
 		self.reservedObjIds = set()
 		### User I/O
 
@@ -2133,9 +2316,9 @@ class Game():
 	### Item Registry ###
 
 	# clear Item registry between runs of the game
+	# nextObjId is deliberately NOT reset; the watermark never decreases
 	def clearRegistry(self):
 		self.itemRegistry = {None: None}
-		self.nextObjId = 0
 		self.reservedObjIds = set()
 
 
@@ -2514,8 +2697,11 @@ class Game():
 			if isinstance(runtimeObject,Creature):
 				# carried creatures start out restrained by their carrier
 				if runtimeObject.carrier is not None and \
-				not runtimeObject.hasStatus("restrained",Data.RESTRAINT_CARRY):
-					insort(runtimeObject.status,["restrained",Data.RESTRAINT_CARRY])
+				not runtimeObject.hasStatus("restrained",
+				reqSource=runtimeObject.carrier.id):
+					insort(runtimeObject.status,
+						["restrained",runtimeObject.carrier.id,None],
+						key=lambda e: e[0])
 
 				# empty gear slots become EmptyGear objects
 				for slot,item in runtimeObject.gear.items():
@@ -2655,7 +2841,7 @@ class Game():
 		self.unpackWorld()
 		# validate the integrity and consistency of the built world
 		self.validateWorld()
-		# no need to keep the reserved ids around anymore
+		# no need to keep ids reserved anymore, they're all in the registry now
 		self.reservedObjIds.clear()
 		return builtWorld,playerObj
 
@@ -2669,6 +2855,10 @@ class Game():
 			raise Exception(f"Object ID {obj.id} from {obj.name} "
 			f"already exists in registry as {self.itemRegistry[obj.id].name}")
 		self.itemRegistry[obj.id] = obj
+		# keep the ID watermark above every id ever seen, so each id is only
+		# ever used by one object
+		if isinstance(obj.id,int):
+			self.nextObjId = max(self.nextObjId,obj.id + 1)
 
 
 	# replace one Item with another in the registry
@@ -2797,7 +2987,8 @@ class Game():
 
 
 	def queueStatusReport(self,creature,name,hadStatus,silent=False):
-		if creature is not player and name in Data.privateStatus:
+		# non-creatures don't report status transitions
+		if not hasMethod(creature,"reportStatusChange"):
 			return False
 		if self.statusReportDepth > 0:
 			key = (creature,name)
@@ -2861,7 +3052,7 @@ class Game():
 		prevHour = self.hour()
 		prevDaytime = self.daytime(prevHour)
 		self.time += t
-		self.silent = player.hasAnyStatus("asleep","dead")
+		self.silent = player.hasStatus(("asleep","dead"))
 
 		# objs can change location during passTime;
 		# flatten all object trees so we don't call passtime twice on any object
@@ -2874,7 +3065,7 @@ class Game():
 		# 	celestial.passTime(t)
 
 		# check again, it may have changed during room.passTime
-		self.silent = player.hasAnyStatus("asleep","dead")
+		self.silent = player.hasStatus(("asleep","dead"))
 		if prevHour != self.hour():
 			self.checkDaytime(prevDaytime=prevDaytime)
 		self.checkAstrology()
@@ -3172,9 +3363,11 @@ class Room(GameObject):
 		# determines how much mass the Room can hold, objects too large cannot enter
 		self.capacity = capacity
 
-		self.status = status if status else []
-		for cond,dur in self.status:
-			assert isinstance(cond,str) and isinstance(dur,int)
+		self.status = [normalizeStatusEntry(entry) for entry in status] \
+			if status else []
+		# transient status-cascade state (never serialized)
+		self.statusCascadeDepth = 0
+		self.alreadyRemoved = set()
 
 		self.passprep = "at" if passprep is None else passprep
 		self.parent = None
@@ -3193,7 +3386,7 @@ class Room(GameObject):
 		if walls:
 			self.walls = Surface("wall",f"Walls of {walls}.",capacity//3,walls,
 			aliases=["walls"])
-		if floor in Data.liquids:
+		if Data.Material.get(floor).liquid:
 			self.floor = Surface("surface",f"A surface of {floor}.",capacity//3,floor,
 			aliases=[floor],determiner="the")
 		elif floor:
@@ -3239,6 +3432,7 @@ class Room(GameObject):
 			jsonDict["floor"] = self.floor.composition
 
 		del jsonDict["surfaces"], jsonDict["determiner"]
+		del jsonDict["statusCascadeDepth"], jsonDict["alreadyRemoved"]
 		return jsonDict
 
 
@@ -3267,7 +3461,7 @@ class Room(GameObject):
 			for item in self.items:
 				merged = O.merge(item)
 				if merged:
-					return self.merged
+					return merged
 
 			insort(self.items,O)
 			O.parent = self
@@ -3281,22 +3475,14 @@ class Room(GameObject):
 		return game.spawn(obj,self)
 
 
-	# apply an area condition to all objs in the Room
-	def addAreaCondition(self,areacond):
-		key,cond,dur = extractConditionInfo(areacond)
-		for obj in self.query(key=key):
-			obj.addStatus(cond,dur)
-
-
-	# add a status condition to the Room with a name and duration
-	def addStatus(self,name,dur,stackable=True):
-		if self.hasStatus(name) and not stackable:
+	# add a status entry to the Room; contents are maintained with
+	# matching AREA-sourced entries while the Room's status lasts
+	# (calls GameObject explicitly so Container can borrow this method)
+	def addStatus(self,name,source=None,dur=None,allowStack=True,silent=False):
+		if not GameObject.addStatus(self,name,source,dur,allowStack,silent):
 			return False
-		if self.hasStatus(name,dur):
-			return False
-		insort(self.status,[name,dur])
-		if name.startswith(("AREA","ITEM","CREATURE")):
-			self.addAreaCondition(name)
+		for obj in self.query():
+			obj.addStatus(name,source="AREA")
 		return True
 
 
@@ -3315,13 +3501,9 @@ class Room(GameObject):
 		obj = self.add(obj,allowOverflow=not isPlash)
 		if not obj:
 			return False
-		# add status conditions from this room
-		for cond,dur in self.status:
-			# if room's condition is an area condition, apply to obj when applicable
-			if cond.startswith(("AREA","ITEM","CREATURE")):
-				key,name,dur = extractConditionInfo(cond)
-				if key(obj):
-					obj.addStatus(name,dur)
+		# maintain this room's statuses on the obj entering
+		for cond,src,dur in self.status:
+			obj.addStatus(cond,source="AREA")
 
 		obj.checkImmersion()
 		self.overflow()
@@ -3374,7 +3556,7 @@ class Room(GameObject):
 	def exit(self,obj):
 		if obj in getattr(self,"permanents",()):
 			return False
-		obj.removeStatus(reqDuration=-3)
+		obj.removeStatus(reqSource="AREA")
 		obj.unimmerse()
 		self.remove(obj)
 		assert obj not in self, f"Object {obj} still in Room {self.name} after exiting"
@@ -3417,16 +3599,6 @@ class Room(GameObject):
 		return False
 
 
-	# try to remove an area condition from all affected objs in the Room
-	def removeAreaCondition(self,areacond):
-		key,cond,dur = extractConditionInfo(areacond)
-		# -3 indicates the condition is caused by being in the Room, otherwise ignore
-		if dur != -3:
-			return
-		for obj in self.query(key=key):
-			obj.removeStatus(cond,dur)
-
-
 	# given an object, try to replace it with another object in the Room
 	# returns True if successful, False if newObj was not added
 	def replaceObj(self,oldObj,newObj):
@@ -3441,21 +3613,16 @@ class Room(GameObject):
 		return True
 
 
-	# removes all conditions with the given name and duration(s)
-	# when nothing given, remove all status conditions
-	def removeStatus(self,reqName=None,reqDuration=None):
-		# for each duration given, removing matching statuses
-		if isinstance(reqDuration,(list,tuple)):
-			for duration in reqDuration:
-				self.removeStatus(reqName,duration)
-			return
-		# copy to prevent removing-while-iterating errors
-		for name,duration in self.status.copy():
-			if name == reqName or reqName is None:
-				if duration == reqDuration or reqDuration is None:
-					self.status.remove([name,duration])
-					if name.startswith(("AREA","ITEM","CREATURE")):
-						self.removeAreaCondition(name)
+	# removes status entries from the Room; contents lose the matching
+	# AREA-sourced entry when the last same-name Room entry goes
+	# (calls GameObject explicitly so Container can borrow this method)
+	def removeStatus(self,reqName="*",reqSource="*",reqDuration="*",silent=False):
+		before = {entry[0] for entry in self.status}
+		removed = GameObject.removeStatus(self,reqName,reqSource,reqDuration,silent)
+		for name in before - {entry[0] for entry in self.status}:
+			for obj in self.query():
+				obj.removeStatus(name,reqSource="AREA")
+		return removed
 
 
 	### Getters ###
@@ -3519,15 +3686,15 @@ class Room(GameObject):
 
 
 	def couldImmerse(self,obj,size=None,vacancy=None):
-		return self.composition in Data.liquids
+		return self.material().liquid
 
 
 	def canSubmerge(self,creature):
 		if creature not in self:
 			return False
-		if self.composition in Data.liquids:
+		if self.material().liquid:
 			return True
-		if self.floor and self.floor.composition in Data.liquids:
+		if self.floor and self.floor.material().liquid:
 			return True
 		return False
 
@@ -3538,7 +3705,7 @@ class Room(GameObject):
 		if obj.parent is not self:
 			return None
 		# a Room composed of liquid has no dry region within it
-		if self.composition in Data.liquids:
+		if self.material().liquid:
 			return self
 
 		# carried creatures and riders are immersed if anchor is submerged
@@ -3554,7 +3721,7 @@ class Room(GameObject):
 		# occupants of submerged platforms share the platform's fluid
 		platform = obj.platform
 		if platform is not None and platform.immersed is not None and \
-		platform.hasStatus("submerged",Data.SUBMERGED_LIQUID) and \
+		platform.hasStatus("submerged",reqSource="IMMERSED") and \
 		platform.immersed.canImmerse(obj):
 			return platform.immersed
 
@@ -3569,7 +3736,7 @@ class Room(GameObject):
 				key=lambda fluid:(fluid.immersionSpace(),fluid.Size()))
 
 		# a liquid floor immerses grounded objects but not flying ones
-		if self.floor and self.floor.composition in Data.liquids and \
+		if self.floor and self.floor.material().liquid and \
 		not obj.hasStatus("flying"):
 			return self.floor
 		# an infinite-capacity Room always has enough dry space around its Plashes
@@ -3764,13 +3931,15 @@ class Item(GameObject):
 		# the parent object containing this object (usually a Room or Container)
 		self.parent = None
 
-		### Status Effects
+		### Status Entries
 
-		self.status = status if status else []
-		for cond,dur in self.status:
-			assert isinstance(cond,str) and isinstance(dur,int)
-		# sort status effects by duration; change idx '1' to '0' to sort by name
-		self.status.sort(key=lambda x: x[1])
+		self.status = [normalizeStatusEntry(entry) for entry in status] \
+			if status else []
+		# keep status entries in canonical order (see statusEntryKey)
+		self.status.sort(key=statusEntryKey)
+		# transient status-cascade state (never serialized)
+		self.statusCascadeDepth = 0
+		self.alreadyRemoved = set()
 
 		### Tethers
 
@@ -3825,21 +3994,15 @@ class Item(GameObject):
 			jsonDict["platform"] = self.platform.id
 		if self.immersed in (self.parent,getattr(self.parent,"floor",None)):
 			jsonDict["immersed"] = None
+		del jsonDict["statusCascadeDepth"], jsonDict["alreadyRemoved"]
 		return jsonDict
 
 
 	### Operation ###
 
-	def addStatus(self,name,dur,stackable=True):
-		if self.hasStatus(name) and not stackable:
-			return False
-		insort(self.status,[name,dur])
-		return True
-
-
 	# establish immersion in a liquid parent, floor, or sibling
 	def immerse(self,fluid,silent=False):
-		if getattr(fluid,"composition",None) not in Data.liquids:
+		if fluid is None or not fluid.material().liquid:
 			return False
 		if self.parent is None:
 			return False
@@ -3860,8 +4023,9 @@ class Item(GameObject):
 			self.changePosture("standing",silent=True)
 		if not self.hasStatus("wet") or self.hasStatus("asleep"):
 			self.waitInput("Splash!")
-		if not self.hasStatus("wet",Data.WET_LIQUID):
-			self.addStatus("wet",Data.WET_LIQUID)
+		if not self.hasStatus("wet",reqSource="IMMERSED") and \
+		not self.hasStatus("wet",reqSource="SUBMERGED"):
+			self.addStatus("wet",source="IMMERSED")
 
 		# check for full submersion in liquid
 		self.checkSubmersion(silent=silent)
@@ -3882,7 +4046,7 @@ class Item(GameObject):
 		fluid = self.immersed
 		self.immersed = None
 		self.checkSubmersion(silent=silent)
-		self.replaceStatus(("wet",Data.WET_LIQUID),("wet",21))
+		self.transferStatus("wet","IMMERSED",None,21)
 		for dependent in self.occupants():
 			if dependent.immersed is fluid:
 				dependent.unimmerse(silent=silent)
@@ -3902,7 +4066,29 @@ class Item(GameObject):
 			# if not silent:
 			# 	Print(f"{+self} cannot be broken.")
 			return False
-		self.Print(f"{+self} breaks.")
+		if self.material().shatterable:
+			return self.shatter()
+		self.printNearby(f"{+self} breaks.")
+		self.destroy()
+		return True
+
+
+	# destroy the item, scattering shards of its composition
+	def shatter(self):
+		assert self.id in game.itemRegistry, f"{self} ID{self.id} not in Item registry"
+		if not self.material().shatterable:
+			return False
+		if self.durability == -1:
+			return False
+		parent = self.parent
+		self.printNearby(f"{+self} shatters.")
+		if self.weight > 2:
+			self.printNearby(f"Shards of {self.composition} scatter everywhere.",
+			color="o")
+		while self.weight > 1:
+			shardWeight = randint(1,min(self.weight,4))
+			self.weight -= shardWeight
+			game.spawn(Shard(self.composition,shardWeight),parent)
 		self.destroy()
 		return True
 
@@ -3970,7 +4156,7 @@ class Item(GameObject):
 
 		# fall into a liquid platform when waterwalking ends
 		liquidPlatform = self.platform if self.platform is not None and \
-			self.platform.composition in Data.liquids else None
+			self.platform.material().liquid else None
 		if liquidPlatform is not None and \
 		(not self.hasStatus("waterwalking") or requiredFluid is liquidPlatform):
 			if not silent:
@@ -4001,7 +4187,7 @@ class Item(GameObject):
 		anchor = self.anchor()
 		floor = getattr(self.parent,"floor",None)
 		if isinstance(self,Creature) and anchor not in (None,floor) and \
-		not anchor.hasStatus("submerged",Data.SUBMERGED_LIQUID) and \
+		not anchor.hasStatus("submerged",reqSource="IMMERSED") and \
 		requiredFluid is None:
 			return self.unimmerse(silent=silent)
 
@@ -4023,23 +4209,25 @@ class Item(GameObject):
 
 	# reconcile Item submersion with its liquid and support
 	def checkSubmersion(self,silent=False):
-		wasSubmerged = self.hasStatus("submerged",Data.SUBMERGED_LIQUID)
+		wasSubmerged = self.hasStatus("submerged",reqSource="IMMERSED")
 		fluid = self.immersed
 		if fluid is None or not fluid.canSubmerge(self):
-			self.removeStatus("submerged",Data.SUBMERGED_LIQUID)
+			self.removeStatus("submerged",reqSource="IMMERSED")
 		else:
 			platform = self.platform
-			onFluidFloor = platform is not None and platform is fluid.floor
+			# a liquid floor (Surface) has no floor of its own beneath it
+			onFluidFloor = platform is not None and \
+				platform is getattr(fluid,"floor",None)
 			onSubmergedPlatform = platform is not None and \
 				platform.immersed is fluid and \
-				platform.hasStatus("submerged",Data.SUBMERGED_LIQUID)
+				platform.hasStatus("submerged",reqSource="IMMERSED")
 			if onFluidFloor or onSubmergedPlatform:
 				if not wasSubmerged:
-					self.addStatus("submerged",Data.SUBMERGED_LIQUID)
+					self.addStatus("submerged",source="IMMERSED")
 			else:
-				self.removeStatus("submerged",Data.SUBMERGED_LIQUID)
+				self.removeStatus("submerged",reqSource="IMMERSED")
 
-		isSubmerged = self.hasStatus("submerged",Data.SUBMERGED_LIQUID)
+		isSubmerged = self.hasStatus("submerged",reqSource="IMMERSED")
 		if wasSubmerged == isSubmerged:
 			return False
 		if isSubmerged and not silent:
@@ -4178,43 +4366,34 @@ class Item(GameObject):
 		self.checkOccupantsWeight(silent=True)
 
 		if not isinstance(self.parent,Creature) and not self.fixed and \
-		not self.hasAnyStatus("flying"):
+		not self.hasStatus("flying"):
 			if self.anchor() is None:
 					self.fall()
 		# happens after fall, this allows for a 1 timestep delay for creature sinking
 		self.checkImmersion()
 
 
-	# removes all conditions of the same name
-	# if reqDuration is given, only removes conditions with that duration or durations
-	def removeStatus(self,reqName=None,reqDuration=None):
-		# for each duration given, remove matching statuses
-		if isinstance(reqDuration,(list,tuple)):
-			for duration in reqDuration:
-				self.removeStatus(reqName,duration)
-			return
-		for name,duration in self.status.copy():
-			if name == reqName or reqName is None:
-				if duration == reqDuration or reqDuration is None:
-					self.status.remove([name,duration])
-
-
-	# replace one status with another
-	# if they have the same name, make sure to add new before removing old
-	def replaceStatus(self,tup1,tup2):
-		if tup1 == tup2:
+	# change an existing status entry's source and/or duration in place
+	# nothing is added or removed, so no hooks, gates, or reports trigger
+	# newDur "*" keeps the old duration; None sets indefinite
+	def transferStatus(self,name,source,newSource,newDur="*"):
+		entry = self.getStatusEntry(name,source)
+		if entry is None:
 			return False
-		c1, d1 = tup1
-		c2, d2 = tup2
-		if not self.hasStatus(c1,d1):
-			return False
-		if c1 == c2:
-			if self.addStatus(c2,d2):
-				self.removeStatus(c1,d1)
-		else:
-			self.removeStatus(c1,d1)
-			self.addStatus(c2,d2)
-
+		# if an entry with the new source already exists, merge into it
+		# (unstackable conditions have frozen durations, so no refresh)
+		existing = self.getStatusEntry(name,newSource)
+		if existing is not None and existing is not entry:
+			canStack = Data.StatusCondition.get(name).stackable
+			self.refreshStatus(existing,entry[2] if newDur == "*" else newDur,
+				canStack)
+			self.status.remove(entry)
+			return True
+		entry[1] = newSource
+		if newDur != "*":
+			entry[2] = newDur
+		self.status.sort(key=statusEntryKey)
+		return True
 
 
 	# when one Item is replaced by another, ensure references to it get substituted
@@ -4286,8 +4465,8 @@ class Item(GameObject):
 		assert dmg >= 0, "Damage must be non-negative"
 		# TODO: add damage type vulnerabilities based on composition
 		# i.e. wood is extra weak to fire and slashing
-		if self.composition in Data.liquids:
-			self.Print("Splish splash...")
+		if self.material().liquid:
+			self.printNearby("Splish splash...")
 			return True
 		if dmg > 0 or not silent:
 			typeDisplay = "" if type == "e" else Data.dmgtypes[type] + " "
@@ -4383,6 +4562,8 @@ class Item(GameObject):
 			occupant.riding = None
 		else:
 			return False
+		# departing the anchor unbinds the comfort it maintained
+		occupant.removeStatus("cozy",reqSource=self.id)
 		return True
 
 
@@ -4422,10 +4603,11 @@ class Item(GameObject):
 			floor = self.floorSupport()
 			if self.anchor() is not floor:
 				self.platform = floor
+			self.checkSubmersion(silent=True)
 			return True
 
 		while "down" in room.links and (room.floor is None or \
-		(room.floor.composition in Data.liquids and verb == "sink")):
+		(room.floor.material().liquid and verb == "sink")):
 			height += room.Capacity() // 5 # approximate vertical height of room
 			room = room.links["down"]
 		if room != self.room():
@@ -4436,6 +4618,7 @@ class Item(GameObject):
 		if self.anchor() is not floor:
 			# self.parent.floor.occupy(self)
 			self.platform = floor
+		self.checkSubmersion(silent=True)
 
 		# TODO: add some collision checking for composition of the floor?
 		if room.floor is not None and not sinking:
@@ -4452,7 +4635,7 @@ class Item(GameObject):
 		if fluid is None:
 			return True
 		targetSubmerged = self.immersed is not None and \
-			self.hasStatus("submerged",Data.SUBMERGED_LIQUID)
+			self.hasStatus("submerged",reqSource="IMMERSED")
 		if targetSubmerged:
 			if self.immersed is fluid:
 				return True
@@ -4467,11 +4650,11 @@ class Item(GameObject):
 
 
 	# Try to assign self as occupant's platform
-	def occupy(self,occupant,silent=False,actor=None):
+	def occupy(self,occupant,silent=False,actor=None,posture=None):
 		assert isinstance(occupant,Item)
 		assert not isinstance(self.parent,Creature)
 		assert self.parent is not None and occupant.parent is self.parent
-		if self.composition in Data.liquids and \
+		if self.material().liquid and \
 		not occupant.hasStatus("waterwalking"):
 			return False
 		if actor is None:
@@ -4532,32 +4715,22 @@ class Item(GameObject):
 		return removed
 
 
-	# describe smell based on composition
+	# describe smell based on instance senses and composition
 	def smell(self,smeller):
 		if smeller.hasStatus("apathy"):
 			msg = f"You have the curse of apathy; {self+'smells like nothing...'}"
-		elif self.composition in Data.scents:
-			msg = Data.scents[self.composition]
-		elif self.composition in Data.tastes:
-			msg = Data.tastes[self.composition]
-			msg = msg.replace("taste","smell").replace("tasting","smelling")
 		else:
-			msg = f"Smells like nothing in particular."
+			msg = self.Scent()
 		smeller.Print(msg)
 		return True
 
 
-	# describe taste based on composition
+	# describe taste based on instance senses and composition
 	def taste(self,taster):
 		if taster.hasStatus("apathy"):
 			msg = "You have the curse of apathy; it tastes like nothing..."
-		elif self.composition in Data.tastes:
-			msg = Data.tastes[self.composition]
-		elif self.composition in Data.scents:
-			msg = Data.scents[self.composition]
-			msg = msg.replace("scent","taste").replace("smelling","tasting")
 		else:
-			msg = f"Tastes like nothing in particular."
+			msg = self.Flavor()
 		taster.Print(msg)
 		return True
 
@@ -4623,6 +4796,18 @@ class Item(GameObject):
 		return anchors
 
 
+	# return the liquid containing or ultimately supporting this Item
+	def immersionContext(self):
+		if self.immersed is not None:
+			return self.immersed
+		for anchor in self.anchors():
+			if anchor.material().liquid:
+				return anchor
+			if anchor.immersed is not None:
+				return anchor.immersed
+		return None
+
+
 	# describe this Item's direct anchor relationship
 	def anchorDescription(self):
 		anchor = self.anchor()
@@ -4674,9 +4859,9 @@ class Item(GameObject):
 			fluid = self.immersed
 		fluidComposition = fluid if isinstance(fluid,str) else \
 			getattr(fluid,"composition",None)
-		liquidDensity = Data.densities.get(fluidComposition,1)
+		liquidDensity = Data.Material.get(fluidComposition).density
 
-		return self.density() < liquidDensity
+		return self.density() <= liquidDensity
 
 
 	# return the parent's floor only when it can physically support this Item
@@ -4684,7 +4869,7 @@ class Item(GameObject):
 		if parent is None:
 			parent = self.parent
 		floor = getattr(parent,"floor",None)
-		if floor is not None and floor.composition in Data.liquids and \
+		if floor is not None and floor.material().liquid and \
 		not self.hasStatus("waterwalking"):
 			return None
 		return floor
@@ -4753,7 +4938,32 @@ class Item(GameObject):
 
 
 	def density(self):
-		return Data.densities.get(self.composition,1)
+		return self.material().density
+
+
+	# resolve taste: a per-instance flavor wins, then one derived from a
+	# per-instance scent, then the material's taste
+	def Flavor(self):
+		if self.flavor is not None:
+			return self.flavor
+		if self.scent is not None:
+			return Data.smellToTaste(self.scent)
+		return self.material().taste
+
+
+	# resolve scent: a per-instance scent wins, then one derived from a
+	# per-instance flavor, then the material's scent
+	def Scent(self):
+		if self.scent is not None:
+			return self.scent
+		if self.flavor is not None:
+			return Data.tasteToSmell(self.flavor)
+		return self.material().scent
+
+
+	# resolve texture: a per-instance texture wins, then the material's
+	def Texture(self):
+		return self.texture if self.texture is not None else self.material().texture
 
 
 	# return the greatest weight that does not exceed the given size
@@ -4851,7 +5061,7 @@ class Item(GameObject):
 	outfile=None):
 		# in godmode we can see all prints
 		if game.mode == 2:
-			args.insert(0,f"[{self.id} {self.name}]:")
+			args = (f"[{self.id} {self.name}]:",) + args
 			color="k"
 			return Print(*args,end=end,sep=sep,delay=delay,color=color,
 			allowSilent=allowSilent,outfile=outfile)
@@ -4860,12 +5070,15 @@ class Item(GameObject):
 
 
 	# print message to player only if player is in its surroundings
+	# non-public messages render only in godmode
 	def printNearby(self,*args,end="\n",sep=None,delay=None,color=None,allowSilent=True,
-	outfile=None):
+	outfile=None,public=True):
 		# in godmode we can see all prints
 		if game.mode == 2:
-			args.insert(0,f"[{self.id} {self.name}]:")
+			args = (f"[{self.id} {self.name}]:",) + args
 			color="k"
+		elif not public:
+			return
 		if (player.surroundings() is self.surroundings() or game.mode == 2) and \
 		self is not player:
 			return Print(*args,end=end,sep=sep,delay=delay,color=color,
@@ -4987,6 +5200,9 @@ class Creature(Item):
 		# these attributes remain unused in the Player subclass
 		self.alert = alert
 		self.lastSawPlayer = lastSawPlayer
+		# transient status-check state (never serialized)
+		self.statusCheckPending = False
+		self.flushingStatusChecks = False
 
 
 	### Dunder Methods ###
@@ -5031,7 +5247,7 @@ class Creature(Item):
 					f"{self.carrier}")
 			if len(slots) < self.gripsNeeded(self.carrier):
 				raise ValueError(f"Carried creature {self} has too few occupied slots")
-			if not self.hasStatus("restrained",Data.RESTRAINT_CARRY):
+			if not self.hasStatus("restrained",reqSource=self.carrier.id):
 				raise ValueError(f"Carried creature {self} lacks carrying restraint")
 
 		for slot,item in self.gear.items():
@@ -5072,7 +5288,8 @@ class Creature(Item):
 		jsonDict["gripSlots"] = self.gripSlots
 
 		dictkeys = list(jsonDict.keys())
-		delAttrs = ("gear","weapon","weapon2","shield","shield2")
+		delAttrs = ("gear","weapon","weapon2","shield","shield2",
+		"statusCheckPending","flushingStatusChecks")
 		# these attributes do not get stored between saves
 		for key in dictkeys:
 			if key.lower() in Data.traits or key in delAttrs:
@@ -5106,62 +5323,53 @@ class Creature(Item):
 		return I
 
 
-	# add a status condition, print message unless silent
-	def addStatus(self,name,dur,stackable=True,silent=False):
-		if self.hasStatus(name) and not stackable:
-			return False
-		hadStatus = self.hasStatus(name)
-
-		# wake up sleeping creature if it gets wet
-		if name == "wet" and self.hasStatus("asleep"):
-			self.removeStatus("asleep")
-		# lift off ground if added flying
-		if name == "flying" and self.platform is self.parent.floor:
-			self.removePlatform()
-
-		insort(self.status,[name,dur])
-		game.queueStatusReport(self,name,hadStatus,silent=silent)
-
-		if name in Data.blessings | Data.curses:
-			self.checkStatus()
-		self.display()
-		return True
+	# mark that this creature's status entries changed and run its status
+	# checks to rederive its derived state
+	def queueStatusCheck(self):
+		self.statusCheckPending = True
+		self.flushStatusChecks()
 
 
-	# report a net status transition to this Creature and nearby observers
+	# run the status checks once to rederive this creature's derived state
+	def flushStatusChecks(self):
+		# entry changes made BY the checks don't rerun them; they stay
+		# pending and are caught by a later flush (at latest, next passTime)
+		if self.flushingStatusChecks or not self.statusCheckPending:
+			return
+		self.statusCheckPending = False
+		self.flushingStatusChecks = True
+		try:
+			# run within a single statusCascade, so a condition one check
+			# removes can't be re-added by another: conflicts prefer removal
+			with self.statusCascade():
+				self.checkStatus()
+				self.checkImmersion()
+		finally:
+			self.flushingStatusChecks = False
+
+
+	# report a net status transition: the subject sees it via Print;
+	# nearby observers witness it via printNearby only if the condition is public
+	# message is the condition's gain/loss predicate ("" = authored suppression)
 	def reportStatusChange(self,name,hadStatus):
 		hasStatus = self.hasStatus(name)
-		if hadStatus == hasStatus or \
-		self is not player and name in Data.privateStatus:
-			return False
-		if not hasStatus and name == "asleep":
+		if hadStatus == hasStatus:
 			return False
 
-		if hasStatus and name in Data.curses:
-			msg = self+f"have the curse of {name}."
-		elif hasStatus and name in Data.blessings:
-			msg = self+f"have the blessing of {name}."
-		elif hasStatus and name == "asleep":
-			msg = self+f"falls {name}."
-		elif hasStatus:
-			msg = self+f"are {name}."
-		elif name in Data.curses:
-			verb = conjugate(+self,"has")
-			msg = f"{+self} no longer {verb} the curse of {name}."
-		elif name in Data.blessings:
-			verb = conjugate(+self,"has")
-			msg = f"{+self} no longer {verb} the blessing of {name}."
+		cond = Data.StatusCondition.get(name)
+		if cond.name != name:
+			# unregistered names share the default record; derive from the live name
+			predicate = f"are {name}." if hasStatus else f"are no longer {name}."
 		else:
-			msg = self+f"are no longer {name}."
+			predicate = cond.gainMsg if hasStatus else cond.lossMsg
+		if predicate == "":
+			return False
+		msg = self + predicate
 
-		color = "w"
-		if hasStatus and name in Data.buffs | Data.blessings:
-			color = "g"
-		elif hasStatus and name in Data.debuffs | Data.curses:
-			color = "r"
+		color = (cond.color or "w") if hasStatus else "w"
 		self.Print(msg,color=color)
-		if self is not player:
-			self.printNearby(msg,color=color)
+		# printNearby suppresses non-public reports itself (godmode sees all)
+		self.printNearby(msg,color=color,public=cond.public)
 		return True
 
 
@@ -5206,7 +5414,7 @@ class Creature(Item):
 		assert entered, f"{self} failed to enter {newparent}"
 		if wasSubmerged and self.immersed is not None and \
 		self.immersed.canSubmerge(self) and not self.hasStatus("submerged"):
-			self.addStatus("submerged",Data.SUBMERGED_LIQUID,silent=True)
+			self.addStatus("submerged",source="IMMERSED",silent=True)
 		# when not riding or being carried, stand on the floor or float when immersed
 		if self.hasStatus("flying") or \
 		self.immersed is not None and self.canSwim():
@@ -5266,9 +5474,9 @@ class Creature(Item):
 				self.removeStatus(p,silent=silent)
 		# standing is the absence of the other conditions
 		if posture != "standing":
-			self.addStatus(posture,Data.POSTURE_ACTIVE,silent=silent)
+			self.addStatus(posture,silent=silent)
 		if posture in ("standing","crouching"):
-			self.removeStatus("cozy",Data.COZY_BED,silent=silent)
+			self.removeStatus("cozy",silent=silent)
 
 		self.checkSize()
 		self.checkHidden()
@@ -5279,13 +5487,15 @@ class Creature(Item):
 		# hunger takes longer with more endurance
 		sinceLastBreathed = game.time - self.lastBreathed
 		if sinceLastBreathed > self.ENDR() // 2 and self.hasStatus("breathless"):
-			# add drowning before removing breathless because removeStatus will recur here
-			self.addStatus("drowning",-2)
+			# add drowning before removing breathless, so the status checks
+			# that run between the two calls never see someone out of breath
+			# with neither condition
+			self.addStatus("drowning")
 			self.removeStatus("breathless",silent=True)
 		elif sinceLastBreathed > self.ENDR() // 3 and \
-		not self.hasAnyStatus("breathless","drowning"):
+		not self.hasStatus(("breathless","drowning")):
 			self.Print("You can't hold your breath much longer...")
-			self.addStatus("breathless",-2,silent=True)
+			self.addStatus("breathless",silent=True)
 		elif sinceLastBreathed <= self.ENDR() // 3:
 			self.removeStatus("breathless",silent=True)
 			self.removeStatus("drowning")
@@ -5293,35 +5503,40 @@ class Creature(Item):
 
 	# add/remove hidden status based on cover
 	def checkHidden(self):
-		transparent = ("glass","ice","water")
 		if getattr(self.parent,"closed",False):
-			self.addStatus("hidden",Data.HIDDEN_CONTAINER)
-		elif self.coverBonus() >= 5 and self.cover.composition not in transparent:
-			self.addStatus("hidden",Data.HIDDEN_COVER)
+			if self.parent.material().transparent:
+				self.removeStatus("hidden",reqSource="CONTAINER")
+			else:
+				self.addStatus("hidden",source="CONTAINER")
+		elif self.coverBonus() >= 5 and \
+		not self.cover.material().transparent:
+			self.addStatus("hidden",source="COVER")
 		else:
-			self.removeStatus("hidden",Data.HIDDEN_COVER)
+			self.removeStatus("hidden",reqSource="COVER")
 
 
 	# add/remove hindered status based on inventory and cargo weight
+	# cause flavor prints first; the deferred generic report follows
 	def checkHindered(self):
-		inventoryHindered = self.invWeight() > self.BRDN()
-		if inventoryHindered and \
-		not self.hasStatus("hindered",Data.HINDERED_INVENTORY):
-			self.Print("Your Inventory grows heavy.")
-			self.addStatus("hindered",Data.HINDERED_INVENTORY)
-		elif not inventoryHindered and \
-		self.hasStatus("hindered",Data.HINDERED_INVENTORY):
-			self.Print("Your Inventory feels lighter.")
-			self.removeStatus("hindered",Data.HINDERED_INVENTORY)
+		with game.deferStatusReports():
+			inventoryHindered = self.invWeight() > self.BRDN()
+			if inventoryHindered and \
+			not self.hasStatus("hindered",reqSource="INVENTORY"):
+				if self.addStatus("hindered",source="INVENTORY"):
+					self.Print("Your Inventory grows heavy.")
+			elif not inventoryHindered and \
+			self.hasStatus("hindered",reqSource="INVENTORY"):
+				if self.removeStatus("hindered",reqSource="INVENTORY"):
+					self.Print("Your Inventory feels lighter.")
 
-		cargoHindered = self.carryWeight() > self.BRDN()//4
-		if cargoHindered and not self.hasStatus("hindered",Data.HINDERED_CARGO):
-			self.Print("Your cargo weighs you down.")
-			self.addStatus("hindered",Data.HINDERED_CARGO)
-		elif not cargoHindered and \
-		self.hasStatus("hindered",Data.HINDERED_CARGO):
-			self.Print("Your cargo feels lighter.")
-			self.removeStatus("hindered",Data.HINDERED_CARGO)
+			cargoHindered = self.carryWeight() > self.BRDN()//4
+			if cargoHindered and not self.hasStatus("hindered",reqSource="CARGO"):
+				if self.addStatus("hindered",source="CARGO"):
+					self.Print("Your cargo weighs you down.")
+			elif not cargoHindered and \
+			self.hasStatus("hindered",reqSource="CARGO"):
+				if self.removeStatus("hindered",reqSource="CARGO"):
+					self.Print("Your cargo feels lighter.")
 
 
 	# unused for Creatures, but used in Player subclass
@@ -5344,16 +5559,16 @@ class Creature(Item):
 
 		# a liquid Room has no surface within the current location
 		if isinstance(fluid,Room):
-			if not self.hasStatus("submerged",Data.SUBMERGED_LIQUID):
-				return self.addStatus("submerged",Data.SUBMERGED_LIQUID,
+			if not self.hasStatus("submerged",reqSource="IMMERSED"):
+				return self.addStatus("submerged",source="IMMERSED",
 					silent=silent)
 			return False
 
 		# carried creatures and riders move with their anchor instead of sinking alone
 		if isinstance(self.anchor(),Creature):
 			if not fluid.canEmerge(self):
-				if not self.hasStatus("submerged",Data.SUBMERGED_LIQUID):
-					return self.addStatus("submerged",Data.SUBMERGED_LIQUID,
+				if not self.hasStatus("submerged",reqSource="IMMERSED"):
+					return self.addStatus("submerged",source="IMMERSED",
 						silent=silent)
 				return False
 			return self.removeStatus("submerged",silent=silent)
@@ -5363,18 +5578,20 @@ class Creature(Item):
 			return self.removeStatus("submerged",silent=silent)
 
 		platform = self.platform
-		onFluidFloor = platform is not None and platform is fluid.floor
+		# a liquid floor (Surface) has no floor of its own beneath it
+		onFluidFloor = platform is not None and \
+			platform is getattr(fluid,"floor",None)
 		onSubmergedPlatform = platform is not None and \
 			platform.immersed is fluid and \
-			platform.hasStatus("submerged",Data.SUBMERGED_LIQUID)
+			platform.hasStatus("submerged",reqSource="IMMERSED")
 		if onFluidFloor or onSubmergedPlatform:
-			if not self.hasStatus("submerged",Data.SUBMERGED_LIQUID):
-				return self.addStatus("submerged",Data.SUBMERGED_LIQUID,
+			if not self.hasStatus("submerged",reqSource="IMMERSED"):
+				return self.addStatus("submerged",source="IMMERSED",
 					silent=silent)
 			return False
 		if platform is not None:
 			return self.removeStatus("submerged",silent=silent)
-		if self.hasStatus("submerged",Data.SUBMERGED_LIQUID):
+		if self.hasStatus("submerged",reqSource="IMMERSED"):
 			return False
 
 		if not self.canSwim(fluid):
@@ -5385,8 +5602,8 @@ class Creature(Item):
 				self.Print("There isn't enough room to remain surfaced!",color="o")
 		else:
 			return self.removeStatus("submerged",silent=silent)
-		if not self.hasStatus("submerged",Data.SUBMERGED_LIQUID):
-			return self.addStatus("submerged",Data.SUBMERGED_LIQUID,silent=silent)
+		if not self.hasStatus("submerged",reqSource="IMMERSED"):
+			return self.addStatus("submerged",source="IMMERSED",silent=silent)
 		return False
 
 
@@ -5545,11 +5762,16 @@ class Creature(Item):
 	# called when a creature's hp hits 0
 	def death(self):
 		self.timeDespawn()
-		self.addStatus("dead",-2)
+		anointed = self.hasStatus("anointed")
+		# add dead first: its onGain hooks clear hunger/tiredness and its
+		# blocks prevent the status checks below from re-deriving them
+		self.addStatus("dead")
+		# death removes permanent statuses; you are refreshed
+		self.removeStatus(reqSource="PERMANENT",silent=True)
 		self.changePosture("laying",silent=True)
 		self.printNearby(f"{+self} died.",color="o")
 
-		if self.hasStatus("anointed"):
+		if anointed:
 			return self.reanimate()
 
 		self.removeRiding(silent=True)
@@ -5626,20 +5848,20 @@ class Creature(Item):
 		self.checkStatus()
 
 		# take damage from damaging status conditions
-		for condition in {c for (c,d) in self.status}:
-			if condition in Data.conditionDmg:
-				factor, dmgType = Data.conditionDmg[condition]
+		for condition in self.conditions():
+			if condition.damage is not None:
+				factor, dmgType = condition.damage
 				dmg = min1(halfRoll(factor) - halfRoll(self.LCK()))
 				self.takeDamage(dmg,dmgType)
 
 		# natural healing is faster with a higher endurance
-		if self.hasAnyStatus("hungry","starving") and not self.hasStatus("mending"):
+		if self.hasStatus(("hungry","starving")) and not self.hasStatus("mending"):
 			self.regenTimer = 0
 		elif not self.hasStatus("dead"):
 			self.regenTimer += t
 			if self.regenTimer >= 50 - self.ENDR() or self.hasStatus("mending"):
 				self.regenTimer = 0
-				h = 5 if self.hasAnyStatus("cozy","mending") else 1
+				h = 5 if self.hasStatus(("cozy","mending")) else 1
 				self.heal(h)
 				# TODO: do mana resurgence at separate rate than healing
 				self.resurge(1)
@@ -5689,45 +5911,6 @@ class Creature(Item):
 		if removed and not silent:
 			self.checkStatus()
 		return removed
-
-
-	# remove any status condition with reqName and reqDuration(s)
-	# if reqName or reqDuration are None, remove all
-	def removeStatus(self,reqName=None,reqDuration=None,silent=False,recheck=True):
-		# for each duration given, remove matching statuses
-		if isinstance(reqDuration,(list,tuple)):
-			removed = False
-			for duration in reqDuration:
-				removed = self.removeStatus(reqName,duration,silent=silent,
-				recheck=recheck) or removed
-			return removed
-		wasSleeping = self.hasStatus("asleep")
-		wellRested = False
-		condsRemoved = []
-		statusStates = {}
-
-		# copy to prevent removing-while-iterating errors
-		for name,duration in self.status.copy():
-			if reqName in (name,None) and reqDuration in (duration,None):
-				statusStates.setdefault(name,True)
-				self.status.remove([name,duration])
-				condsRemoved.append(name)
-				# TODO: this is hacky, it should check the total duration of time slept
-				# needs a counter sleepTime in the class
-				if name == "asleep" and duration < 30:
-					wellRested = True
-		for name,hadStatus in statusStates.items():
-			game.queueStatusReport(self,name,hadStatus,silent=silent)
-
-		# this recurs into removeStatus, so guard to prevent infinite loop
-		if condsRemoved and recheck:
-			self.checkStatus()
-			if any(status in ("flying","waterwalking") for status in condsRemoved):
-				self.checkImmersion(silent=silent)
-		if "asleep" in condsRemoved and not self.hasStatus("asleep"):
-			self.awaken(wellRested=wellRested)
-		self.display()
-		return bool(condsRemoved)
 
 
 	# replace this object with newObj in parent and all tethers
@@ -5924,9 +6107,9 @@ class Creature(Item):
 		if self.hasStatus("dead"):
 			return False
 		prevhp = self.hp
-		if(f"{type} vulnerability" in self.status): dmg *= 2
-		if(f"{type} resistance" in self.status): dmg //= 2
-		if(f"{type} immunity" in self.status): dmg = 0
+		if self.hasStatus(f"{type} vulnerability"): dmg *= 2
+		if self.hasStatus(f"{type} resistance"): dmg //= 2
+		if self.hasStatus(f"{type} immunity"): dmg = 0
 		# bludgeoning damage can't kill you in one hit
 		if type in ("b","d") and self.hp > 1:
 			self.hp = min1(self.hp-dmg)
@@ -5936,11 +6119,24 @@ class Creature(Item):
 		total_dmg = prevhp - self.hp
 
 		p = "!" if self.hasStatus("asleep") or total_dmg > self.MXHP()//4 else "."
+		# verb escalates with damage relative to max hp
+		verb = "took"
+		if total_dmg > self.MXHP()//2 and total_dmg > 25:
+			verb = "suffered"
+		elif total_dmg > self.MXHP()//4 and total_dmg > 25:
+			verb = choice(Data.dmgverbs)
+		# emphasize truly large hits
+		if total_dmg > 300:
+			emp = choice(Data.superEmphasis)+" "
+		elif total_dmg > 50 and total_dmg > self.MXHP()//2:
+			emp = choice(Data.emphasis)+" "
+		else:
+			emp = ""
 		color = "w"
 		if self is player and total_dmg > 0:
 			color = "r"
 		typeDisplay = "" if type == "e" else Data.dmgtypes[type] + " "
-		msg = f"{+self} took {total_dmg} {typeDisplay}damage{p}"
+		msg = f"{+self} {verb} {emp}{total_dmg} {typeDisplay}damage{p}"
 		self.Print(msg,color=color)
 		self.printNearby(msg,color=color)
 		self.display()
@@ -6179,7 +6375,7 @@ class Creature(Item):
 				carrier.Print(f"{+self} is too heavy for you to carry.")
 			return False
 
-		if not self.restrain(carrier,duration=Data.RESTRAINT_CARRY,silent=silent):
+		if not self.restrain(carrier,silent=silent):
 			return False
 
 		self.removeRiding(silent=True)
@@ -6288,7 +6484,7 @@ class Creature(Item):
 				self.platform = floor
 			return True
 		while "down" in room.links and (room.floor is None or \
-		(room.floor.composition in Data.liquids and verb == "sink")):
+		(room.floor.material().liquid and verb == "sink")):
 			height += room.Capacity() // 5 # approximate height of room
 			room = room.links["down"]
 		if room != self.room():
@@ -6304,7 +6500,7 @@ class Creature(Item):
 			self.platform = floor
 
 		force = min(height,20*self.weight)
-		if not self.hasAnyStatus("fleetfooted","submerged") and \
+		if not self.hasStatus(("fleetfooted","submerged")) and \
 		room.floor is not None and self.immersed is None:
 			if force > 0:
 				self.takeDamage(force,"b")
@@ -6317,11 +6513,11 @@ class Creature(Item):
 
 
 	# occupying a Creature is equivalent to riding it
-	def occupy(self,occupant,silent=False,actor=None):
+	def occupy(self,occupant,silent=False,actor=None,posture=None):
 		if not isinstance(occupant,Creature):
 			occupant.fall(self.Size()//5)
 			return False
-		return self.ride(occupant,silent=silent,actor=actor)
+		return self.ride(occupant,silent=silent,actor=actor,posture=posture)
 
 
 	def offer(self,I):
@@ -6342,7 +6538,7 @@ class Creature(Item):
 		if not silent:
 			self.Print(f"You drop {-carried}.")
 			carried.Print(f"{+self} is no longer carrying you.")
-		carried.removeStatus("restrained",Data.RESTRAINT_CARRY,silent=True)
+		carried.removeStatus("restrained",reqSource=self.id,silent=True)
 		if drop and not self.assignReleasedPlatform(carried):
 			carried.fall(self.Size()//5)
 		assert carried not in self.carrying() and carried.parent is self.parent
@@ -6380,7 +6576,8 @@ class Creature(Item):
 
 
 	# attempt to restrain this Creature
-	def restrain(self,restrainer,item=None,duration=Data.RESTRAINT_CARRY,silent=False):
+	# the restraint is sourced to the restraining item if given, else the restrainer
+	def restrain(self,restrainer,item=None,silent=False):
 		if not self.isAlive():
 			return True
 		if not self.isFriendly() and self.canMove():
@@ -6395,14 +6592,15 @@ class Creature(Item):
 				if not silent:
 					restrainer.Print(f"{+self} evades restraint!",color="r")
 				return False
-		self.addStatus("restrained",duration,silent=True)
+		source = item.id if item is not None else restrainer.id
+		self.addStatus("restrained",source=source,silent=True)
 		if not silent:
 			restrainer.Print(f"You restrain {-self}!",color="g")
 		return True
 
 
-	# attempt to ride this Creature
-	def ride(self,rider,silent=False,actor=None):
+	# attempt to ride this Creature; posture is the rider's intended posture
+	def ride(self,rider,silent=False,actor=None,posture=None):
 		assert isinstance(rider,Creature)
 		assert self.parent is not None and rider.parent is self.parent
 		if actor is None:
@@ -6432,6 +6630,12 @@ class Creature(Item):
 					(self+f"is occupied by {-riderToPush}."))
 			return False
 
+		# a rider intending to crouch settles into it before the attempt;
+		# crouching improves the mounting contest (read before the platform
+		# is removed, which would read as "floating")
+		if posture in ("crouch","crouching"):
+			rider.changePosture("crouch",silent=silent)
+		riderCrouched = rider.posture() == "crouching"
 		rider.removeRiding()
 		rider.removePlatform()
 
@@ -6472,7 +6676,7 @@ class Creature(Item):
 			if not silent:
 				actor.Print(self+f"struggle.",color="o")
 			mountPenalty = -10 if self.posture() == "laying" else 0
-			riderBonus = 10 if rider.posture() == "crouching" else 0
+			riderBonus = 10 if riderCrouched else 0
 			athleticsContest = self.ATHL() - rider.ATHL() - riderBonus + mountPenalty
 			if athleticsContest > 0:
 				if not silent:
@@ -6676,7 +6880,7 @@ class Creature(Item):
 		else:
 			if anchor == anchor.parent.floor:
 				self.platform = anchor
-			elif not anchor.occupy(self):
+			elif not anchor.occupy(self,posture=posture):
 				return False
 
 		if self.platform is anchor:
@@ -6734,7 +6938,7 @@ class Creature(Item):
 		if not self.canSwim():
 			self.Print("You can't submerge because you can't swim!")
 			return False
-		self.addStatus("submerged",Data.SUBMERGED_LIQUID)
+		self.addStatus("submerged",source="IMMERSED")
 		if self is not player:
 			self.printNearby(self+"submerges.")
 		self.checkImmersion()
@@ -6777,54 +6981,35 @@ class Creature(Item):
 
 	### Statistics ###
 
-	# the following are the player's traits, which can be modified by status effects
-	def STR(self):
-		modifiers = (("brawniness",10), ("weakness",-10))
-		return self.conditionalMod(self.str, modifiers, lo=1)
+	# sum of all trait modifiers from present conditions
+	# (compounding conditions contribute once per entry)
+	def statusModifier(self,trait):
+		return sum(cond.modifies.get(trait,0) for cond in self.conditions())
 
-	def SPD(self):
-		modifiers = (("swiftness",10), ("slowness",-10))
-		return self.conditionalMod(self.spd, modifiers, lo=1)
+	# the following are the player's traits, which can be modified by conditions
+	def STR(self): return max(1, self.str + self.statusModifier("STR"))
 
-	def SKL(self):
-		modifiers = (("prowess",10), ("clumsiness",-10))
-		return self.conditionalMod(self.skl, modifiers, lo=1)
+	def SPD(self): return max(1, self.spd + self.statusModifier("SPD"))
 
-	def STM(self):
-		modifiers = (("liveliness",10), ("weariness",-10), ("tired",-3), ("fatigued",-5))
-		return self.conditionalMod(self.stm, modifiers, lo=1)
+	def SKL(self): return max(1, self.skl + self.statusModifier("SKL"))
 
-	def CON(self):
-		modifiers = (("toughness",10), ("illness",-10))
-		return self.conditionalMod(self.con, modifiers, lo=1)
+	def STM(self): return max(1, self.stm + self.statusModifier("STM"))
 
-	def CHA(self):
-		modifiers = (("felicity",10), ("timidity",-10))
-		return self.conditionalMod(self.cha, modifiers, lo=1)
+	def CON(self): return max(1, self.con + self.statusModifier("CON"))
 
-	def INT(self):
-		modifiers = [("sagacity",10), ("stupidity",-10)]
-		return self.conditionalMod(self.int, modifiers, lo=1)
+	def CHA(self): return max(1, self.cha + self.statusModifier("CHA"))
 
-	def WIS(self):
-		modifiers = [("lucidity",10), ("insanity",-10), ("fatigued",-3)]
-		return self.conditionalMod(self.wis, modifiers, lo=1)
+	def INT(self): return max(1, self.int + self.statusModifier("INT"))
 
-	def FTH(self):
-		modifiers = [("fidelity",10), ("apathy",-10), ("fatigued", 3)]
-		return self.conditionalMod(self.fth, modifiers, lo=1)
+	def WIS(self): return max(1, self.wis + self.statusModifier("WIS"))
 
-	def LCK(self):
-		modifiers = [("prosperity",10), ("calamity",-10)]
-		return self.conditionalMod(self.lck, modifiers, lo=1)
+	def FTH(self): return max(1, self.fth + self.statusModifier("FTH"))
 
-	def LOVE(self):
-		modifiers = [("enchanted",50)]
-		return self.conditionalMod(self.love, modifiers, lo=-100, hi=100)
+	def LCK(self): return max(1, self.lck + self.statusModifier("LCK"))
 
-	def FEAR(self):
-		modifiers = [("haunted",50)]
-		return self.conditionalMod(self.fear, modifiers, lo=-100, hi=100)
+	def LOVE(self): return bound(self.love + self.statusModifier("LOVE"),-100,100)
+
+	def FEAR(self): return bound(self.fear + self.statusModifier("FEAR"),-100,100)
 
 	# these are creature stats that are determined dynamically with formulas
 	# these formulas are difficult to read, check design document for details
@@ -6858,7 +7043,7 @@ class Creature(Item):
 
 	def ENDR(self): return 2*self.STM() + self.CON()
 
-	def EVSN(self): return 10 if self.hasAnyStatus("sitting","laying") \
+	def EVSN(self): return 10 if self.hasStatus(("sitting","laying")) \
 	else 2*self.ATSP() + self.LCK() + self.SPD()
 
 	def INVS(self): return 2*self.INT() + self.WIS()
@@ -6954,11 +7139,11 @@ class Creature(Item):
 			fluid = self.immersed
 		fluidComposition = fluid if isinstance(fluid,str) else \
 			getattr(fluid,"composition",None)
-		liquidDensity = Data.densities.get(fluidComposition,1)
+		liquidDensity = Data.Material.get(fluidComposition).density
 
 		if not self.canMove():
 			return False
-		buoyancy = 5*liquidDensity
+		buoyancy = 10*liquidDensity+10
 		return self.Weight()+self.gearWeight() <= self.ATHL()+self.MVMT()+buoyancy
 
 
@@ -6975,10 +7160,9 @@ class Creature(Item):
 
 	# returns True if Creature can move (not restrained, paralyzed, etc)
 	def canMove(self):
-		conds = ("restrained","paralyzed","frozen","unconscious","dead")
 		if self.MVMT() == 0:
 			return False
-		return self.isAlive() and not self.hasAnyStatus(conds)
+		return self.isAlive() and not any(cond.immobile for cond in self.conditions())
 
 
 	# return whether current cargo plus an optional Creature fits the cargo limit
@@ -7011,18 +7195,6 @@ class Creature(Item):
 	def ridingSpace(self,rider=None):
 		assert rider is None or isinstance(rider,Creature)
 		return self.Size() - self.occupantsSize(exclude=rider)
-
-
-	# modify a stat conditionally based on status effects
-	def conditionalMod(self,stat,bonuses=[],lo=None,hi=None):
-		for condname, bonus in bonuses:
-			if self.hasStatus(condname):
-				stat = stat + bonus
-		if lo:
-			stat = max(lo,stat)
-		if hi:
-			stat = min(hi,stat)
-		return stat
 
 
 	# for Creatures, contents is the inventory. This is used in objQuery()
@@ -7171,7 +7343,7 @@ class Creature(Item):
 			if fluidPosition:
 				pos += f" {fluidPosition}"
 			waterwalking = self.hasStatus("waterwalking") and \
-				self.platform is floor and floor.composition in Data.liquids
+				self.platform is floor and floor.material().liquid
 			if self.platform is not floor or waterwalking:
 				occupyprep = getattr(self.platform,"occupyprep","on")
 				pos += f" {occupyprep} {-self.platform}"
@@ -7474,10 +7646,10 @@ class Player(Creature):
 		# hunger takes longer with more endurance
 		sinceLastAte = game.time - self.lastAte
 		if sinceLastAte > 100 + 10*self.ENDR():
-			self.removeStatus("hungry",-2,recheck=False)
-			self.addStatus("starving",-2)
+			self.removeStatus("hungry")
+			self.addStatus("starving")
 		elif sinceLastAte > 50 + 5*self.ENDR() and not invigorated:
-			self.addStatus("hungry",-2)
+			self.addStatus("hungry")
 		elif sinceLastAte < 100:
 			self.removeStatus("starving")
 			self.removeStatus("hungry")
@@ -7491,10 +7663,10 @@ class Player(Creature):
 		# sleep deprivation takes longer with more endurance
 		sinceLastSlept = game.time - self.lastSlept
 		if sinceLastSlept > 300 + 40*self.ENDR() and not invigorated:
-			self.removeStatus("tired",-2,recheck=False)
-			self.addStatus("fatigued",-2)
+			self.removeStatus("tired")
+			self.addStatus("fatigued")
 		elif sinceLastSlept > 150 + 20*self.ENDR() and not invigorated:
-			self.addStatus("tired",-2)
+			self.addStatus("tired")
 		elif sinceLastSlept < 100 or invigorated:
 			self.removeStatus("fatigued")
 			self.removeStatus("tired")
@@ -7507,8 +7679,13 @@ class Player(Creature):
 		self.changePosture("laying",silent=True)
 		ellipsis(color="r")
 
-		self.addStatus("dead",-2)
-		if self.hasStatus("anointed"):
+		anointed = self.hasStatus("anointed")
+		# add dead first: its onGain hooks clear hunger/tiredness and its
+		# blocks prevent the status checks below from re-deriving them
+		self.addStatus("dead")
+		# death removes any permanent statuses, you are refreshed
+		self.removeStatus(reqSource="PERMANENT",silent=True)
+		if anointed:
 			return self.reanimate()
 
 		self.removeRiding(silent=True)
@@ -7609,7 +7786,7 @@ class Player(Creature):
 		location = self.parent
 		if self.hasStatus("sagacity"):
 			return True
-		if location is None or self.hasAnyStatus("blindness","stupidity"):
+		if location is None or self.hasStatus(("blindness","stupidity")):
 			return False
 		return self.countCompasses() > 0 or (self.canSeeSky() and "sun" in location)
 
@@ -7687,10 +7864,11 @@ class Player(Creature):
 		self.printInv(outfile=sidepanel)
 
 
-	# if each trait is below or above normal, color it accordingly and print
+	# print each trait's modified value, colored green if it's above the
+	# static trait value and red if below
 	def displayTrait(self,t):
 		assert hasattr(self,t.lower()) and hasMethod(self,t.upper())
-		displayTrait = t.upper() + ": "+ str(getattr(self,t))
+		displayTrait = t.upper() + ": "+ str(getattr(self,t.upper())())
 
 		if self.hasStatus("stupidity"):
 			displayTrait = ambiguateNumbers(displayTrait)
@@ -7854,29 +8032,31 @@ class Player(Creature):
 
 
 	# prints all status conditions and their durations in a formatted table
-	# conditions with negative (special) durations are represented with "--"
+	# conditions with no duration (indefinite) are represented with "--"
 	def printStatus(self, *args, outfile=None):
-		if len(self.status) == 0:
-			Print("None")
-			return
-
 		conditions = []
 		durations = []
-		# populate conditions with unique condition names affecting the player
+		# populate conditions with unique, displayable condition names
 		# populate durations with the highest duration for that condition
-		# negative (special) durations take precedence over positive durations
-		for cond, dur in sorted(self.status, key=lambda x: x[0]):
+		# indefinite (None) durations take precedence over timed ones
+		for cond, src, dur in sorted(self.status, key=lambda x: x[0]):
+			if not Data.StatusCondition.get(cond).displayable:
+				continue
 			if cond in conditions:
 				idx = conditions.index(cond)
-				olddur = durations[idx]
-				newdur = dur if dur > olddur and olddur > 0 else olddur
-				durations[idx] = newdur
+				chosenDur = durations[idx]
+				if chosenDur is not None:
+					durations[idx] = None if dur is None else max(dur,chosenDur)
 				continue
 			conditions.append(cond)
 			durations.append(dur)
 
-		# display permanent durations as "--", adjust length according to max digit length
-		displayDurs = [str(dur) if dur > 0 else "--" for dur in durations]
+		if len(conditions) == 0:
+			Print("None")
+			return
+
+		# display indefinite durations as "--", adjust length according to max digit length
+		displayDurs = ["--" if dur is None else str(dur) for dur in durations]
 		if self.hasStatus("stupidity"):
 			displayDurs = [ambiguateNumbers(dur) for dur in displayDurs]
 		nDigits = max(len(dur) for dur in displayDurs)
@@ -7891,13 +8071,9 @@ class Player(Creature):
 			if self.hasStatus("stupidity"):
 				displayCondition = ambiguateNumbers(displayCondition)
 
-			color = "w"
+			color = Data.StatusCondition.get(condition).color or "w"
 			if self.hasStatus("apathy") and condition != "apathy":
 				color = "w"
-			elif condition in Data.blessings | Data.buffs:
-				color = "g"
-			elif condition in Data.curses | Data.debuffs:
-				color = "r"
 			statusDisplay.append(tinge(color,displayCondition)[0])
 
 		# nCols = min(3,((len(statusDisplay)-1)//5)+1)
@@ -8321,10 +8497,16 @@ class Animal(Speaker):
 
 	# touch this Animal
 	def touch(self,toucher):
-		if self.species in Data.textures:
-			Print(Data.textures[self.species])
+		# a per-instance texture wins, then a registered species texture,
+		# then the composition's texture
+		if self.texture is not None:
+			Print(self.texture)
+			return
+		speciesMaterial = Data.materials.get(self.species)
+		if speciesMaterial is not None:
+			Print(speciesMaterial.texture)
 		else:
-			return super().touch(toucher)
+			Print(self.Texture())
 
 
 	def Attack(self):
@@ -8435,7 +8617,7 @@ class Surface(Fixture):
 		super().__init__(name,desc,weight,composition,**kwargs)
 		if any("water" in alias for alias in self.aliases):
 			self.aliases.append("water")
-		if any(name in Data.liquids for name in self.aliases+[self.name]):
+		if any(Data.Material.get(name).liquid for name in self.aliases+[self.name]):
 			self.aliases.append("liquid")
 
 
@@ -8449,7 +8631,7 @@ class Surface(Fixture):
 
 
 	def couldImmerse(self,obj,size=None,vacancy=None):
-		return self.composition in Data.liquids
+		return self.material().liquid
 
 
 	def canSubmerge(self,obj):
@@ -8483,10 +8665,10 @@ stars = Celestial("stars","The twinkling stars dot the night sky, each one a dis
 eclipse = Celestial("eclipse","The sun and moon align perfectly, casting an eerie shadow" \
 " over the land.",0,"fire",aliases=["solar eclipse","sun","moon"])
 meteorshower = Celestial("meteor shower","A dazzling meteor shower streaks across the" \
-" sky, lighting up the darkness with brief flashes of light.",0,"rock",
+" sky, lighting up the darkness with brief flashes of light.",0,"ylem",
 aliases=["meteors","shower"])
 aurora = Celestial("aurora","The sky is painted with vibrant colors as the aurora dances" \
-" overhead, a mesmerizing display of nature's beauty.",0,"energy",aliases=["auroras"])
+" overhead, a mesmerizing display of nature's beauty.",0,"ylem",aliases=["auroras"])
 sky = Celestial("sky","The vast expanse of the sky stretches out above, a canvas for " \
 "the sun, moon, and stars.",0,"air",aliases=["heavens","firmament"],determiner="the")
 celestials = (sky,sun,moon,stars,eclipse,meteorshower,aurora)
@@ -8779,7 +8961,7 @@ class Container(Portal):
 			raise ValueError(f"Container {self} has invalid entrance link")
 		if self.links.get(self.exitprep) is not self.parent:
 			raise ValueError(f"Container {self} has invalid exit link")
-		if self.floor.composition in Data.liquids and \
+		if self.floor.material().liquid and \
 			("down" not in self.links or \
 			not isinstance(self.links["down"],(Room,Portal))):
 			raise ValueError(f"Container {self} has a liquid floor but no valid down link")
@@ -8831,14 +9013,10 @@ class Container(Portal):
 		return game.spawn(obj,self)
 
 
-	# apply an area condition to all objs in the Container
-	def addAreaCondition(self,areacond):
-		return Room.addAreaCondition(self,areacond)
-
-
 	# add a status condition to the Container with a name and duration
-	def addStatus(self,name,dur,stackable=True):
-		return Room.addStatus(self,name,dur,stackable=stackable)
+	def addStatus(self,name,source=None,dur=None,allowStack=True,silent=False):
+		return Room.addStatus(self,name,source,dur,allowStack=allowStack,
+		silent=silent)
 
 
 	def overflow(self):
@@ -8867,26 +9045,21 @@ class Container(Portal):
 		for item in self.items.copy():
 			item.waitInput(f"You are no longer in {-self}.")
 			item.changeLocation(parent)
-			item.Print(f"{+item} comes out of {-self}.")
+			item.printNearby(f"{+item} comes out of {-self}.")
 		return True
 
 
 	# remove Item
 	def remove(self,I):
-		Print(f"REMOVING {I} FROM {self}")
 		self.items.remove(I)
 		I.parent = None
 
 
-	# try to remove an area condition from all affected objs in the Container
-	def removeAreaCondition(self,areacond):
-		return Room.removeAreaCondition(self,areacond)
-
-
-	# removes all conditions with the given name and duration
-	# when nothing given, remove all status conditions
-	def removeStatus(self,reqName=None,reqDuration=None):
-		return Room.removeStatus(self,reqName=reqName,reqDuration=reqDuration)
+	# removes all status entries with the given name(s), source, and duration
+	# when nothing given, remove all removable entries
+	def removeStatus(self,reqName="*",reqSource="*",reqDuration="*",silent=False):
+		return Room.removeStatus(self,reqName=reqName,reqSource=reqSource,
+		reqDuration=reqDuration,silent=silent)
 
 
 	### Interaction ###
@@ -8937,7 +9110,7 @@ class Container(Portal):
 	def exit(self,traverser):
 		if traverser not in self:
 			return False
-		traverser.removeStatus("hidden",Data.HIDDEN_CONTAINER)
+		traverser.removeStatus("hidden",reqSource="CONTAINER")
 		return Room.exit(self,traverser)
 
 
@@ -9071,7 +9244,7 @@ class Container(Portal):
 	# get the links dict to use in the parent's allLinks method
 	# we don't want to include the exit link, that is not accessible from the parent
 	def getLinksForParent(self):
-		return {dir:dest for dir,dest in self.links.items() if dest is not self}
+		return {dir:dest for dir,dest in self.links.items() if dest is self}
 
 
 	# get total size of all items in Container
@@ -9390,18 +9563,14 @@ class Weapon(Item):
 		Print(f"{self.sharpness} {self.minGripsNeeded} {self.range}")
 
 
-	# licking shark weapons hurts!
+	# licking sharp weapons hurts!
 	def lick(self,licker):
 		# TODO: don't check for composition, check for if its sharp?
 		if self.composition in ("glass","bronze","iron","steel"):
 			Print("It tastes like... blood.")
 			licker.takeDamage(3,"s")
 			return True
-
-		if self.composition in Data.tastes:
-			Print(Data.tastes[self.composition])
-		if self.composition in Data.scents:
-			Print(Data.scents[self.composition].replace("scent","taste"))
+		Print(self.Flavor())
 
 
 	# wrap as Projectile for temporary use while launching
@@ -9411,11 +9580,31 @@ class Weapon(Item):
 
 
 	# if given keen status, maximize sharpness
-	def addStatus(self,name,dur,stackable=True):
-		if super().addStatus(name,dur,stackable=stackable):
-			if self.hasStatus("keen"):
-				self.sharpness = 20
-			return True
+	def addStatus(self,name,source=None,dur=None,allowStack=True,silent=False):
+		added = super().addStatus(name,source,dur,allowStack=allowStack,
+			silent=silent)
+		if added and name == "keen" and self.hasStatus("keen"):
+			self.sharpness = 20
+		return added
+
+
+
+# Shards are sharp fragments spawned when a shatterable Item shatters
+# stats are derived from composition and weight unless explicitly overridden
+class Shard(Weapon):
+	def __init__(self,composition,weight,name=None,desc=None,durability=1,
+	might=None,sleight=0,sharpness=None,range=0,type="s",**kwargs):
+		if name is None:
+			name = f"{composition} shard"
+		if desc is None:
+			desc = f"A sharp shard of {composition}."
+		if might is None:
+			might = min1(weight//2)
+		if sharpness is None:
+			sharpness = 6 if composition == "glass" else 2
+		kwargs.setdefault("aliases",["shard"])
+		super().__init__(name,desc,weight,durability,composition,might,sleight,
+		sharpness,range,type,**kwargs)
 
 
 

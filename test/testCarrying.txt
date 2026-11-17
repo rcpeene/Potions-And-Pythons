@@ -3,7 +3,7 @@ test
 \tpt cabin basement
 
 \spn green python
-\mbu green python tamed -1
+\mbu green python tamed
 
 take green python
 \chk len(player.carrying()) == 1
@@ -36,10 +36,10 @@ take blade of light
 \chk str(-fo("blade of light",queryType="player")) == "the Blade of Light"
 drop blade of light
 \spn red python
-\mbu red python tamed -1
+\mbu red python tamed
 take red python
 \spn goblin
-\mbu goblin tamed -1
+\mbu goblin tamed
 \grw goblin 4
 
 take goblin
@@ -95,7 +95,7 @@ take green python
 \grw green python 11
 \chk len(player.carrying()) == 1
 \chk sum(player[s] is player.carrying()[0] for s in player.carrySlots) == 2
-\chk player.hasStatus("hindered",Core.Data.HINDERED_CARGO)
+\chk player.hasStatus("hindered",reqSource="CARGO")
 gear
 carrying
 status
@@ -114,7 +114,7 @@ take green python
 carrying
 status
 drop green python
-\chk not player.hasStatus("hindered",Core.Data.HINDERED_CARGO)
+\chk not player.hasStatus("hindered",reqSource="CARGO")
 status
 
 
@@ -129,9 +129,9 @@ here
 
 \\ Multiple cargo remain unique and follow carry-slot order
 \spn green python
-\mbu green python tamed -1
+\mbu green python tamed
 \spn red python
-\mbu red python tamed -1
+\mbu red python tamed
 take green python
 take red python
 \chk player.carrying() == [player[s] for s in player.carrySlots]
@@ -187,13 +187,13 @@ take goblin
 take goblin
 \chk fo("goblin",queryType="room").carrier is None
 \chk all(player[s] is Core.EmptyGear() for s in player.carrySlots)
-\mbu goblin tamed -1
+\mbu goblin tamed
 \shk goblin 4
 
 \\ Carrying removes riding/platform tethers and inherits the carrier's cover
 \spn horse
-\mbu horse tamed -1
-\mbu green python tamed -1
+\mbu horse tamed
+\mbu green python tamed
 take green python
 put green python on horse
 \spn Core.Item("test cover","",100,-1,"wood")
@@ -220,26 +220,26 @@ drop green python
 dismount
 
 \\ Inventory and cargo hinder sources remain independent
-\mbu goblin tamed -1
+\mbu goblin tamed
 \grw goblin 4
 take goblin
 \spn Core.Item("heavy test item","",120,-1,"iron")
 take heavy test item
-\chk player.hasStatus("hindered",Core.Data.HINDERED_INVENTORY)
-\chk player.hasStatus("hindered",Core.Data.HINDERED_CARGO)
+\chk player.hasStatus("hindered",reqSource="INVENTORY")
+\chk player.hasStatus("hindered",reqSource="CARGO")
 drop heavy test item
-\chk not player.hasStatus("hindered",Core.Data.HINDERED_INVENTORY)
-\chk player.hasStatus("hindered",Core.Data.HINDERED_CARGO)
+\chk not player.hasStatus("hindered",reqSource="INVENTORY")
+\chk player.hasStatus("hindered",reqSource="CARGO")
 drop goblin
-\chk not player.hasStatus("hindered",Core.Data.HINDERED_CARGO)
+\chk not player.hasStatus("hindered",reqSource="CARGO")
 
 \\ Creature replacement has no gameplay command, so invoke replacement directly
-\mbu green python tamed -1
+\mbu green python tamed
 \grw green python 11
 take green python
 \exe game.oldCargo=player.carrying()[0]
 \exe game.newCargo=Core.Creature("new cargo","",1,[1]*10)
-\exe game.newCargo.addStatus("tamed",-1,silent=True)
+\exe game.newCargo.addStatus("tamed",silent=True)
 \exe game.oldCargo.replace(game.newCargo)
 \chk game.newCargo.carrier is player
 \chk all(player[s] is game.newCargo for s in player.carrySlots)

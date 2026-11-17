@@ -67,7 +67,7 @@ put determined teacup on peripatetic tea tray
 \\ An occupant that cannot enter the destination remains behind and detaches
 \spn Core.Item("pocket-sized ferry","A ferry whose route planning exceeds its dimensions.",2,-1,"wood")
 \spn Core.Item("tenacious passenger trunk","A trunk unwilling to fit where it plainly cannot.",10,10,"wood")
-\spn Core.Container("thimble terminal","A terminal with room for almost nothing.",1,-1,"metal",[],capacity=2)
+\spn Core.Container("thimble terminal","A terminal with room for almost nothing.",1,-1,"steel",[],capacity=2)
 take tenacious passenger trunk
 put tenacious passenger trunk on pocket-sized ferry
 \exe game.tinyDest=fo("thimble terminal",queryType="room")
@@ -92,7 +92,7 @@ put loyal gravy boat on banished sideboard
 
 \\ Destroying a platform drops every occupant
 \spn Core.Item("doomed dessert cart","A dessert cart with one structural flaw too many.",20,1,"wood")
-\spn Core.Item("last slice of pie","A slice of pie displaying admirable composure.",2,10,"food")
+\spn Core.Item("last slice of pie","A slice of pie displaying admirable composure.",2,10,"bread")
 take last slice of pie
 put last slice of pie on doomed dessert cart
 \exe game.doomedCart=fo("doomed dessert cart",queryType="room")

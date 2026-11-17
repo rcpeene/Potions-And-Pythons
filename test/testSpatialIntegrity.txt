@@ -76,8 +76,8 @@ put resident brick in packed trunk
 \chk not fo("thimble chest",queryType="room").items
 
 \\ Aggregate creature groups are rejected even when the leader alone fits
-\spn Core.Creature("processional pony","A pony followed by more procession than expected.",20,[10]*10,status=[["tamed",-1]])
-\spn Core.Creature("ceremonial rider","A rider equipped with twenty units of ceremony.",20,[1]*10,status=[["tamed",-1]])
+\spn Core.Creature("processional pony","A pony followed by more procession than expected.",20,[10]*10,status=[["tamed"]])
+\spn Core.Creature("ceremonial rider","A rider equipped with twenty units of ceremony.",20,[1]*10,status=[["tamed"]])
 take ceremonial rider
 put ceremonial rider on processional pony
 \exe game.tinyStable=Core.Room("Tiny Stable","Test","A stable priced by the square inch.",{},[],[],[],capacity=25,floor="wood")
@@ -129,25 +129,25 @@ put tenured turnip on retiring plinth
 \chk game.oldPlinth not in game.itemRegistry.values()
 
 \\ Replacing a mount preserves a valid rider
-\spn Core.Creature("veteran mount","A mount approaching a dignified retirement.",80,[10]*10,status=[["tamed",-1]])
-\spn Core.Creature("mounted herald","A herald determined to retain the same seat.",8,[1]*10,status=[["tamed",-1]])
+\spn Core.Creature("veteran mount","A mount approaching a dignified retirement.",80,[10]*10,status=[["tamed"]])
+\spn Core.Creature("mounted herald","A herald determined to retain the same seat.",8,[1]*10,status=[["tamed"]])
 take mounted herald
 put mounted herald on veteran mount
 \exe game.oldMount=fo("veteran mount",queryType="room")
 \exe game.herald=fo("mounted herald",queryType="room")
-\exe game.newMount=Core.Creature("relief mount","A fresh mount reporting for the next shift.",80,[10]*10,status=[["tamed",-1]])
+\exe game.newMount=Core.Creature("relief mount","A fresh mount reporting for the next shift.",80,[10]*10,status=[["tamed"]])
 \exe game.oldMount.replace(game.newMount)
 \chk game.herald.riding is game.newMount
 \chk game.newMount.parent is player.parent
 
 \\ An incompatible replacement mount drops the former rider without dangling tethers
-\spn Core.Creature("broad palfrey","A broad palfrey with generous seating.",80,[10]*10,status=[["tamed",-1]])
-\spn Core.Creature("substantial envoy","An envoy requiring substantial diplomatic seating.",30,[1]*10,status=[["tamed",-1]])
+\spn Core.Creature("broad palfrey","A broad palfrey with generous seating.",80,[10]*10,status=[["tamed"]])
+\spn Core.Creature("substantial envoy","An envoy requiring substantial diplomatic seating.",30,[1]*10,status=[["tamed"]])
 take substantial envoy
 put substantial envoy on broad palfrey
 \exe game.broadPalfrey=fo("broad palfrey",queryType="room")
 \exe game.envoy=fo("substantial envoy",queryType="room")
-\exe game.tinyReplacement=Core.Creature("replacement mouse","A mouse issued as a replacement mount in error.",2,[1]*10,status=[["tamed",-1]])
+\exe game.tinyReplacement=Core.Creature("replacement mouse","A mouse issued as a replacement mount in error.",2,[1]*10,status=[["tamed"]])
 \exe game.broadPalfrey.replace(game.tinyReplacement)
 \chk game.envoy.riding is None
 \chk game.envoy.platform is player.parent.floor
@@ -155,7 +155,7 @@ put substantial envoy on broad palfrey
 
 \\ Replacing carried cargo with an Item preserves its exact occupied slots
 \spn green python
-\mbu green python tamed -1
+\mbu green python tamed
 \grw green python 11
 take green python
 \exe game.oldCargo=player.carrying()[0]
@@ -173,7 +173,7 @@ take enchanted oven mitt
 equip enchanted oven mitt
 \exe game.oldMitt=fo("enchanted oven mitt",queryType="player")
 \exe game.mittSlot=player.inGear("enchanted oven mitt")[0]
-\exe game.mittSprite=Core.Creature("oven sprite","A sprite emerging from the mitt with excellent heat resistance.",1,[1]*10,status=[["tamed",-1]])
+\exe game.mittSprite=Core.Creature("oven sprite","A sprite emerging from the mitt with excellent heat resistance.",1,[1]*10,status=[["tamed"]])
 \exe game.oldMitt.replace(game.mittSprite)
 \chk game.mittSprite.carrier is player
 \chk player[game.mittSlot] is game.mittSprite
@@ -231,7 +231,7 @@ put surviving cup on doomed dais
 \chk game.doomedDaisId not in game.itemRegistry
 
 \\ Destroying carried cargo clears its carrier and every occupied carry slot
-\spn Core.Creature("departing courier","A courier whose final delivery is its own cleanup.",4,[1]*10,status=[["tamed",-1]])
+\spn Core.Creature("departing courier","A courier whose final delivery is its own cleanup.",4,[1]*10,status=[["tamed"]])
 take departing courier
 \exe game.departingCourier=fo("departing courier",queryType="room")
 \exe game.departingCourierId=game.departingCourier.id
@@ -242,8 +242,8 @@ take departing courier
 \chk game.departingCourierId not in game.itemRegistry
 
 \\ Destroying a mount releases its rider onto the room floor
-\spn Core.Creature("retiring destrier","A mount retiring by unusually final means.",80,[10]*10,status=[["tamed",-1]])
-\spn Core.Creature("surviving rider","A rider with excellent continuity planning.",6,[1]*10,status=[["tamed",-1]])
+\spn Core.Creature("retiring destrier","A mount retiring by unusually final means.",80,[10]*10,status=[["tamed"]])
+\spn Core.Creature("surviving rider","A rider with excellent continuity planning.",6,[1]*10,status=[["tamed"]])
 take surviving rider
 put surviving rider on retiring destrier
 \exe game.retiringDestrier=fo("retiring destrier",queryType="room")
@@ -262,7 +262,7 @@ hide behind condemned screen
 \exe game.condemnedScreenId=game.condemnedScreen.id
 \exe game.condemnedScreen.destroy()
 \chk player.cover is None
-\chk not player.hasStatus("hidden",Core.Data.HIDDEN_COVER)
+\chk not player.hasStatus("hidden",reqSource="COVER")
 \chk game.condemnedScreenId not in game.itemRegistry
 
 \\ Destroying a populated container displaces its contents outward

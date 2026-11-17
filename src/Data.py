@@ -8,6 +8,8 @@
 # 3. Game term dictionary	(Game terms used by Define() in Parse.py)
 # 4. Intro Logo Data		(Strings and lists used for the intro animation)
 
+from dataclasses import dataclass, field
+
 
 
 TERMINAL_HEIGHT = 32
@@ -56,7 +58,7 @@ laughs = {"haha","hahaha","hehe","hehehe","heehee","lol","rofl","lmao"}
 # this is because "up" and "down" are also in the "directions" dict
 # they are not necessary entries here, but make interpreting more consistent...
 # for use in the Go() action functions
-prepositions = {"above","across","around","at","away","away from","behind","below","beneath","by","d","down","for","from","in","inside","into","near","off","of","on","onto","out","out of","over","through","to","toward","under","u","up","upon","using","with"}
+prepositions = {"above","across","around","at","away","away from","behind","below","beneath","by","d","down","for","from","in","inside","into","near","off","of","on","onto","out","out of","outside","over","through","to","toward","under","u","up","upon","using","with"}
 
 pronouns = {"she","he","they","her","him","them","it"}
 
@@ -75,9 +77,22 @@ directions = {"n":"north","ne":"northeast","e":"east","se":"southeast","s":"sout
 
 cardinals = ("north","east","south","west","northeast","southeast","southwest","northwest")
 
-
 dmgtypes = {"a":"acid","b":"bludgeoning","c":"cold","d":"drowning","e":"essential","f":"fire","h":"hunger","i":"psychic","l":"lightning","n":"necrotic","p":"piercing","r":"radiant","s":"slashing","t":"thunder","v":"force","x":"poison"}
 dmgclasses = {"a":"elem","b":"phys","c":"elem","d":"phys","e":"dev","f":"elem","h":"phys","i":"mag","l":"elem","n":"mag","p":"phys","r":"mag","s":"phys","t":"elem","v":"mag","x":"elem"}
+
+# verbs for reporting damage greater than a quarter of max hp
+dmgverbs = ("received","sustained","endured")
+
+# emphasis phrases for reporting especially large figures
+emphasis = ("a whopping","a staggering","a crushing","a devastating","a monstrous",
+"a punishing","an eye-watering","a ruinous","a dire",
+"a bone-chilling","a merciless","a titanic","a savage",
+"a hellacious","a jaw-dropping","an unholy","a tremendous",
+"a gut-wrenching","an obscene","a stupefying")
+
+# emphasis phrases for reporting outright implausible figures
+superEmphasis = ("a ridiculous","a colossal","an absurd","a cataclysmic","a ludicrous",
+"a preposterous","an earth-shattering","a silly little")
 
 
 # gear dict used to initialize creatures
@@ -89,40 +104,144 @@ initgear = {"over":None, "head":None, "torso":None, "left":None, "right":None,
 ## STATUS CONDITION CODES ##
 ############################
 
-COZY_BED = -4
-COZY_FIRE = -5
-HIDDEN_COVER = -4
-HIDDEN_CONTAINER = -5
-HINDERED_INVENTORY = -4
-HINDERED_STICKY = -5
-HINDERED_CARGO = -6
-POSTURE_ACTIVE = -4
-RESTRAINT_CARRY = -4
-RESTRAINT_BINDINGS = -5
-SUBMERGED_LIQUID = -4
-WET_LIQUID = -4
-WET_STICKY = -5
 
-blessings = {"brawniness","swiftness","prowess","liveliness","toughness","felicity","sagacity","lucidity","fidelity","prosperity"}
+# a StatusCondition is the shared, immutable record of properties for one
+# status condition name; entries on objects store only [name, source, duration]
+@dataclass(frozen=True,kw_only=True)
+class StatusCondition:
+	name: str
+	# (factor, dmgtype) damage rolled against the bearer each tick, or None
+	damage: tuple = None
+	# "blessing of" / "curse of" / None; classifies the condition for
+	# class-targeted effects and derives the default gain/loss messages
+	prefix: str = None
+	# display color code for reports and the stats panel: "g"/"r"/None=white
+	color: str = None
+	# magical conditions are the targets of dispel-class effects
+	magical: bool = False
+	# bearer-facing report text: a verb-first predicate completed by the
+	# subject (e.g. "are burning." -> "You are/The wolf is burning.");
+	# leading adverbs are allowed; "" suppresses the report entirely;
+	# derived from name/prefix when not authored
+	gainMsg: str = None
+	lossMsg: str = None
+	# trait modifiers summed into stat getters while present, e.g. {"STR":10}
+	# (multiplied by entry count for compounding conditions)
+	modifies: dict = field(default_factory=dict)
+	# other creatures' instances of this condition are reported/shown to you
+	public: bool = False
+	# shown in the bearer's stats panel and in the 'status' command output
+	displayable: bool = True
+	# prevents movement and most actions
+	immobile: bool = False
+	# may a new entry be added while the condition is already present?
+	stackable: bool = True
+	# do multiple entries compound the effect, or do reads cap at 1?
+	compounds: bool = False
+	# condition names whose addition this condition vetoes while present
+	blocks: tuple = ()
+	# cascading effects that conditions can trigger
+	# onAdd/onRemove trigger on any status entry operations, while-
+	# onGain/onLoss trigger on the first addition and last removal of the condition
+	# onTick and onExpire refer to duration counts of the condition
+	# onBlock triggers when an attempt to add a blocked condition occurs
+	onAdd: tuple = ()
+	onGain: tuple = ()
+	onRemove: tuple = ()
+	onLoss: tuple = ()
+	onTick: tuple = ()
+	onExpire: tuple = ()
+	onBlock: tuple = ()
 
-curses = {"weakness","slowness","clumsiness","weariness","illness","timidity","stupidity","insanity","apathy","calamity"}
+	def __post_init__(self):
+		assert isinstance(self.blocks,tuple) and \
+			all(isinstance(n,str) for n in self.blocks), \
+			f"StatusCondition '{self.name}' blocks must be a tuple of names"
+		assert isinstance(self.modifies,dict) and all(
+			isinstance(k,str) and isinstance(v,int)
+			for k,v in self.modifies.items()), \
+			f"StatusCondition '{self.name}' modifies must map trait names to ints"
+		# cascade hooks must be authored in canonical form: a tuple of
+		# (name, *args) tuple descriptors
+		for hook in ("onAdd","onGain","onRemove","onLoss","onTick","onExpire",
+		"onBlock"):
+			val = getattr(self,hook)
+			assert isinstance(val,tuple) and all(
+				isinstance(d,tuple) and d and isinstance(d[0],str) for d in val), \
+				f"StatusCondition '{self.name}' {hook} must be a canonical " \
+				f"tuple of descriptors"
+		# derive default predicate report messages from the name and prefix
+		if self.gainMsg is None:
+			gain = f"have the {self.prefix} {self.name}." if self.prefix \
+				else f"are {self.name}."
+			object.__setattr__(self,"gainMsg",gain)
+		if self.lossMsg is None:
+			loss = f"no longer have the {self.prefix} {self.name}." \
+				if self.prefix else f"are no longer {self.name}."
+			object.__setattr__(self,"lossMsg",loss)
 
-buffs = {"anointed","fleetfooted","flying","invigorated","mending","wildspeaking"}
+	# look up the shared record for a status condition name
+	# unregistered names resolve to a plain default record (the ylem pattern)
+	@classmethod
+	def get(cls,name):
+		return statusConditions.get(name,DEFAULT_STATUS_CONDITION)
 
-debuffs = {"dead","hindered","hungry","starving","tired","fatigued","drowning"}
 
-privateStatus = {"dead","invisible","hidden","hindered"}
+# the single source of truth for status condition properties, keyed by name
+statusConditions = {s.name: s for s in (
+	StatusCondition(name="anointed",color="g"),
+	StatusCondition(name="apathy",prefix="curse of",color="r",modifies={"FTH":-10}),
+	StatusCondition(name="asleep",immobile=True,public=True,gainMsg="falls asleep.",lossMsg="",onExpire=(("awaken",True),),onLoss=(("awaken",),)),
+	StatusCondition(name="bleeding",damage=(15,"e"),public=True),
+	StatusCondition(name="brawniness",prefix="blessing of",color="g",modifies={"STR":10}),
+	StatusCondition(name="burning",damage=(50,"f"),public=True),
+	StatusCondition(name="calamity",prefix="curse of",color="r",modifies={"LCK":-10}),
+	StatusCondition(name="clumsiness",prefix="curse of",color="r",modifies={"SKL":-10}),
+	StatusCondition(name="dead",color="r",immobile=True,stackable=False,blocks=("hungry","starving","tired","fatigued"),onGain=(("removeStatus","hungry"),("removeStatus","starving"),("removeStatus","tired"),("removeStatus","fatigued"))),
+	StatusCondition(name="drowning",color="r",damage=(25,"d"),public=True),
+	StatusCondition(name="enchanted",magical=True,modifies={"LOVE":50}),
+	StatusCondition(name="fatigued",color="r",public=True,stackable=False,modifies={"STM":-5,"WIS":-3,"FTH":3}),
+	StatusCondition(name="felicity",prefix="blessing of",color="g",modifies={"CHA":10}),
+	StatusCondition(name="fidelity",prefix="blessing of",color="g",modifies={"FTH":10}),
+	StatusCondition(name="fleetfooted",color="g"),
+	StatusCondition(name="flying",color="g",public=True,onGain=(("Float",),)),
+	StatusCondition(name="levitating",onGain=(("Float",),)),
+	StatusCondition(name="frozen",immobile=True,damage=(20,"c"),public=True,blocks=("burning",),onGain=(("removeStatus","burning"),),onBlock=(("removeStatus","frozen"),)),
+	StatusCondition(name="haunted",magical=True,modifies={"FEAR":50}),
+	StatusCondition(name="hidden"),
+	StatusCondition(name="hindered",color="r"),
+	StatusCondition(name="hungry",color="r"),
+	StatusCondition(name="illness",prefix="curse of",color="r",modifies={"CON":-10}),
+	StatusCondition(name="insanity",prefix="curse of",color="r",modifies={"WIS":-10}),
+	StatusCondition(name="invigorated",color="g"),
+	StatusCondition(name="invisible"),
+	StatusCondition(name="liveliness",prefix="blessing of",color="g",modifies={"STM":10}),
+	StatusCondition(name="lucidity",prefix="blessing of",color="g",modifies={"WIS":10}),
+	StatusCondition(name="mending",color="g"),
+	StatusCondition(name="paralyzed",immobile=True,public=True),
+	StatusCondition(name="poisoned",damage=(5,"x"),compounds=True),
+	StatusCondition(name="prosperity",prefix="blessing of",color="g",modifies={"LCK":10}),
+	StatusCondition(name="prowess",prefix="blessing of",color="g",modifies={"SKL":10}),
+	StatusCondition(name="restrained",immobile=True,public=True),
+	StatusCondition(name="sagacity",prefix="blessing of",color="g",modifies={"INT":10}),
+	StatusCondition(name="slowness",prefix="curse of",color="r",public=True,modifies={"SPD":-10}),
+	StatusCondition(name="starving",color="r",damage=(1,"h")),
+	StatusCondition(name="stunned",immobile=True,public=True),
+	StatusCondition(name="submerged",public=True,onGain=(("transferStatus","wet","IMMERSED","SUBMERGED"),),onLoss=(("transferStatus","wet","SUBMERGED","IMMERSED"),)),
+	StatusCondition(name="stupidity",prefix="curse of",color="r",modifies={"INT":-10}),
+	StatusCondition(name="swiftness",prefix="blessing of",color="g",public=True,modifies={"SPD":10}),
+	StatusCondition(name="timidity",prefix="curse of",color="r",modifies={"CHA":-10}),
+	StatusCondition(name="tired",color="r",stackable=False,modifies={"STM":-3}),
+	StatusCondition(name="toughness",prefix="blessing of",color="g",modifies={"CON":10}),
+	StatusCondition(name="unconscious",immobile=True,public=True),
+	StatusCondition(name="weakness",prefix="curse of",color="r",modifies={"STR":-10}),
+	StatusCondition(name="weariness",prefix="curse of",color="r",modifies={"STM":-10}),
+	StatusCondition(name="wet",public=True,blocks=("burning",),onGain=(("removeStatus","burning"),),onAdd=(("removeStatus","asleep"),),onBlock=(("removeStatus","wet",None),)),
+	StatusCondition(name="wildspeaking",color="g",public=True),
+)}
 
-immobileStatus = ("asleep","frozen","paralyzed","unconscious","stunned","dead","restrained")
-
-conditionDmg = {
-	"burning":(50,"f"),
-	"drowning":(25,"d"),
-	"bleeding":(25,"e"),
-	"frozen":(15,"c"),
-	"poisoned":(5,"x"),
-	"starving":(1,"h"),
-}
+# unregistered status names resolve to a plain default record
+DEFAULT_STATUS_CONDITION = StatusCondition(name=None)
 
 spawnpools = {
 	"Woodlands": (("green python",1), ("goblin",1)),
@@ -166,74 +285,163 @@ dayhours = hours[:9]
 nighthours = hours[9:]
 
 
-liquids = {"acid","freshwater","lava","mudwater","oil","saltwater","slime","urine","water"}
-
-densities = {
-	"brick": 2,
-	"bronze": 4,
-	"glass": 2,
-	"gold": 6,
-	"iron": 4,
-	"lava": 2,
-	"silver": 5,
-	"steel": 4,
-	"stone": 2,
-}
+# a Material is the shared, immutable record of properties for one composition
+# convert smell vocabulary to taste vocabulary in a sense description
+def smellToTaste(text):
+	return text.replace("smelling","tasting").replace("smell","taste") \
+		.replace("scent","taste")
 
 
-# tastes dict is used if key isn't present in scents
-# this should be used only when it has no taste or its scent is distinct from taste
-scents = {
-	"flesh": "It smells a little like body odor."
-}
+# convert taste vocabulary to smell vocabulary in a sense description
+def tasteToSmell(text):
+	return text.replace("tasting","smelling").replace("taste","smell") \
+		.replace("flavor","scent")
 
 
-tastes = {
-	"acid": "It tastes painful... Ouch!",
-	"bread": "It tastes like fluffy dreams and joy.",
-	"brick": "It tastes like dry gritty clay.",
-	"bronze": "It has a light metallic taste.",
-	"earth": "It has a sharp taste of ancient musty dirt.",
-	"flesh": "Yuck!",
-	"freshwater": "It tastes crisp and pure.",
-	"glass": "It has little taste.",
-	"grass": "It tastes like grass.",
-	"iron": "It tastes like iron.",
-	"mud": "It is wet and pungent, tasting mildly of dirt.",
-	"mudwater": "It tastes dank and dirty.",
-	"oil": "It tastes oily.",
-	"rust": "It tastes like dirty iron.",
-	"saltwater": "It tastes salty and foamy.",
-	"soil": "It has a deep and full fresh earthy taste.",
-	"steel": "It has a slightly metallic taste.",
-	"stone": "It has a dull taste of chalk and lime.",
-	"urine": "It tastes acrid and bitter.",
-	"water": "It doesn't taste like much.",
-	"wood": "It doesn't taste like much.",
-}
+# game objects store only their composition string; the Material it names is
+# looked up at call time (via material() or GameObject.material()), so
+# composition changes from mixing or brewing are always reflected, and saves
+# never store Material objects
+@dataclass(frozen=True,kw_only=True)
+class Material:
+	name: str
+	# relative mass per unit of size; an object's size is its weight//density
+	density: int = 1
+	# liquids form Plashes, immerse objects, and can be drunk
+	liquid: bool = False
+	# transparent compositions can be seen through (no hiding inside/behind)
+	transparent: bool = False
+	# shatterable compositions scatter into Shards when they break
+	shatterable: bool = False
+	# how reactive this material is to fire and force, from 0 to 10:
+	# 0 = inert (cannot burn or react at all)
+	# 1-5 = flammable (a single fire hit of 25 - 5*volatility damage
+	#       triggers its ignite effects, so 5 ignites from any fire at all;
+	#       impact never triggers)
+	# 6-10 = explosive (any fire triggers ignite; a single blunt hit of
+	#        100 - 20*(volatility-5) damage triggers its impact effects)
+	volatility: int = 0
+	# if either sense is omitted, it is derived from the other at init;
+	# materials with neither get nondescript defaults, as does texture
+	taste: str = None
+	scent: str = None
+	texture: str = None
+	# tuples of effect descriptors (effectName, *args) naming Effects.py
+	# functions, run when something of this material is consumed, drenched
+	# onto a target, touched, ignited, struck hard, unsealed, or broken
+	consume: tuple = ()
+	drench: tuple = ()
+	touch: tuple = ()
+	ignite: tuple = ()
+	impact: tuple = ()
+	expose: tuple = ()
+	onBreak: tuple = ()
+
+	def __post_init__(self):
+		for trigger in ("consume","drench","touch","ignite","impact","expose",
+		"onBreak"):
+			val = getattr(self,trigger)
+			assert isinstance(val,tuple) and all(
+				isinstance(d,tuple) and d and isinstance(d[0],str) for d in val), \
+				f"Material '{self.name}' {trigger} must be a canonical " \
+				f"tuple of descriptors"
+		if self.taste is None and self.scent is not None:
+			object.__setattr__(self,"taste",smellToTaste(self.scent))
+		if self.scent is None and self.taste is not None:
+			object.__setattr__(self,"scent",tasteToSmell(self.taste))
+		if self.taste is None:
+			object.__setattr__(self,"taste","It doesn't taste like much in particular.")
+		if self.scent is None:
+			object.__setattr__(self,"scent","It doesn't smell like anything specific.")
+		if self.texture is None:
+			if self.liquid:
+				object.__setattr__(self,"texture","It feels wet.")
+			else:
+				object.__setattr__(self,"texture","It feels completely featureless.")
+
+	# look up the shared Material record for a composition string
+	# unregistered compositions resolve to ylem, the formless default material
+	@classmethod
+	def get(cls,name):
+		return materials.get(name,DEFAULT_MATERIAL)
+
+	# the single fire hit damage required to trigger this material's ignite
+	# effects, or None if it cannot burn (volatility 0)
+	def igniteThreshold(self):
+		if self.volatility == 0:
+			return None
+		return max(1,25 - 5*self.volatility)
+
+	# the single blunt hit damage required to trigger this material's impact
+	# effects, or None if it does not react to force (volatility 5 and under)
+	def impactThreshold(self):
+		if self.volatility <= 5:
+			return None
+		return max(1,100 - 20*(self.volatility-5))
 
 
-textures = {
-	"bread": "It is soft and fluffy.",
-	"brick": "It feels flat and gritty.",
-	"earth": "It feels dry and crumbly.",
-	"flesh": "It feels soft and fleshy.",
-	"freshwater": "It feels cold and wet.",
-	"glass": "It is very smooth.",
-	"grass": "It feels soft and grassy.",
-	"iron": "It feels smooth and sturdy.",
-	"mud": "It feels wet and sticky.",
-	"mudwater": "It feels wet and slightly slimy.",
-	"oil": "It feels wet and oily.",
-	"python": "It feels smooth and scaly. Ew.",
-	"rust": "It feels rough.",
-	"saltwater": "It feels wet and foamy.",
-	"soil": "It feels loamy and moist.",
-	"steel": "It feels smooth and sturdy.",
-	"stone": "It feels slighty rough and very solid.",
-	"water": "It feels wet.",
-	"wood": "It feels like a hard sturdy wood.",
-}
+# the single source of truth for material properties, keyed by material name
+materials = {m.name: m for m in (
+	Material(name="acid",liquid=True,taste="It tastes painful... Ouch!"),
+	Material(name="air",transparent=True),
+	Material(name="black potion",liquid=True,volatility=9,taste="It tastes acrid, like smoke and saltpeter.",scent="It smells faintly of sulfur and char.",consume=(("damage",10,"x"),),ignite=(("explode","t"),),impact=(("explode","t"),)),
+	Material(name="blue potion",liquid=True,taste="It tastes cool and tingly, like a winter breeze.",consume=(("resurge",20),)),
+	Material(name="bread",taste="It tastes like fluffy dreams and joy.",texture="It is soft and fluffy."),
+	Material(name="brick",density=2,shatterable=True,taste="It tastes like dry gritty clay.",texture="It feels flat and gritty."),
+	Material(name="bronze",density=3,taste="It has a light metallic taste."),
+	Material(name="canvas",texture="It feels like coarse woven fabric."),
+	Material(name="ceramic",density=2,shatterable=True,texture="It feels smooth and almost squeaky."),
+	Material(name="cheese",taste="It tastes sharp, creamy, and divine.",scent="It has a pungent funk."),
+	Material(name="clay",density=2,texture="It feels dense and earthen."),
+	Material(name="cloth",texture="It feels soft and woven."),
+	Material(name="coffee",liquid=True,taste="It tastes bold, bitter, and invigorating.",scent="It has a rich, roasty aroma.",consume=(("impartStatus","invigorated",50),)),
+	Material(name="crystal",density=2,transparent=True,shatterable=True,texture="It feels smooth and solid."),
+	Material(name="earth",taste="It has a sharp taste of ancient musty dirt.",texture="It feels dry and crumbly."),
+	Material(name="energy"),
+	Material(name="fire",scent="It smells of smoke and char.",texture="It feels searingly hot!"),
+	Material(name="flesh",taste="Yuck!",scent="It smells a little like body odor.",texture="It feels soft and fleshy."),
+	Material(name="freshwater",liquid=True,taste="It tastes crisp and pure.",texture="It feels cold and wet."),
+	Material(name="glass",density=2,transparent=True,shatterable=True,taste="It has little taste.",texture="It is very smooth."),
+	Material(name="gold",density=4),
+	Material(name="grass",taste="It tastes like grass.",texture="It feels soft and grassy."),
+	Material(name="green potion",liquid=True,taste="It tastes sharp and herbaceous.",consume=(("impartStatus","swiftness",100),)),
+	Material(name="ice",transparent=True),
+	Material(name="iron",density=3,taste="It tastes like iron.",texture="It feels smooth and sturdy."),
+	Material(name="lava",density=2,liquid=True),
+	Material(name="lead",density=4,taste="It tastes sweet and metallic. Probably fine."),
+	Material(name="leather",texture="It feels tough and supple."),
+	Material(name="magic"),
+	Material(name="mud",taste="It is wet and pungent, tasting mildly of dirt.",texture="It feels wet and sticky."),
+	Material(name="mudwater",liquid=True,taste="It tastes dank and dirty.",texture="It feels wet and slightly slimy."),
+	Material(name="oil",liquid=True,volatility=4,taste="It tastes oily.",texture="It feels wet and oily.",ignite=(("areaStatus","burning",15),)),
+	Material(name="paper",texture="It feels thin and dry."),
+	Material(name="python",texture="It feels smooth and scaly. Ew."),
+	Material(name="red potion",liquid=True,taste="It tastes sweet and warm, like cherries and cinnamon.",consume=(("heal",20),)),
+	Material(name="rust",taste="It tastes like dirty iron.",texture="It feels rough."),
+	Material(name="saltwater",liquid=True,taste="It tastes salty and foamy.",texture="It feels wet and foamy."),
+	Material(name="sand",texture="It feels coarse and rough."),
+	Material(name="silver",density=4),
+	Material(name="slime",liquid=True),
+	Material(name="smoke",scent="It smells of noxious smoke."),
+	Material(name="soil",taste="It has a deep and full fresh earthy taste.",texture="It feels loamy and moist."),
+	Material(name="steel",density=3,taste="It has a slightly metallic taste.",texture="It feels smooth and sturdy."),
+	Material(name="stone",density=2,shatterable=True,taste="It has a dull taste of chalk and lime.",texture="It feels slighty rough and very solid."),
+	Material(name="urine",liquid=True,taste="It tastes acrid and bitter."),
+	Material(name="vegetable",taste="It tastes... nutritious",texture="It feels firm and fibrous."),
+	Material(name="void"),
+	Material(name="water",liquid=True,transparent=True,taste="It doesn't taste like much.",texture="It feels wet."),
+	Material(name="wicker",texture="It feels like woven dry reeds."),
+	Material(name="wine",liquid=True,taste="It tastes rich, fruity, and dry.",texture="It feels wet and slightly sticky."),
+	Material(name="wood",taste="It has a heady and slightly bitter taste.",texture="It feels like a hard sturdy wood."),
+	# ylem is the primordial undifferentiated substance; it is the material of
+	# anything whose composition is None or not registered here
+	Material(name="ylem"),
+)}
+# unregistered compositions resolve to ylem, the formless default material
+DEFAULT_MATERIAL = materials["ylem"]
+# objects with no composition are made of ylem as well
+materials[None] = DEFAULT_MATERIAL
+
 
 ### Celestial Descriptions:
 eclipseDesc = "The bold bronze sun is blackened by the ominous moon. The world is dark above and below but for the ring of violet light tracing the moon. Those golden lines of fire that scar the moon's surface seem like cracks through which the sun's rays seep faintly through. All is still in the heavens as they bear witness to this solemn union."

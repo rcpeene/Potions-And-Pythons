@@ -2,33 +2,33 @@ test
 
 \\ Positive status durations decrement and expire; permanent statuses remain
 \mbu self fleeting 2
-\mbu self enduring -1
-\chk player.hasStatus("fleeting",2)
+\mbu self enduring
+\chk player.hasStatus("fleeting",reqDuration=2)
 \exe game.passTime(1)
-\chk player.hasStatus("fleeting",1)
-\chk player.hasStatus("enduring",-1)
+\chk player.hasStatus("fleeting",reqDuration=1)
+\chk player.hasStatus("enduring",reqDuration=None)
 \exe game.passTime(1)
 \chk not player.hasStatus("fleeting")
-\chk player.hasStatus("enduring",-1)
+\chk player.hasStatus("enduring",reqDuration=None)
 \xpl enduring
 
 \\ Nonstacking statuses refuse duplicates and exact-duration removal preserves siblings
-\exe game.firstSingleClockAdded=player.addStatus("single clock",5,stackable=False,silent=True)
-\exe game.secondSingleClockAdded=player.addStatus("single clock",10,stackable=False,silent=True)
+\exe game.firstSingleClockAdded=player.addStatus("single clock",dur=5,allowStack=False,silent=True)
+\exe game.secondSingleClockAdded=player.addStatus("single clock",dur=10,allowStack=False,silent=True)
 \chk game.firstSingleClockAdded
 \chk not game.secondSingleClockAdded
-\chk player.hasStatus("single clock",5)
-\exe player.addStatus("split clock",5,silent=True)
-\exe player.addStatus("split clock",10,silent=True)
-\exe player.removeStatus("split clock",5,silent=True)
-\chk not player.hasStatus("split clock",5)
-\chk player.hasStatus("split clock",10)
+\chk player.hasStatus("single clock",reqDuration=5)
+\exe player.addStatus("split clock",dur=5,silent=True)
+\exe player.addStatus("split clock",dur=10,silent=True)
+\exe player.removeStatus("split clock",reqDuration=5,silent=True)
+\chk not player.hasStatus("split clock",reqDuration=5)
+\chk player.hasStatus("split clock",reqDuration=10)
 \exe player.removeStatus("single clock",silent=True)
 \exe player.removeStatus("split clock",silent=True)
 
 \\ Damaging conditions apply damage while active and stop after removal
 \set self hp 10000
-\mbu self poisoned -1
+\mbu self poisoned
 \exe game.beforePoison=player.hp
 \exe player.passTime(1)
 \chk player.hp < game.beforePoison
@@ -40,33 +40,33 @@ test
 \\ Hunger advances to starvation and clears after eating time is reset
 \exe game.time=player.lastAte+51+5*player.ENDR()
 \exe player.checkHungry()
-\chk player.hasStatus("hungry",-2)
+\chk player.hasStatus("hungry")
 \exe game.time=player.lastAte+101+10*player.ENDR()
 \exe player.checkHungry()
-\chk player.hasStatus("starving",-2)
-\chk not player.hasStatus("hungry",-2)
+\chk player.hasStatus("starving")
+\chk not player.hasStatus("hungry")
 \exe player.lastAte=game.time
 \exe player.checkHungry()
-\chk not player.hasAnyStatus("hungry","starving")
+\chk not player.hasStatus(("hungry","starving"))
 
 \\ Wakefulness advances to tired and fatigued, then clears after rest
 \exe game.time=player.lastSlept+151+20*player.ENDR()
 \exe player.lastAte=game.time
 \exe player.checkTired()
-\chk player.hasStatus("tired",-2)
+\chk player.hasStatus("tired")
 \exe game.time=player.lastSlept+301+40*player.ENDR()
 \exe player.lastAte=game.time
 \exe player.checkTired()
-\chk player.hasStatus("fatigued",-2)
-\chk not player.hasStatus("tired",-2)
+\chk player.hasStatus("fatigued")
+\chk not player.hasStatus("tired")
 \exe player.lastSlept=game.time
 \exe player.checkTired()
-\chk not player.hasAnyStatus("tired","fatigued")
+\chk not player.hasStatus(("tired","fatigued"))
 
 \\ Weariness is the stamina curse, distinct from ordinary tiredness
-\mbu self weariness -1
-\chk "weariness" in Data.curses
-\chk "tired" not in Data.curses
+\mbu self weariness
+\chk Data.StatusCondition.get("weariness").prefix == "curse of"
+\chk Data.StatusCondition.get("tired").prefix is None
 \chk player.STM() == 1
 \xpl weariness
 
@@ -76,14 +76,14 @@ test
 \exe player.lastAte=game.time
 \exe player.lastSlept=game.time
 \exe player.checkBreathing()
-\chk player.hasStatus("breathless",-2)
+\chk player.hasStatus("breathless")
 \exe game.time=player.ENDR()//2+1
 \exe player.checkBreathing()
-\chk player.hasStatus("drowning",-2)
-\chk not player.hasStatus("breathless",-2)
+\chk player.hasStatus("drowning")
+\chk not player.hasStatus("breathless")
 \exe player.lastBreathed=game.time
 \exe player.checkBreathing()
-\chk not player.hasAnyStatus("breathless","drowning")
+\chk not player.hasStatus(("breathless","drowning"))
 
 \\ Day and night select the expected persistent celestial bodies
 \exe game.time=0

@@ -52,32 +52,15 @@ class Bed(Core.Item):
 			if verb in ("stand","crouch","sit","lay"):
 				traverser.changePosture(verb)
 			if traverser.posture() == "laying" and \
-			not traverser.hasStatus("cozy",Data.COZY_BED):
-				traverser.addStatus("cozy",Data.COZY_BED)
+			not traverser.hasStatus("cozy",reqSource=self.id):
+				traverser.addStatus("cozy",source=self.id)
 		return True
 
 
 
+# Bottles are glass vessels; they shatter via Item.shatter when they break
 class Bottle(Core.Item):
-	def breaks(self):
-		if self.id not in Core.game.itemRegistry:
-			return False
-		parent = self.parent
-		if self.durability == -1:
-			if not Core.game.silent:
-				Core.Print(f"{+self} cannot be broken.")
-			return False
-		self.Print(f"{+self} breaks.")
-		if self.weight > 2 and self.composition == "glass":
-			self.Print("Shards of glass scatter everywhere.",color="o")
-		while self.weight > 1 and self.composition == "glass":
-			shardWeight = randint(1,max(self.weight,4))
-			self.weight -= shardWeight
-			shard = Shard("glass shard","a sharp shard of glass",shardWeight,-1,"glass",
-			{"shard"})
-			Core.game.spawn(shard,parent)
-		self.destroy()
-		return True
+	pass
 
 
 
@@ -86,6 +69,12 @@ class Box(Core.Container):
 	def __init__(self,name,desc,weight,durability,composition,items,closed=False,**kwargs):
 		super().__init__(name,desc,weight,durability,composition,items,**kwargs)
 		self.closed = closed
+
+
+	# Boxes are hollow; size tracks weight directly rather than material density
+	def Size(self):
+		return Core.min1(self.weight)
+
 
 	def canPass(self,obj,silent=False):
 		if self.closed:
@@ -108,8 +97,8 @@ class Box(Core.Container):
 
 
 	def examine(self,looker):
-		if looker not in self.items:
-			self.open(looker,silent=True)
+		if self.closed and looker not in self.items:
+			return self.open(looker)
 		return super().examine(looker)
 
 
@@ -124,7 +113,7 @@ class Box(Core.Container):
 		self.closed = False
 		for elem in self.items:
 			if isinstance(elem,Core.Creature):
-				elem.removeStatus("hidden",Data.HIDDEN_CONTAINER)
+				elem.removeStatus("hidden",reqSource="CONTAINER")
 		for occupant in self.occupants():
 			occupant.fall()
 		if Core.player not in self.items and not silent:
@@ -136,9 +125,11 @@ class Box(Core.Container):
 	def close(self,closer):
 		self.closed = True
 		closer.Print(f"You close {-self}.")
-		for elem in self.items:
-			if isinstance(elem,Core.Creature):
-				elem.addStatus("hidden",Data.HIDDEN_CONTAINER)
+		# creatures remain visible through a transparent closed Box
+		if not self.material().transparent:
+			for elem in self.items:
+				if isinstance(elem,Core.Creature):
+					elem.addStatus("hidden",source="CONTAINER")
 		return True
 
 
@@ -401,8 +392,8 @@ class Mouth(Core.Item):
 class Plash(Core.Portal):
 
 	LIQUID_SIZES = {
-		"droplet":       2,
-		"driblet":       5,
+		"droplet":       1,
+		"driblet":       4,
 		"small puddle":  10,
 		"puddle":        20,
 		"large puddle":  30,
@@ -413,12 +404,12 @@ class Plash(Core.Portal):
 
 	def __init__(self,weight,name=None,desc=None,composition="freshwater",infinite=False,
 	occupyprep="on",links=None,capacity=None,**kwargs):
-		assert composition in Data.liquids
+		assert Data.Material.get(composition).liquid
 		if name is None:
-			name = next((name for name,limit in self.LIQUID_SIZES.items() \
-				if weight <= limit),list(self.LIQUID_SIZES)[-1])
+			name = composition
 		if desc is None:
-			desc = f"a {name} of {composition}"
+			desc = f"Some {composition}." if name == composition else \
+				f"A {name} of {composition}."
 		super().__init__(name,desc,weight,-1,composition,links or {},
 			capacity=capacity,passprep="in",fixed=True,**kwargs)
 		self.occupyprep = occupyprep
@@ -427,6 +418,7 @@ class Plash(Core.Portal):
 		self.aliases.append(self.composition)
 		if self.composition in ("freshwater","mudwater","saltwater"):
 			self.aliases.append("water")
+		self.updateAliases()
 
 
 	@property
@@ -471,6 +463,12 @@ class Plash(Core.Portal):
 		assert weight > 0 and weight <= self.weight-minimumWeight
 		if self.parent is not None:
 			self.printNearby(f"{+self.parent} overflows with {self.composition}!")
+			carrier = next((ancestor for ancestor in self.ancestors() \
+				if isinstance(ancestor,Core.Creature)),None)
+			if carrier is not None and \
+			not carrier.hasStatus("wet",reqSource="IMMERSED") and \
+			not carrier.hasStatus("wet",reqSource="SUBMERGED"):
+				carrier.addStatus("wet",dur=21)
 		composition = self.composition
 		self.drain(weight)
 		return Plash(weight,composition=composition)
@@ -486,6 +484,13 @@ class Plash(Core.Portal):
 		if self.parent is None or vacancy == -1:
 			return size
 		return self.parent.Capacity() * size // (size + vacancy)
+
+
+	# return the whole percentage of a finite parent occupied by this Plash
+	def fillPercent(self):
+		if self.parent is None or self.parent.Capacity() == -1:
+			return 0
+		return 100 * self.Size() // self.parent.Capacity()
 
 
 	# return whether this Plash can currently immerse a sibling object
@@ -527,6 +532,21 @@ class Plash(Core.Portal):
 		return self.parent.vacancy() > obj.Size() // 5
 
 
+	# Replace aliases derived from quantity while preserving authored aliases.
+	def updateAliases(self):
+		sizeNames = set(self.LIQUID_SIZES)
+		sizeWords = {name.split()[-1] for name in sizeNames}
+		sizeAliases = sizeNames | \
+			{f"{name} of {self.composition}" for name in sizeNames} | sizeWords
+		# remove old size-based aliases
+		self.aliases = [alias for alias in self.aliases if alias not in sizeAliases]
+		# determine sizeName based on self weight
+		sizeName = next((name for name,limit in self.LIQUID_SIZES.items() \
+			if self.weight <= limit),list(self.LIQUID_SIZES)[-1])
+		self.aliases.extend((sizeName,f"{sizeName} of {self.composition}",
+			sizeName.split()[-1]))
+
+
 	# return sibling objects currently immersed in this Plash
 	def immersedObjects(self):
 		if self.parent is None:
@@ -538,8 +558,31 @@ class Plash(Core.Portal):
 
 	# Surface occupants are described by describeImmersed(), not inline with the Plash.
 	def nounPhrase(self,det="",n=-1,plural=False,cap=0,includePosture=False):
-		return Core.GameObject.nounPhrase(self,det=det,n=n,plural=plural,cap=cap,
-			includePosture=includePosture)
+		inContainer = isinstance(self.parent,Core.Container)
+		sizeName = next((name for name,limit in self.LIQUID_SIZES.items() \
+			if self.weight <= limit),list(self.LIQUID_SIZES)[-1])
+		usesSizeName = inContainer or self.name == self.composition or \
+			self.name in self.LIQUID_SIZES
+
+		if det.lower() == "the":
+			phrase = f"the {self.name}"
+		elif inContainer and self.fillPercent() >= 10:
+			phrase = f"some {self.name}" if det == "a" or n >= 1 else self.name
+		elif usesSizeName:
+			if n > 1:
+				phrase = f"{n} {sizeName}s of {self.composition}"
+			elif plural:
+				phrase = f"{sizeName}s of {self.composition}"
+			elif det == "a" or n == 1:
+				phrase = f"a {sizeName} of {self.composition}"
+			else:
+				phrase = f"{sizeName} of {self.composition}"
+		else:
+			phrase = Core.GameObject.nounPhrase(self,det=det,n=n,plural=plural,
+				includePosture=includePosture)
+		if cap > 0:
+			phrase = Core.capWords(phrase,c=cap)
+		return phrase
 
 
 	# describe visible objects whose spatial relationship is owned by this liquid
@@ -617,7 +660,7 @@ class Plash(Core.Portal):
 		if occupant not in self.occupants():
 			return False
 		removed = super().disoccupy(occupant)
-		self.replaceStatus(("wet",Data.WET_LIQUID),("wet",21))
+		self.transferStatus("wet","IMMERSED",None,21)
 		return removed
 
 
@@ -638,13 +681,42 @@ class Plash(Core.Portal):
 
 		if self.weight <= 0:
 			return self.destroy()
+		self.updateAliases()
 
 		for obj in self.immersedObjects().copy():
 			obj.checkImmersion()
 
 
+	# infinite plashes tend toward their threshold mass
+	# finite plashes in a Room soak away after their despawn timer expires
+	def passTime(self,t):
+		assert not (self.infinite and self.despawnTimer is not None), \
+			f"Infinite Plash {self} cannot have a despawnTimer"
+		super().passTime(t)
+		if self.infinite:
+			if self.weight < self.infinite:
+				self.fill(1)
+			elif self.weight > self.infinite:
+				self.drain(1)
+			return
+		if self.despawnTimer is not None and self.despawnTimer <= 0 and \
+		isinstance(self.parent,Core.Room):
+			self.drain(1)
+
+
+	# a Plash lingers for as many moments as its weight when it lands in a Room
+	def timeDespawn(self):
+		self.despawnTimer = None if self.infinite else self.weight
+
+
 	# immerse the traverser in this Plash
 	def enter(self,traverser,verb=None):
+		if traverser.parent is not self.parent:
+			if self.parent in traverser.ancestors():
+				traverser.Print(f"You need to get out of {-traverser.parent} first.")
+			else:
+				traverser.Print(f"You need to be in {-self.parent} first.")
+			return False
 		anchor = traverser.anchor()
 		floor = getattr(self.parent,"floor",None)
 		if anchor not in (None,floor):
@@ -729,6 +801,7 @@ class Plash(Core.Portal):
 			quantity -= overflow
 
 		self.weight += quantity
+		self.updateAliases()
 		quantitySize = self.Size() - oldSize
 		if overflow:
 			self.printNearby(f"{self.parent} overflows!")
@@ -776,6 +849,7 @@ class Plash(Core.Portal):
 		elif self.capacity is not None and self.Capacity() != -1:
 			self.capacity = self.Capacity() + other.Capacity()
 		self.weight += other.weight
+		self.updateAliases()
 		self.infinite = self.infinite or other.infinite
 		self.aliases = list(set(self.aliases + other.aliases))
 
@@ -793,6 +867,8 @@ class Plash(Core.Portal):
 
 	# move to a specific parent and fluid while preserving compatible submersion
 	def transferImmersed(self,traverser,destinationParent,destinationFluid):
+		if not self.canPass(traverser):
+			return False
 		if destinationFluid is not destinationParent and \
 		destinationFluid.parent is not destinationParent:
 			return False
@@ -816,7 +892,7 @@ class Plash(Core.Portal):
 			if wasSubmerged and traverser.immersed is not None and \
 			traverser.immersed.canSubmerge(traverser):
 				if not traverser.hasStatus("submerged"):
-					traverser.addStatus("submerged",Data.SUBMERGED_LIQUID,
+					traverser.addStatus("submerged",source="IMMERSED",
 						silent=True)
 			return True
 
@@ -848,7 +924,7 @@ class Plash(Core.Portal):
 		if verb is None:
 			floorSupported = traverser.platform is getattr(self.parent,"floor",None)
 			if not self.canSubmerge(traverser) and floorSupported:
-				verb = "wade"
+				verb = "wade" if self.Capacity() > traverser.Size() else "stand"
 			elif traverser.canSwim(self):
 				verb = "swim"
 			else:
@@ -877,6 +953,9 @@ class Plash(Core.Portal):
 			if not traverser.canSwim(self):
 				traverser.Print(f"You can't go {dir}, you aren't able to swim!")
 				return False
+			if not self.canPass(traverser):
+				traverser.Print(f"You can't {verb} {dir}. {-self} is too shallow.")
+				return False
 			newLoc = self.getNewLocation(dir)
 			if not traverser.canChangeLocation(newLoc):
 				return False
@@ -900,7 +979,7 @@ class Plash(Core.Portal):
 		if immersed:
 			traverser.Print(f"{+self} does not go {dir}.",color="k")
 			return False
-		if dir in self.links:
+		if dir in self.links or dir in ("out",self.exitprep):
 			traverser.Print(f"You're not in {-self}.",color="k")
 			return False
 
@@ -948,26 +1027,6 @@ class Potion(Bottle):
 			if Core.hasMethod(obj,"drench"):
 				obj.drench(self)
 		self.replace("bottle")
-
-
-
-class Shard(Core.Item):
-	#???
-	def Cut(self,P):
-		# TODO: do something here?
-		Core.Print("[you cut something?]")
-
-
-	def Lick(self,licker):
-		if self.composition in ("glass","bronze","iron","steel"):
-			licker.Print("It tastes like... blood.")
-			licker.takeDamage(3,"s")
-			return True
-
-		if self.composition in Data.tastes:
-			licker.Print(Data.tastes[self.composition])
-		if self.composition in Data.scents:
-			licker.Print(Data.scents[self.composition].replace("scent","taste"))
 
 
 
@@ -1100,9 +1159,9 @@ class Wall(Core.Passage):
 		if traverser is Core.player or traverser in Core.player.anchors():
 			Core.waitInput()
 
-		if verb != "jump" or dir not in ("down","off") or traverser.hasAnyStatus("flying"):
+		if verb != "jump" or dir not in ("down","off") or traverser.hasStatus("flying"):
 			contest = Core.roll(traverser.ATHL()) - self.difficulty
-			if contest > 0 or traverser.hasAnyStatus("clingfast","flying","submerged"):
+			if contest > 0 or traverser.hasStatus(("clingfast","flying","submerged")):
 				traverser.changeLocation(newLoc)
 				return True
 
@@ -1183,8 +1242,7 @@ class Window(Core.Passage):
 		while self.weight > 2 and self.composition == "glass":
 			shardWeight = randint(1,3)
 			self.weight -= shardWeight
-			shard = Shard("glass shard","a sharp shard of glass",shardWeight,-1,"glass",
-			{"shard"})
+			shard = Core.Shard("glass",shardWeight)
 			Core.game.spawn(shard,Core.game.currentroom)
 		for occupant in self.occupants():
 			occupant.fall(room=self.getNewLocation())
@@ -1277,9 +1335,6 @@ class Door(Window):
 	def close(self,closer):
 		self.closed = True
 		closer.Print(f"You close {-self}.")
-		for elem in self.items:
-			if isinstance(elem,Core.Creature):
-				elem.addStatus("hidden",Data.HIDDEN_CONTAINER)
 		return True
 
 
@@ -1294,5 +1349,5 @@ factory = {
 	"puddle": lambda: Plash(randint(2,10),name="puddle",
 		desc="A small puddle of murky water.",composition="water"),
 	"red potion": lambda: Potion("red potion", "A bubbling red liquid in a glass bottle.",10,3,"glass",["bottle","glass","potion"],2),
-	"shard": lambda: Shard("glass shard","A small glass shard.",2,1,"glass",["shard"])
+	"shard": lambda: Core.Shard("glass",2)
 }

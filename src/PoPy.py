@@ -76,7 +76,7 @@ def main(testing=False):
 			Core.game.whoseTurn = creature
 			if creature.id not in Core.game.itemRegistry or creature.parent is None:
 				continue
-			if not creature.hasAnyStatus("asleep","dead"):
+			if not creature.hasStatus(("asleep","dead")):
 				if creature is Core.player:
 					# take user input until player successfully performs an action
 					while not Interpreter.interpret(): continue
@@ -112,27 +112,13 @@ if __name__ == "__main__":
 
 # WATER AND LIQUIDS
 
+
 # POURING, LEAKING, FILLING, DRAINING
 
-# we need to handle creatures obtaining liquid. Straightup liquids should probably-
-# not be allowed in inventories? What about a creature taking a barrel of wine, and then-
-# putting something in the barrel to casue overflow? 
-# The wine should displace out of the inventory
+# think about a broken water container or leaking/draining
 
 
-### we need a way to handle interactions with puddles within containers
-# What will you do?
-# > hit the chest
-# chest fist None
-# chest fist None None hand None
-# You can't attack the wooden chest, you're in the puddle.
-# What will you do?
-# > close the chest
-# You can't close the wooden chest, you're in the puddle.
-
-# "a puddle appeared!" even when chest is closed, make this sensitive to surroundings
-
-# make sure plashes in a barrel engulf/displace items in parent as they change size
+# MIXING LIQUIDS
 
 # pour multiple bottles of stuff into one pot
 	# will need to use a method 'merge'
@@ -142,19 +128,6 @@ if __name__ == "__main__":
 
 		# what about adding plashes to rooms already made of liquid?
 			# i guess this is the same as pouring a liquid out while in a plash
-
-# think about a broken water container or leaking/draining
-# if a plash is big enough in the room, have it leak out to another room?
-# replace plash 'finite' with an integer representing its infite weight
-	# if a plash is larger than this it will leak/shrink down to that weight
-
-
-# ctrl+e (or whatever clubs is) in cabin quarters yields
-# LEAVING ROOM gold wooden chest
-# REMOVING gold FROM wooden chest
-# TypeError: Cannot merge non-Serpens with Serpens
-
-# MIXING LIQUIDS
 
 # there is basic single-ingredient crafting (put one item into machine get some output)
 # there is mixture crafting (put multiple items, get some output)
@@ -171,11 +144,13 @@ if __name__ == "__main__":
 	# when not all ingredients are accounted for in crafting ingredients can specify defaults
 		# crafting will look for the highest priority ingredient that has a default and choose that recipe
 
-
 # add puddles, what about pouring liquid into plash? or adding plash to liquid room?
 # try to lick/taste/smell a liquid room
 
 # think about hiding, occupying pools. Items and Creatures.
+# add an alert() method called during alarming actions (attacking, shouting,
+	# singing, laughing, dancing, mounting); it should nullify most kinds of
+	# hidden (see the "TODO: add alert() here" sites in Interpreter.py)
 # test drinking an object when inv is full, see if bottle goes on ground
 # hide/get in a body of water?
 # "drink from the pond"
@@ -184,6 +159,13 @@ if __name__ == "__main__":
 
 # when checking if canAdd, allow for checking for intended posture, not current posture?
 # limit changePosture if theres not enough space?
+
+# consider cross-tick oscillation of derived statuses: a cascade pair that keeps
+	# undoing itself (onGain removes its own cause, onLoss restores it) would
+	# flicker a status on/off once per tick; if this ever bites, the remedy is to
+	# rerun the checks in flushStatusChecks until a pass changes nothing, with a
+	# record of which hooks already fired spanning that whole rerun (so each
+	# cascade acts once and the checks get the last word)
 
 ################################################################################
 
@@ -208,6 +190,7 @@ if __name__ == "__main__":
 # prevent softlock of rooms getting overcrowded with items so theres no vacancy
 	# if a room gets too full, maybe intelligently eject objects to nearby rooms during passTime, or despawn worthless items
 	# figure out what happens if theres a pit with no vacancy, and you fall into it. Do you get destroyed by displace()?
+	# if a plash is big enough in the room, have it leak out to another room?
 # support one-way portals and multi-way portals? (several portals are are fully connected)
 
 # test "put on hat" and "put hat on"
@@ -227,6 +210,10 @@ if __name__ == "__main__":
 # handle case when trying to Heft a creature thats already being carried,
 	# warn player and ask if they want to proceed before the unequip everything
 	# contest with enemy carrier?
+# carried creatures should no longer be forced to start restrained;
+	# an unrestrained carried creature that moves apart from its carrier just
+	# terminates the carry relationship; for the player, prompt:
+	# "You are being carried by {carrier}. Want to get down?"
 # do a name query for plurals; if user tries to input plural; then chooseObject?
 # add possession? (so you can say 'break goblin's sword', 'take his food')... these could be easily restructured as "break sword from goblin", "take food from him"
 	# 'take goblins sword from him'
@@ -235,7 +222,12 @@ if __name__ == "__main__":
 # when catching, drop it if it inventory is full?
 
 # RANGED AND IMPACT
-# readjust throw force formula; compare to BRDN (shouldn't be able to throw heavier than you can have in inv, or more than you can carry in hands?
+# consider if the player was super small, should they be prevented from getting on the table 
+	# due to size?
+	# probably if you're less than 1/10th the size of something then you need to be able to climb it-
+	# in order to occupy it?
+
+# readjust throw force formula; compare to STR or ATHL (shouldn't be able to throw heavier than you can have in inv, or more than you can carry in hands?
 # check if throwing a creature which has another riding it?
 # knock stuff off of a table if it takes impact?
 # add in projectile weapons?
@@ -265,6 +257,12 @@ if __name__ == "__main__":
 # add new weapons
 
 # LOOKING AND HIDING
+# THINGS THAT WE MAY WANT TO CONCEAL/SHOW BASED ON INVS:
+	# small plashes, like droplets of wine
+	# perhaps other small items?
+	# of course covered objects/creatures
+	# consider how glass objects work. can you look in/out of them when closed?
+	# does glass work for cover? what about clear liquids?
 # don't print contents of a container unless its open, and only open them when given "look in" rather than "look at"
 # add room property which is description of directions ("look up", "look east", "look out", etc.)
 # try "boom" effect. It will only effect current room/container (unless container breaks or is open?)
@@ -272,6 +270,15 @@ if __name__ == "__main__":
 # restrict Read to readable objects?
 # determine when to print addStatus messages and removeStatus messages for creatures/items
 # if describing something in own inventory, also print the lore tip in grey (or other color)
+# Consider blindness
+	# how would player even navigate rooms? They'd enter the room, see the room name-
+		# and maybe get a brief or random summary of the smell and sound of things in the room?
+		# could have a func which picks a few things and gets their smell or sound
+		# BUT THEN, how will they input what they want to interact with......
+			# just like 'go towards the smell?' 'attack forward'?
+	# if we do blindness, every message would need an alternate message
+	# either no message at all, or a message describing its sound or smell
+	# some messages me of course appear both when blind or sighted.
 # make items have an invisibility property? but what about if a missed projectile hits something invisible?
 # make player.aware(I) method, which instead of using currentroom, checks if I in player.surroundings.objTree
 	# replace references to currentroom with player.parent when needed
@@ -281,6 +288,14 @@ if __name__ == "__main__":
 # add 'floating' to objects descname that are floating
 # decide whether compressed occupant descriptions may conceal creatures among "things";
 	# examining reveals them but consumes a turn, potentially letting those creatures attack
+# do we always want to tell player that they can use an object for something? for instance,
+	# > get in
+	# 1. cracked mirror
+	# 2. wine cask
+	# What will you get in?
+	#
+	# This reveals that the mirror is a portal; 
+	# 	information to the player they otherwise would not have had
 
 # TIME AND SLEEP
 # make sinceLastAte, sinceLast actual meters like hungriness and sleepiness, that rise or decay
@@ -301,6 +316,7 @@ if __name__ == "__main__":
 # add a coin purse? which holds your money? required to collect money?
 # make a list of all possible uses and inputs for each action and systematically test them. Revise the world to accomodate them
 # upgrade the text crawl in the title to resemble a snake
+# create a curated list of verbs commands to show and separate out the complete list
 
 # CRAFTING
 # add in crafting recipes. Probably store this as a JSON?
@@ -335,13 +351,11 @@ if __name__ == "__main__":
 	# however, just having experiences cannot
 		# update most descriptive flavor texts and stats info
 
-
-# fill out glossary more, change definitions of some things to be more expository and fantastical
-# add knowledge/intelligence value for glossary, 
-# player only knows something if the term is in their "knowledge" set or their KNWL fits the requirement
-# perhaps don't allow crafting certain things without it in their glossary?
-# or add items to glossary through trial and error in crafting?
-# create a curated list of verbs commands to show and separate out the complete list
+	# fill out glossary more, change definitions of some things to be more expository and fantastical
+	# add knowledge/intelligence value for glossary, 
+	# player only knows something if the term is in their "knowledge" set or their KNWL fits the requirement
+	# perhaps don't allow crafting certain things without it in their glossary?
+	# or add items to glossary through trial and error in crafting?
 
 # DIALOGUE
 # allow for conditional replies. If both cases and replies are defined, only show replies whose cases are met

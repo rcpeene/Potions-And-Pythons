@@ -9,7 +9,7 @@ test
 \exe Core.roll=lambda sides,modifier=0:1+modifier
 
 \\ Lob an inventory Item at an object target
-\spn Core.Creature("dummy","A patient target dummy with unusually deep reserves.",100,[1]*10,hp=10000,status=[["tamed",-1]])
+\spn Core.Creature("dummy","A patient target dummy with unusually deep reserves.",100,[1]*10,hp=10000,status=[["tamed"]])
 \spn Core.Item("dart","A dart eager to become somebody else's problem.",4,-1,"iron")
 take dart
 \lob dart dummy
@@ -18,7 +18,7 @@ take dart
 \chk fo("dummy",queryType="room").hp < 10000
 
 \\ Lob a carried Creature and clear every carrying slot
-\spn Core.Creature("captive","A compact captive bracing for unconventional travel.",4,[1]*10,status=[["tamed",-1]])
+\spn Core.Creature("captive","A compact captive bracing for unconventional travel.",4,[1]*10,status=[["tamed"]])
 take captive
 \chk fo("captive",queryType="room").carrier is player
 \lob captive dummy
@@ -27,8 +27,8 @@ take captive
 \chk all(player[slot] is not fo("captive",queryType="room") for slot in player.carrySlots)
 
 \\ Lob a riding Creature and clear its riding tether
-\spn Core.Creature("pony","A pony serving briefly as launch infrastructure.",80,[10]*10,status=[["tamed",-1]])
-\spn Core.Creature("jockey","A jockey discovering an obscure clause in the job description.",4,[1]*10,status=[["tamed",-1]])
+\spn Core.Creature("pony","A pony serving briefly as launch infrastructure.",80,[10]*10,status=[["tamed"]])
+\spn Core.Creature("jockey","A jockey discovering an obscure clause in the job description.",4,[1]*10,status=[["tamed"]])
 take jockey
 put jockey on pony
 \chk fo("jockey",queryType="room").riding is fo("pony",queryType="room")
@@ -56,9 +56,9 @@ go north
 \chk fo("northstone",queryType="room").platform is player.parent.floor
 
 \\ Homing and calamity can ricochet back to the launcher, who catches it
-\spn Core.Creature("homingdummy","A nimble dummy that sends enchanted missiles home.",30,[1000]*10,hp=10000,status=[["tamed",-1]])
-\spn Core.Item("seeker","A missile enchanted to miss in a highly intentional manner.",4,-1,"iron",status=[["homing",-1]])
-\mbu self calamity -1
+\spn Core.Creature("homingdummy","A nimble dummy that sends enchanted missiles home.",30,[1000]*10,hp=10000,status=[["tamed"]])
+\spn Core.Item("seeker","A missile enchanted to miss in a highly intentional manner.",4,-1,"iron",status=[["homing"]])
+\mbu self calamity
 take seeker
 throw seeker at homingdummy
 yes
@@ -68,8 +68,8 @@ yes
 
 \\ A forced miss has a valid launcher and can ricochet into a selected victim
 \tpt cabin basement
-\spn Core.Creature("missdummy","A dummy positioned to be missed with confidence.",30,[1000]*10,hp=10000,status=[["tamed",-1]])
-\spn Core.Creature("victim","A volunteer wearing the curse of narrative inevitability.",30,[1]*10,hp=10000,status=[["tamed",-1],["calamity",-1]])
+\spn Core.Creature("missdummy","A dummy positioned to be missed with confidence.",30,[1000]*10,hp=10000,status=[["tamed"]])
+\spn Core.Creature("victim","A volunteer wearing the curse of narrative inevitability.",30,[1]*10,hp=10000,status=[["tamed"],["calamity"]])
 \spn Core.Item("boomerang","A boomerang with only a theoretical understanding of returning.",4,-1,"wood")
 take boomerang
 throw boomerang at missdummy
@@ -129,7 +129,7 @@ throw throwanvil at dummy
 \chk fo("throwanvil",queryType="room").platform is player.parent.floor
 
 \\ A flying missile remains unsupported after launch instead of falling
-\spn Core.Item("papercrane","A paper crane taking the projectile designation personally.",1,-1,"paper",status=[["flying",-1]])
+\spn Core.Item("papercrane","A paper crane taking the projectile designation personally.",1,-1,"paper",status=[["flying"]])
 take papercrane
 throw papercrane at dummy
 \chk fo("papercrane",queryType="room").parent is player.parent

@@ -3,7 +3,7 @@ test
 
 \\ Minimal combat smoke test pending the combat overhaul
 \spn Core.Weapon("practice sword","A plain sword reserved for basic combat wiring.",4,100,"iron",3,2,1,1,"s")
-\spn Core.Creature("practice dummy","A durable dummy waiting for combat to become more elaborate.",30,[1]*10,hp=10000,status=[["tamed",-1],["laying",-1]])
+\spn Core.Creature("practice dummy","A durable dummy waiting for combat to become more elaborate.",30,[1]*10,hp=10000,status=[["tamed"],["laying"]])
 take practice sword
 equip practice sword
 attack practice dummy with practice sword

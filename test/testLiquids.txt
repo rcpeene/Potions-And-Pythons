@@ -20,60 +20,62 @@ out
 swim in brook
 \chk player.parent is world["babbling brook"]
 \chk player.immersed is fo("brook",queryType="room")
-\chk player.hasStatus("wet",Data.WET_LIQUID)
-\chk sum(status == ["wet",Data.WET_LIQUID] for status in player.status) == 1
+\chk player.hasStatus("wet",reqSource="IMMERSED")
+\chk sum(status == ["wet","IMMERSED",None] for status in player.status) == 1
 swim in brook
-\chk sum(status == ["wet",Data.WET_LIQUID] for status in player.status) == 1
+\chk sum(status == ["wet","IMMERSED",None] for status in player.status) == 1
 go out
 \chk player.immersed is None
 \chk player.platform is player.parent.floor
-\chk player.hasStatus("wet",20)
+\chk player.hasStatus("wet",reqDuration=20)
 
 \\ A swimmer can submerge and emerge without leaving the Plash
 swim in brook
 swim down
 \chk player.immersed is fo("brook",queryType="room")
-\chk player.hasStatus("submerged",Data.SUBMERGED_LIQUID)
+\chk player.hasStatus("submerged",reqSource="IMMERSED")
 swim up
 \chk player.immersed is fo("brook",queryType="room")
 \chk not player.hasStatus("submerged")
 go out
 
-\\ Shallow liquid permits immersion but refuses submersion
+\\ A Plash too shallow to submerge the swimmer refuses entry
 \spn Items.Plash(20,name="shallow basin",desc="A basin made for wet ankles and little else.",composition="freshwater",capacity=20)
 swim in shallow basin
-swim down
-\chk player.immersed is fo("shallow basin",queryType="room")
+\chk player.immersed is None
 \chk not player.hasStatus("submerged")
-go out
 
 \\ Taking an immersed Item clears its spatial immersion tether
 \spn Core.Item("soaked token","A token resting beneath the water.",2,-1,"iron")
-\exe fo("soaked token",queryType="room").immerse(fo("shallow basin",queryType="room"),silent=True)
+\exe fo("soaked token",queryType="room").immerse(fo("brook",queryType="room"),silent=True)
+swim in brook
 take soaked token
 \chk fo("soaked token",queryType="player").parent is player
 \chk fo("soaked token",queryType="player").immersed is None
+go out
 \spn Core.Item("large shallow marker","A large marker used to test shallow Item immersion.",80,-1,"iron")
 \exe fo("large shallow marker",queryType="room").immerse(fo("shallow basin",queryType="room"),silent=True)
 \chk fo("large shallow marker",queryType="room").immersed is fo("shallow basin",queryType="room")
-\chk not fo("large shallow marker",queryType="room").hasStatus("submerged",Data.SUBMERGED_LIQUID)
+\chk not fo("large shallow marker",queryType="room").hasStatus("submerged",reqSource="IMMERSED")
 
 \\ Item submersion derives from fluid depth and support depth
 \spn Items.Plash(200,name="item test pool",composition="freshwater",capacity=200)
+\chk Core.Item("equal density marker","",1,-1,"wood").canSwim("freshwater")
+\chk not Core.Item("dense marker","",1,-1,"stone").canSwim("freshwater")
 \spn Core.Item("floating marker","A marker used to test unsupported immersion.",2,-1,"iron")
 \exe marker = fo("floating marker",queryType="room"); marker.platform = None; marker.immerse(fo("item test pool",queryType="room"),silent=True)
 \chk fo("floating marker",queryType="room").immersed is fo("item test pool",queryType="room")
-\chk not fo("floating marker",queryType="room").hasStatus("submerged",Data.SUBMERGED_LIQUID)
+\chk not fo("floating marker",queryType="room").hasStatus("submerged",reqSource="IMMERSED")
 \spn Core.Item("bottom marker","A marker used to test bottom support.",2,-1,"iron")
 \exe bottom = fo("bottom marker",queryType="room"); bottom.immerse(fo("item test pool",queryType="room"),silent=True)
 \chk fo("bottom marker",queryType="room").platform is fo("item test pool",queryType="room").floor
-\chk fo("bottom marker",queryType="room").hasStatus("submerged",Data.SUBMERGED_LIQUID)
+\chk fo("bottom marker",queryType="room").hasStatus("submerged",reqSource="IMMERSED")
 \spn Core.Item("nested marker","A marker used to test nested support.",2,-1,"iron")
 \exe nested = fo("nested marker",queryType="room"); nested.platform = fo("bottom marker",queryType="room"); nested.immerse(fo("item test pool",queryType="room"),silent=True)
-\chk fo("nested marker",queryType="room").hasStatus("submerged",Data.SUBMERGED_LIQUID)
+\chk fo("nested marker",queryType="room").hasStatus("submerged",reqSource="IMMERSED")
 \exe bottom = fo("bottom marker",queryType="room"); nested = fo("nested marker",queryType="room"); bottom.platform = None; bottom.checkSubmersion(); nested.checkSubmersion()
-\chk not fo("bottom marker",queryType="room").hasStatus("submerged",Data.SUBMERGED_LIQUID)
-\chk not fo("nested marker",queryType="room").hasStatus("submerged",Data.SUBMERGED_LIQUID)
+\chk not fo("bottom marker",queryType="room").hasStatus("submerged",reqSource="IMMERSED")
+\chk not fo("nested marker",queryType="room").hasStatus("submerged",reqSource="IMMERSED")
 
 \\ Crowding blocks emergence until removing an obstruction creates headspace
 \spn Items.Box("crowded tank","A close-fitting tank with little room above the water.",20,-1,"iron",[Items.Plash(80,name="tank water",composition="freshwater",capacity=200),Core.Item("underwater ledge","A low ledge beneath the waterline.",20,-1,"stone")],capacity=120)
@@ -85,9 +87,9 @@ stand on dry tank rim
 \chk player.platform is None
 \chk player.immersed is fo("tank water",queryType="room")
 stand on underwater ledge
-\chk player.hasStatus("submerged",Data.SUBMERGED_LIQUID)
+\chk player.hasStatus("submerged",reqSource="IMMERSED")
 swim up
-\chk player.hasStatus("submerged",Data.SUBMERGED_LIQUID)
+\chk player.hasStatus("submerged",reqSource="IMMERSED")
 \exe fo("underwater ledge",queryType="room",roomD=3).destroy()
 swim up
 \chk not player.hasStatus("submerged")
@@ -99,16 +101,17 @@ exit
 \chk fo("big mossy rock",queryType="room") in player.parent.items
 \chk fo("big mossy rock",queryType="room").platform is player.parent.floor
 \chk fo("big mossy rock",queryType="room").immersed is fo("pond",queryType="room")
-\chk fo("big mossy rock",queryType="room").hasStatus("submerged",Data.SUBMERGED_LIQUID)
+\chk fo("big mossy rock",queryType="room").hasStatus("submerged",reqSource="IMMERSED")
 stand on broad bank shrub
 get in pond
 \chk player.platform is fo("broad bank shrub",queryType="room")
 \chk player.immersed is None
 stand on floor
-\spn Core.Item("surfaced pond rock","A broad rock fixed at the pond surface.",20,-1,"wood",fixed=True)
+\spn Core.Item("surfaced pond rock","A broad rock fixed at the pond surface.",40,-1,"wood",fixed=True)
 \exe rock = fo("surfaced pond rock",queryType="room"); rock.platform = None; rock.immerse(fo("pond",queryType="room"),silent=True)
 \chk fo("surfaced pond rock",queryType="room").immersed is fo("pond",queryType="room")
-\chk not fo("surfaced pond rock",queryType="room").hasStatus("submerged",Data.SUBMERGED_LIQUID)
+\chk not fo("surfaced pond rock",queryType="room").hasStatus("submerged",reqSource="IMMERSED")
+get in pond
 stand on surfaced pond rock
 \chk player.platform is fo("surfaced pond rock",queryType="room")
 \chk player.immersed is None
@@ -117,15 +120,15 @@ get in pond
 \chk player.platform is fo("surfaced pond rock",queryType="room")
 \chk player.immersed is None
 \exe rock = fo("surfaced pond rock",queryType="room"); rock.platform = rock.immersed.floor; rock.checkSubmersion()
-\chk fo("surfaced pond rock",queryType="room").hasStatus("submerged",Data.SUBMERGED_LIQUID)
+\chk fo("surfaced pond rock",queryType="room").hasStatus("submerged",reqSource="IMMERSED")
 \chk player.platform is None
 \chk player.immersed is fo("pond",queryType="room")
-\chk not player.hasStatus("submerged",Data.SUBMERGED_LIQUID)
+\chk not player.hasStatus("submerged",reqSource="IMMERSED")
 stand on floor
 stand on big mossy rock
 \chk player.platform is fo("big mossy rock",queryType="room")
 \chk player.immersed is fo("pond",queryType="room")
-\chk player.hasStatus("submerged",Data.SUBMERGED_LIQUID)
+\chk player.hasStatus("submerged",reqSource="IMMERSED")
 \chk player.position() == "standing in the pond on the big mossy rock"
 get in pond
 \chk player.platform is fo("big mossy rock",queryType="room")
@@ -139,6 +142,10 @@ stand on surfaced pond rock
 stand on floor
 get in pond
 stand on broad bank shrub
+\chk player.platform is None
+\chk player.immersed is fo("pond",queryType="room")
+go out
+stand on broad bank shrub
 \chk player.platform is fo("broad bank shrub",queryType="room")
 \chk player.immersed is None
 stand on floor
@@ -147,7 +154,7 @@ swim down
 stand on big mossy rock
 \chk player.platform is fo("big mossy rock",queryType="room")
 \chk player.immersed is fo("pond",queryType="room")
-\chk player.hasStatus("submerged",Data.SUBMERGED_LIQUID)
+\chk player.hasStatus("submerged",reqSource="IMMERSED")
 \TPT babbling brook
 
 \\ Linked Plashes transfer both immersion and submersion
@@ -157,17 +164,17 @@ swim east
 \chk player.parent is world["pond"]
 \chk player.immersed is fo("pond",queryType="room")
 \chk fo("pond",queryType="room").floor is world["pond"].floor
-\chk player.hasStatus("submerged",Data.SUBMERGED_LIQUID)
+\chk player.hasStatus("submerged",reqSource="IMMERSED")
 swim west
 \chk player.parent is world["babbling brook"]
 \chk player.immersed is fo("brook",queryType="room")
-\chk player.hasStatus("submerged",Data.SUBMERGED_LIQUID)
+\chk player.hasStatus("submerged",reqSource="IMMERSED")
 
 \\ A failed linked descent leaves every physical state unchanged
 swim down
 \chk player.parent is world["babbling brook"]
 \chk player.immersed is fo("brook",queryType="room")
-\chk player.hasStatus("submerged",Data.SUBMERGED_LIQUID)
+\chk player.hasStatus("submerged",reqSource="IMMERSED")
 swim up
 go out
 
@@ -182,7 +189,7 @@ swim in source water
 swim east
 \chk player.parent is fo("source tank",queryType="room")
 \chk player.immersed is fo("source water",queryType="room",roomD=3)
-\chk player.hasStatus("wet",Data.WET_LIQUID)
+\chk player.hasStatus("wet",reqSource="IMMERSED")
 go out
 exit
 
@@ -193,7 +200,7 @@ exit
 go down
 \chk player.parent is world["seafloor"]
 \chk player.immersed is world["seafloor"]
-\chk player.hasStatus("submerged",Data.SUBMERGED_LIQUID)
+\chk player.hasStatus("submerged",reqSource="IMMERSED")
 \spn Core.Item("underwater perch","A support used to test underwater mounting.",10,-1,"stone")
 stand on underwater perch
 \chk player.platform is fo("underwater perch",queryType="room")
@@ -212,6 +219,9 @@ stand on floor
 stand on underwater perch
 \chk player.platform is fo("underwater perch",queryType="room")
 stand on floor
+\chk player.platform is None
+\chk player.position() == "floating"
+stand on floor
 \chk player.platform is world["seafloor"].floor
 swim up
 \chk player.parent is world["seacoast"]
@@ -221,7 +231,7 @@ swim up
 
 \\ Flying avoids a liquid floor but remains immersed in a liquid Room
 \tpt white beach
-\mbu self flying -1
+\mbu self flying
 \tpt open sea
 \chk player.immersed is None
 \chk player.platform is None
@@ -234,7 +244,7 @@ go down
 
 \\ Waterwalking uses the Plash as a platform until the status ends
 \tpt babbling brook
-\mbu self waterwalking -1
+\mbu self waterwalking
 swim in brook
 \chk player.immersed is None
 \chk player.platform is player.parent.floor
@@ -251,7 +261,7 @@ lay on brook
 go out
 
 \\ Waterwalking cannot create dry space inside a liquid Room
-\mbu self waterwalking -1
+\mbu self waterwalking
 \TPT open sea
 \chk player.platform is player.parent.floor
 \chk player.position() == "standing on the surface"
@@ -259,12 +269,12 @@ swim down
 \chk player.platform is player.parent.floor
 \chk player.immersed is None
 go down
-\chk player.parent is world["seacoast"]
+\chk player.parent is world["open sea"]
 \chk player.platform is player.parent.floor
 \chk player.immersed is None
 \tpt seafloor
 \chk player.immersed is world["seafloor"]
-\chk player.hasStatus("submerged",Data.SUBMERGED_LIQUID)
+\chk player.hasStatus("submerged",reqSource="IMMERSED")
 swim up
 \chk player.parent is world["seacoast"]
 \chk player.immersed is None
@@ -274,24 +284,21 @@ swim up
 
 \\ A non-swimmer sinks through a liquid floor without ordinary fall damage
 \set self hp 1000
-\set self str 0
-\set self skl 0
-\set self spd 0
-\set self stm 0
+\exe game.savedWeight = player.weight
+\set self weight 150
 \tpt open sea
-\chk player.hasStatus("submerged",Data.SUBMERGED_LIQUID)
+\chk not player.canSwim()
+\chk player.hasStatus("submerged",reqSource="IMMERSED")
+wait
 wait
 \chk player.parent is world["seafloor"]
 \chk player.platform is world["seafloor"].floor
 \chk player.hp == 1000
-\set self str 4
-\set self skl 4
-\set self spd 4
-\set self stm 4
+\exe player.weight = game.savedWeight
 \tpt babbling brook
 
 \\ Carried creatures follow the player's immersion while the player is submerged
-\spn Core.Creature("water mouse","A mouse prepared to be held above the water whenever possible.",1,[1]*10,status=[["tamed",-1]])
+\spn Core.Creature("water mouse","A mouse prepared to be held above the water whenever possible.",1,[1]*10,status=[["tamed"]])
 take water mouse
 swim in brook
 \chk player.carrying()[0].immersed is None
@@ -310,20 +317,26 @@ drop water mouse
 \chk fo("water mouse",queryType="room").immersed is fo("brook",queryType="room")
 take water mouse
 go out
+\exe game.mouse = fo("water mouse",queryType="player")
 \TPT pond
+\exe game.mouse.changeLocation(player.parent,silent=True)
+take water mouse
 stand on broad bank shrub
 drop water mouse
 \chk fo("water mouse",queryType="room").platform is fo("broad bank shrub",queryType="room")
 \chk fo("water mouse",queryType="room").immersed is None
 take water mouse
 stand on floor
+get in pond
 stand on surfaced pond rock
 drop water mouse
 \chk fo("water mouse",queryType="room").platform is fo("surfaced pond rock",queryType="room")
 \chk fo("water mouse",queryType="room").immersed is None
 take water mouse
 stand on floor
+get in pond
 stand on big mossy rock
+crouch
 drop water mouse
 \chk fo("water mouse",queryType="room").platform is fo("big mossy rock",queryType="room")
 \chk fo("water mouse",queryType="room").immersed is fo("pond",queryType="room")
@@ -336,8 +349,8 @@ drop water mouse
 \TPT babbling brook
 
 \\ A rider follows a mount into and back out of deep liquid
-\spn Core.Creature("river horse","A compact horse entirely untroubled by deep water.",49,[20]*10,status=[["tamed",-1]])
-\spn Core.Creature("saddle mouse","A mouse assigned to travel in the horse's care.",1,[1]*10,status=[["tamed",-1]])
+\spn Core.Creature("river horse","A compact horse entirely untroubled by deep water.",49,[20]*10,status=[["tamed"]])
+\spn Core.Creature("saddle mouse","A mouse assigned to travel in the horse's care.",1,[1]*10,status=[["tamed"]])
 \exe fo("river horse",queryType="room").Heft(fo("saddle mouse",queryType="room"),silent=True)
 ride river horse
 go in brook
@@ -347,7 +360,7 @@ go in brook
 \chk fo("saddle mouse",queryType="room").carrier is player.riding
 \chk fo("saddle mouse",queryType="room").immersed is None
 swim down
-\chk player.riding.hasStatus("submerged",Data.SUBMERGED_LIQUID)
+\chk player.riding.hasStatus("submerged",reqSource="IMMERSED")
 \chk player.immersed is fo("brook",queryType="room")
 \chk fo("saddle mouse",queryType="room").immersed is fo("brook",queryType="room")
 swim up
@@ -359,13 +372,23 @@ dismount
 
 \\ Filling and draining a confined Plash reconciles forced immersion
 \tpt cabin basement
+stand on wine cask
+\chk not enforceVerbScope("touch",player.anchor(),permitAnchor=True)
+\chk enforceVerbScope("take",player.anchor(),permitAnchor=False)
+stand on floor
+open wine cask
+get in wine cask
+\chk not enforceVerbScope("attack",player.parent,permitParent=True,permitSelf=True)
+\chk enforceVerbScope("take",player.parent,permitParent=False)
+get out
+
 \spn Items.Box("test cistern","A cistern calibrated to leave exactly one block of dry space.",20,-1,"iron",[Items.Plash(20,name="cistern water",composition="freshwater"),Core.Item("cistern block","A block waiting for the waterline.",20,-1,"wood")],capacity=45)
 \chk fo("cistern block",queryType="room",roomD=3).immersed is None
 \exe fo("cistern water",queryType="room",roomD=3).fill(5)
 \chk fo("cistern block",queryType="room",roomD=3).immersed is fo("cistern water",queryType="room",roomD=3)
 \exe fo("cistern water",queryType="room",roomD=3).drain(24)
 \chk fo("cistern block",queryType="room",roomD=3).immersed is None
-\chk fo("cistern block",queryType="room",roomD=3).hasStatus("wet",21)
+\chk fo("cistern block",queryType="room",roomD=3).hasStatus("wet",reqDuration=21)
 
 \\ Partial draining releases oversized immersion while preserving a smaller object
 \spn Items.Box("sorting tank","A tank calibrated to sort immersed cargo by available water.",20,-1,"iron",[Items.Plash(40,name="sorting water",composition="freshwater"),Core.Item("large float","A large float requiring substantial water.",20,-1,"wood"),Core.Item("small float","A small float content with very little water.",5,-1,"wood")],capacity=100)
@@ -375,7 +398,7 @@ dismount
 \exe fo("sorting water",queryType="room",roomD=3).drain(25)
 \chk fo("large float",queryType="room",roomD=3).immersed is None
 \chk fo("small float",queryType="room",roomD=3).immersed is fo("sorting water",queryType="room",roomD=3)
-\chk fo("large float",queryType="room",roomD=3).hasStatus("wet",21)
+\chk fo("large float",queryType="room",roomD=3).hasStatus("wet",reqDuration=21)
 
 \\ Infinite Plashes spill and drain only to their configured source threshold
 \spn Items.Plash(40,name="spring source",desc="A spring that replenishes itself below a fixed level.",composition="freshwater",infinite=20)
@@ -389,7 +412,7 @@ dismount
 
 \\ Solid admission spills resident liquid instead of rejecting the object
 \spn Items.Box("spill chest","A chest filled nearly to its brim with water.",20,-1,"iron",[Items.Plash(20,name="chest water",composition="freshwater")],capacity=30)
-\spn Core.Item("thirsty brick","A brick about to displace its share of water.",15,-1,"clay")
+\spn Core.Item("thirsty brick","A brick about to displace its share of water.",30,-1,"clay")
 take thirsty brick
 put thirsty brick in spill chest
 \chk fo("thirsty brick",queryType="room",roomD=3).parent is fo("spill chest",queryType="room")

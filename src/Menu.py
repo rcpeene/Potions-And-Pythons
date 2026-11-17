@@ -33,6 +33,8 @@ def writeGame(filename,Game,World):
 	gfd.write(Core.getRoomKey(Game.prevroom,World) + "\n")
 	gfd.write(str(Game.time) + "\n")
 	gfd.write(str(Game.events) + "\n")
+	# persist the ID watermark so destroyed objects' IDs are never reissued
+	gfd.write(str(Game.nextObjId) + "\n")
 	gfd.close()
 
 
@@ -186,14 +188,10 @@ def readGameData(filename):
 	prevroom = gametext[2][:-1]			# third line is name of previous room
 	time = int(gametext[3][:-1])		# fourth line is time int
 	events = eval(gametext[4][:-1])
+	# sixth line is the object ID watermark (absent in older saves)
+	nextObjId = int(gametext[5]) if len(gametext) > 5 else 0
 	gfd.close()
-	return mode,currentroom,prevroom,time,events
-
-
-def readGame(filename,World,dlogForest):
-	mode,currentroom,prevroom,time,events = readGameData(filename)
-	return Core.Game(mode,World[currentroom],World[prevroom],time,events,dlogForest,
-	Creatures.factory,Items.factory)
+	return mode,currentroom,prevroom,time,events,nextObjId
 
 
 
@@ -298,9 +296,9 @@ def loadGame(filename=None):
 	playerData = readJSON("player.json")
 	worldData = readWorldJSON("world.json")
 	dlogForest = readDialogue("../../gamedata/Dialogue.json")
-	mode,currentroom,prevroom,time,events = readGameData("game.txt")
+	mode,currentroom,prevroom,time,events,nextObjId = readGameData("game.txt")
 	Core.game = Core.Game(mode,Core.defaultRoom,Core.defaultRoom,time,events,dlogForest,
-	Creatures.factory,Items.factory)
+	Creatures.factory,Items.factory,nextObjId=nextObjId)
 	Core.world,Core.player = Core.game.buildWorld(worldData,playerData)
 	Core.game.currentroom = Core.world[currentroom]
 	Core.game.prevroom = Core.world[prevroom]
@@ -393,7 +391,7 @@ def createCharacter():
 	name = Core.InputLock(delay=0).title()
 	Core.Print("Describe yourself.",end="",delay=0,color="k")
 	desc = Core.InputLock(cue="\nYou are ",delay=0)
-	return Core.Player(name,desc,29,[1]*10,0,0)
+	return Core.Player(name,desc,39,[1]*10,0,0)
 
 
 # starts a new game and returns player, world, and game objects

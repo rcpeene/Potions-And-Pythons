@@ -127,7 +127,7 @@
 		"permanents": [],
 		"items": [],
 		"creatures": [],
-		"status": [["AREA burning -3",10]],
+		"status": [["burning",null,10]],
 		"ceiling": "smoke",
 		"floor": "sand"
 	},
@@ -158,7 +158,7 @@
 				"name": "broken sword",
 				"desc": "an iron sword that is broken halfway down the blade",
 				"aliases": ["sword"],
-				"weight": 6,
+				"weight": 8,
 				"durability": 15,
 				"composition": "iron",
 				"might": 5,
@@ -207,6 +207,27 @@
 			{
 				"__class__": "factoryItem",
 				"name": "green potion"
+			},
+			{
+				"__class__": "Box",
+				"name": "wine cask",
+				"desc": "A stout wooden cask filled to the brim with dark red wine.",
+				"aliases": ["cask","barrel","wine barrel"],
+				"weight": 30,
+				"durability": 20,
+				"composition": "wood",
+				"capacity": 70,
+				"closed": true,
+				"items": [
+					{
+						"__class__": "Plash",
+						"weight": 70,
+						"name": "wine",
+						"desc": "Dark red wine fills the cask to the brim.",
+						"composition": "wine",
+						"mention": false
+					}
+				]
 			}
 		],
 		"creatures": [],
@@ -373,7 +394,7 @@
 				"composition": "stone",
 				"fixed": true,
 				"capacity": 100,
-				"status": [["AREA wet -3",-2]]
+				"status": [["wet"]]
 			}
 		],
 		"items": [
@@ -385,6 +406,26 @@
 				"capacity": -1,
 				"composition": "urine",
 				"aliases": ["puddle"]
+			},
+			{
+				"__class__": "Box",
+				"name": "bottle",
+				"desc": "A clear glass bottle with a bit of water sloshing around inside.",
+				"aliases": ["glass bottle","water bottle"],
+				"weight": 6,
+				"durability": 3,
+				"composition": "glass",
+				"capacity": 10,
+				"items": [
+					{
+						"__class__": "Plash",
+						"weight": 5,
+						"name": "water",
+						"desc": "A bit of clear water resting at the bottom of the bottle.",
+						"composition": "freshwater",
+						"mention": false
+					}
+				]
 			},
 			{
 				"__class__": "Lockbox",
@@ -588,7 +629,6 @@
 			}
 		],
 		"status": [],
-		"composition": "freshwater",
 		"walls": "wood",
 		"floor": "soil"
 	},
@@ -626,7 +666,7 @@
 				"aliases": ["mustang"],
 				"determiner": "your",
 				"traits": [8,10,3,12,12,3,1,2,2,5],
-				"status": [["tamed",-3]],
+				"status": [["tamed"]],
 				"hp": 100,
 				"mp": 0,
 				"inv": [],
@@ -653,7 +693,7 @@
 					"tail": null
 				},
 				"aliases": ["drake"],
-				"status": [["flying",-3]]
+				"status": [["flying"]]
 			}
 		],
 		"status": [],
@@ -680,7 +720,7 @@
 				"rarity": -1,
 				"aliases": ["machine","pitcher"],
 				"triggers": ["Use", "Press", "Run"],
-				"effect": "Effects.Launch('shard',10,50,self,Core.player)",
+				"effect": "Effects.launch(Core.player,self,Core.player,'shard',10,50)",
 				"delay": 3,
 				"maxRepeats": 5,
 				"toggle": true
@@ -869,7 +909,7 @@
 						"weight": 40,
 						"durability": 100,
 						"composition": "stone",
-						"status": [["submerged",-4]],
+						"status": [["submerged","IMMERSED"]],
 						"aliases": ["mossy rock", "big rock", "rock"],
 						"mention": true
 					}
@@ -950,7 +990,7 @@
 					"legs": null
 				},
 				"inv": [],
-				"status": [["wants bottle of coffee",-3]]
+				"status": [["wants bottle of coffee"]]
 			},
 			{
 				"__class__": "Person",

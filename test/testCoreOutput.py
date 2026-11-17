@@ -11,6 +11,7 @@ sys.path.insert(0,os.path.join(ROOT,"src"))
 
 import Core
 import Items
+import Interpreter
 
 
 class CensorTests(unittest.TestCase):
@@ -61,13 +62,13 @@ class CensorTests(unittest.TestCase):
 
 	def testSagacityUsesKnowledgeOfOneHundred(self):
 		self.setKnowledge(1)
-		Core.player.status = [["sagacity",-1]]
+		Core.player.status = [["sagacity",None,None]]
 		self.assertEqual(Core.censor("|100|known|101+|hidden"),"known")
 
 	def testSagacityUsesInvestigationOfOneHundred(self):
 		self.setKnowledge(1)
 		self.setInvestigation(1)
-		Core.player.status = [["sagacity",-1]]
+		Core.player.status = [["sagacity",None,None]]
 		text = "|KNWL 100|known|INVS 100|noticed|INVS 101+|hidden"
 		self.assertEqual(Core.censor(text),"knownnoticed")
 
@@ -89,14 +90,14 @@ class CensorTests(unittest.TestCase):
 		self.assertEqual(Core.primer("keep <blue>literal"),"keep <blue>literal")
 
 	def testPrimerRandomizesKnownTagsDuringInsanity(self):
-		Core.player.status = [["insanity",-1]]
+		Core.player.status = [["insanity",None,None]]
 		with patch("Core.choice",return_value="g") as chooseColor:
 			self.assertEqual(Core.primer("<b>text</>"),
 				"\033[32mtext\033[0m")
 		chooseColor.assert_called_once()
 
 	def testApathyMakesInlineColorsWhiteExceptBlack(self):
-		Core.player.status = [["apathy",-1]]
+		Core.player.status = [["apathy",None,None]]
 		self.assertEqual(Core.primer("<r>red</> plain <k>black</> end"),
 			"\033[37mred\033[37m plain \033[90mblack\033[37m end")
 
@@ -107,7 +108,7 @@ class CensorTests(unittest.TestCase):
 		self.assertEqual(printedLength,len("blue"))
 
 	def testStupidityTraitsFitWithinSidePanel(self):
-		Core.player.status = [["stupidity",-1]]
+		Core.player.status = [["stupidity",None,None]]
 		Core.player.str = 11
 		output = io.StringIO()
 		Core.player.printTraits(outfile=output)
@@ -165,35 +166,39 @@ class DeferredStatusReportTests(unittest.TestCase):
 	def testNestedDeferralReportsOnlyNetStatusChange(self):
 		with patch.object(self.creature,"printNearby") as nearby:
 			with Core.game.deferStatusReports():
-				self.creature.addStatus("on fire",-1)
+				self.creature.addStatus("burning")
 				with Core.game.deferStatusReports():
-					self.creature.removeStatus("on fire",recheck=False)
-					self.creature.addStatus("on fire",-1)
+					self.creature.removeStatus("burning")
+					self.creature.addStatus("burning")
 				self.assertFalse(nearby.called)
 
 		nearby.assert_called_once()
-		self.assertEqual(nearby.call_args.args[0],"The goblin is on fire.")
+		self.assertEqual(nearby.call_args.args[0],"The goblin is burning.")
 
 	def testDeferralSuppressesNoNetChangeAndPrivateStatus(self):
 		with patch.object(self.creature,"printNearby") as nearby:
 			with Core.game.deferStatusReports():
-				self.creature.addStatus("wet",1)
-				self.creature.removeStatus("wet",recheck=False)
-				self.creature.addStatus("hidden",-1)
-			self.assertFalse(nearby.called)
+				self.creature.addStatus("wet",dur=1)
+				self.creature.removeStatus("wet")
+				self.creature.addStatus("hidden")
+			# the wet flicker nets to nothing; the private status routes
+			# through printNearby as non-public (so godmode can still see it)
+			nearby.assert_called_once()
+			self.assertEqual(nearby.call_args.args[0],"The goblin is hidden.")
+			self.assertFalse(nearby.call_args.kwargs["public"])
 
 	def testDeferralTracksSilentMutationWithoutReportingIt(self):
 		with patch.object(self.creature,"printNearby") as nearby:
 			with Core.game.deferStatusReports():
-				self.creature.addStatus("submerged",-4,silent=True)
+				self.creature.addStatus("submerged",source="IMMERSED",silent=True)
 			self.assertFalse(nearby.called)
 		self.assertTrue(self.creature.hasStatus("submerged"))
 
 	def testSilentTemporaryStatusDoesNotCauseFalseRemovalReport(self):
 		with patch.object(self.creature,"printNearby") as nearby:
 			with Core.game.deferStatusReports():
-				self.creature.addStatus("submerged",-4,silent=True)
-				self.creature.removeStatus("submerged",recheck=False)
+				self.creature.addStatus("submerged",source="IMMERSED",silent=True)
+				self.creature.removeStatus("submerged")
 			self.assertFalse(nearby.called)
 
 	def testMovementReportsStatusAfterTransitionOutput(self):
@@ -201,7 +206,7 @@ class DeferredStatusReportTests(unittest.TestCase):
 		with patch.object(self.creature,"printNearby",
 			side_effect=lambda message,**kwargs: events.append(message)):
 			def transition(creature,destination,silent=False):
-				creature.addStatus("submerged",-4)
+				creature.addStatus("submerged",source="IMMERSED")
 				events.append("room description")
 				return True
 			self.creature._changeLocation = MethodType(transition,self.creature)
@@ -216,7 +221,7 @@ class DeferredStatusReportTests(unittest.TestCase):
 		with patch.object(self.creature,"printNearby",
 			side_effect=lambda message,**kwargs: events.append(message)):
 			def transition(movingItem,destination,silent=False):
-				self.creature.addStatus("submerged",-4)
+				self.creature.addStatus("submerged",source="IMMERSED")
 				events.append("item transition complete")
 				return True
 			item._changeLocation = MethodType(transition,item)
@@ -224,6 +229,33 @@ class DeferredStatusReportTests(unittest.TestCase):
 
 		self.assertEqual(events,
 			["item transition complete","The goblin is submerged."])
+
+
+class DistanceRefusalTests(unittest.TestCase):
+	def setUp(self):
+		self.originalPlayer = Core.player
+		Core.player = Core.Player("Tester","",1,[1]*10,0,0)
+		self.cask = Core.Item("wine cask","",30,20,"wood",determiner="the")
+
+	def tearDown(self):
+		Core.player = self.originalPlayer
+
+	def testDryTargetIsOmittedFromImmersionRefusal(self):
+		with patch.object(Core.player,"position",return_value="standing in the puddle"), \
+		patch("Core.Print") as output:
+			self.assertTrue(Interpreter.refuseVerbDistance("close",self.cask,
+				describeTarget=False))
+		output.assert_called_once_with(
+			"You can't close the wine cask; you're standing in the puddle.")
+
+	def testPositionRefusalNamesTargetExplicitly(self):
+		ground = Core.Item("ground","",100,-1,"stone",determiner="the")
+		self.cask.platform = ground
+		with patch.object(Core.player,"position",return_value="standing nearby"), \
+		patch("Core.Print") as output:
+			self.assertTrue(Interpreter.refuseVerbDistance("close",self.cask))
+		output.assert_called_once_with("You can't close the wine cask; "
+			"you're standing nearby, and it is on the ground.")
 
 
 class LiquidDescriptionTests(unittest.TestCase):
@@ -249,6 +281,33 @@ class LiquidDescriptionTests(unittest.TestCase):
 			room.describeItems()
 			room.describeCreatures()
 		return output.getvalue()
+
+	def testPlashUsesMassNounIndefiniteDeterminer(self):
+		wine = Items.Plash(70,name="wine",composition="wine")
+		cask = Items.Box("cask","",30,-1,"wood",[wine],capacity=70)
+		wine.parent = cask
+		self.assertEqual(wine.fillPercent(),100)
+		self.assertEqual(wine.nounPhrase(n=1),"some wine")
+		self.assertEqual(wine.nounPhrase("a"),"some wine")
+		self.assertEqual(wine.nounPhrase("the"),"the wine")
+
+		wine.weight = 2
+		self.assertLess(wine.fillPercent(),10)
+		self.assertEqual(wine.nounPhrase(n=1),"a droplet of wine")
+
+		spill = Items.Plash(50,composition="wine")
+		self.assertEqual(spill.name,"wine")
+		self.assertIn("small pool",spill.aliases)
+		self.assertIn("small pool of wine",spill.aliases)
+		self.assertEqual(spill.nounPhrase(n=1),"a small pool of wine")
+		self.assertEqual(spill.nounPhrase(n=2),"2 small pools of wine")
+
+		droplet = Items.Plash(2,composition="wine")
+		self.assertEqual(Core.listObjects("There is ",[spill,droplet],"."),
+			"There is a small pool of wine and a droplet of wine.")
+		self.assertEqual(Core.listObjects("There are ",[spill,
+			Items.Plash(50,composition="wine")],"."),
+			"There are 2 small pools of wine.")
 
 	def testRoomListsFloatingObjectsThroughMentionedPlash(self):
 		pond = Items.Plash(100,name="pond")
@@ -279,7 +338,7 @@ class LiquidDescriptionTests(unittest.TestCase):
 		rock.platform = None
 		athlete.immersed = pond
 		athlete.platform = room.floor
-		athlete.addStatus("sitting",Core.Data.POSTURE_ACTIVE,silent=True)
+		athlete.addStatus("sitting",silent=True)
 		wizard.platform = pond
 
 		self.assertEqual(self.describeRoomContents(room),
@@ -319,7 +378,7 @@ class LiquidDescriptionTests(unittest.TestCase):
 		room = self.makeRoom([pond],[shark,surfer])
 		shark.immersed = pond
 		shark.platform = None
-		shark.addStatus("submerged",Core.Data.SUBMERGED_LIQUID,silent=True)
+		shark.addStatus("submerged",source="IMMERSED",silent=True)
 		surfer.riding = shark
 
 		output = io.StringIO()
@@ -338,7 +397,7 @@ class LiquidDescriptionTests(unittest.TestCase):
 		lilyPad.platform = None
 		Core.player.immersed = pond
 		Core.player.platform = None
-		Core.player.addStatus("submerged",Core.Data.SUBMERGED_LIQUID,silent=True)
+		Core.player.addStatus("submerged",source="IMMERSED",silent=True)
 
 		output = io.StringIO()
 		with patch("sys.stdout",output):
