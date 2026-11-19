@@ -191,6 +191,26 @@ if __name__ == "__main__":
 	# if a room gets too full, maybe intelligently eject objects to nearby rooms during passTime, or despawn worthless items
 	# figure out what happens if theres a pit with no vacancy, and you fall into it. Do you get destroyed by displace()?
 	# if a plash is big enough in the room, have it leak out to another room?
+	# if you're banished then must reappear in a totally full room, we need a way to assign you to a new place
+	# perhaps we need a 'shunt' mechanism which intelligently redirects objects to other rooms
+
+# plot-critical destruction vs physics-accident destruction: the planned "destroy"
+	# effect trigger (botnotes section 3) makes destruction a significant authored
+	# event (e.g. the evil orb recording a world event when destroyed), but destroy()
+	# is also reachable through unglamorous paths: despawn timers (passTime) and
+	# displace()'s last-resort fallback silently destroy objects that fit nowhere.
+	# a quest item could vanish -- and fire its world-altering trigger -- by physics
+	# accident. find a way to prevent destruction due to displacement for significant
+	# items: e.g. displacement routes to the room floor instead of destruction, or a
+	# flag/rarity tier exempting plot items (rarity 6 "unique" is a candidate marker).
+	# also decide whether despawn-destruction should fire the destroy trigger at all,
+	# or only deliberate destruction (combat, explosions, scripts)
+# handle keys that are destroyed or replaced: Lockbox.validate requires every
+	# nonnegative keyid to resolve to a Key in the registry, so a destroyed key
+	# leaves an unknown ID and a succession-replaced key (replaceID) leaves a
+	# wrong-class object -- either way the next world load crashes validation.
+	# options: soften validate to warn/prune, make lock-critical keys unbreakable
+	# (durability -1), or update keyids at the destroy/replace chokepoints
 # support one-way portals and multi-way portals? (several portals are are fully connected)
 
 # test "put on hat" and "put hat on"

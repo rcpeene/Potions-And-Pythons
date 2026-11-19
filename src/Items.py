@@ -664,10 +664,12 @@ class Plash(Core.Portal):
 		return removed
 
 
-	def destroy(self,silent=True):
+	# fluids sever immersion tethers on their way out of the world,
+	# whether destroyed or suspended
+	def detach(self,silent=True):
 		for obj in self.immersedObjects().copy():
 			obj.unimmerse(silent=silent)
-		return super().destroy(silent=silent)
+		super().detach(silent=silent)
 
 
 	def drain(self,quantity):
@@ -824,12 +826,6 @@ class Plash(Core.Portal):
 
 		if not self.infinite:
 			self.drain(3)
-
-
-	def destroy(self,silent=True):
-		for obj in self.immersedObjects().copy():
-			obj.unimmerse()
-		return super().destroy(silent=silent)
 
 
 	def merge(self,other):

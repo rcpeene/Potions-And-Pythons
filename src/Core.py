@@ -2759,13 +2759,40 @@ class Game():
 
 		registryObjects = {runtimeObject for runtimeObject in self.itemRegistry.values() \
 			if runtimeObject is not None}
+
+		# suspended objects are owned by their substitutes rather than the
+		# containment tree; validate their subtrees and count them as placed
+		suspended = set()
+		for runtimeObject in registryObjects:
+			latent = getattr(runtimeObject,"suspended",None)
+			if latent is None:
+				continue
+			require(latent not in contained and latent not in suspended,
+				f"Suspended {latent} occupies another world position")
+			require(latent.parent is None,
+				f"Suspended {latent} unexpectedly has parent {latent.parent}")
+			# the latent's status entry must mirror the substitute's link
+			require(latent.hasStatus("suspended",reqSource=runtimeObject.id),
+				f"Suspended {latent} lacks the status entry for its " \
+					f"substitute {runtimeObject}")
+			suspended.add(latent)
+			validateContainmentRecur(latent)
+
+		# the mirror direction: a suspended status with no substitute
+		# pointing back is a desynchronized custody record
+		for runtimeObject in registryObjects:
+			if runtimeObject.hasStatus("suspended"):
+				require(runtimeObject in suspended,
+					f"{runtimeObject} bears a suspended status but no " \
+						f"substitute holds it")
+
 		for objId,runtimeObject in self.itemRegistry.items():
 			if runtimeObject is None:
 				continue
 			require(isinstance(objId,int) and runtimeObject.id == objId,
 				f"Registry key {objId} does not match {runtimeObject}'s ID " \
 					f"{runtimeObject.id}")
-		require(registryObjects == contained | set(celestials),
+		require(registryObjects == contained | set(celestials) | suspended,
 			"Registry and contained world objects do not match")
 
 		for room in world.values():
@@ -3608,6 +3635,8 @@ class Room(GameObject):
 		self.remove(oldObj)
 
 		if not self.canAdd(newObj):
+			# a failed replacement must leave oldObj where it was
+			self.add(oldObj)
 			return False
 		self.enter(newObj)
 		return True
@@ -3881,7 +3910,7 @@ class Item(GameObject):
 	def __init__(self,name,desc,weight,durability,composition,aliases=None,rarity=1,
 	status=None,plural=None,descname=None,determiner=None,pronoun="it",occupyprep="on",
 	fixed=False,mention=True,longevity=None,despawnTimer=None,scent=None,flavor=None,
-	texture=None,platform=None,immersed=None,minGripsNeeded=1,id=None):
+	texture=None,platform=None,immersed=None,minGripsNeeded=1,suspended=None,id=None):
 
 		### Basic Properties
 	
@@ -3947,6 +3976,12 @@ class Item(GameObject):
 		self.platform = platform
 		self.immersed = immersed
 
+		### Suspension
+
+		# the suspended object this substitute stands in for (see replace/restore)
+		# a suspended object stays registered but detached, serialized nested here
+		self.suspended = suspended
+
 
 	### Dunder Methods ###
 
@@ -3961,7 +3996,8 @@ class Item(GameObject):
 	def validate(self):
 		if not isinstance(self.id,int) or game.itemRegistry.get(self.id) is not self:
 			raise ValueError(f"Registry does not contain {self} at its ID {self.id}")
-		if self not in celestials:
+		# suspended objects are owned by their substitute, not a parent
+		if self not in celestials and not self.hasStatus("suspended"):
 			if self.parent is None or self not in game.ownedChildren(self.parent):
 				raise ValueError(f"{self} is not owned by its parent {self.parent}")
 		if self.platform is not None and not isinstance(self.platform,Item):
@@ -3994,6 +4030,10 @@ class Item(GameObject):
 			jsonDict["platform"] = self.platform.id
 		if self.immersed in (self.parent,getattr(self.parent,"floor",None)):
 			jsonDict["immersed"] = None
+		# a held latent object serializes as a full nested spec (see Menu's
+		# worldEncoder, which exempts this key from Item-to-ID conversion)
+		if self.suspended is None:
+			del jsonDict["suspended"]
 		del jsonDict["statusCascadeDepth"], jsonDict["alreadyRemoved"]
 		return jsonDict
 
@@ -4292,60 +4332,91 @@ class Item(GameObject):
 		return not anyFell
 
 
-	# removes this Item and all references to it from the game
-	def destroy(self,silent=True):
-		if isinstance(self.parent,Room) and self in self.parent.permanents:
-			return False
-		if not silent:
-			self.Print(f"{+self} disappears.")
-
-		parent = self.parent
+	# sever every spatial tether and leave the world tree, staying registered
+	# this is a shared end state of destruction and suspension
+	def detach(self,silent=True):
 		self.clearCovering()
 		occupants = self.occupants()
 		self.clearOccupants()
 		for occupant in occupants:
 			occupant.fall(self.Size()//5)
 		self.removePlatform()
-		for item in getattr(self,"items",[]).copy():
-			item.changeLocation(parent)
-
 		# may have already been removed from parent
 		if self.parent and self in self.parent:
 			self.parent.remove(self)
 		self.parent = None
 
+
+	# removes this Item and all references to it from the game
+	# returns True if destruction occurred, False if refused (Room permanents)
+	def destroy(self,silent=True):
+		if isinstance(self.parent,Room) and self in self.parent.permanents:
+			return False
+		# a substitute cannot be destroyed without restoring its latent
+		if self.suspended is not None:
+			self.restore()
+			return True
+		if not silent:
+			self.Print(f"{+self} disappears.")
+
 		# TODO: first drop all items from contents? or just some important ones?
+		# relocate contents into parent
+		# a parentless (never-placed) object destroys its contents instead. 
+		# Use a while loop because destroyed children can dump contents into our items
+		parent = self.parent
+		if parent is not None:
+			for item in getattr(self,"items",[]).copy():
+				item.changeLocation(parent)
+		else:
+			items = getattr(self,"items",None)
+			while items:
+				items[-1].destroy(silent=silent)
+
+		self.detach(silent=silent)
+
 		assert game.itemRegistry[self.id] is self, \
 		f"{self} ID{self.id} holds wrong Item in registry {game.itemRegistry[self.id]}"
 		del game.itemRegistry[self.id]
+		return True
 
 
-	# if an Item is too small for its parent, repeatedly move it to parent's parent
-	# until theres space for it. if it cannot fit in the final parent (Room), destroy it
-	# this prevents strange physical scenarios and should not normally be called
+	# walk up the ancestor chain from start for a place this object could
+	# go, without mutating anything; returns the destination or None
+	def displaceDestination(self,start):
+		destination = start
+		while destination is not None:
+			if hasMethod(destination,"canObtain"):
+				if destination.canObtain(self,silent=True):
+					return destination
+			elif hasMethod(destination,"canAdd"):
+				if destination.canAdd(self):
+					return destination
+			else:
+				return None
+			destination = getattr(destination,"parent",None)
+		return None
+
+
+	# if an Item is too small for its parent, move it up the ancestor chain to
+	# the first place that fits; if nothing fits, destroy it. The destination
+	# is planned before any mutation so a doomed object dies in place, where
+	# its parent still resolves (contents and a latent need a location)
 	def displace(self,newparent=None):
 		self.clearOccupants()
-		if self.parent:
-			oldParent = self.parent
-			if isinstance(oldParent,Creature):
-				removed = oldParent.remove(self,silent=True)
-			else:
-				removed = oldParent.exit(self)
-			assert removed, f"Failed to remove {self} from {oldParent}"
-		nextparent = getattr(newparent,"parent",None)
-		if hasMethod(newparent,"canObtain"):
-			if newparent.canObtain(self,silent=True):
-				return newparent.ObtainItem(self)
-			else:
-				return self.displace(nextparent)
-		elif hasMethod(newparent,"canAdd"):
-			if newparent.canAdd(self):
-				return self.changeLocation(newparent)
-			else:
-				return self.displace(nextparent)
-		else:
+
+		# no destination exists anywhere: destroy in place
+		destination = self.displaceDestination(newparent)
+		if destination is None:
 			self.destroy()
 			return False
+
+		# mutate: the move operations evict self from its old parent themselves
+		if hasMethod(destination,"canObtain"):
+			return destination.ObtainItem(self)
+		if isinstance(self.parent,Creature):
+			removed = self.parent.remove(self,silent=True)
+			assert removed, f"Failed to remove {self} from {self.parent}"
+		return self.changeLocation(destination)
 
 
 	# prevent despawning
@@ -4396,51 +4467,26 @@ class Item(GameObject):
 		return True
 
 
-	# when one Item is replaced by another, ensure references to it get substituted
-	# removes old Item's refs from parent,covered,occupants,platform
-	# attempts to add corresponding refs with newObj, and destroys the old object
-	def replace(self,newObj):
-		if newObj is self:
-			return self
+	# snapshot the tethers a replacement must hand over, before any mutation
+	def replacementSnapshot(self):
+		return {"parent": self.parent, "covered": self.covering().copy(),
+			"occupants": self.occupants()}
 
-		parent = self.parent
-		coveredCreatures = self.covering().copy()
-		occupants = self.occupants()
-		if isinstance(newObj,str) or newObj.id is None:
-			newObj = game.spawn(newObj)
 
-		def checkReplacementTethers():
-			for covered in coveredCreatures:
-				covered.removeCover(silent=True)
-				covered.checkCover()
-			if isinstance(newObj,Creature):
-				newObj.checkTethers()
-			if newObj.parent is not None:
-				newObj.checkSize()
-
-		# if it fails to place the new object in parent, displace it
-		if not parent.replaceObj(self,newObj):
-			self.destroy()
-			game.replaceID(self,newObj)
-			result = newObj.displace(parent)
-			checkReplacementTethers()
-			return result
-		for covered in coveredCreatures:
+	# hand over type-specific tethers to newObj mid-replacement
+	def transferReplacementTethers(self,newObj,snap):
+		for covered in snap["covered"]:
 			covered.removeCover(silent=True)
 			covered.addCover(newObj)
-
-		for occupant in occupants:
+		for occupant in snap["occupants"]:
 			self.disoccupy(occupant)
 			if isinstance(newObj,Creature) or newObj.parent is None:
 				occupant.fall(self.Size()//5)
 			else:
 				newObj.occupy(occupant,silent=True)
-			# if newObj was destroyed when adding occupants, end here
+			# newObj may be destroyed when receiving an occupant
 			if newObj.parent is None:
-				result = self.destroy()
-				checkReplacementTethers()
-				return result
-
+				return
 		if self.platform not in (None,self.parent) and newObj.parent:
 			p = self.platform
 			self.removePlatform()
@@ -4448,16 +4494,122 @@ class Item(GameObject):
 				newObj.changeLocation(p)
 			else:
 				p.occupy(newObj)
-		# if newObj was destroyed when replacing platform, end here
-		if newObj.parent is None:
-			result = self.destroy()
-			checkReplacementTethers()
-			return result
 
-		self.destroy()
-		game.replaceID(self,newObj)
-		checkReplacementTethers()
-		return newObj
+
+	# recalculate the tethers after a completed replacement
+	def replacementChecks(self,newObj,snap):
+		for covered in snap["covered"]:
+			covered.checkCover()
+		if isinstance(newObj,Creature):
+			newObj.checkTethers()
+		if newObj.parent is not None:
+			newObj.checkSize()
+
+
+	# substitute newObj into this object's parent and all its tethers
+	# destroy=True (succession): self is destroyed and newObj inherits its ID
+	# destroy=False (suspension): self persists suspended, owned by newObj
+	# when old obj gets replaced through suspension, it become a 'latent' object-
+	# occupying no room, and only existing as newObj.suspended
+	# transferId=False: both objects keep their own IDs (used for restoring a suspended obj)
+	# returns the replacement if it exists in the world afterward, else None
+	def replace(self,newObj,destroy=True,transferId=True):
+		if newObj is self:
+			return self
+		if isinstance(self.parent,Room) and self in self.parent.permanents:
+			return False
+		if isinstance(newObj,str) or newObj.id is None:
+			newObj = game.spawn(newObj)
+		# record tethers prior to replacement
+		snap = self.replacementSnapshot()
+
+		# insert newObj into self's place and transfer tethers
+		# newObj may be destroyed during tether transfer
+		parent = self.parent
+		placed = parent.replaceObj(self,newObj)
+		# if newObj cannot exist anywhere, replacement fails
+		if not placed and newObj.displaceDestination(parent) is None:
+			newObj.destroy()
+			return None
+		if placed:
+			self.transferReplacementTethers(newObj,snap)
+		replacementStillExists = game.itemRegistry.get(newObj.id) is newObj
+
+		# replacement via succession: 
+		# destroy self and potentially transfer latent and id to newObj
+		if destroy:
+			latent = self.suspended
+			# if self is itself already a substitute, hand over its latent to newObj.
+			if latent is not None and replacementStillExists:
+				# if substitute already has a latent, it cannot accept another one
+				assert newObj.suspended is None, \
+					f"{newObj} already holds suspended {newObj.suspended}"
+				newObj.suspended = latent
+				# if self.suspended (the latent) is not None-
+				# then destroy() will end up restoring the latent
+				self.suspended = None
+
+			# replaceObj nulled self.parent; destroy needs it to relocate contents
+			if self.parent is None:
+				self.parent = parent
+			oldId = self.id
+			self.destroy()
+
+			if transferId and replacementStillExists:
+				game.replaceID(self,newObj)
+			# if newObj doesnt receive old id, the latent must point toward newObj's id
+			if not transferId and latent is not None and replacementStillExists:
+				latent.transferStatus("suspended",oldId,newObj.id)
+
+		# replacement via suspension: 
+		# detach and store self into newObj.suspended
+		else:
+			self.detach()
+			if replacementStillExists:
+				# if substitute already has a latent, it cannot accept another one
+				assert newObj.suspended is None, \
+					f"{newObj} already holds suspended {newObj.suspended}"
+				newObj.suspended = self
+				self.addStatus("suspended",source=newObj.id,silent=True)
+			else:
+				# if newObj no longer exists, replacement failed
+				# self should not remain suspended so it returns to the world
+				self.displace(parent)
+
+		# a newObj that was refused placement still needs a home somewhere
+		if not placed:
+			newObj.displace(parent)
+		# ensure integrity after replacement
+		self.replacementChecks(newObj,snap)
+		# return newObj if it wasnt destroyed during replacement process
+		return newObj if game.itemRegistry.get(newObj.id) is newObj else None
+
+
+	# return a suspended object to the world in this substitute's place:
+	# the reverse of replace(destroy=False); the latent reclaims the
+	# substitute's current tethers, and neither object's ID changes
+	# returns the restored object, or None if it did not survive restoration
+	def restore(self):
+		original = self.suspended
+		if original is None:
+			return None
+
+		# clear the link first so destroying this substitute doesn't recurse
+		self.suspended = None
+		original.removeStatus("suspended",reqSource=self.id,silent=True)
+
+		# if substitute is being destroyed-
+		# try to put original back into the substitute's last location
+		if self.parent is None or self not in self.parent:
+			lastParent = self.parent
+			if game.itemRegistry.get(self.id) is self:
+				self.destroy()
+			original.displace(lastParent)
+		else:
+			self.replace(original,transferId=False)
+
+		# return restored object if it was not destroyed during restoration
+		return original if game.itemRegistry.get(original.id) is original else None
 
 
 	# degrade Item durability if damage is high enough, break if durability goes to 0
@@ -5791,11 +5943,9 @@ class Creature(Item):
 			player.gainxp(xp)
 
 
-	# remove all tethers and references with this Creature, then destroy it
-	def destroy(self,silent=True):
+	# sever tethers (cover, carrying both ways, riding)
+	def detach(self,silent=True):
 		carrying = list(self.carrying())
-		if not silent:
-			self.Print(f"{+self} disappears.")
 		if self.cover:
 			self.removeCover()
 		self.clearCovering()
@@ -5806,12 +5956,7 @@ class Creature(Item):
 			self.removeCarry(carried,silent=True,drop=True)
 		self.removePlatform()
 		self.removeRiding(silent=silent)
-
-		# may have already been removed from parent
-		if self.parent and self in self.parent:
-			self.parent.remove(self)
-		# TODO: drop all items from inventory? or just some important ones?
-		super().destroy(silent=True)
+		super().detach(silent=silent)
 
 
 	# TODO: is this function necessary?
@@ -5913,69 +6058,49 @@ class Creature(Item):
 		return removed
 
 
-	# replace this object with newObj in parent and all tethers
-	# newObj may be an object ID string, in which case it is spawned first
-	def replace(self,newObj):
-		if newObj is self:
-			return self
+	# Creatures also hand over carrying, carrier, riding, and mount tethers
+	def replacementSnapshot(self):
+		snap = super().replacementSnapshot()
+		snap["carrying"] = list(self.carrying())
+		snap["carrier"] = self.carrier
+		snap["riding"] = self.riding
+		snap["carrySlots"] = [] if self.carrier is None else \
+			[slot for slot in self.carrier.carrySlots if self.carrier[slot] is self]
+		return snap
 
-		parent = self.parent
-		coveredCreatures = self.covering().copy()
-		occupants = self.occupants()
-		carrying = list(self.carrying())
-		carrier = self.carrier
-		riding = self.riding
-		carrySlots = [] if carrier is None else \
-			[slot for slot in carrier.carrySlots if carrier[slot] is self]
-		if isinstance(newObj,str) or newObj.id is None:
-			newObj = game.spawn(newObj)
 
-		def checkReplacementTethers():
-			creatures = coveredCreatures + carrying + [carrier,riding]
-			if isinstance(newObj,Creature):
-				creatures.append(newObj)
-			for creature in {c for c in creatures if isinstance(c,Creature)}:
-				creature.checkTethers()
-			if newObj.parent is not None:
-				newObj.checkSize()
-
-		# if we fail to place this object in parent, displace the newObj
-		if not self.parent.replaceObj(self,newObj):
-			self.destroy()
-			result = newObj.displace(self.parent)
-			checkReplacementTethers()
-			return result
-
-		for covered in coveredCreatures:
+	# hand over cover, riders, cargo, carrier slots, riding, and platform
+	# newObj may not survive receiving its new tethers
+	def transferReplacementTethers(self,newObj,snap):
+		for covered in snap["covered"]:
 			covered.removeCover(silent=True)
 			covered.addCover(newObj)
-		for occupant in occupants:
+		for occupant in snap["occupants"]:
 			occupant.replaceObj(self,newObj)
-		# if newObj was destroyed by new rider, then we can end here
+		# newObj may be destroyed when receiving an occupant
 		if not newObj.parent:
-			result = self.destroy()
-			checkReplacementTethers()
-			return result
+			return
 
 		# TODO: when replacing creature with creature, copy carrying and riding?
-		if carrying:
+		if snap["carrying"]:
 			# parent is used to removeCarry, so reassign it temporarily
-			self.parent = parent
+			self.parent = snap["parent"]
 			self.clearCarrying(silent=True,drop=False)
 			self.parent = None
-			for carried in carrying:
+			for carried in snap["carrying"]:
 				carried.fall(self.Size()//5)
 
+		carrier = snap["carrier"]
 		if carrier:
 			carrier.clearCarrySlots(self)
 			if isinstance(newObj,Creature):
 				if newObj.carrier:
 					newObj.carrier.removeCarry(newObj,silent=True,drop=False)
 				if newObj.carry(carrier,silent=True):
-					carrier.assignCarrySlots(newObj,carrySlots)
+					carrier.assignCarrySlots(newObj,snap["carrySlots"])
 			elif carrier.canObtain(newObj,silent=True):
 				carrier.ObtainItem(newObj,silent=True)
-				for slot in carrySlots:
+				for slot in snap["carrySlots"]:
 					carrier[slot] = newObj
 		elif self.riding:
 			# TODO: preserve a replacement Creature as rider on the same mount
@@ -5990,16 +6115,20 @@ class Creature(Item):
 			else:
 				p.occupy(newObj)
 
-		self.destroy()
-		checkReplacementTethers()
-		# newObj may have already been destroyed
-		if newObj.parent:
-			game.replaceID(self,newObj)
-			newObj.checkTethers() if isinstance(newObj,Creature) else None
-			return newObj
+
+	# rederive tethers for every creature a replacement may have disturbed
+	def replacementChecks(self,newObj,snap):
+		creatures = snap["covered"] + snap["carrying"] + \
+			[snap["carrier"],snap["riding"]]
+		if isinstance(newObj,Creature):
+			creatures.append(newObj)
+		for creature in {c for c in creatures if isinstance(c,Creature)}:
+			creature.checkTethers()
+		if newObj.parent is not None:
+			newObj.checkSize()
 
 
-	# replace Creature with a Creature or Item in this Creature's tethers
+	# replace a Creature in this Creature's tethers with a Creature or Item
 	# replace riding with platform, carrying with inventory item
 	def replaceCreature(self,oldObj,newObj):
 		assert isinstance(oldObj,Creature)
@@ -6035,7 +6164,7 @@ class Creature(Item):
 		newObj.checkTethers() if isinstance(newObj,Creature) else None
 
 
-	# replace Item with a Creature or Item in tis Creature's tethers
+	# replace an Item in this Creature's tethers with a Creature or Item
 	# if newObj is creature, replaced equipped gear with carried
 	def replaceItem(self,oldObj,newObj):
 		assert oldObj in self and not isinstance(oldObj,Creature)

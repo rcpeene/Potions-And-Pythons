@@ -229,6 +229,7 @@ statusConditions = {s.name: s for s in (
 	StatusCondition(name="stunned",immobile=True,public=True),
 	StatusCondition(name="submerged",public=True,onGain=(("transferStatus","wet","IMMERSED","SUBMERGED"),),onLoss=(("transferStatus","wet","SUBMERGED","IMMERSED"),)),
 	StatusCondition(name="stupidity",prefix="curse of",color="r",modifies={"INT":-10}),
+	StatusCondition(name="suspended",gainMsg="",lossMsg=""),
 	StatusCondition(name="swiftness",prefix="blessing of",color="g",public=True,modifies={"SPD":10}),
 	StatusCondition(name="timidity",prefix="curse of",color="r",modifies={"CHA":-10}),
 	StatusCondition(name="tired",color="r",stackable=False,modifies={"STM":-3}),

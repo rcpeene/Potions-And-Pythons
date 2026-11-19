@@ -278,5 +278,111 @@ put rescued keepsake in condemned coffer
 \chk game.rescuedKeepsake.platform is player.parent.floor
 \chk game.condemnedCofferId not in game.itemRegistry
 
+\\ Suspension keeps the original registered under its own ID, owned by its substitute
+\spn Items.Key("heirloom key","A key with a long future and a longer pedigree.",1,10,"iron")
+\exe game.heirloomKey=fo("heirloom key",queryType="room")
+\exe game.heirloomKeyId=game.heirloomKey.id
+\exe game.keyMouse=Core.Creature("polymorph mouse","A mouse with a key somewhere in its past.",1,[1]*10,status=[["tamed"]])
+\exe game.suspendResult=game.heirloomKey.replace(game.keyMouse,destroy=False)
+\chk game.suspendResult is game.keyMouse
+\chk game.keyMouse.parent is player.parent
+\chk game.keyMouse.id != game.heirloomKeyId
+\chk game.keyMouse.suspended is game.heirloomKey
+\chk game.itemRegistry[game.heirloomKeyId] is game.heirloomKey
+\chk game.heirloomKey.parent is None
+\chk game.heirloomKey.hasStatus("suspended",reqSource=game.keyMouse.id)
+
+\\ Restore returns the original to the world with both IDs unchanged and no residue
+\exe game.restoreResult=game.keyMouse.restore()
+\chk game.restoreResult is game.heirloomKey
+\chk game.heirloomKey.parent is player.parent
+\chk game.heirloomKey.id == game.heirloomKeyId
+\chk not game.heirloomKey.hasStatus("suspended")
+\chk game.keyMouse not in game.itemRegistry.values()
+
+\\ Destroying a substitute releases its latent in place
+\exe game.keyRat=Core.Creature("polymorph rat","A rat on a strictly temporary contract.",1,[1]*10,status=[["tamed"]])
+\exe game.heirloomKey.replace(game.keyRat,destroy=False)
+\exe game.keyRat.destroy()
+\chk game.itemRegistry[game.heirloomKeyId] is game.heirloomKey
+\chk game.heirloomKey.parent is player.parent
+\chk not game.heirloomKey.hasStatus("suspended")
+
+\\ Succession-replacing a substitute passes custody of the latent to the successor
+\exe game.keyCat=Core.Creature("custodial cat","A cat unaware of what it is holding.",2,[5]*10,status=[["tamed"]])
+\exe game.heirloomKey.replace(game.keyCat,destroy=False)
+\exe game.keyDog=Core.Creature("successor dog","A dog inheriting more than a position.",3,[5]*10,status=[["tamed"]])
+\exe game.keyCat.replace(game.keyDog)
+\chk game.keyDog.suspended is game.heirloomKey
+\chk game.heirloomKey.hasStatus("suspended",reqSource=game.keyDog.id)
+\exe game.keyDog.destroy()
+\chk game.heirloomKey.parent is player.parent
+\chk not game.heirloomKey.hasStatus("suspended")
+
+\\ Nested suspensions unwind one level at a time
+\spn Core.Item("matryoshka charm","A charm comfortable inside other forms.",2,-1,"silver")
+\exe game.matryoshka=fo("matryoshka charm",queryType="room")
+\exe game.innerForm=Core.Creature("inner serpent","A serpent that is secretly a charm.",2,[5]*10,status=[["tamed"]])
+\exe game.matryoshka.replace(game.innerForm,destroy=False)
+\exe game.outerForm=Core.Creature("outer toad","A toad that is secretly a serpent.",1,[1]*10,status=[["tamed"]])
+\exe game.innerForm.replace(game.outerForm,destroy=False)
+\chk game.outerForm.suspended is game.innerForm
+\chk game.innerForm.suspended is game.matryoshka
+\exe game.outerForm.destroy()
+\chk game.innerForm.parent is player.parent
+\chk game.innerForm.suspended is game.matryoshka
+\exe game.innerForm.destroy()
+\chk game.matryoshka.parent is player.parent
+\chk not game.matryoshka.hasStatus("suspended")
+
+\\ A replacement that fits nowhere aborts, leaving the original untouched
+\spn Items.Box("cramped reliquary","A reliquary with no tolerance for growth.",5,-1,"wood",[],capacity=3)
+\spn Core.Item("protected relic","A relic protected by sheer lack of space.",1,-1,"gold")
+take protected relic
+put protected relic in cramped reliquary
+\exe game.reliquary=fo("cramped reliquary",queryType="room")
+\exe game.relic=fo("protected relic",queryType="room",roomD=3)
+\exe game.relicId=game.relic.id
+\exe game.roomCapacity=player.parent.capacity
+\exe player.parent.capacity=1
+\exe game.monolith=Core.Item("unviable monolith","A monolith whose dimensions defeat all hospitality.",500,-1,"stone")
+\exe game.abortResult=game.relic.replace(game.monolith,destroy=False)
+\exe player.parent.capacity=game.roomCapacity
+\chk game.abortResult is None
+\chk game.itemRegistry[game.relicId] is game.relic
+\chk game.relic.parent is game.reliquary
+\chk game.relic in game.reliquary.items
+\chk not game.relic.hasStatus("suspended")
+\chk game.monolith not in game.itemRegistry.values()
+
+\\ A failed placement with room above still suspends; the substitute lands upstairs
+\exe game.bigStandin=Core.Item("roomy surrogate","A surrogate too broad for the reliquary but not the room.",40,-1,"stone")
+\exe game.standinResult=game.relic.replace(game.bigStandin,destroy=False)
+\chk game.standinResult is game.bigStandin
+\chk game.bigStandin.parent is player.parent
+\chk game.bigStandin.suspended is game.relic
+\exe game.bigStandin.restore()
+\chk game.relic.parent is player.parent
+
+\\ Room permanents refuse replacement and destruction without side effects
+\exe game.permanentIdol=game.spawn(Core.Fixture("immovable idol","An idol with tenure.",50,"stone"),player.parent)
+\exe player.parent.permanents.append(game.permanentIdol)
+\exe game.registrySize=len(game.itemRegistry)
+\exe game.permanentReplaceResult=game.permanentIdol.replace("bottle")
+\chk game.permanentReplaceResult is False
+\chk len(game.itemRegistry) == game.registrySize
+\chk game.itemRegistry[game.permanentIdol.id] is game.permanentIdol
+\chk not game.permanentIdol.destroy()
+\exe player.parent.permanents.remove(game.permanentIdol)
+
+\\ Destroying a never-placed container destroys its contents rather than orphaning them
+\exe game.voidTrinket=Core.Item("void trinket","A trinket packed for a journey to nowhere.",1,-1,"copper")
+\exe game.voidSatchel=game.spawn(Items.Box("void satchel","A satchel that never arrived anywhere.",3,-1,"cloth",items=[game.voidTrinket],capacity=5))
+\exe game.voidSatchelId=game.voidSatchel.id
+\exe game.voidTrinketId=game.voidTrinket.id
+\exe game.voidSatchel.destroy()
+\chk game.voidSatchelId not in game.itemRegistry
+\chk game.voidTrinketId not in game.itemRegistry
+
 quit
 yes
