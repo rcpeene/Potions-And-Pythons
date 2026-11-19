@@ -47,6 +47,7 @@ swim in shallow basin
 
 \\ Taking an immersed Item clears its spatial immersion tether
 \spn Core.Item("soaked token","A token resting beneath the water.",2,-1,"iron")
+\\ Items sink on the next tick rather than at drop, so immerse directly
 \exe fo("soaked token",queryType="room").immerse(fo("brook",queryType="room"),silent=True)
 swim in brook
 take soaked token
@@ -319,6 +320,7 @@ take water mouse
 go out
 \exe game.mouse = fo("water mouse",queryType="player")
 \TPT pond
+\\ Cheat teleports leave carried creatures behind, so ferry the mouse over
 \exe game.mouse.changeLocation(player.parent,silent=True)
 take water mouse
 stand on broad bank shrub

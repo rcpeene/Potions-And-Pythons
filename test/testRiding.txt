@@ -36,8 +36,8 @@ put travel-sized bard on patient palfrey
 \\ A rider too large is refused before losing an existing riding tether
 \spn Core.Creature("faithful charger","A charger committed to continuity.",100,[10]*10,status=[["tamed"]])
 \spn Core.Creature("thimble pony","A pony better suited to a dollhouse cavalry.",5,[10]*10,status=[["tamed"]])
-\exe player.removePlatform()
-\exe player.riding=fo("faithful charger",queryType="room")
+ride faithful charger
+\chk player.riding is fo("faithful charger",queryType="room")
 \exe game.oversizedRideSucceeded=fo("thimble pony",queryType="room").ride(player,silent=True)
 \chk not game.oversizedRideSucceeded
 \chk player.riding is fo("faithful charger",queryType="room")
