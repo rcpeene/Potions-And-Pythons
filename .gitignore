@@ -8,4 +8,4 @@ build/
 *.exe
 PoPy
 templates.json
-*.log
+*.logbotnotes.txt
