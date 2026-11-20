@@ -13,7 +13,7 @@ import sys, os, re, subprocess
 import tempfile
 import subprocess
 import atexit
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 try:
 	import msvcrt
 	sys.stdout.reconfigure(encoding='utf-8')
@@ -2014,6 +2014,12 @@ class GameObject():
 		return
 
 
+	# plain objects have no status checks to defer; Creature overrides this
+	@contextmanager
+	def deferStatusChecks(self):
+		yield
+
+
 	# add a status entry, print message unless silent
 	def addStatus(self,name,source=None,dur=None,allowStack=True,silent=False):
 		assert dur is None or (isinstance(dur,int) and dur > 0), \
@@ -3907,10 +3913,16 @@ class Room(GameObject):
 # Items are the heart of the game. Everything in a room should be an Item
 # All items come with a name, description, weight, durability, and composition
 class Item(GameObject):
+	# valid trigger keys for authored effects; equip/unequip may be
+	# slot-qualified ("equip:head", "equip:grip")
+	effectTriggers = {"obtain","drop","equip","unequip","carry","uncarry",
+	"open","close","spawn","destroy"}
+
 	def __init__(self,name,desc,weight,durability,composition,aliases=None,rarity=1,
 	status=None,plural=None,descname=None,determiner=None,pronoun="it",occupyprep="on",
 	fixed=False,mention=True,longevity=None,despawnTimer=None,scent=None,flavor=None,
-	texture=None,platform=None,immersed=None,minGripsNeeded=1,suspended=None,id=None):
+	texture=None,platform=None,immersed=None,minGripsNeeded=1,suspended=None,
+	effects=None,id=None):
 
 		### Basic Properties
 	
@@ -3982,6 +3994,21 @@ class Item(GameObject):
 		# a suspended object stays registered but detached, serialized nested here
 		self.suspended = suspended
 
+		### Authored Effects
+
+		# optional dict of trigger name -> effect descriptors
+		# departure keys: None derives inverses, () suppresses, authored replaces
+		self.effects = effects
+		if effects:
+			import Effects
+			self.effects = {trigger: Effects.wrapEffectDescriptors(descriptors)
+				for trigger,descriptors in effects.items()}
+			# an unknown trigger key is never fired, so it would be silently
+			# dead content; construction is the only place to catch it
+			for trigger in self.effects:
+				base,_,slot = trigger.partition(":")
+				assert base in self.effectTriggers, f"{self.name} effects has unknown trigger '{trigger}'"
+
 
 	### Dunder Methods ###
 
@@ -4034,6 +4061,8 @@ class Item(GameObject):
 		# worldEncoder, which exempts this key from Item-to-ID conversion)
 		if self.suspended is None:
 			del jsonDict["suspended"]
+		if not self.effects:
+			del jsonDict["effects"]
 		del jsonDict["statusCascadeDepth"], jsonDict["alreadyRemoved"]
 		return jsonDict
 
@@ -4417,6 +4446,39 @@ class Item(GameObject):
 			removed = self.parent.remove(self,silent=True)
 			assert removed, f"Failed to remove {self} from {self.parent}"
 		return self.changeLocation(destination)
+
+
+	# fire this item's effect descriptors for one trigger
+	# binding triggers stop granting if their relationship ends mid-batch-
+	# because an effect may undo the trigger condition itself
+	def evokeEffects(self,trigger,actor,target=None):
+		descriptors = (self.effects or {}).get(trigger)
+		if not descriptors:
+			return False
+		if target is None:
+			target = actor
+		import Effects
+
+		# defer target's status checks until the whole batch has applied
+		with target.deferStatusChecks() if target else nullcontext():
+			# when the effect is a str, exec it directly
+			if isinstance(descriptors,str):
+				return Effects.evokeEffects(descriptors,actor,self,target)
+
+			base,_,slot = trigger.partition(":")
+			stillHolds = {
+				"obtain": lambda: self.parent is actor,
+				# a slot-qualified trigger holds only while the item is in that slot
+				"equip": (lambda: actor.gear.get(slot) is self) if slot
+					else (lambda: self in actor.gear.values()),
+				"carry": lambda: getattr(self,"carrier",None) is actor,
+			}.get(base,lambda: True)
+
+			# evoke all conditions as long as trigger holds true
+			for descriptor in descriptors:
+				if stillHolds():
+					Effects.evokeEffects((descriptor,),actor,self,target)
+		return True
 
 
 	# prevent despawning
@@ -5353,8 +5415,8 @@ class Creature(Item):
 		self.alert = alert
 		self.lastSawPlayer = lastSawPlayer
 		# transient status-check state (never serialized)
+		self.statusCheckDepth = 0
 		self.statusCheckPending = False
-		self.flushingStatusChecks = False
 
 
 	### Dunder Methods ###
@@ -5441,7 +5503,7 @@ class Creature(Item):
 
 		dictkeys = list(jsonDict.keys())
 		delAttrs = ("gear","weapon","weapon2","shield","shield2",
-		"statusCheckPending","flushingStatusChecks")
+		"statusCheckDepth","statusCheckPending")
 		# these attributes do not get stored between saves
 		for key in dictkeys:
 			if key.lower() in Data.traits or key in delAttrs:
@@ -5475,29 +5537,38 @@ class Creature(Item):
 		return I
 
 
-	# mark that this creature's status entries changed and run its status
-	# checks to rederive its derived state
+	# defer status checks so they never judge a half-finished operation
+	@contextmanager
+	def deferStatusChecks(self):
+		self.statusCheckDepth += 1
+		try:
+			yield
+		finally:
+			self.statusCheckDepth -= 1
+			if self.statusCheckDepth == 0:
+				self.flushStatusChecks()
+
+
+	# mark that status entries changed; checks run now unless deferred
 	def queueStatusCheck(self):
 		self.statusCheckPending = True
-		self.flushStatusChecks()
+		if self.statusCheckDepth == 0:
+			self.flushStatusChecks()
 
 
 	# run the status checks once to rederive this creature's derived state
 	def flushStatusChecks(self):
-		# entry changes made BY the checks don't rerun them; they stay
-		# pending and are caught by a later flush (at latest, next passTime)
-		if self.flushingStatusChecks or not self.statusCheckPending:
+		if self.statusCheckDepth > 0 or not self.statusCheckPending:
 			return
 		self.statusCheckPending = False
-		self.flushingStatusChecks = True
+		self.statusCheckDepth += 1
 		try:
-			# run within a single statusCascade, so a condition one check
-			# removes can't be re-added by another: conflicts prefer removal
+			# regulate status cascades caused by status checks
 			with self.statusCascade():
 				self.checkStatus()
 				self.checkImmersion()
 		finally:
-			self.flushingStatusChecks = False
+			self.statusCheckDepth -= 1
 
 
 	# report a net status transition: the subject sees it via Print;
@@ -5894,6 +5965,9 @@ class Creature(Item):
 
 	# check all status conditions that may need updating
 	def checkStatus(self):
+		# dead creatures don't update their conditions
+		if self.hasStatus("dead"):
+			return
 		self.checkHungry()
 		self.checkTired()
 		self.checkCarrying()
@@ -6020,6 +6094,9 @@ class Creature(Item):
 			self.removeStatus("anointed",silent=True)
 		self.hp = 1
 		self.nullDespawn()
+		# reanimation refreshes your body
+		self.lastAte = game.time
+		self.lastSlept = game.time
 		if self is player:
 			delay(1)
 			self.waitInput("You reawaken!",color="g")
@@ -7814,6 +7891,7 @@ class Player(Creature):
 		self.addStatus("dead")
 		# death removes any permanent statuses, you are refreshed
 		self.removeStatus(reqSource="PERMANENT",silent=True)
+		self.changePosture("laying",silent=True)
 		if anointed:
 			return self.reanimate()
 

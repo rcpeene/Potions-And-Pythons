@@ -38,18 +38,18 @@ def resolveRoom(x):
 	return room if isinstance(room,Core.Room) else None
 
 
-# normalize authored effect descriptors to a canonical tuple of descriptors:
-# a bare descriptor (lone eval string or single (name, *args) sequence) is
-# wrapped; an eval string may not appear inside a collection
+# normalize authored effect descriptors to a canonical tuple of (name, *args)
+# tuple descriptors, validating effect names; a lone string element is a
+# zero-arg descriptor
+# None (the derive marker) and bare strings (whole-value exec code) pass through
 def wrapEffectDescriptors(descriptors):
-	if isinstance(descriptors,str):
-		return (descriptors,)
-	if isinstance(descriptors,(tuple,list)) and descriptors and \
-	isinstance(descriptors[0],str):
-		return (tuple(descriptors),)
-	assert all(not isinstance(d,str) for d in descriptors), \
-		"eval strings must be authored alone, not inside collections"
-	return tuple(tuple(d) for d in descriptors)
+	if descriptors is None or isinstance(descriptors,str):
+		return descriptors
+	descriptors = tuple((d,) if isinstance(d,str) else tuple(d) for d in descriptors)
+	for descriptor in descriptors:
+		assert descriptor and descriptor[0] in effects, \
+			f"unknown effect name '{descriptor[0] if descriptor else descriptor}'"
+	return descriptors
 
 
 def applyAreaEffect(effect,root,condfunc=lambda x:True):
@@ -328,20 +328,18 @@ effects = {name: func for name,func in globals().items()
 	if callable(func) and getattr(func,"__module__",None) == __name__}
 
 
-# run authored effect descriptors (a collection or a single one alone)
-# a tuple (effectName, *args) is dispatched through the effects registry with
-# the (actor, source, target) context spliced in; a string is eval()'d
+# run authored effect descriptors through the registry, splicing in the
+# (actor, source, target) context
+# a bare string value is not a descriptor collection: the whole string is exec'd as code
 def evokeEffects(descriptors,actor,source,target=None):
-	# a single bare descriptor is wrapped into a singleton collection
+	if isinstance(descriptors,str):
+		exec(descriptors)
+		return True
 	descriptors = wrapEffectDescriptors(descriptors)
-	for descriptor in descriptors:
-		if isinstance(descriptor,str):
-			eval(descriptor)
-		else:
-			name,*args = descriptor
-			if name not in effects:
-				raise ValueError(f"Unknown effect name '{name}'")
-			effects[name](actor,source,target,*args)
+	for name,*args in descriptors:
+		if name not in effects:
+			raise ValueError(f"Unknown effect name '{name}'")
+		effects[name](actor,source,target,*args)
 	return len(descriptors) > 0
 
 

@@ -111,22 +111,26 @@ EFFECT SYSTEM DOCTRINE
   where possible), never a fallback. A string descriptor is eval()'d -- the
   deliberate, visibly-exceptional escape hatch for custom situations, and
   what existing Controller/Switch effect strings already are.
-- Authoring grammar is two-tier. Python source (Data.py materials, future
-  bespoke code) writes CANONICAL form only -- a tuple of (name, *args) tuple
-  descriptors; Material.__post_init__ asserts this rather than repairing it,
-  so bare authoring fails at import, and materials, being coded data rather
-  than world-authored, do not allow eval strings at all. The flexible
+- Authoring grammar is ONE descriptor grammar, discriminated by shape alone.
+  A descriptor collection is a sequence whose elements are each a
+  (name, *args) sequence or a lone string, which is a zero-arg descriptor
+  ("explode" means ("explode",)). Coded data (Data.py materials and
+  conditions) writes CANONICAL tuple-of-tuples only; __post_init__ asserts
+  rather than repairs, so bare authoring fails at import. The flexible
   grammar is a boundary-parsing concern owned by
   Effects.wrapEffectDescriptors, applied where authored data enters from
-  outside Python (object-effects JSON load later; evokeEffects tolerates it
-  for direct callers now): a lone string is a singleton eval descriptor; a
-  sequence with a string first element is one (name, *args) descriptor; a
-  sequence of sequences is a collection. Lists and tuples are
+  outside Python (Item effects load, evokeEffects): lists and tuples are
   interchangeable there (JSON only has lists) and cast to canonical
-  tuple-of-tuples. An eval string must be the WHOLE authored value -- never
-  an element of a collection (the parser asserts; this keeps the flexible
-  grammar unambiguous, and an eval needing company can do everything itself,
-  being code).
+  tuple-of-tuples. There is NO single-descriptor shorthand:
+  one descriptor with args is authored (("bindStatus","x"),) -- a bare
+  ("bindStatus","x") parses as two zero-arg descriptors and fails name
+  validation loudly at load. The escape hatch: an authored value that is a
+  bare string (the WHOLE value, never an element) is exec'd as code, so
+  multi-statement hatches work; the shape survives JSON unambiguously
+  because a string INSIDE a collection is always an effect name. Coded
+  data (materials, conditions) does not allow eval values at all; the
+  hatch exists only for world-authored data (Item effects,
+  Controller/Switch strings).
 - Descriptor args that reference game objects are authored as object IDs and
   resolved at fire time inside the effect function via resolveObj (never
   bound at load). A missing ID means the effect fizzles gracefully.

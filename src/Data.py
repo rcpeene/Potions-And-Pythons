@@ -161,8 +161,6 @@ class StatusCondition:
 			isinstance(k,str) and isinstance(v,int)
 			for k,v in self.modifies.items()), \
 			f"StatusCondition '{self.name}' modifies must map trait names to ints"
-		# cascade hooks must be authored in canonical form: a tuple of
-		# (name, *args) tuple descriptors
 		for hook in ("onAdd","onGain","onRemove","onLoss","onTick","onExpire",
 		"onBlock"):
 			val = getattr(self,hook)
