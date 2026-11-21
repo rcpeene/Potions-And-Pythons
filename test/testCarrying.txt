@@ -158,20 +158,25 @@ drop green python
 unequip broken sword
 
 \\ Replanning when unequipping an item changes strength and required grips
-\\ \set self str 10
-\\ \spn Core.Item("strength charm","",1,-1,"cloth")
-\\ \spn Core.Item("filler","",1,-1,"cloth")
-\\ \spn Core.Creature("replan cargo","",20,[1]*10)
-\\ take strength charm
-\\ take filler
-\\ \exe fo("strength charm",queryType="player").unequip=__import__("types").MethodType(lambda item:setattr(Core.player,"str",1),fo("strength charm",queryType="player"))
-\\ equip strength charm
-\\ equip filler
-\\ \chk not player.Heft(fo("replan cargo",queryType="room"),forceUnequip=True,silent=True)
-\\ \chk fo("replan cargo",queryType="room").carrier is None
-\\ \chk all(player[s] is not fo("replan cargo",queryType="room") for s in player.carrySlots)
-\\ unequip filler
-\\ \set self str 4
+\spn sword of brawniness
+\spn Core.Item("grip filler","A stick holding a hand hostage.",2,-1,"wood")
+\spn Core.Creature("replan cargo","A creature exactly heavy enough to demand a new plan.",48,[1]*10)
+take sword of brawniness
+take grip filler
+\\ the plan unequips the first carry slot (left), so the sword must hold it
+\exe player.equipInHand(fo("sword of brawniness",queryType="player"),slot="left")
+\exe player.equipInHand(fo("grip filler",queryType="player"),slot="right")
+\chk player.STR() == 14
+\chk not player.Heft(fo("replan cargo",queryType="room"),forceUnequip=True,silent=True)
+\chk fo("replan cargo",queryType="room").carrier is None
+\chk all(player[s] is not fo("replan cargo",queryType="room") for s in player.carrySlots)
+\chk not player.hasStatus("brawniness")
+\chk player.STR() == 4
+\chk fo("grip filler",queryType="player") in player.gear.values()
+unequip grip filler
+drop sword of brawniness
+drop grip filler
+\exe fo("replan cargo",queryType="room").destroy()
 
 \\ Hostile cargo resistance and evasion leave every carry slot untouched
 \set goblin str 20

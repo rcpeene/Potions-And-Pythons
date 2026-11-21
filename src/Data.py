@@ -105,6 +105,18 @@ initgear = {"over":None, "head":None, "torso":None, "left":None, "right":None,
 ############################
 
 
+# derive the descriptors that undo a collection, in reverse order:
+# bindStatus derives a matching sourced removeStatus; all else derives nothing
+def deriveInverses(descriptors,sourceId):
+	if not descriptors or isinstance(descriptors,str):
+		return ()
+	inverses = []
+	for name,*args in reversed(descriptors):
+		if name == "bindStatus":
+			inverses.append(("removeStatus",args[0],sourceId))
+	return tuple(inverses)
+
+
 # a StatusCondition is the shared, immutable record of properties for one
 # status condition name; entries on objects store only [name, source, duration]
 @dataclass(frozen=True,kw_only=True)
@@ -147,10 +159,11 @@ class StatusCondition:
 	# onBlock triggers when an attempt to add a blocked condition occurs
 	onAdd: tuple = ()
 	onGain: tuple = ()
-	onRemove: tuple = ()
-	onLoss: tuple = ()
+	# None derives inverses of the counterpart hook at init, () suppresses
+	onRemove: tuple = None
+	onLoss: tuple = None
 	onTick: tuple = ()
-	onExpire: tuple = ()
+	onExpire: tuple = None
 	onBlock: tuple = ()
 
 	def __post_init__(self):
@@ -161,6 +174,11 @@ class StatusCondition:
 			isinstance(k,str) and isinstance(v,int)
 			for k,v in self.modifies.items()), \
 			f"StatusCondition '{self.name}' modifies must map trait names to ints"
+		for hook,counterpart in (("onRemove","onAdd"),("onLoss","onGain"),
+		("onExpire","onGain")):
+			if getattr(self,hook) is None:
+				object.__setattr__(self,hook,
+					deriveInverses(getattr(self,counterpart),self.name))
 		for hook in ("onAdd","onGain","onRemove","onLoss","onTick","onExpire",
 		"onBlock"):
 			val = getattr(self,hook)
@@ -216,6 +234,7 @@ statusConditions = {s.name: s for s in (
 	StatusCondition(name="liveliness",prefix="blessing of",color="g",modifies={"STM":10}),
 	StatusCondition(name="lucidity",prefix="blessing of",color="g",modifies={"WIS":10}),
 	StatusCondition(name="mending",color="g"),
+	StatusCondition(name="nullified",magical=True,onGain=(("releaseBound",),),onLoss=(("resumeBound",),),onExpire=(("resumeBound",),)),
 	StatusCondition(name="paralyzed",immobile=True,public=True),
 	StatusCondition(name="poisoned",damage=(5,"x"),compounds=True),
 	StatusCondition(name="prosperity",prefix="blessing of",color="g",modifies={"LCK":10}),
@@ -227,7 +246,6 @@ statusConditions = {s.name: s for s in (
 	StatusCondition(name="stunned",immobile=True,public=True),
 	StatusCondition(name="submerged",public=True,onGain=(("transferStatus","wet","IMMERSED","SUBMERGED"),),onLoss=(("transferStatus","wet","SUBMERGED","IMMERSED"),)),
 	StatusCondition(name="stupidity",prefix="curse of",color="r",modifies={"INT":-10}),
-	StatusCondition(name="suspended",gainMsg="",lossMsg=""),
 	StatusCondition(name="swiftness",prefix="blessing of",color="g",public=True,modifies={"SPD":10}),
 	StatusCondition(name="timidity",prefix="curse of",color="r",modifies={"CHA":-10}),
 	StatusCondition(name="tired",color="r",stackable=False,modifies={"STM":-3}),

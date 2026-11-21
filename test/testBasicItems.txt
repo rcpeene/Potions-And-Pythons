@@ -88,5 +88,53 @@ lock skeleton lockbox with trial skeleton key
 \exe game.zeroLock.unlock(player,game.ordinaryKey)
 \chk game.zeroLock.locked
 
+\\ An equipped sword of brawniness binds its blessing, unequipping unbinds it
+\spn sword of brawniness
+take sword of brawniness
+\chk not player.hasStatus("brawniness")
+equip sword of brawniness
+\chk player.hasStatus("brawniness")
+\chk player.STR() == 14
+unequip sword of brawniness
+\chk not player.hasStatus("brawniness")
+\chk player.STR() == 4
+
+\\ Dropping the sword while still equipped also strips the blessing
+equip sword of brawniness
+\chk player.hasStatus("brawniness")
+drop sword of brawniness
+\chk not player.hasStatus("brawniness")
+\chk fo("sword of brawniness",queryType="room").parent is not player
+
+\\ Nullifying the sword suspends its blessing, and losing nullified resumes it
+take sword of brawniness
+equip sword of brawniness
+\chk player.STR() == 14
+\exe fo("sword of brawniness",queryType="player").nullify()
+\chk not player.hasStatus("brawniness")
+\chk player.STR() == 4
+equip sword of brawniness
+\chk not player.hasStatus("brawniness")
+\exe fo("sword of brawniness",queryType="player").removeStatus("nullified")
+\chk player.hasStatus("brawniness")
+\chk player.STR() == 14
+
+\\ Destroying the equipped sword strips the blessing with it
+\exe fo("sword of brawniness",queryType="player").destroy()
+\chk not player.hasStatus("brawniness")
+\chk not any(obj and obj.name == "sword of brawniness" for obj in game.itemRegistry.values())
+
+\\ A sword of weakness curses its wielder only while equipped
+\spn sword of weakness
+take sword of weakness
+\chk not player.hasStatus("weakness")
+equip sword of weakness
+\chk player.hasStatus("weakness")
+\chk player.STR() == 1
+unequip sword of weakness
+\chk not player.hasStatus("weakness")
+\chk player.STR() == 4
+drop sword of weakness
+
 quit
 yes

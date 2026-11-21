@@ -287,17 +287,17 @@ put rescued keepsake in condemned coffer
 \chk game.suspendResult is game.keyMouse
 \chk game.keyMouse.parent is player.parent
 \chk game.keyMouse.id != game.heirloomKeyId
-\chk game.keyMouse.suspended is game.heirloomKey
+\chk game.keyMouse.latent is game.heirloomKey
 \chk game.itemRegistry[game.heirloomKeyId] is game.heirloomKey
 \chk game.heirloomKey.parent is None
-\chk game.heirloomKey.hasStatus("suspended",reqSource=game.keyMouse.id)
+\chk game.heirloomKey.substitute is game.keyMouse
 
 \\ Restore returns the original to the world with both IDs unchanged and no residue
 \exe game.restoreResult=game.keyMouse.restore()
 \chk game.restoreResult is game.heirloomKey
 \chk game.heirloomKey.parent is player.parent
 \chk game.heirloomKey.id == game.heirloomKeyId
-\chk not game.heirloomKey.hasStatus("suspended")
+\chk game.heirloomKey.substitute is None
 \chk game.keyMouse not in game.itemRegistry.values()
 
 \\ Destroying a substitute releases its latent in place
@@ -306,18 +306,18 @@ put rescued keepsake in condemned coffer
 \exe game.keyRat.destroy()
 \chk game.itemRegistry[game.heirloomKeyId] is game.heirloomKey
 \chk game.heirloomKey.parent is player.parent
-\chk not game.heirloomKey.hasStatus("suspended")
+\chk game.heirloomKey.substitute is None
 
 \\ Succession-replacing a substitute passes custody of the latent to the successor
 \exe game.keyCat=Core.Creature("custodial cat","A cat unaware of what it is holding.",2,[5]*10,status=[["tamed"]])
 \exe game.heirloomKey.replace(game.keyCat,destroy=False)
 \exe game.keyDog=Core.Creature("successor dog","A dog inheriting more than a position.",3,[5]*10,status=[["tamed"]])
 \exe game.keyCat.replace(game.keyDog)
-\chk game.keyDog.suspended is game.heirloomKey
-\chk game.heirloomKey.hasStatus("suspended",reqSource=game.keyDog.id)
+\chk game.keyDog.latent is game.heirloomKey
+\chk game.heirloomKey.substitute is game.keyDog
 \exe game.keyDog.destroy()
 \chk game.heirloomKey.parent is player.parent
-\chk not game.heirloomKey.hasStatus("suspended")
+\chk game.heirloomKey.substitute is None
 
 \\ Nested suspensions unwind one level at a time
 \spn Core.Item("matryoshka charm","A charm comfortable inside other forms.",2,-1,"silver")
@@ -326,14 +326,14 @@ put rescued keepsake in condemned coffer
 \exe game.matryoshka.replace(game.innerForm,destroy=False)
 \exe game.outerForm=Core.Creature("outer toad","A toad that is secretly a serpent.",1,[1]*10,status=[["tamed"]])
 \exe game.innerForm.replace(game.outerForm,destroy=False)
-\chk game.outerForm.suspended is game.innerForm
-\chk game.innerForm.suspended is game.matryoshka
+\chk game.outerForm.latent is game.innerForm
+\chk game.innerForm.latent is game.matryoshka
 \exe game.outerForm.destroy()
 \chk game.innerForm.parent is player.parent
-\chk game.innerForm.suspended is game.matryoshka
+\chk game.innerForm.latent is game.matryoshka
 \exe game.innerForm.destroy()
 \chk game.matryoshka.parent is player.parent
-\chk not game.matryoshka.hasStatus("suspended")
+\chk game.matryoshka.substitute is None
 
 \\ A replacement that fits nowhere aborts, leaving the original untouched
 \spn Items.Box("cramped reliquary","A reliquary with no tolerance for growth.",5,-1,"wood",[],capacity=3)
@@ -352,7 +352,7 @@ put protected relic in cramped reliquary
 \chk game.itemRegistry[game.relicId] is game.relic
 \chk game.relic.parent is game.reliquary
 \chk game.relic in game.reliquary.items
-\chk not game.relic.hasStatus("suspended")
+\chk game.relic.substitute is None
 \chk game.monolith not in game.itemRegistry.values()
 
 \\ A failed placement with room above still suspends; the substitute lands upstairs
@@ -360,7 +360,7 @@ put protected relic in cramped reliquary
 \exe game.standinResult=game.relic.replace(game.bigStandin,destroy=False)
 \chk game.standinResult is game.bigStandin
 \chk game.bigStandin.parent is player.parent
-\chk game.bigStandin.suspended is game.relic
+\chk game.bigStandin.latent is game.relic
 \exe game.bigStandin.restore()
 \chk game.relic.parent is player.parent
 

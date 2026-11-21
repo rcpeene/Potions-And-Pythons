@@ -175,7 +175,9 @@ def awaken(actor,source,target,wellRested=False):
 # bind a status to the target (actor if none): stripped by the derived
 # inverse when the source departs/dies (idempotent: re-binding refreshes)
 # returns whether the binding is in effect after the call
-def bindStatus(actor,source,target,name,duration=None):
+def bindStatus(actor,source,target,name,duration=None,ref=None):
+	if ref is not None and ref in Core.game.itemRegistry:
+		target = Core.game.itemRegistry[ref]
 	if target is None:
 		target = actor
 	srcId = originId(source)
@@ -224,12 +226,16 @@ def heal(actor,source,target,amount):
 	return target.heal(amount)
 
 
-# impart a status to the target (actor if none): free-standing, survives
-# the source's departure or destruction; repeatable (two doses, two entries)
-def impartStatus(actor,source,target,name,duration=None):
+# impart a free-standing status to the target (actor if none)
+# src=True stamps the source's id, or src may be an authored cause-code
+def impartStatus(actor,source,target,name,duration=None,src=None,ref=None):
+	if ref is not None and ref in Core.game.itemRegistry:
+		target = Core.game.itemRegistry[ref]
 	if target is None:
 		target = actor
-	return target.addStatus(name,originId(source),duration)
+	if src is True:
+		src = originId(source)
+	return target.addStatus(name,src,duration)
 
 
 # spawn a missile and launch it at the target
@@ -273,6 +279,22 @@ def removeRoomStatus(actor,source,target,name,room=None):
 	return room.removeStatus(name)
 
 
+# remove status entries matching name from every bearer world-wide,
+# sourced to the source's id (or to src if given)
+def purgeSourced(actor,source,target,name="*",src=None):
+	reqSource = src if src is not None else originId(source)
+	if reqSource is None:
+		return False
+	purged = False
+	for obj in list(Core.game.itemRegistry.values()):
+		if obj is not None and obj.status:
+			purged = obj.removeStatus(name,reqSource=reqSource) or purged
+	for room in Core.world.values():
+		if room.status:
+			purged = room.removeStatus(name,reqSource=reqSource) or purged
+	return purged
+
+
 # remove status entries matching name (and optionally source/duration)
 # from the target (actor if none)
 # "*" matches anything; None matches unsourced / indefinite respectively
@@ -280,6 +302,22 @@ def removeStatus(actor,source,target,name="*",reqSource="*",reqDuration="*"):
 	if target is None:
 		target = actor
 	return target.removeStatus(name,reqSource=reqSource,reqDuration=reqDuration)
+
+
+# strip the statuses the target item is sustaining from every bearer
+def releaseBound(actor,source,target):
+	if not Core.hasMethod(target,"releaseBoundStatuses"):
+		return False
+	target.releaseBoundStatuses()
+	return True
+
+
+# re-grant the bound statuses of the target item's standing arrival triggers
+def resumeBound(actor,source,target):
+	if not Core.hasMethod(target,"resumeBoundStatuses"):
+		return False
+	target.resumeBoundStatuses()
+	return True
 
 
 # restore the target's magic points, up to its maximum

@@ -111,6 +111,7 @@ class Box(Core.Container):
 		elif not silent:
 			opener.Print(f"You open {-self}.")
 		self.closed = False
+		self.evokeEffects("open",opener)
 		for elem in self.items:
 			if isinstance(elem,Core.Creature):
 				elem.removeStatus("hidden",reqSource="CONTAINER")
@@ -123,8 +124,11 @@ class Box(Core.Container):
 
 	# sets closed to true
 	def close(self,closer):
+		if self.closed:
+			return False
 		self.closed = True
 		closer.Print(f"You close {-self}.")
+		self.evokeEffects("close",closer)
 		# creatures remain visible through a transparent closed Box
 		if not self.material().transparent:
 			for elem in self.items:
@@ -1323,14 +1327,18 @@ class Door(Window):
 		if self.closed:
 			Core.Print(f"You open {-self}.")
 			self.closed = False
+			self.evokeEffects("open",opener)
 		else:
 			Core.Print(f"{+self} is already open.")
 
 
 	# sets closed to True
 	def close(self,closer):
+		if self.closed:
+			return False
 		self.closed = True
 		closer.Print(f"You close {-self}.")
+		self.evokeEffects("close",closer)
 		return True
 
 
@@ -1345,5 +1353,11 @@ factory = {
 	"puddle": lambda: Plash(randint(2,10),name="puddle",
 		desc="A small puddle of murky water.",composition="water"),
 	"red potion": lambda: Potion("red potion", "A bubbling red liquid in a glass bottle.",10,3,"glass",["bottle","glass","potion"],2),
-	"shard": lambda: Core.Shard("glass",2)
+	"shard": lambda: Core.Shard("glass",2),
+	"sword of brawniness": lambda: Core.Weapon("sword of brawniness",
+		"A sword emanating an aura of strength.",4,20,"iron",4,2,5,1,"s",
+		aliases=["sword"],effects={"equip":(("bindStatus","brawniness"),)}),
+	"sword of weakness": lambda: Core.Weapon("sword of weakness",
+		"A sword emanating an aura of frailty.",4,20,"iron",4,2,5,1,"s",
+		aliases=["sword"],effects={"equip":(("bindStatus","weakness"),)})
 }

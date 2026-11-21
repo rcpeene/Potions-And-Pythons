@@ -1988,12 +1988,13 @@ class GameObject():
 
 	# run the cascade descriptors the named condition authored for one kind
 	# of status event (action is one of the seven hook field names)
+	# the condition name is the source, so bound statuses are stamped with it
 	def evokeStatusHooks(self,action,name):
 		descriptors = getattr(Data.StatusCondition.get(name),action)
 		if not descriptors:
 			return
 		import Effects
-		Effects.evokeEffects(descriptors,self,None,self)
+		Effects.evokeEffects(descriptors,self,name,self)
 
 
 	# a status cascade spans a status mutation and all its consequences;
@@ -2770,27 +2771,27 @@ class Game():
 		# containment tree; validate their subtrees and count them as placed
 		suspended = set()
 		for runtimeObject in registryObjects:
-			latent = getattr(runtimeObject,"suspended",None)
+			latent = getattr(runtimeObject,"latent",None)
 			if latent is None:
 				continue
 			require(latent not in contained and latent not in suspended,
 				f"Suspended {latent} occupies another world position")
 			require(latent.parent is None,
 				f"Suspended {latent} unexpectedly has parent {latent.parent}")
-			# the latent's status entry must mirror the substitute's link
-			require(latent.hasStatus("suspended",reqSource=runtimeObject.id),
-				f"Suspended {latent} lacks the status entry for its " \
+			# the latent's substitute reference must mirror the link
+			require(latent.substitute is runtimeObject,
+				f"Suspended {latent} does not point back at its " \
 					f"substitute {runtimeObject}")
 			suspended.add(latent)
 			validateContainmentRecur(latent)
 
-		# the mirror direction: a suspended status with no substitute
-		# pointing back is a desynchronized custody record
+		# the mirror direction: a substitute reference with no suspended
+		# link pointing back is a desynchronized custody record
 		for runtimeObject in registryObjects:
-			if runtimeObject.hasStatus("suspended"):
+			if runtimeObject.substitute is not None:
 				require(runtimeObject in suspended,
-					f"{runtimeObject} bears a suspended status but no " \
-						f"substitute holds it")
+					f"{runtimeObject} points at a substitute that does " \
+						f"not hold it")
 
 		for objId,runtimeObject in self.itemRegistry.items():
 			if runtimeObject is None:
@@ -3003,6 +3004,8 @@ class Game():
 				parent.remove(obj)
 				self.unregisterSpawnTree(newObjects)
 				raise
+		# after attachment, so effects can resolve the spawn location
+		obj.evokeEffects("spawn",None)
 		return obj
 
 
@@ -3921,7 +3924,7 @@ class Item(GameObject):
 	def __init__(self,name,desc,weight,durability,composition,aliases=None,rarity=1,
 	status=None,plural=None,descname=None,determiner=None,pronoun="it",occupyprep="on",
 	fixed=False,mention=True,longevity=None,despawnTimer=None,scent=None,flavor=None,
-	texture=None,platform=None,immersed=None,minGripsNeeded=1,suspended=None,
+	texture=None,platform=None,immersed=None,minGripsNeeded=1,latent=None,
 	effects=None,id=None):
 
 		### Basic Properties
@@ -3991,8 +3994,13 @@ class Item(GameObject):
 		### Suspension
 
 		# the suspended object this substitute stands in for (see replace/restore)
-		# a suspended object stays registered but detached, serialized nested here
-		self.suspended = suspended
+		# a latent object stays registered but detached, serialized nested here
+		self.latent = latent
+		# the substitute standing in for this object while it is suspended
+		# (derived from the substitute's latent reference, never serialized)
+		self.substitute = None
+		if latent is not None:
+			latent.substitute = self
 
 		### Authored Effects
 
@@ -4024,7 +4032,7 @@ class Item(GameObject):
 		if not isinstance(self.id,int) or game.itemRegistry.get(self.id) is not self:
 			raise ValueError(f"Registry does not contain {self} at its ID {self.id}")
 		# suspended objects are owned by their substitute, not a parent
-		if self not in celestials and not self.hasStatus("suspended"):
+		if self not in celestials and self.substitute is None:
 			if self.parent is None or self not in game.ownedChildren(self.parent):
 				raise ValueError(f"{self} is not owned by its parent {self.parent}")
 		if self.platform is not None and not isinstance(self.platform,Item):
@@ -4059,8 +4067,10 @@ class Item(GameObject):
 			jsonDict["immersed"] = None
 		# a held latent object serializes as a full nested spec (see Menu's
 		# worldEncoder, which exempts this key from Item-to-ID conversion)
-		if self.suspended is None:
-			del jsonDict["suspended"]
+		if self.latent is None:
+			del jsonDict["latent"]
+		# the substitute reference is rederived from the nesting on load
+		del jsonDict["substitute"]
 		if not self.effects:
 			del jsonDict["effects"]
 		del jsonDict["statusCascadeDepth"], jsonDict["alreadyRemoved"]
@@ -4382,31 +4392,76 @@ class Item(GameObject):
 		if isinstance(self.parent,Room) and self in self.parent.permanents:
 			return False
 		# a substitute cannot be destroyed without restoring its latent
-		if self.suspended is not None:
+		if self.latent is not None:
 			self.restore()
 			return True
+		# before detach, so effects can resolve the item's location
+		self.evokeEffects("destroy",None)
 		if not silent:
 			self.Print(f"{+self} disappears.")
 
-		# TODO: first drop all items from contents? or just some important ones?
-		# relocate contents into parent
-		# a parentless (never-placed) object destroys its contents instead. 
-		# Use a while loop because destroyed children can dump contents into our items
+		# relocate contents into parent if it has one
 		parent = self.parent
 		if parent is not None:
 			for item in getattr(self,"items",[]).copy():
 				item.changeLocation(parent)
+		# TODO: find a way to preserve important items here?
+		# destroy contents if no parent exists
+		# use a while loop because destroyed children can dump contents into our items
 		else:
 			items = getattr(self,"items",None)
 			while items:
 				items[-1].destroy(silent=silent)
 
 		self.detach(silent=silent)
+		self.releaseBoundStatuses()
 
 		assert game.itemRegistry[self.id] is self, \
 		f"{self} ID{self.id} holds wrong Item in registry {game.itemRegistry[self.id]}"
 		del game.itemRegistry[self.id]
 		return True
+
+
+	# strip entries sourced to this object's id from every bearer
+	def releaseBoundStatuses(self):
+		for obj in list(game.itemRegistry.values()):
+			if obj is not None and obj.status:
+				obj.removeStatus(reqSource=self.id)
+		for room in world.values():
+			if room.status:
+				room.removeStatus(reqSource=self.id)
+
+
+	# counterpart of releaseBoundStatuses
+	# re-grant the bound statuses for triggers after 'nullified' ends
+	def resumeBoundStatuses(self):
+		# determine which triggers have ongoing effects to resume
+		triggers = []
+		if isinstance(self.parent,Creature):
+			owner = self.parent
+			triggers.append(("obtain",owner))
+			slots = [s for s,i in owner.gear.items() if i is self]
+			if slots:
+				triggers.append(("equip",owner))
+				triggers.extend((f"equip:{s}",owner) for s in slots)
+		if getattr(self,"carrier",None) is not None:
+			triggers.append(("carry",self.carrier))
+
+		# evoke only bound status from selected triggers
+		import Effects
+		for trigger,actor in triggers:
+			descriptors = (self.effects or {}).get(trigger)
+			if not descriptors or isinstance(descriptors,str):
+				continue
+			for descriptor in descriptors:
+				if descriptor[0] == "bindStatus":
+					Effects.evokeEffects((descriptor,),actor,self)
+
+
+	# suppress this item's effect triggers: the nullified condition strips
+	# outstanding bound statuses and resumes them when its last entry ends
+	def nullify(self,source=None,duration=None):
+		return self.addStatus("nullified",source,duration)
 
 
 	# walk up the ancestor chain from start for a place this object could
@@ -4452,7 +4507,22 @@ class Item(GameObject):
 	# binding triggers stop granting if their relationship ends mid-batch-
 	# because an effect may undo the trigger condition itself
 	def evokeEffects(self,trigger,actor,target=None):
-		descriptors = (self.effects or {}).get(trigger)
+		# a nullified item's effects don't fire
+		if self.hasStatus("nullified"):
+			return False
+		# fetch the triggered effect descriptors
+		effects = self.effects or {}
+		descriptors = effects.get(trigger)
+
+		# for removal triggers, if no effects are written,
+		# infer them from its opposite trigger
+		base,_,slot = trigger.partition(":")
+		additiveTrigger = {"drop":"obtain","unequip":"equip","uncarry":"carry",
+			"close":"open"}.get(base)
+		if descriptors is None and additiveTrigger is not None:
+			additiveKey = f"{additiveTrigger}:{slot}" if slot else additiveTrigger
+			descriptors = Data.deriveInverses(effects.get(additiveKey),self.id)
+
 		if not descriptors:
 			return False
 		if target is None:
@@ -4465,7 +4535,6 @@ class Item(GameObject):
 			if isinstance(descriptors,str):
 				return Effects.evokeEffects(descriptors,actor,self,target)
 
-			base,_,slot = trigger.partition(":")
 			stillHolds = {
 				"obtain": lambda: self.parent is actor,
 				# a slot-qualified trigger holds only while the item is in that slot
@@ -4570,10 +4639,10 @@ class Item(GameObject):
 
 	# substitute newObj into this object's parent and all its tethers
 	# destroy=True (succession): self is destroyed and newObj inherits its ID
-	# destroy=False (suspension): self persists suspended, owned by newObj
+	# destroy=False (suspension): self persists latently, owned by newObj
 	# when old obj gets replaced through suspension, it become a 'latent' object-
-	# occupying no room, and only existing as newObj.suspended
-	# transferId=False: both objects keep their own IDs (used for restoring a suspended obj)
+	# occupying no room, and only existing as newObj.latent
+	# transferId=False: both objects keep their own IDs (used for restoring a latent obj)
 	# returns the replacement if it exists in the world afterward, else None
 	def replace(self,newObj,destroy=True,transferId=True):
 		if newObj is self:
@@ -4600,39 +4669,36 @@ class Item(GameObject):
 		# replacement via succession: 
 		# destroy self and potentially transfer latent and id to newObj
 		if destroy:
-			latent = self.suspended
+			latent = self.latent
 			# if self is itself already a substitute, hand over its latent to newObj.
 			if latent is not None and replacementStillExists:
 				# if substitute already has a latent, it cannot accept another one
-				assert newObj.suspended is None, \
-					f"{newObj} already holds suspended {newObj.suspended}"
-				newObj.suspended = latent
-				# if self.suspended (the latent) is not None-
+				assert newObj.latent is None, \
+					f"{newObj} already holds latent {newObj.latent}"
+				newObj.latent = latent
+				latent.substitute = newObj
+				# if self.latent is not None-
 				# then destroy() will end up restoring the latent
-				self.suspended = None
+				self.latent = None
 
 			# replaceObj nulled self.parent; destroy needs it to relocate contents
 			if self.parent is None:
 				self.parent = parent
-			oldId = self.id
 			self.destroy()
 
 			if transferId and replacementStillExists:
 				game.replaceID(self,newObj)
-			# if newObj doesnt receive old id, the latent must point toward newObj's id
-			if not transferId and latent is not None and replacementStillExists:
-				latent.transferStatus("suspended",oldId,newObj.id)
 
 		# replacement via suspension: 
-		# detach and store self into newObj.suspended
+		# detach and store self into newObj.latent
 		else:
 			self.detach()
 			if replacementStillExists:
 				# if substitute already has a latent, it cannot accept another one
-				assert newObj.suspended is None, \
-					f"{newObj} already holds suspended {newObj.suspended}"
-				newObj.suspended = self
-				self.addStatus("suspended",source=newObj.id,silent=True)
+				assert newObj.latent is None, \
+					f"{newObj} already holds latent {newObj.latent}"
+				newObj.latent = self
+				self.substitute = newObj
 			else:
 				# if newObj no longer exists, replacement failed
 				# self should not remain suspended so it returns to the world
@@ -4652,13 +4718,13 @@ class Item(GameObject):
 	# substitute's current tethers, and neither object's ID changes
 	# returns the restored object, or None if it did not survive restoration
 	def restore(self):
-		original = self.suspended
+		original = self.latent
 		if original is None:
 			return None
 
 		# clear the link first so destroying this substitute doesn't recurse
-		self.suspended = None
-		original.removeStatus("suspended",reqSource=self.id,silent=True)
+		self.latent = None
+		original.substitute = None
 
 		# if substitute is being destroyed-
 		# try to put original back into the substitute's last location
@@ -4906,6 +4972,25 @@ class Item(GameObject):
 		self.clearOccupants()
 		self.clearCovering()
 		self.platform = None
+		self.evokeEffects("obtain",obtainer)
+
+
+	# counterpart of obtain, called when leaving a Creature's possession
+	def drop(self,dropper):
+		self.evokeEffects("drop",dropper)
+
+
+	# counterpart pair, called when entering/leaving a wearer's gear slots
+	def equip(self,wearer,slots=()):
+		self.evokeEffects("equip",wearer)
+		for slot in slots:
+			self.evokeEffects(f"equip:{slot}",wearer)
+
+
+	def unequip(self,wearer,slots=()):
+		self.evokeEffects("unequip",wearer)
+		for slot in slots:
+			self.evokeEffects(f"unequip:{slot}",wearer)
 
 
 	# stop covering object if it is covered by self
@@ -5908,6 +5993,7 @@ class Creature(Item):
 		for item in items:
 			occupied = [slot for slot in self.gripSlots if self[slot] is item]
 			gripsNeeded = item.gripsNeeded(self)
+			# move item to appropriate grip slot and trigger equip effects
 			if len(occupied) < gripsNeeded:
 				available = [slot for slot in self.gripSlots \
 					if self[slot] is EmptyGear()]
@@ -5917,9 +6003,11 @@ class Creature(Item):
 					continue
 				for slot in available[:gripsNeeded-len(occupied)]:
 					self[slot] = item
+					item.evokeEffects(f"equip:{slot}",self)
 			elif len(occupied) > gripsNeeded:
 				for slot in occupied[gripsNeeded:]:
 					self[slot] = EmptyGear()
+					item.evokeEffects(f"unequip:{slot}",self)
 
 		self.assignWeaponAndShield()
 
@@ -5999,6 +6087,8 @@ class Creature(Item):
 
 		if anointed:
 			return self.reanimate()
+		# a true death releases the statuses this creature was sustaining
+		self.releaseBoundStatuses()
 
 		self.removeRiding(silent=True)
 		self.clearCarrying(silent=True)
@@ -6108,7 +6198,7 @@ class Creature(Item):
 
 
 	# remove an Item from Inventory
-	# if it was equipped, unequip it. if it has a Drop() method, call that
+	# if it was equipped, unequip it; fires the item's drop
 	# check if still hindered
 	def remove(self,I,silent=False):
 		removed = False
@@ -6128,8 +6218,8 @@ class Creature(Item):
 			if any(getattr(ancestor,"locked",False) for ancestor in invAncestors):
 				return False
 			removed = I.parent.exit(I)
-		if removed and hasMethod(I,"Drop"):
-			I.Drop(self)
+		if removed:
+			I.drop(self)
 		if removed and not silent:
 			self.checkStatus()
 		return removed
@@ -6278,6 +6368,7 @@ class Creature(Item):
 
 			if oldObjSlot:
 				self.gear[oldObjSlot] = newObj
+				newObj.equip(self,[oldObjSlot])
 
 		self.checkStatus()
 		self.checkTethers()
@@ -6392,9 +6483,13 @@ class Creature(Item):
 				self[slot] = EmptyGear()
 
 		# set creature's authoritative carrier tether and assign creature to slots
+		newCarry = creature.carrier is not self
 		creature.carrier = self
 		for slot in useSlots:
 			self[slot] = creature
+		# re-slotting an already-carried creature doesn't re-fire the trigger
+		if newCarry:
+			creature.evokeEffects("carry",self)
 		self.display()
 
 
@@ -6604,8 +6699,10 @@ class Creature(Item):
 			return False
 		if slot not in self.gear.keys():
 			return False
+		# a previous occupant must leave gear properly before being replaced
+		self.unequip(slot,silent=True)
 		self[slot] = I
-		I.equip()
+		I.equip(self,[slot])
 		return True
 
 
@@ -6637,7 +6734,7 @@ class Creature(Item):
 		for grip in grips:
 			self[grip] = I
 		self.assignWeaponAndShield()
-		if hasMethod(I,"equip"): I.equip(self)
+		I.equip(self,grips)
 		self.checkStatus()
 		return True
 
@@ -6745,6 +6842,7 @@ class Creature(Item):
 			self.Print(f"You drop {-carried}.")
 			carried.Print(f"{+self} is no longer carrying you.")
 		carried.removeStatus("restrained",reqSource=self.id,silent=True)
+		carried.evokeEffects("uncarry",self)
 		if drop and not self.assignReleasedPlatform(carried):
 			carried.fall(self.Size()//5)
 		assert carried not in self.carrying() and carried.parent is self.parent
@@ -6936,7 +7034,7 @@ class Creature(Item):
 			self.assignWeaponAndShield()
 			if not silent:
 				self.Print(f"You unequip {-I}.")
-			if hasMethod(I,"unequip"): I.unequip()
+			I.unequip(self,slotsEquipped)
 			self.display()
 
 
@@ -7894,6 +7992,8 @@ class Player(Creature):
 		self.changePosture("laying",silent=True)
 		if anointed:
 			return self.reanimate()
+		# a true death releases the statuses you were sustaining
+		self.releaseBoundStatuses()
 
 		self.removeRiding(silent=True)
 		self.clearCarrying(silent=True)
@@ -9829,14 +9929,6 @@ class Armor(Item):
 		self.slots = slots if slots else []
 		if type(slots) is not list:
 			self.slots = [slots]
-
-
-	def equip(self):
-		pass
-
-
-	def unequip(self):
-		pass
 
 
 

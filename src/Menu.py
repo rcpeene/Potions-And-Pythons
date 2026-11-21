@@ -65,9 +65,9 @@ class worldEncoder(json.JSONEncoder):
 				del jsonDict["parent"]
 			for k, v in jsonDict.items():
 				if isinstance(v, (Core.Creature, Core.Item)):
-					# a suspended object exists nowhere else in the save, so
+					# a latent object exists nowhere else in the save, so
 					# it nests as a full spec instead of flattening to an ID
-					if k == "suspended":
+					if k == "latent":
 						continue
 					jsonDict[k] = v.id
 			return jsonDict
