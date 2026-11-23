@@ -136,5 +136,29 @@ unequip sword of weakness
 \chk player.STR() == 4
 drop sword of weakness
 
+\\ A closed box seals its contents; opening it exposes them to the room
+\exe Data.materials["mistcrystal"]=Data.Material(name="mistcrystal",expose=(("areaCreatureStatus","misted",50),))
+\spn Items.Box("mist box","A box with a foggy reputation.",5,20,"wood",[Core.Item("mist crystal","A crystal sweating mist.",2,-1,"mistcrystal")],closed=True,capacity=20)
+\chk not player.hasStatus("misted")
+open mist box
+\chk player.hasStatus("misted")
+
+\\ Arrival in a room exposes again
+\exe player.ObtainItem(fo("mist crystal",queryType="room",roomD=3),silent=True)
+\exe player.removeStatus("misted")
+drop mist crystal
+\chk player.hasStatus("misted")
+
+\\ A plash spilling through an inventory drenches the carrier and lands outside
+\exe player.add(game.spawn(Items.Plash(30,name="burst water",composition="freshwater")))
+\chk player.hasStatus("wet")
+\chk fo("burst water",queryType="room").parent is room
+
+\\ A mere droplet only touches the carrier on its way out, which freshwater ignores
+\exe player.removeStatus("wet")
+\exe player.add(game.spawn(Items.Plash(1,name="burst droplet",composition="freshwater")))
+\chk not player.hasStatus("wet")
+\chk fo("burst droplet",queryType="room").parent is room
+
 quit
 yes

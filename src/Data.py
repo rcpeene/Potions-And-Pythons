@@ -347,7 +347,8 @@ class Material:
 	# functions, run when something of this material is consumed, drenched
 	# onto a target, touched, ignited, struck hard, unsealed, or broken
 	consume: tuple = ()
-	drench: tuple = ()
+	# None derives the default at init: liquids wet whoever they drench
+	drench: tuple = None
 	touch: tuple = ()
 	ignite: tuple = ()
 	impact: tuple = ()
@@ -355,6 +356,9 @@ class Material:
 	onBreak: tuple = ()
 
 	def __post_init__(self):
+		if self.drench is None:
+			default = (("impartStatus","wet",21),) if self.liquid else ()
+			object.__setattr__(self,"drench",default)
 		for trigger in ("consume","drench","touch","ignite","impact","expose",
 		"onBreak"):
 			val = getattr(self,trigger)

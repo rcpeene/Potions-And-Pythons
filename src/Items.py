@@ -1,4 +1,4 @@
-# Items.py
+﻿# Items.py
 # This file contains the item classes used in the game
 # This file is dependent on Core.py and is a dependency of Menu.py and Interpreter.py
 
@@ -112,9 +112,10 @@ class Box(Core.Container):
 			opener.Print(f"You open {-self}.")
 		self.closed = False
 		self.evokeEffects("open",opener)
-		for elem in self.items:
-			if isinstance(elem,Core.Creature):
-				elem.removeStatus("hidden",reqSource="CONTAINER")
+		# contents are newly exposed, and hidden creatures are revealed
+		for elem in list(self.items):
+			elem.expose(opener)
+			elem.removeStatus("hidden",reqSource="CONTAINER")
 		for occupant in self.occupants():
 			occupant.fall()
 		if Core.player not in self.items and not silent:
@@ -760,7 +761,7 @@ class Plash(Core.Portal):
 			return False
 		traverser.unimmerse()
 		if traverser.anchor() is None:
-			traverser.platform = traverser.floorSupport()
+			traverser.platform = traverser.footing()
 		return True
 
 

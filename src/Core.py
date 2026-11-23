@@ -1,4 +1,4 @@
-# Core.py
+﻿# Core.py
 # This file contains all core functions and classes used throughout the game
 # This file is a dependency of Creatures.py, Items.py, Menu.py, and Interpreter.py
 # and is dependent on Data.py
@@ -722,8 +722,8 @@ def ambiguateNumbers(text,grammatical=False):
 		# capitalize only if preceding non-whitespace char is . ! ?
 		if (prev is None or prev in ".!?") and grammatical:
 			replacement = replacement.capitalize()
-		# §10 -> "some money"
-		if prev == "§" and grammatical:
+		# Â§10 -> "some money"
+		if prev == "Â§" and grammatical:
 			replacement += " money"
 			return replacement
 
@@ -2699,7 +2699,7 @@ class Game():
 			parent = runtimeObject.parent
 			if getattr(runtimeObject,"platform",None) == "floor":
 				# determine object floor from parent's floor
-				runtimeObject.platform = runtimeObject.floorSupport(parent)
+				runtimeObject.platform = runtimeObject.footing(parent)
 
 			if isinstance(runtimeObject,Creature):
 				# carried creatures start out restrained by their carrier
@@ -3485,12 +3485,13 @@ class Room(GameObject):
 
 		# set platform surface for object if it has a usable floor
 		if O.anchor() is None and not O.hasStatus("flying"):
-			O.platform = O.floorSupport(self)
+			O.platform = O.footing(self)
 
 		# add object to appropriate content list
 		if isinstance(O,Creature):
 			insort(self.creatures,O)
 			O.parent = self
+			O.expose(None,self)
 			return O
 		elif isinstance(O,Item):
 			# merge object if mergeable with existing item here
@@ -3502,6 +3503,7 @@ class Room(GameObject):
 			insort(self.items,O)
 			O.parent = self
 			O.timeDespawn()
+			O.expose(None,self)
 			return O
 		return False
 
@@ -4212,7 +4214,7 @@ class Item(GameObject):
 		self.immersed is not None and self.canSwim():
 			self.platform = None
 		else:
-			self.platform = self.floorSupport(newparent)
+			self.platform = self.footing(newparent)
 		return True
 
 
@@ -4255,7 +4257,7 @@ class Item(GameObject):
 			if fluid is not self.parent and hasMethod(fluid,"occupy") and \
 			fluid.occupy(self,silent=True):
 				return True
-			self.platform = self.floorSupport()
+			self.platform = self.footing()
 			return True
 
 		# remove immersion if fluid can no longer immerse us for some reason
@@ -4831,7 +4833,7 @@ class Item(GameObject):
 		for occupant in self.occupants():
 			self.disoccupy(occupant)
 			if not isinstance(self.parent,Creature):
-				occupant.platform = occupant.floorSupport(self.parent)
+				occupant.platform = occupant.footing(self.parent)
 
 
 	# Called by specific occupant when changing its anchor
@@ -4880,7 +4882,7 @@ class Item(GameObject):
 			if destinationFluid is not immersionSource and \
 			immersionSource.transferImmersed(self,destinationParent,destinationFluid):
 				self.printNearby(f"{~self} sinks from above!".capitalize())
-			floor = self.floorSupport()
+			floor = self.footing()
 			if self.anchor() is not floor:
 				self.platform = floor
 			self.checkSubmersion(silent=True)
@@ -4894,7 +4896,7 @@ class Item(GameObject):
 			self.changeLocation(room)
 			self.printNearby(f"{~self} {verb}s from above!".capitalize())
 
-		floor = self.floorSupport()
+		floor = self.footing()
 		if self.anchor() is not floor:
 			# self.parent.floor.occupy(self)
 			self.platform = floor
@@ -5164,7 +5166,7 @@ class Item(GameObject):
 
 
 	# return the parent's floor only when it can physically support this Item
-	def floorSupport(self,parent=None):
+	def footing(self,parent=None):
 		if parent is None:
 			parent = self.parent
 		floor = getattr(parent,"floor",None)
@@ -5234,6 +5236,31 @@ class Item(GameObject):
 		room = self.ancestors()[-1]
 		assert isinstance(room,Room), f"{self}'s first ancestor {room} is not a Room"
 		return room
+
+
+	# the local environment: the nearest enclosing closed container or
+	# Creature (inventories don't share air with their surroundings), or the Room
+	def enclosure(self):
+		obj = self.parent
+		while not isinstance(obj,Room) and obj is not None:
+			if getattr(obj,"closed",False) or isinstance(obj,Creature):
+				return obj
+			obj = obj.parent
+		return obj
+
+
+	# fire this object's expose material triggers, and its contents' if it
+	# is an open container
+	def expose(self,actor,area=None):
+		if area is None:
+			area = self.enclosure()
+		descriptors = self.material().expose
+		if descriptors:
+			import Effects
+			Effects.evokeEffects(descriptors,actor,self,area)
+		if not getattr(self,"closed",False):
+			for obj in list(getattr(self,"items",())):
+				obj.expose(actor,area)
 
 
 	def density(self):
@@ -5614,10 +5641,25 @@ class Creature(Item):
 		if isinstance(I,Serpens):
 			return I
 
+		# an inventory can't hold a loose plash; it spills into the surroundings
+		if hasMethod(I,"Spill"):
+			self.Print(f"{+I} seeps out of your Inventory!",color="o")
+			# spill material onto creature
+			material = I.material()
+			spill = material.touch
+			if I.Weight() > self.Weight()//10:
+				spill = material.drench 
+			if spill:
+				import Effects
+				Effects.evokeEffects(spill,None,I,self)
+			I.displace(self.parent)
+			return I
+
 		alphabetical = lambda x: (x.name.lower(), x.name)
 		insort(self.inv,I,key=alphabetical)
 		I.parent = self
 		I.nullDespawn()
+		I.expose(None)
 		self.display()
 		return I
 
@@ -5728,7 +5770,7 @@ class Creature(Item):
 		self.immersed is not None and self.canSwim():
 			self.platform = None
 		elif self.riding is None and self.carrier is None:
-			self.platform = self.floorSupport(newparent)
+			self.platform = self.footing(newparent)
 
 		# propagate location change to creatures riding or being carried
 		for carried in carrying:
@@ -6098,7 +6140,7 @@ class Creature(Item):
 
 		n = diceRoll(3,player.LOOT(),-2)
 		game.spawn(Serpens(n),self.parent)
-		self.printNearby(f"Dropped §{n}.",color="g")
+		self.printNearby(f"Dropped Â§{n}.",color="g")
 
 		if game.whoseTurn is player:
 			r = self.rating()
@@ -6460,9 +6502,9 @@ class Creature(Item):
 		self.money += money
 		color = "g" if money > 0 else "w"
 		if money == 0:
-			self.Print(f"You have §{self.money}.")
+			self.Print(f"You have Â§{self.money}.")
 		else:
-			self.Print(f"You have §{self.money}!",color=color)
+			self.Print(f"You have Â§{self.money}!",color=color)
 		self.display()
 
 
@@ -6552,10 +6594,10 @@ class Creature(Item):
 	# place a released creature on support, in nearby fluid, or on the room floor
 	def assignReleasedPlatform(self,carried):
 		platform = self.platform
-		floor = self.floorSupport()
+		floor = self.footing()
 		# preserve shared floor support without treating it as ordinary occupancy
 		if platform is floor and floor is not None:
-			carried.platform = carried.floorSupport()
+			carried.platform = carried.footing()
 			carried.checkImmersion(silent=True)
 			if carried.platform is platform:
 				return True
@@ -6583,7 +6625,7 @@ class Creature(Item):
 		# use the room floor last; removeCarry() handles falling if none exists
 		if carried.immersed is not None:
 			carried.unimmerse(silent=True)
-		carried.platform = carried.floorSupport()
+		carried.platform = carried.footing()
 		if carried.platform is None:
 			return False
 		carried.checkImmersion(silent=True)
@@ -6782,7 +6824,7 @@ class Creature(Item):
 			if destinationFluid is not immersionSource and \
 			immersionSource.transferImmersed(self,destinationParent,destinationFluid):
 				self.printNearby(f"{~self} sinks from above!".capitalize())
-			floor = self.floorSupport()
+			floor = self.footing()
 			if self.anchor() is not floor:
 				self.platform = floor
 			return True
@@ -6798,7 +6840,7 @@ class Creature(Item):
 				self.printNearby(f"{~self} {verb}s from above!".capitalize())
 				if self.hasStatus("submerged") and self.canSwim(): return False
 
-		floor = self.floorSupport()
+		floor = self.footing()
 		if self.anchor() is not floor:
 			self.platform = floor
 
@@ -7065,7 +7107,7 @@ class Creature(Item):
 		if not (self.hasStatus("flying") or \
 		self.immersed is not None and self.canSwim()):
 			# self.parent.floor.occupy(self)
-			self.platform = self.floorSupport()
+			self.platform = self.footing()
 		if self.anchor() in (None,self.parent.floor):
 			self.changePosture(posture,silent=True)
 		return True
@@ -8290,7 +8332,7 @@ class Player(Creature):
 	def printLV(self,*args): Print(f"LV: {self.level()}",color="o")
 
 	# takes args because interpreter passes them
-	def printMoney(self,*args): Print(f"§ {self.money}",color="g")
+	def printMoney(self,*args): Print(f"Â§ {self.money}",color="g")
 
 	# takes args because interpreter passes them
 	def printMP(self,*args): Print(f"MP: {self.mp}/{self.MXMP()}",color="b")
@@ -8322,7 +8364,7 @@ class Player(Creature):
 		name = self.name
 		if len(name) > 45:
 			name = name[:42] + "..."
-		stats = [name,f"LV: {self.level()}",f"§ {self.money}",
+		stats = [name,f"LV: {self.level()}",f"Â§ {self.money}",
 		   f"RP: {self.rp}/100",f"HP: {self.hp}/{self.MXHP()}",
 		   f"MP: {self.mp}/{self.MXMP()}"]
 		colors = ["w","o","g","y","r","b"]
@@ -9312,6 +9354,7 @@ class Container(Portal):
 		insort(self.items,I)
 		I.parent = self
 		I.nullDespawn()
+		I.expose(None)
 		return I
 
 
