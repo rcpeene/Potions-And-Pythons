@@ -238,8 +238,12 @@ def impartStatus(actor,source,target,name,duration=None,src=None,ref=None):
 	return target.addStatus(name,src,duration)
 
 
-# spawn a missile and launch it at the target
+# spawn a missile and launch it at the target (actor if none; fizzle if neither)
 def launch(actor,source,target,missileName,speed,aim):
+	if target is None:
+		target = actor
+	if target is None:
+		return False
 	missile = spawnObject(missileName,silent=True).asProjectile()
 	adverb = ""
 	p = "."
@@ -331,6 +335,12 @@ def resurge(actor,source,target,amount):
 	target.display()
 	target.Print(f"You resurged {gain} MP.",color="g")
 	return gain
+
+
+# spawn a factory object beside the source (or into the current room)
+def spawn(actor,source,target,name):
+	parent = source.parent if source is not None else None
+	return spawnObject(name,parent)
 
 
 # re-attribute a status entry on the target (actor if none) in place,

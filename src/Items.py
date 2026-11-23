@@ -139,15 +139,15 @@ class Box(Core.Container):
 
 
 
-# Controllers are generic Items that triggger an 'effect' upon some 'trigger' action
+# Controllers are generic Items that evoke an 'effect' upon some 'trigger' action
 # triggers work as the method endpoints that run the effect ('use','touch','press',etc)
-# the effect is a string that is executed when the trigger is called
+# the effect is a descriptor collection, or a string exec'd as code
 class Controller(Core.Item):
 	def __init__(self,name,desc,weight,durability,composition,effect,triggers=None,
 	**kwargs):
 		super().__init__(name,desc,weight,durability,composition,**kwargs)
 		self.triggers = triggers if triggers else ["use"]
-		self.effect = effect
+		self.effect = Effects.wrapEffectDescriptors(effect)
 		for trigger in self.triggers:
 			f = lambda *args: self.Trigger(*args)
 			setattr(self,trigger,f)
@@ -165,9 +165,9 @@ class Controller(Core.Item):
 
 	### Operation ###
 
-	# triggers some effect using the effect string to call related function
-	def Trigger(self,*args):
-		exec(self.effect)
+	# evoke the effect descriptors, with whoever triggered it as the actor
+	def Trigger(self,actor=None,*args):
+		Effects.evokeEffects(self.effect,actor,self,None)
 
 
 
@@ -219,10 +219,10 @@ class Generator(Controller):
 		self.cost = cost
 
 
-	def Trigger(self,*args):
+	def Trigger(self,actor=None,*args):
 		if self.charge > self.cost:
 			self.charge -= self.cost
-			eval(self.effect)
+			Effects.evokeEffects(self.effect,actor,self,None)
 		else:
 			self.Print("Nothing happened...")
 
@@ -252,9 +252,18 @@ class Timer(Controller):
 		self.toggle = toggle
 		# whether or not repeats and fuse reset upon trigger
 		self.reset = reset
+		# who last turned it on; the actor of fuse-fired effects
+		self.activator = None
 
 
-	def Trigger(self,*args):
+	# don't save the activator reference to json
+	def convertToJSON(self):
+		jsonDict = super().convertToJSON()
+		del jsonDict["activator"]
+		return jsonDict
+
+
+	def Trigger(self,actor=None,*args):
 		if self.reset and not self.on:
 			self.repeats = 0
 			self.fuse = self.delay
@@ -267,6 +276,7 @@ class Timer(Controller):
 			return False
 
 		self.on = True
+		self.activator = actor
 		self.Print(f"{+self} turns on.")
 
 
@@ -279,7 +289,7 @@ class Timer(Controller):
 
 		self.fuse -= 1
 		if self.fuse <= 0:
-			eval(self.effect)
+			Effects.evokeEffects(self.effect,self.activator,self,None)
 			self.repeats += 1
 			self.fuse = self.delay
 
@@ -1069,28 +1079,32 @@ class Painting(Sign):
 
 
 class Switch(Controller):
-	def __init__(self,name,desc,weight,durability,composition,effect,offEffect,on=False,
-	toggle=True,**kwargs):
+	def __init__(self,name,desc,weight,durability,composition,effect,offEffect=None,
+	on=False,toggle=True,**kwargs):
 		super().__init__(name,desc,weight,durability,composition,effect,**kwargs)
-		self.offEffect = offEffect
+		# None derives inverses of the on-effect at fire time, () suppresses
+		self.offEffect = Effects.wrapEffectDescriptors(offEffect)
 		self.on = on
 		# whether or not it can be turned off after turn on
 		self.toggle = toggle
 
 
-	# triggers some effect using the effect name to find related function
-	def Trigger(self):
+	# evoke the on or off effect descriptors for whoever flipped it
+	def Trigger(self,actor=None,*args):
 		if self.on and not self.toggle:
 			self.Print(f"{+self} is already on.")
 			return False
 		elif self.on:
 			self.Print(f"{+self} turns off.")
 			self.on = False
-			eval(self.offEffect)
+			offEffect = self.offEffect
+			if offEffect is None:
+				offEffect = Data.deriveInverses(self.effect,self.id)
+			Effects.evokeEffects(offEffect,actor,self,None)
 		else:
 			self.Print(f"{+self} turns on.")
 			self.on = True
-			eval(self.effect)
+			Effects.evokeEffects(self.effect,actor,self,None)
 
 
 

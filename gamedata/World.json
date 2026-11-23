@@ -356,7 +356,7 @@
 				"composition": "steel",
 				"aliases": ["button","machine","coffee machine","nespresso"],
 				"triggers": ["use", "press", "run"],
-				"effect": "Effects.spawnObject('coffee')"
+				"effect": [["spawn", "coffee"]]
 			},
 			{
 				"__class__": "Item",
@@ -720,7 +720,7 @@
 				"rarity": -1,
 				"aliases": ["machine","pitcher"],
 				"triggers": ["Use", "Press", "Run"],
-				"effect": "Effects.launch(Core.player,self,Core.player,'shard',10,50)",
+				"effect": [["launch", "shard", 10, 50]],
 				"delay": 3,
 				"maxRepeats": 5,
 				"toggle": true

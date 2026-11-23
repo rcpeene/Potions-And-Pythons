@@ -4466,6 +4466,87 @@ class Item(GameObject):
 		return self.addStatus("nullified",source,duration)
 
 
+	# the creature this trigger's relationship currently holds with, or None
+	def triggerActor(self,trigger):
+		base,_,slot = trigger.partition(":")
+		if base == "obtain" and isinstance(self.parent,Creature):
+			return self.parent
+		if base == "equip" and isinstance(self.parent,Creature):
+			if slot and self.parent.gear.get(slot) is self:
+				return self.parent
+			if not slot and self in self.parent.gear.values():
+				return self.parent
+		if base == "carry":
+			return getattr(self,"carrier",None)
+		return None
+
+
+	# append one effect descriptor under a trigger key, firing it
+	# immediately if the trigger's relationship already holds
+	def addEffect(self,trigger,descriptor):
+		import Effects
+		descriptor = Effects.wrapEffectDescriptors((descriptor,))[0]
+		base,_,slot = trigger.partition(":")
+		assert base in self.effectTriggers, \
+			f"{self.name} addEffect got unknown trigger '{trigger}'"
+		if self.effects is None:
+			self.effects = {}
+		existing = self.effects.get(trigger) or ()
+		assert not isinstance(existing,str), \
+			f"{self.name} effects['{trigger}'] is exec code; cannot append"
+
+		# concatenate new effect to existing effects
+		self.effects[trigger] = tuple(existing) + (descriptor,)
+
+		actor = self.triggerActor(trigger)
+		if actor is not None and not self.hasStatus("nullified"):
+			Effects.evokeEffects((descriptor,),actor,self,actor)
+		return True
+
+
+	# remove all effect descriptors matching the criteria, firing their
+	# derived inverses if their trigger's relationship still holds
+	# "*" matches anything; reqArgs matches a descriptor's whole args tuple
+	# a whole-key exec string only matches by trigger (reqName/reqArgs "*")
+	def removeEffects(self,reqTrigger="*",reqName="*",reqArgs="*"):
+		if not self.effects:
+			return False
+		import Effects
+
+		matches = lambda d: reqName in (d[0],"*") and reqArgs in (d[1:],"*")
+		removed = False
+		for trigger,descriptors in list(self.effects.items()):
+			if reqTrigger not in (trigger,"*"):
+				continue
+
+			# remove special exec-string effects if they match
+			if isinstance(descriptors,str):
+				if reqName == reqArgs == "*":
+					del self.effects[trigger]
+					removed = True
+				continue
+
+			# identify descriptors that match removal criteria
+			matched = tuple(d for d in descriptors if matches(d))
+			if not matched:
+				continue
+
+			# evoke each inverse effect matched before removing
+			actor = self.triggerActor(trigger)
+			if actor is not None and not self.hasStatus("nullified"):
+				inverses = Data.deriveInverses(matched,self.id)
+				Effects.evokeEffects(inverses,actor,self,actor)
+			
+			# make sure to keep descriptors that don't match
+			remaining = tuple(d for d in descriptors if not matches(d))
+			if remaining:
+				self.effects[trigger] = remaining
+			else:
+				del self.effects[trigger]
+			removed = True
+		return removed
+
+
 	# walk up the ancestor chain from start for a place this object could
 	# go, without mutating anything; returns the destination or None
 	def displaceDestination(self,start):

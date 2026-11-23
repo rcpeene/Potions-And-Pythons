@@ -51,5 +51,42 @@ test
 \chk game.itemRegistry[game.effectWild.creatures[0].id] is game.effectWild.creatures[0]
 \exe Core.percentChance=game.originalPercentChance
 
+\\ addEffect on a wielded item fires the new descriptor immediately
+\spn Core.Weapon("plain saber","A saber awaiting a blessing.",4,20,"iron",4,2,5,1,"s")
+take plain saber
+equip plain saber
+\exe fo("plain saber",queryType="player").addEffect("equip",("bindStatus","brawniness"))
+\chk player.hasStatus("brawniness")
+
+\\ The added effect behaves as if authored: unequip strips, re-equip re-binds
+unequip plain saber
+\chk not player.hasStatus("brawniness")
+equip plain saber
+\chk player.hasStatus("brawniness")
+
+\\ addEffect on an unheld trigger waits for its arrival
+\exe fo("plain saber",queryType="player").addEffect("carry",("bindStatus","swiftness"))
+\chk not player.hasStatus("swiftness")
+
+\\ removeEffects by name strips the grant it was sustaining
+\exe fo("plain saber",queryType="player").addEffect("equip",("impartStatus","invigorated",50))
+\exe game.saberRemoved=fo("plain saber",queryType="player").removeEffects(reqName="bindStatus")
+\chk game.saberRemoved
+\chk not player.hasStatus("brawniness")
+\chk player.hasStatus("invigorated")
+\chk fo("plain saber",queryType="player").effects.get("carry") is None
+
+\\ Wildcard removal of an absent name reports nothing removed
+\chk not fo("plain saber",queryType="player").removeEffects(reqName="bindStatus")
+
+\\ removeEffects by args removes only the matching descriptor
+\exe fo("plain saber",queryType="player").addEffect("equip",("bindStatus","brawniness"))
+\exe fo("plain saber",queryType="player").addEffect("equip",("bindStatus","swiftness"))
+\exe fo("plain saber",queryType="player").removeEffects(reqName="bindStatus",reqArgs=("swiftness",))
+\chk not player.hasStatus("swiftness")
+\chk player.hasStatus("brawniness")
+unequip plain saber
+drop plain saber
+
 quit
 yes
